@@ -1,0 +1,106 @@
+name: dzlocal_shop
+description: تطبيق تسوق محلي متطور للسوق الجزائري
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  cupertino_icons: ^1.0.2
+
+  equatable: ^2.0.5
+
+  shared_preferences: ^2.2.2
+  http: ^1.1.2
+  flutter_secure_storage: ^9.0.0
+  jwt_decoder: ^2.0.1
+  provider: ^6.1.1
+  image_picker: ^1.2.1
+
+  # Advanced UI/UX Framework - Premium Experience
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  glassmorphism: ^3.0.0
+  
+  # Premium Animations & Interactions
+  lottie: ^3.1.2                    # Hollywood-grade animations
+  # rive: ^0.13.1                   # Disabled - NDK issues
+  animated_text_kit: ^4.2.2        # Dynamic text animations
+  flutter_staggered_animations: ^1.1.1  # Sophisticated list animations
+  spring: ^2.0.1                    # Natural physics-based animations
+  
+  # Advanced Visual Effects
+  flutter_glow: ^0.3.0             # Premium glow/neon effects
+  flutter_neumorphic_plus: ^3.3.0  # Soft UI design system
+  flutter_gradient_colors: ^2.1.1   # Curated gradient palettes
+  
+  # Enhanced Components
+  # carousel_slider: ^4.2.1        # Disabled - conflicts with Flutter's CarouselController
+  flutter_carousel_widget: ^3.0.1  # Alternative carousel without conflicts  
+  smooth_page_indicator: ^1.1.0    # Elegant page indicators
+  flutter_rating_bar: ^4.0.1       # Interactive rating system
+  pull_to_refresh: ^2.0.0          # iOS-style refresh
+  flutter_slidable: ^3.1.1         # Swipe actions
+  
+  # Advanced Layout Systems
+  flutter_staggered_grid_view: ^0.7.0  # Pinterest-style grids
+  sticky_headers: ^0.3.0+2         # Floating section headers
+  
+  # Enhanced Media & Content
+  extended_image: ^8.2.0           # Advanced image handling
+  photo_view: ^0.15.0              # Zoom & pan for images
+  flutter_blurhash: ^0.8.2         # Progressive image loading
+  
+  # Interactive Feedback
+  haptic_feedback: ^0.5.0          # Tactile responses
+  
+  # Performance & State
+  visibility_detector: ^0.4.0+2    # Viewport detection
+  flutter_cache_manager: ^3.3.1    # Intelligent caching
+  
+  # Premium Navigation
+  go_router: ^14.2.7               # Next-gen routing
+  
+  # Commerce Specific
+  share_plus: ^10.0.2              # Social sharing
+  url_launcher: ^6.3.0             # External links
+  geolocator: ^12.0.0              # Location services
+  google_maps_flutter: ^2.5.0      # Maps for store discovery
+  local_auth: ^2.3.0               # Biometric auth
+  
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+  
+
+flutter:
+  uses-material-design: true
+
+  # Assets
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+  
+  # Fonts - تم تعطيلها مؤقتاً (يمكن إضافتها لاحقاً إذا كانت متوفرة)
+  # fonts:
+  #   - family: Tajawal
+  #     fonts:
+  #       - asset: assets/fonts/Tajawal-Regular.ttf
+  #       - asset: assets/fonts/Tajawal-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Tajawal-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Tajawal-Light.ttf
+  #         weight: 300
