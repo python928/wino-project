@@ -5,7 +5,6 @@ import '../../data/models/pack_model.dart';
 import '../services/api_service.dart';
 import '../services/product_api_service.dart';
 import '../services/store_api_service.dart';
-import '../config/api_config.dart';
 
 /// Category model for home screen
 class Category {
@@ -78,8 +77,8 @@ class HomeProvider with ChangeNotifier {
   bool _isLoadingHotDeals = false;
   String? _hotDealsError;
 
-  // Packs
-  List<Pack> _packs = [];
+  // Featured Packs
+  List<Pack> _featuredPacks = [];
   bool _isLoadingPacks = false;
   String? _packsError;
 
@@ -100,7 +99,8 @@ class HomeProvider with ChangeNotifier {
   bool get isLoadingHotDeals => _isLoadingHotDeals;
   String? get hotDealsError => _hotDealsError;
 
-  List<Pack> get packs => _packs;
+  List<Pack> get featuredPacks => _featuredPacks;
+  List<Pack> get packs => _featuredPacks; // Alias for compatibility
   bool get isLoadingPacks => _isLoadingPacks;
   String? get packsError => _packsError;
 
@@ -114,7 +114,7 @@ class HomeProvider with ChangeNotifier {
       loadFeaturedStores(),
       loadRecentProducts(),
       loadHotDeals(),
-      loadPacks(),
+      loadFeaturedPacks(),
     ]);
   }
 
@@ -200,27 +200,34 @@ class HomeProvider with ChangeNotifier {
     }
   }
 
-  /// Load packs from API
-  Future<void> loadPacks() async {
+  /// Load featured packs
+  Future<void> loadFeaturedPacks() async {
     _isLoadingPacks = true;
     _packsError = null;
     notifyListeners();
 
     try {
-      final data = await ApiService.get(ApiConfig.packs);
+      final data = await ApiService.get('/api/catalog/packs/');
+      
       if (data is Map<String, dynamic> && data['results'] != null) {
-        _packs = (data['results'] as List)
+        // API returns {count: X, results: [...]}
+        _featuredPacks = (data['results'] as List)
             .map((json) => Pack.fromJson(json as Map<String, dynamic>))
-            .take(10)
+            .take(10) // Limit to 10 packs
             .toList();
       } else if (data is List) {
-        _packs = data
+        // Fallback: API returns a direct list
+        _featuredPacks = data
             .map((json) => Pack.fromJson(json as Map<String, dynamic>))
-            .take(10)
+            .take(10) // Limit to 10 packs
             .toList();
+      } else {
+        _featuredPacks = [];
       }
+      _packsError = null;
     } catch (e) {
-      _packsError = e.toString();
+      _featuredPacks = [];
+      _packsError = 'فشل في تحميل الحزم: ${e.toString()}';
     } finally {
       _isLoadingPacks = false;
       notifyListeners();

@@ -6,11 +6,18 @@ class PackApiService {
 
   Future<List<Pack>> getMerchantPacks(int merchantId) async {
     try {
-      final data = await ApiService.get('/packs/merchant/$merchantId/');
-      if (data is List) {
+      final data = await ApiService.get('/api/catalog/packs/?store=$merchantId');
+      
+      if (data is Map<String, dynamic> && data['results'] != null) {
+        // API returns {count: X, results: [...]}
+        return (data['results'] as List)
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else if (data is List) {
+        // Fallback: API returns a direct list
         return data.map((json) => Pack.fromJson(json as Map<String, dynamic>)).toList();
       }
-      throw Exception('Unexpected response when fetching packs');
+      throw Exception('Unexpected response format when fetching merchant packs');
     } catch (e) {
       throw Exception('Error fetching packs: $e');
     }
@@ -32,7 +39,7 @@ class PackApiService {
         'merchant_id': merchantId,
       };
 
-      final data = await ApiService.post('/packs/', body);
+      final data = await ApiService.post('/api/catalog/packs/', body);
       if (data is Map<String, dynamic>) {
         return Pack.fromJson(data);
       }
@@ -44,7 +51,7 @@ class PackApiService {
 
   Future<Pack> updatePack(int packId, Map<String, dynamic> updates) async {
     try {
-      final data = await ApiService.put('/packs/$packId/', updates);
+      final data = await ApiService.put('/api/catalog/packs/$packId/', updates);
       if (data is Map<String, dynamic>) {
         return Pack.fromJson(data);
       }
@@ -56,7 +63,7 @@ class PackApiService {
 
   Future<void> deletePack(int packId) async {
     try {
-      await ApiService.delete('/packs/$packId/');
+      await ApiService.delete('/api/catalog/packs/$packId/');
       return;
     } catch (e) {
       throw Exception('Error deleting pack: $e');

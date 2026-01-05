@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/pack_provider.dart';
+import '../../core/providers/store_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/premium_ui_components.dart';
 import '../../core/utils/helpers.dart';
@@ -17,10 +18,10 @@ class AddPackScreen extends StatefulWidget {
 }
 
 class _AddPackScreenState extends State<AddPackScreen> {
+  final TextEditingController _packNameController = TextEditingController();
   final TextEditingController _packPriceController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  List<Post> _filteredProducts = [];
-  final GlobalKey<AnimatedListState> _selectedListKey = GlobalKey<AnimatedListState>();
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   double _enteredPackPrice = 0.0;
   String? _formError;
 
@@ -69,6 +70,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
       }
     });
     _searchController.addListener(() {
+      setState(() {});
       final query = _searchController.text;
       context.read<PostProvider>().onSearchQueryChanged(query);
     });
@@ -81,12 +83,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
 
   @override
   void dispose() {
+    _packNameController.dispose();
     _searchController.dispose();
+    _packPriceController.dispose();
     super.dispose();
-  }
-
-  void _filterProducts() {
-    // deprecated: we now use PostProvider.onSearchQueryChanged (debounced)
   }
 
   void _addProductToPack(Post product) {
@@ -98,21 +98,20 @@ class _AddPackScreenState extends State<AddPackScreen> {
     HapticFeedback.lightImpact();
     final index = provider.selectedProducts.length;
     provider.addProduct(product);
-    _selectedListKey.currentState?.insertItem(index, duration: const Duration(milliseconds: 300));
+    _listKey.currentState?.insertItem(index);
+    _searchController.clear();
+    FocusScope.of(context).unfocus();
   }
 
-  void _removeProductFromPack(Post product) {
+  void _removeProductFromPack(Post product, int index) {
     final provider = context.read<PackProvider>();
     HapticFeedback.mediumImpact();
-    final index = provider.selectedProducts.indexWhere((p) => p.id == product.id);
-    if (index == -1) return;
+    final qty = provider.quantities[product.id] ?? 1;
+    
     provider.removeProduct(product);
-    _selectedListKey.currentState?.removeItem(
+    _listKey.currentState?.removeItem(
       index,
-      (context, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: _buildSelectedItem(product),
-      ),
+      (context, animation) => _buildTableRow(product, animation, quantityOverride: qty),
       duration: const Duration(milliseconds: 300),
     );
   }
@@ -129,6 +128,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
       setState(() => _formError = 'اختر منتجات الحزمة أولاً');
       return;
     }
+    if (_packNameController.text.trim().isEmpty) {
+      setState(() => _formError = 'أدخل اسم الحزمة');
+      return;
+    }
     if (_packPriceController.text.isEmpty || double.tryParse(_packPriceController.text) == null) {
       setState(() => _formError = 'أدخل سعر بيع الحزمة');
       return;
@@ -139,13 +142,28 @@ class _AddPackScreenState extends State<AddPackScreen> {
       return;
     }
     final auth = context.read<AuthProvider>();
-    final merchantId = auth.user?.id ?? 0;
+    final userId = auth.user?.id;
+    
+    if (userId == null) {
+       setState(() => _formError = 'يجب تسجيل الدخول أولاً');
+       return;
+    }
+
     try {
+      // Get Store ID
+      final storeProvider = context.read<StoreProvider>();
+      final store = await storeProvider.getMyStore(userId);
+      
+      if (store == null) {
+         setState(() => _formError = 'لم يتم العثور على متجر لهذا المستخدم');
+         return;
+      }
+
       await provider.submitPack(
-        name: 'حزمة جديدة',
+        name: _packNameController.text.trim(),
         description: 'حزمة منشورة من التطبيق',
         discountPrice: enteredPrice,
-        merchantId: merchantId,
+        merchantId: store.id,
       );
       if (mounted) {
         Helpers.showSnackBar(context, 'تم نشر الحزمة بنجاح');
@@ -156,79 +174,290 @@ class _AddPackScreenState extends State<AddPackScreen> {
     }
   }
 
-  Widget _buildSelectedItem(Post product) {
-    final packProvider = context.read<PackProvider>();
-    final qty = packProvider.quantities[product.id] ?? 1;
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.only(right: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: AppColors.goldGradient,
-        boxShadow: AppColors.goldShadow,
-        border: Border.all(color: AppColors.borderGold.withOpacity(0.25)),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+  Widget _buildSearchResults() {
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
+        final products = postProvider.myPosts;
+        if (products.isEmpty) {
+           return const Center(child: Text('لا توجد نتائج'));
+        }
+        return SizedBox(
+          height: 300,
+          child: ListView.builder(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return ListTile(
+                leading: SizedBox(width: 50, height: 50, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: _safeThumb(product.image))),
+                title: Text(product.title),
+                subtitle: Text('${product.price} د.ج'),
+                trailing: const Icon(Icons.add_circle, color: AppColors.primary),
+                onTap: () => _addProductToPack(product),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectedProductsTable() {
+    return Consumer<PackProvider>(
+      builder: (context, provider, child) {
+        final selected = provider.selectedProducts;
+        if (selected.isEmpty) {
+          return const Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_basket_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('لم تقم بإضافة أي منتجات للحزمة بعد', style: TextStyle(color: Colors.grey)),
+                  Text('استخدم البحث أعلاه لإضافة منتجات', style: TextStyle(color: Colors.grey)),
+                ],
               ),
-              child: product.gallery.isNotEmpty ? _safeThumb(product.gallery.first) : _safeThumb(null),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(4),
-            child: Text(
-              product.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10, color: Colors.white),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          );
+        }
+
+        return Expanded(
+          child: Column(
             children: [
-              IconButton(
-                icon: const Icon(Icons.remove, size: 16),
-                onPressed: () {
-                  final current = packProvider.quantities[product.id] ?? 1;
-                  if (current > 1) {
-                    HapticFeedback.selectionClick();
-                    _onQuantityChange(product, current - 1);
-                  }
-                },
+              // Table Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.grey[200],
+                child: const Row(
+                  children: [
+                    Expanded(flex: 3, child: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 2, child: Text('الكمية', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                    Expanded(flex: 2, child: Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.end)),
+                  ],
+                ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                child: Text('$qty', key: ValueKey(qty)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add, size: 16),
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  _onQuantityChange(product, (packProvider.quantities[product.id] ?? 1) + 1);
-                },
+              // Table Body
+              Expanded(
+                child: AnimatedList(
+                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  key: _listKey,
+                  initialItemCount: selected.length,
+                  itemBuilder: (context, index, animation) {
+                    if (index >= selected.length) return const SizedBox.shrink();
+                    return _buildTableRow(selected[index], animation);
+                  },
+                ),
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.white, size: 16),
-            onPressed: () {
-              HapticFeedback.heavyImpact();
-              _removeProductFromPack(product);
-            },
-          ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTableRow(Post product, Animation<double> animation, {int? quantityOverride}) {
+    return SizeTransition(
+      sizeFactor: animation,
+      child: Consumer<PackProvider>(
+        builder: (context, provider, _) {
+          final qty = quantityOverride ?? provider.quantities[product.id] ?? 1;
+          final total = product.price * qty;
+          
+          return Container(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black12)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                // Product Info
+                Expanded(
+                  flex: 3,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        onPressed: () {
+                           final index = provider.selectedProducts.indexOf(product);
+                           if (index != -1) _removeProductFromPack(product, index);
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 40, 
+                        height: 40, 
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: _safeThumb(product.image),
+                        )
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(product.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text('${product.price} د.ج', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Quantity
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                           if (qty > 1) _onQuantityChange(product, qty - 1);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
+                          child: const Icon(Icons.remove, size: 16),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      InkWell(
+                        onTap: () => _onQuantityChange(product, qty + 1),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
+                          child: const Icon(Icons.add, size: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Total
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    '${total.toStringAsFixed(0)} د.ج',
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
       ),
+    );
+  }
+
+  Widget _buildSummarySection() {
+    return Consumer<PackProvider>(
+      builder: (context, provider, _) {
+        final totalPrice = provider.totalPrice;
+        final diff = totalPrice - _enteredPackPrice;
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _packNameController,
+                  decoration: InputDecoration(
+                    labelText: 'اسم الحزمة *',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('مجموع أسعار المنتجات:', style: TextStyle(color: Colors.grey)),
+                    Text('${totalPrice.toStringAsFixed(2)} د.ج', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _packPriceController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'سعر بيع الحزمة',
+                          suffixText: 'د.ج',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text('التوفير', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        Text(
+                          '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} د.ج',
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (_formError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      _formError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: provider.isSubmitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: provider.isSubmitting 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('نشر الحزمة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isSearching = _searchController.text.isNotEmpty;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -240,13 +469,23 @@ class _AddPackScreenState extends State<AddPackScreen> {
         ),
         body: Column(
           children: [
+            // Search Bar
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'ابحث عن منتج...',
+                  hintText: 'ابحث عن منتج لإضافته...',
                   prefixIcon: const Icon(Icons.search),
+                  suffixIcon: isSearching
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            FocusScope.of(context).unfocus();
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -255,135 +494,12 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 ),
               ),
             ),
-            Expanded(
-              child: Consumer<PostProvider>(
-                builder: (context, postProvider, child) {
-                  final products = postProvider.myPosts;
-                  return ListView.builder(
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return Dismissible(
-                        key: Key(product.id.toString()),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (_) => _addProductToPack(product),
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: AppColors.primary,
-                          child: const Icon(Icons.add, color: Colors.white),
-                        ),
-                        child: ListTile(
-                          leading: SizedBox(width: 50, height: 50, child: product.gallery.isNotEmpty ? _safeThumb(product.gallery.first) : _safeThumb(null)),
-                          title: Text(product.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: Text('${product.price.toStringAsFixed(2)} د.ج'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: () => _addProductToPack(product),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-            Consumer<PackProvider>(
-              builder: (context, packProvider, child) {
-                final selected = packProvider.selectedProducts;
-                if (selected.isEmpty) return const SizedBox.shrink();
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('المنتجات المختارة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 120,
-                        child: AnimatedList(
-                          key: _selectedListKey,
-                          scrollDirection: Axis.horizontal,
-                          initialItemCount: selected.length,
-                          itemBuilder: (context, index, animation) {
-                            final product = selected[index];
-                            return SizeTransition(
-                              sizeFactor: animation,
-                              axis: Axis.horizontal,
-                              child: _buildSelectedItem(product),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'إجمالي السعر: ${packProvider.totalPrice.toStringAsFixed(2)} د.ج',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              if (_enteredPackPrice > 0)
-                                Text(
-                                  'الفرق: ${(packProvider.totalPrice - _enteredPackPrice).toStringAsFixed(2)} د.ج',
-                                  style: TextStyle(
-                                    color: (packProvider.totalPrice - _enteredPackPrice) >= 0 ? Colors.green : Colors.red,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          SizedBox(
-                            width: 120,
-                            child: TextField(
-                              controller: _packPriceController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                hintText: 'سعر الحزمة',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                filled: true,
-                                fillColor: Colors.amber[50],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (_formError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            _formError!,
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: PremiumUIComponents.luxuryGoldButton(
-                          text: packProvider.isSubmitting ? 'جاري النشر...' : 'نشر الحزمة',
-                          onPressed: packProvider.isSubmitting ? () {} : () => _submit(),
-                          isLoading: packProvider.isSubmitting,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+
+            // Content Area
+            isSearching ? _buildSearchResults() : _buildSelectedProductsTable(),
+
+            // Bottom Summary Section
+            _buildSummarySection(),
           ],
         ),
       ),

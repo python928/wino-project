@@ -9,6 +9,28 @@ class StoreApiService {
   // Simple in-memory cache for store details
   final Map<int, Store> _storeCache = {};
 
+  Future<Store?> getMyStore(int userId) async {
+    try {
+      final data = await ApiService.get('${ApiConfig.stores}?owner=$userId');
+      if (data is List && data.isNotEmpty) {
+        final store = Store.fromJson(data.first as Map<String, dynamic>);
+        _storeCache[store.id] = store;
+        return store;
+      } else if (data is Map<String, dynamic> && data['results'] != null) {
+         final results = data['results'] as List;
+         if (results.isNotEmpty) {
+           final store = Store.fromJson(results.first as Map<String, dynamic>);
+           _storeCache[store.id] = store;
+           return store;
+         }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching my store: $e');
+      return null;
+    }
+  }
+
   Future<Store> getStoreDetails(int storeId, {int retries = 2, bool forceRefresh = false}) async {
     if (!forceRefresh && _storeCache.containsKey(storeId)) {
       return _storeCache[storeId]!;

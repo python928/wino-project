@@ -1,6 +1,7 @@
 from rest_framework import filters, permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite
 from .serializers import (
@@ -59,8 +60,9 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 class PackViewSet(viewsets.ModelViewSet):
 	queryset = Pack.objects.select_related('store').prefetch_related('images', 'pack_products')
 	serializer_class = PackSerializer
-	filter_backends = [filters.OrderingFilter]
+	filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
 	ordering_fields = ['created_at', 'discount']
+	filterset_fields = ['store']
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve']:

@@ -53,6 +53,7 @@ class Routes {
   // Merchant
   static const String statistics = '/statistics';
   static const String priceComparison = '/price-comparison';
+  static const String addPack = '/add-pack';
   
   // Support & Info
   static const String help = '/help';

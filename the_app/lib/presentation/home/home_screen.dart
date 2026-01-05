@@ -485,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
-                    onPressed: () => homeProvider.loadPacks(),
+                    onPressed: () => homeProvider.loadFeaturedPacks(),
                     child: const Text('إعادة المحاولة'),
                   ),
                 ],
@@ -563,13 +563,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Stack(
                 children: [
-                  // Pack Icon
+                  // Pack Images/Icon
                   Center(
-                    child: Icon(
-                      Icons.inventory_2_rounded,
-                      size: 40,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
+                    child: _buildStackedProductImages(pack.products),
                   ),
                   // Discount badge
                   if (discountPercent > 0)
@@ -629,6 +625,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _buildProductSummary(pack.products),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                         height: 1.2,
                       ),
                     ),
@@ -979,5 +986,140 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _toggleFavorite(Post product) {
     Helpers.showSnackBar(context, 'تمت الإضافة إلى المفضلة');
+  }
+
+  Widget _buildStackedProductImages(List<dynamic> products) {
+    if (products.isEmpty) {
+      return Icon(
+        Icons.inventory_2_rounded,
+        size: 50,
+        color: Colors.white.withValues(alpha: 0.9),
+      );
+    }
+
+    // Show up to 3 product images stacked
+    final imagesToShow = products.take(3).toList();
+    final imageCount = imagesToShow.length;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
+        
+        // Image size adapts to container
+        final imageSize = (availableHeight * 0.65).clamp(45.0, 70.0);
+        final overlap = imageSize * 0.4;
+        final totalWidth = imageSize + (imageCount - 1) * (imageSize - overlap);
+        final startX = (availableWidth - totalWidth) / 2;
+        
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            for (int i = 0; i < imageCount; i++)
+              Positioned(
+                left: startX + i * (imageSize - overlap),
+                child: Container(
+                  width: imageSize,
+                  height: imageSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _getProductImage(imagesToShow[i]),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _getProductImage(dynamic product) {
+    String? imageUrl;
+    
+    // Handle PackProduct object
+    if (product is PackProduct) {
+      imageUrl = product.productImage;
+    } else if (product is Map<String, dynamic>) {
+      imageUrl = product['product_image'] as String?;
+    }
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.inventory_2,
+          size: 18,
+          color: Colors.grey,
+        ),
+      );
+    }
+
+    // Handle relative URLs from backend
+    final fullImageUrl = imageUrl.startsWith('/') 
+        ? 'http://127.0.0.1:8000$imageUrl' 
+        : imageUrl;
+
+    return Image.network(
+      fullImageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.inventory_2,
+          size: 18,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  String _buildProductSummary(List<dynamic> products) {
+    if (products.isEmpty) return 'حزمة فارغة';
+    
+    final maxItems = 3;
+    final itemsToShow = products.take(maxItems).toList();
+    
+    final validItems = itemsToShow.map((product) {
+      int quantity = 1;
+      String name = '';
+      
+      // Handle PackProduct object
+      if (product is PackProduct) {
+        quantity = product.quantity;
+        name = product.productName;
+      } else if (product is Map<String, dynamic>) {
+        quantity = product['quantity'] ?? 1;
+        name = product['product_name']?.toString().trim() ?? '';
+      }
+      
+      if (name.isNotEmpty && name != 'null') {
+        return '$quantity $name';
+      }
+      return null;
+    }).where((item) => item != null).toList();
+    
+    if (validItems.isEmpty) {
+      return '${products.length} منتجات';
+    }
+    
+    String summary = validItems.join(' + ');
+    
+    if (products.length > maxItems) {
+      summary += ' ...';
+    }
+    
+    return summary;
   }
 }

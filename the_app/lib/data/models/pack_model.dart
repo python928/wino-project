@@ -30,16 +30,23 @@ class Pack extends Equatable {
       id: json['id'] as int,
       name: json['name'] as String,
       description: json['description'] as String,
-      products: (json['products'] as List<dynamic>)
+      products: ((json['products'] ?? json['pack_products']) as List<dynamic>)
           .map((e) => PackProduct.fromJson(e as Map<String, dynamic>))
           .toList(),
-      totalPrice: (json['total_price'] as num).toDouble(),
-      discountPrice: (json['discount_price'] as num).toDouble(),
+      totalPrice: _parseDouble(json['total_price']),
+      discountPrice: _parseDouble(json['discount_price']),
       createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
-      merchantId: json['merchant_id'] as int,
-      merchantName: json['merchant_name'] as String,
+      updatedAt: json['updated_at'] as String? ?? '',
+      merchantId: (json['merchant_id'] ?? json['store']) as int? ?? 0,
+      merchantName: json['merchant_name'] as String? ?? '',
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {
@@ -89,10 +96,10 @@ class PackProduct extends Equatable {
 
   factory PackProduct.fromJson(Map<String, dynamic> json) {
     return PackProduct(
-      productId: json['product_id'] as int,
+      productId: (json['product_id'] ?? json['product']) as int,
       productName: json['product_name'] as String,
       productImage: json['product_image'] as String,
-      productPrice: (json['product_price'] as num).toDouble(),
+      productPrice: Pack._parseDouble(json['product_price']),
       quantity: json['quantity'] as int,
     );
   }

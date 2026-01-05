@@ -57,10 +57,17 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class PackProductSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_image = serializers.SerializerMethodField()
+    product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         model = PackProduct
-        fields = ['id', 'pack', 'product']
-        read_only_fields = ['id']
+        fields = ['id', 'product', 'product_name', 'product_image', 'product_price', 'quantity']
+
+    def get_product_image(self, obj):
+        image = obj.product.images.filter(is_main=True).first() or obj.product.images.first()
+        return image.image.url if image else ''
 
 
 class PackImageSerializer(serializers.ModelSerializer):
@@ -73,11 +80,33 @@ class PackImageSerializer(serializers.ModelSerializer):
 class PackSerializer(serializers.ModelSerializer):
     pack_products = PackProductSerializer(many=True, read_only=True)
     images = PackImageSerializer(many=True, read_only=True)
+    
+    # Input fields matching frontend
+    products = serializers.ListField(write_only=True, required=False)
+    merchant_id = serializers.IntegerField(source='store_id')
+    merchant_name = serializers.CharField(source='store.name', read_only=True)
+    discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Pack
-        fields = ['id', 'store', 'name', 'description', 'discount', 'created_at', 'pack_products', 'images']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description', 'discount_price', 'total_price', 'created_at', 'pack_products', 'images', 'products']
+        read_only_fields = ['id', 'created_at', 'pack_products', 'images']
+
+    def get_total_price(self, obj):
+        return sum(pp.product.price * pp.quantity for pp in obj.pack_products.all())
+
+    def create(self, validated_data):
+        products_data = validated_data.pop('products', [])
+        pack = Pack.objects.create(**validated_data)
+        
+        for item in products_data:
+            product_id = item.get('product_id')
+            quantity = item.get('quantity', 1)
+            if product_id:
+                PackProduct.objects.create(pack=pack, product_id=product_id, quantity=quantity)
+        
+        return pack
 
 
 class ReviewSerializer(serializers.ModelSerializer):

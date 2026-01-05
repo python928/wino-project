@@ -26,6 +26,10 @@ class StoreProvider extends ChangeNotifier {
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
+  Future<Store?> getMyStore(int userId) async {
+    return await apiService.getMyStore(userId);
+  }
+
   /// Load store details and its products
   Future<void> loadStore(int storeId, {bool forceRefresh = false}) async {
     _isLoading = true;

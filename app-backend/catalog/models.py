@@ -52,6 +52,7 @@ class Pack(models.Model):
 class PackProduct(models.Model):
 	pack = models.ForeignKey(Pack, on_delete=models.CASCADE, related_name='pack_products')
 	product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='in_packs')
+	quantity = models.PositiveIntegerField(default=1)
 
 	class Meta:
 		unique_together = ('pack', 'product')

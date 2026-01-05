@@ -196,7 +196,7 @@ class ProductCard extends StatelessWidget {
             // Details Section
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(7),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -208,7 +208,7 @@ class ProductCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 11,
                         height: 1.2,
                         color: Colors.black87,
                       ),
@@ -241,7 +241,7 @@ class ProductCard extends StatelessWidget {
                               style: TextStyle(
                                 color: AppColors.primaryPurple,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 12,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

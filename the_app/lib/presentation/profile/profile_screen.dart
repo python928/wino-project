@@ -12,7 +12,9 @@ import '../../core/routing/routes.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/providers/post_provider.dart'; // Import PostProvider
+import '../../core/providers/pack_provider.dart'; // Import PackProvider
 import '../../data/models/post_model.dart';
+import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
 import '../auth/splash_screen.dart';
 import 'edit_customer_profile_screen.dart';
@@ -198,6 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           // Load offers after we have the store ID
           if (mounted && _storeId != null) {
             context.read<PostProvider>().loadMyOffers(_storeId.toString());
+            context.read<PackProvider>().loadMyPacks(_storeId!);
           }
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -860,6 +863,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             }
             if (_storeId != null) {
               provider.loadMyOffers(_storeId.toString());
+              context.read<PackProvider>().loadMyPacks(_storeId!);
             }
             provider.loadPosts();
             provider.loadOffers();
@@ -1016,13 +1020,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildMerchantPosts({required String type}) {
-    return Consumer<PostProvider>(
-      builder: (context, postProvider, child) {
+    return Consumer2<PostProvider, PackProvider>(
+      builder: (context, postProvider, packProvider, child) {
         List<dynamic> items = [];
         if (type == 'promotion') {
           items = postProvider.myOffers;
+        } else if (type == 'pack') {
+          items = packProvider.myPacks;
         } else if (type == 'all') {
-          items = [...postProvider.myPosts, ...postProvider.myOffers];
+          items = [...postProvider.myPosts, ...postProvider.myOffers, ...packProvider.myPacks];
         } else {
           items = postProvider.myPosts;
         }
@@ -1031,20 +1037,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           bool matchesType = false;
           String title = '';
 
-          if (item is Offer) {
-            title = item.product.title;
-            matchesType = (type == 'promotion' || type == 'all');
-          } else if (item is Post) {
-            title = item.title;
-            if (type == 'all') {
-              matchesType = true;
-            } else if (type == 'product') {
-              matchesType = true;
-            } else if (type == 'pack') {
-              matchesType = false;
-            } else if (type == 'promotion') {
-              matchesType = false;
+          try {
+            if (item is Offer) {
+              title = item.product.title;
+              matchesType = (type == 'promotion' || type == 'all');
+            } else if (item is Pack) {
+              title = item.name;
+              matchesType = (type == 'pack' || type == 'all');
+            } else if (item is Post) {
+              title = item.title;
+              if (type == 'all') {
+                matchesType = true;
+              } else if (type == 'product') {
+                matchesType = true;
+              } else if (type == 'pack') {
+                matchesType = false;
+              } else if (type == 'promotion') {
+                matchesType = false;
+              }
+            } else {
+              // Unknown type - skip it
+              return false;
             }
+          } catch (e) {
+            // If any error occurs during filtering, skip this item
+            debugPrint('Profile: Error filtering item: $e');
+            return false;
           }
 
           final matchesSearch = _searchQuery.isEmpty || title.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -1081,12 +1099,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.72,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.65,
                       ),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
@@ -1109,15 +1127,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               });
                             },
                           );
-                        } else if (item is Offer) {
-                          final product = item.product;
+                        } else if (item is Pack) {
                           return GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                Routes.productDetails,
-                                arguments: product,
-                              );
+                              // Navigate to pack details if needed
                             },
                             child: Container(
                               decoration: BoxDecoration(
@@ -1125,9 +1138,129 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Images section
+                                      Expanded(
+                                        flex: 3,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                AppColors.primary.withOpacity(0.15),
+                                                AppColors.primary.withOpacity(0.05),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: const BorderRadius.only(
+                                              topLeft: Radius.circular(12),
+                                              topRight: Radius.circular(12),
+                                            ),
+                                          ),
+                                          child: _buildStackedProductImages(item.products),
+                                        ),
+                                      ),
+                                      // Info section
+                                      Expanded(
+                                        flex: 2,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              item.name,
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _buildProductSummary(item.products),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary.withOpacity(0.8)),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  '${item.products.length} منتج',
+                                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                                ),
+                                                Text(
+                                                  '${item.discountPrice.toStringAsFixed(0)} د.ج',
+                                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Edit button
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.pushNamed(context, Routes.addPack, arguments: item);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.1),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(Icons.edit, size: 12, color: AppColors.primary),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else if (item is Offer) {
+                          try {
+                            final product = item.product;
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  Routes.productDetails,
+                                  arguments: product,
+                                );
+                              },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
@@ -1192,14 +1325,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                         ),
                                         // Edit Button
                                         Positioned(
-                                          top: 8,
-                                          right: 8,
+                                          top: 6,
+                                          right: 6,
                                           child: GestureDetector(
                                             onTap: () => _showEditOfferSheet(item),
                                             child: Container(
-                                              padding: const EdgeInsets.all(5),
+                                              padding: const EdgeInsets.all(3),
                                               decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                              child: const Icon(Icons.edit, size: 14, color: AppColors.primaryBlue),
+                                              child: const Icon(Icons.edit, size: 12, color: AppColors.primaryBlue),
                                             ),
                                           ),
                                         ),
@@ -1210,7 +1343,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                   Expanded(
                                     flex: 2,
                                     child: Padding(
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(8),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
@@ -1219,7 +1352,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                             product.title,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                           ),
                                           const Spacer(),
                                           Row(
@@ -1229,24 +1362,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                                 style: const TextStyle(
                                                   color: AppColors.primaryBlue,
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
+                                                  fontSize: 11,
                                                 ),
                                               ),
-                                              const SizedBox(width: 4),
+                                              const SizedBox(width: 3),
                                               Text(
                                                 Helpers.formatPrice(product.price),
-                                                style: TextStyle(color: Colors.grey[500], fontSize: 10, decoration: TextDecoration.lineThrough),
+                                                style: TextStyle(color: Colors.grey[500], fontSize: 9, decoration: TextDecoration.lineThrough),
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 4),
+                                          const SizedBox(height: 3),
                                           Row(
                                             children: [
-                                              const Icon(Icons.star, size: 12, color: Colors.amber),
+                                              const Icon(Icons.star, size: 10, color: Colors.amber),
                                               const SizedBox(width: 2),
                                               Text(
                                                 '4.5',
-                                                style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                                                style: TextStyle(color: Colors.grey[600], fontSize: 9),
                                               ),
                                             ],
                                           ),
@@ -1258,6 +1391,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               ),
                             ),
                           );
+                          } catch (e) {
+                            debugPrint('Profile: Error displaying offer: $e');
+                            return const SizedBox.shrink();
+                          }
                         } else {
                           return const SizedBox.shrink();
                         }
@@ -1353,6 +1490,140 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         }).toList(),
       ),
     );
+  }
+
+  Widget _buildStackedProductImages(List<dynamic> products) {
+    if (products.isEmpty) {
+      return const Center(
+        child: Icon(Icons.shopping_bag, size: 45, color: AppColors.primary),
+      );
+    }
+
+    // Show up to 3 product images stacked
+    final imagesToShow = products.take(3).toList();
+    final imageCount = imagesToShow.length;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate image size based on available space
+        final availableWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
+        
+        // Image size adapts to container - use 55% of height (smaller)
+        final imageSize = (availableHeight * 0.55).clamp(35.0, 60.0);
+        final overlap = imageSize * 0.4; // 40% overlap
+        final totalWidth = imageSize + (imageCount - 1) * (imageSize - overlap);
+        final startX = (availableWidth - totalWidth) / 2;
+        
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            for (int i = 0; i < imageCount; i++)
+              Positioned(
+                left: startX + i * (imageSize - overlap),
+                child: Container(
+                  width: imageSize,
+                  height: imageSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: _getProductImage(imagesToShow[i]),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _getProductImage(dynamic product) {
+    String? imageUrl;
+    
+    // Handle PackProduct object
+    if (product is PackProduct) {
+      imageUrl = product.productImage;
+    } else if (product is Map<String, dynamic>) {
+      imageUrl = product['product_image'] as String?;
+    }
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.inventory_2,
+          size: 18,
+          color: Colors.grey,
+        ),
+      );
+    }
+
+    // Handle relative URLs from backend
+    final fullImageUrl = imageUrl.startsWith('/') 
+        ? 'http://127.0.0.1:8000$imageUrl' 
+        : imageUrl;
+
+    return Image.network(
+      fullImageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.inventory_2,
+          size: 18,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  String _buildProductSummary(List<dynamic> products) {
+    if (products.isEmpty) return 'حزمة فارغة';
+    
+    final maxItems = 3;
+    final itemsToShow = products.take(maxItems).toList();
+    
+    final validItems = itemsToShow.map((product) {
+      int quantity = 1;
+      String name = '';
+      
+      // Handle PackProduct object
+      if (product is PackProduct) {
+        quantity = product.quantity;
+        name = product.productName;
+      } else if (product is Map<String, dynamic>) {
+        quantity = product['quantity'] ?? 1;
+        name = product['product_name']?.toString().trim() ?? '';
+      }
+      
+      if (name.isNotEmpty && name != 'null') {
+        return '$quantity $name';
+      }
+      return null;
+    }).where((item) => item != null).toList();
+    
+    if (validItems.isEmpty) {
+      return '${products.length} منتجات';
+    }
+    
+    String summary = validItems.join(' + ');
+    
+    if (products.length > maxItems) {
+      summary += ' ...';
+    }
+    
+    return summary;
   }
 }
 

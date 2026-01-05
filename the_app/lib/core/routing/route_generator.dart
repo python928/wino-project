@@ -96,6 +96,15 @@ class RouteGenerator {
           child: AddPackScreen(),
         );
 
+      case Routes.addPack:
+        final pack = settings.arguments as Pack?;
+        return _slideTransition(
+          settings: settings,
+          child: pack != null 
+              ? EditPackScreen(packData: pack.toJson())
+              : AddPackScreen(),
+        );
+
       case '/merchant/packs/edit':
         final pack = settings.arguments;
         if (pack is! Pack) {

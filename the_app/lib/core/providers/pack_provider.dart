@@ -10,13 +10,34 @@ class PackProvider extends ChangeNotifier {
 
   final List<Post> _selectedProducts = [];
   final Map<int, int> _quantities = {};
+  final List<Pack> _myPacks = [];
   bool _isSubmitting = false;
+  bool _isLoadingPacks = false;
   String? _error;
 
   List<Post> get selectedProducts => List.unmodifiable(_selectedProducts);
   Map<int, int> get quantities => Map.unmodifiable(_quantities);
+  List<Pack> get myPacks => List.unmodifiable(_myPacks);
   bool get isSubmitting => _isSubmitting;
+  bool get isLoadingPacks => _isLoadingPacks;
   String? get error => _error;
+
+  Future<void> loadMyPacks(int merchantId) async {
+    _isLoadingPacks = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _myPacks.clear();
+      final packs = await apiService.getMerchantPacks(merchantId);
+      _myPacks.addAll(packs);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoadingPacks = false;
+      notifyListeners();
+    }
+  }
 
   double get totalPrice {
     double total = 0;
@@ -87,6 +108,8 @@ class PackProvider extends ChangeNotifier {
         merchantId: merchantId,
       );
       clear();
+      // Refresh packs list
+      await loadMyPacks(merchantId);
       return pack;
     } catch (e) {
       _error = e.toString();
