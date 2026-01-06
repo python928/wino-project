@@ -113,8 +113,7 @@ class MessageProvider with ChangeNotifier {
         _conversations[index] = Conversation(
           userId: conv.userId,
           username: conv.username,
-          firstName: conv.firstName,
-          lastName: conv.lastName,
+          name: conv.name,
           profileImage: conv.profileImage,
           lastMessage: conv.lastMessage,
           lastMessageTime: conv.lastMessageTime,
@@ -147,8 +146,7 @@ class MessageProvider with ChangeNotifier {
       _conversations[index] = Conversation(
         userId: conv.userId,
         username: conv.username,
-        firstName: conv.firstName,
-        lastName: conv.lastName,
+        name: conv.name,
         profileImage: conv.profileImage,
         lastMessage: content,
         lastMessageTime: DateTime.now(),

@@ -5,30 +5,50 @@ import '../../core/services/api_service.dart';
 import '../../core/providers/post_provider.dart';
 import '../shared_widgets/custom_bottom_nav.dart';
 import 'home_screen.dart';
+import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final int initialIndex;
+  final String? initialSearchQuery;
+
+  const MainNavigationScreen({
+    super.key,
+    this.initialIndex = 0,
+    this.initialSearchQuery,
+  });
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen>
+class MainNavigationScreenState extends State<MainNavigationScreen>
     with WidgetsBindingObserver {
-  int _selectedIndex = 0; // Start with Home
+  late int _selectedIndex;
+  String? _searchQuery;
 
-  // Screens: Home, Notifications, Profile
-  final List<Widget> _screens = const [
-    HomeScreen(),           // 0 - الرئيسية
-    NotificationsScreen(),  // 1 - الإشعارات
-    ProfileScreen(),        // 2 - حسابي
+  // Method to navigate to search tab with a query
+  void navigateToSearchWithQuery(String query) {
+    setState(() {
+      _searchQuery = query;
+      _selectedIndex = 1; // Switch to Search tab
+    });
+  }
+
+  // Build screens dynamically to pass search query
+  List<Widget> get _screens => [
+    const HomeScreen(),           // 0 - الرئيسية
+    SearchTabScreen(initialQuery: _searchQuery),      // 1 - البحث
+    const NotificationsScreen(),  // 2 - الإشعارات
+    const ProfileScreen(),        // 3 - حسابي
   ];
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex; // Use initial index from widget
+    _searchQuery = widget.initialSearchQuery; // Use initial search query if provided
     WidgetsBinding.instance.addObserver(this);
     _refreshTokenIfNeeded();
   }

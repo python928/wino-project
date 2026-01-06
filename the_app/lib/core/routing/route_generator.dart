@@ -5,7 +5,8 @@ import '../../presentation/auth/login_screen.dart';
 import '../../presentation/auth/register_screen.dart';
 import '../../presentation/home/main_navigation_screen.dart';
 import '../../presentation/product/product_detail_screen.dart';
-import '../../presentation/store/store_screen.dart';
+import '../../presentation/pack/pack_detail_screen.dart';
+import '../../presentation/store/enhanced_store_screen.dart';
 import '../../presentation/store_details/store_details_screen.dart';
 import '../../presentation/profile/add_product_screen.dart';
 import '../../presentation/profile/edit_product_screen.dart';
@@ -53,13 +54,18 @@ class RouteGenerator {
 
       // ===== STORE ROUTES =====
       case Routes.store:
-        final store = settings.arguments;
-        if (store is! Store) {
+        final storeId = settings.arguments;
+        // Accept both int directly or extract from map
+        final id = storeId is int
+            ? storeId
+            : (storeId is Map ? storeId['storeId'] as int? : null);
+
+        if (id == null) {
           return _invalidArgsRoute(settings);
         }
         return _fadeTransition(
           settings: settings,
-          child: StoreDetailsScreen(store: store),
+          child: EnhancedStoreScreen(storeId: id),
         );
 
       // ===== PRODUCT ROUTES =====
@@ -71,6 +77,16 @@ class RouteGenerator {
         return _slideTransition(
           settings: settings,
           child: ProductDetailScreen(product: product),
+        );
+
+      case Routes.packDetails:
+        final pack = settings.arguments;
+        if (pack is! Pack) {
+          return _invalidArgsRoute(settings);
+        }
+        return _slideTransition(
+          settings: settings,
+          child: PackDetailScreen(pack: pack),
         );
 
       // ===== MERCHANT ROUTES =====

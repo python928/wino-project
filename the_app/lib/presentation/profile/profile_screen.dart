@@ -24,6 +24,9 @@ import '../home/widgets/product_card.dart'; // Import ProductCard
 import 'add_promotion_screen.dart'; // Import AddPromotionScreen
 import 'edit_product_screen.dart'; // Import EditProductScreen
 import 'add_pack_screen.dart'; // Import AddPackScreen
+import '../common/widgets/unified_item_card.dart'; // Import UnifiedItemCard
+import '../common/widgets/stacked_product_images.dart'; // Import StackedProductImages
+import '../common/constants/card_constants.dart'; // Import CardConstants
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,12 +69,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Check if profile type changed and reload data
-    final authProvider = context.read<AuthProvider>();
-    if (_lastProfileType != null && _lastProfileType != authProvider.activeProfileType) {
-      _loadUserData();
-    }
-    _lastProfileType = authProvider.activeProfileType;
+    // This is called when dependencies change, but we handle profile type
+    // changes in the build method where we watch AuthProvider
   }
 
   Future<void> _fetchStoreData() async {
@@ -187,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       setState(() {
         _userId = userData['id'];
-        _userName = userData['display_name'] ?? userData['full_name'] ?? userData['first_name'] ?? 'مستخدم';
+        _userName = userData['name'] ?? userData['username'] ?? 'مستخدم';
         _location = userData['location'] ?? 'الجزائر العاصمة';
         // Use AuthProvider's activeProfileType for consistency
         _userType = isMerchantFromAuth ? 'merchant' : 'user';
@@ -196,6 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       });
 
       if (_userType == 'merchant' && _userId != null) {
+        // Clear existing data and load merchant data
         _fetchStoreData().then((_) {
           // Load offers after we have the store ID
           if (mounted && _storeId != null) {
@@ -207,6 +207,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           if (mounted) {
             final provider = context.read<PostProvider>();
             provider.loadMyPosts(_userId.toString());
+          }
+        });
+      } else {
+        // Switching to user mode - clear merchant data
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            // Clear the store-specific data
+            setState(() {
+              _storeId = null;
+              _storeCoverUrl = null;
+              _storeDescription = '';
+            });
           }
         });
       }
@@ -813,7 +825,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         context,
         MaterialPageRoute(
           builder: (context) => EditMerchantProfileScreen(
-            initialName: userData?['full_name'] ?? '',
+            initialName: userData?['name'] ?? '',
             initialEmail: userData?['email'] ?? '',
             initialPhone: userData?['phone'] ?? '',
             initialImage: userData?['profile_image'] ?? userData?['store_image'] ?? userData?['avatar'],
@@ -830,7 +842,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         context,
         MaterialPageRoute(
           builder: (context) => EditCustomerProfileScreen(
-            initialName: userData?['full_name'] ?? '',
+            initialName: userData?['name'] ?? '',
             initialEmail: userData?['email'] ?? '',
             initialPhone: userData?['phone'] ?? '',
             initialImage: userData?['avatar'],
@@ -962,6 +974,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final bool isMerchant = authProvider.activeProfileType == 'STORE';
     final Color primaryColor = isMerchant ? AppColors.primaryBlue : AppColors.primaryBlue;
     final Gradient primaryGradient = isMerchant ? AppColors.deepGradient : AppColors.goldGradient;
+
+    // Detect profile type change and reload data
+    if (_lastProfileType != null && _lastProfileType != authProvider.activeProfileType) {
+      // Profile type changed - reload data after current frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadUserData();
+        }
+      });
+    }
+    _lastProfileType = authProvider.activeProfileType;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -1099,12 +1122,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: CardConstants.gridHorizontalPadding,
+                        vertical: CardConstants.gridVerticalPadding,
+                      ),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.65,
+                        crossAxisCount: CardConstants.gridCrossAxisCount,
+                        crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                        mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                        childAspectRatio: CardConstants.gridChildAspectRatio,
                       ),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
@@ -1128,269 +1154,45 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             },
                           );
                         } else if (item is Pack) {
-                          return GestureDetector(
+                          return UnifiedItemCard(
+                            title: '${item.name}\n${_buildProductSummary(item.products)}',
+                            price: item.discountPrice,
+                            customImageWidget: StackedProductImages(products: item.products),
+                            bottomLeftText: '${item.products.length} منتج',
+                            bottomLeftIcon: Icons.inventory_2_outlined,
                             onTap: () {
-                              // Navigate to pack details if needed
+                              // Navigate to pack details
+                              Navigator.pushNamed(context, Routes.packDetails, arguments: item);
                             },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Images section
-                                      Expanded(
-                                        flex: 3,
-                                        child: Container(
-                                          width: double.infinity,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                AppColors.primary.withOpacity(0.15),
-                                                AppColors.primary.withOpacity(0.05),
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                            borderRadius: const BorderRadius.only(
-                                              topLeft: Radius.circular(12),
-                                              topRight: Radius.circular(12),
-                                            ),
-                                          ),
-                                          child: _buildStackedProductImages(item.products),
-                                        ),
-                                      ),
-                                      // Info section
-                                      Expanded(
-                                        flex: 2,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              item.name,
-                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _buildProductSummary(item.products),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary.withOpacity(0.8)),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  '${item.products.length} منتج',
-                                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                                ),
-                                                Text(
-                                                  '${item.discountPrice.toStringAsFixed(0)} د.ج',
-                                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Edit button
-                                  Positioned(
-                                    top: 4,
-                                    left: 4,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.pushNamed(context, Routes.addPack, arguments: item);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(Icons.edit, size: 12, color: AppColors.primary),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            onEditTap: () {
+                              Navigator.pushNamed(context, Routes.addPack, arguments: item);
+                            },
                           );
                         } else if (item is Offer) {
                           try {
                             final product = item.product;
-                            return GestureDetector(
+                            // Create modified product with promotion pricing
+                            final productWithPromotion = product.copyWith(
+                              price: item.newPrice,
+                              oldPrice: product.price,
+                              discountPercentage: item.discountPercentage,
+                            );
+                            return UnifiedItemCard(
+                              title: product.title,
+                              imageUrl: product.image,
+                              price: item.newPrice,
+                              oldPrice: product.price,
+                              discountPercentage: item.discountPercentage,
+                              rating: product.rating,
                               onTap: () {
                                 Navigator.pushNamed(
                                   context,
                                   Routes.productDetails,
-                                  arguments: product,
+                                  arguments: productWithPromotion,
                                 );
                               },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Image with badges
-                                  Expanded(
-                                    flex: 3,
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                          child: SizedBox(
-                                            width: double.infinity,
-                                            child: (product.image == null || product.image!.isEmpty)
-                                                ? Container(
-                                                    color: Colors.grey[200],
-                                                    alignment: Alignment.center,
-                                                    child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                                                  )
-                                                : Image.network(
-                                                    product.image!,
-                                                    fit: BoxFit.cover,
-                                                    loadingBuilder: (context, child, loadingProgress) {
-                                                      if (loadingProgress == null) return child;
-                                                      return Container(
-                                                        color: Colors.grey[200],
-                                                        alignment: Alignment.center,
-                                                        child: const SizedBox(
-                                                          width: 20,
-                                                          height: 20,
-                                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                                        ),
-                                                      );
-                                                    },
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      return Container(
-                                                        color: Colors.grey[200],
-                                                        alignment: Alignment.center,
-                                                        child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                                                      );
-                                                    },
-                                                  ),
-                                          ),
-                                        ),
-                                        // Discount Badge
-                                        Positioned(
-                                          top: 8,
-                                          left: 8,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '-${item.discountPercentage}%',
-                                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                        ),
-                                        // Edit Button
-                                        Positioned(
-                                          top: 6,
-                                          right: 6,
-                                          child: GestureDetector(
-                                            onTap: () => _showEditOfferSheet(item),
-                                            child: Container(
-                                              padding: const EdgeInsets.all(3),
-                                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                              child: const Icon(Icons.edit, size: 12, color: AppColors.primaryBlue),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Details
-                                  Expanded(
-                                    flex: 2,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            product.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                          ),
-                                          const Spacer(),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                Helpers.formatPrice(item.newPrice),
-                                                style: const TextStyle(
-                                                  color: AppColors.primaryBlue,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                Helpers.formatPrice(product.price),
-                                                style: TextStyle(color: Colors.grey[500], fontSize: 9, decoration: TextDecoration.lineThrough),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.star, size: 10, color: Colors.amber),
-                                              const SizedBox(width: 2),
-                                              Text(
-                                                '4.5',
-                                                style: TextStyle(color: Colors.grey[600], fontSize: 9),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                              onEditTap: () => _showEditOfferSheet(item),
+                            );
                           } catch (e) {
                             debugPrint('Profile: Error displaying offer: $e');
                             return const SizedBox.shrink();
@@ -1502,19 +1304,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     // Show up to 3 product images stacked
     final imagesToShow = products.take(3).toList();
     final imageCount = imagesToShow.length;
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // Calculate image size based on available space
         final availableWidth = constraints.maxWidth;
         final availableHeight = constraints.maxHeight;
-        
-        // Image size adapts to container - use 55% of height (smaller)
-        final imageSize = (availableHeight * 0.55).clamp(35.0, 60.0);
-        final overlap = imageSize * 0.4; // 40% overlap
+
+        // Image size adapts to container - use 70% of height for better visibility
+        final imageSize = (availableHeight * 0.70).clamp(50.0, 90.0);
+        final overlap = imageSize * 0.35; // 35% overlap for better spacing
         final totalWidth = imageSize + (imageCount - 1) * (imageSize - overlap);
         final startX = (availableWidth - totalWidth) / 2;
-        
+
         return Stack(
           alignment: Alignment.center,
           children: [
@@ -1526,18 +1328,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   height: imageSize,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white, width: 2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(11),
                     child: _getProductImage(imagesToShow[i]),
                   ),
                 ),
@@ -1550,7 +1352,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _getProductImage(dynamic product) {
     String? imageUrl;
-    
+
     // Handle PackProduct object
     if (product is PackProduct) {
       imageUrl = product.productImage;
@@ -1560,28 +1362,44 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
-        color: Colors.grey[200],
+        color: Colors.grey[100],
+        alignment: Alignment.center,
         child: const Icon(
           Icons.inventory_2,
-          size: 18,
+          size: 28,
           color: Colors.grey,
         ),
       );
     }
 
     // Handle relative URLs from backend
-    final fullImageUrl = imageUrl.startsWith('/') 
-        ? 'http://127.0.0.1:8000$imageUrl' 
+    final fullImageUrl = imageUrl.startsWith('/')
+        ? 'http://127.0.0.1:8000$imageUrl'
         : imageUrl;
 
     return Image.network(
       fullImageUrl,
       fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[100],
+          alignment: Alignment.center,
+          child: const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      },
       errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey[200],
+        color: Colors.grey[100],
+        alignment: Alignment.center,
         child: const Icon(
           Icons.inventory_2,
-          size: 18,
+          size: 28,
           color: Colors.grey,
         ),
       ),

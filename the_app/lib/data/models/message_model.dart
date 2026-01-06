@@ -56,8 +56,7 @@ class Message {
 class Conversation {
   final int userId;
   final String username;
-  final String firstName;
-  final String lastName;
+  final String name;
   final String? profileImage;
   final String lastMessage;
   final DateTime lastMessageTime;
@@ -67,8 +66,7 @@ class Conversation {
   const Conversation({
     required this.userId,
     required this.username,
-    required this.firstName,
-    required this.lastName,
+    required this.name,
     this.profileImage,
     required this.lastMessage,
     required this.lastMessageTime,
@@ -76,12 +74,7 @@ class Conversation {
     required this.isSender,
   });
 
-  String get displayName {
-    if (firstName.isNotEmpty || lastName.isNotEmpty) {
-      return '$firstName $lastName'.trim();
-    }
-    return username;
-  }
+  String get displayName => name.isNotEmpty ? name : username;
 
   String? get avatarUrl {
     if (profileImage == null || profileImage!.isEmpty) return null;
@@ -93,8 +86,7 @@ class Conversation {
     return Conversation(
       userId: json['user_id'] ?? 0,
       username: json['username'] ?? '',
-      firstName: json['first_name'] ?? '',
-      lastName: json['last_name'] ?? '',
+      name: json['name'] ?? json['username'] ?? '',
       profileImage: json['profile_image'],
       lastMessage: json['last_message'] ?? '',
       lastMessageTime: DateTime.tryParse(json['last_message_time'] ?? '') ?? DateTime.now(),

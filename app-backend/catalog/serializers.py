@@ -120,9 +120,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'user_name', 'username', 'store', 'created_at']
 
     def get_user_name(self, obj):
-        if obj.user.first_name or obj.user.last_name:
-            return f"{obj.user.first_name} {obj.user.last_name}".strip()
-        return obj.user.username
+        return obj.user.name if hasattr(obj.user, 'name') and obj.user.name else obj.user.username
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

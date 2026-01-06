@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/routing/routes.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/models/backend_store_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/repositories/post_repository.dart';
@@ -24,6 +26,8 @@ class _StoreScreenState extends State<StoreScreen> {
   String? _error;
   BackendStore? _store;
   List<Post> _products = const [];
+  bool _isFollowing = false;
+  double _userRating = 0;
 
   @override
   void initState() {
@@ -57,148 +61,454 @@ class _StoreScreenState extends State<StoreScreen> {
     }
   }
 
+  void _toggleFollow() {
+    setState(() => _isFollowing = !_isFollowing);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isFollowing ? 'تم متابعة المتجر' : 'تم إلغاء المتابعة'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showRatingDialog() {
+    double tempRating = _userRating;
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('تقييم المتجر', textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('كيف تقيم تجربتك مع هذا المتجر؟'),
+              const SizedBox(height: 20),
+              StatefulBuilder(
+                builder: (context, setDialogState) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          setDialogState(() => tempRating = index + 1.0);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(
+                            index < tempRating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 36,
+                          ),
+                        ),
+                      );
+                    }),
+                  );
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() => _userRating = tempRating);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('شكراً على تقييمك!')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+              ),
+              child: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _callStore() async {
+    if (_store?.phoneNumber.isEmpty ?? true) return;
+    final uri = Uri.parse('tel:${_store!.phoneNumber}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _openMap() async {
+    if (_store?.latitude == null || _store?.longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الموقع غير متاح')),
+      );
+      return;
+    }
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${_store!.latitude},${_store!.longitude}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final storeName = _store?.name ?? (_products.isNotEmpty ? _products.first.storeName : null);
-    final storeDescription = _store?.description ?? '';
-    final storeAddress = _store?.address ?? '';
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(storeName ?? 'متجر #${widget.storeId}'),
-      ),
       body: RefreshIndicator(
         onRefresh: _loadStore,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_store?.coverImageUrl.isNotEmpty == true)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          height: 140,
-                          width: double.infinity,
-                          child: Image.network(
+            // Cover Image with App Bar
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true,
+              backgroundColor: AppColors.primaryBlue,
+              flexibleSpace: FlexibleSpaceBar(
+                background: _store?.coverImageUrl.isNotEmpty == true
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
                             _store!.coverImageUrl,
                             fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                color: Colors.grey[200],
-                                alignment: Alignment.center,
-                                child: const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[200],
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        if (_store?.profileImageUrl.isNotEmpty == true)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: SizedBox(
-                              width: 56,
-                              height: 56,
-                              child: Image.network(
-                                _store!.profileImageUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return Container(
-                                    color: Colors.grey[200],
-                                    alignment: Alignment.center,
-                                    child: const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[200],
-                                    alignment: Alignment.center,
-                                    child: const Icon(Icons.store, size: 26, color: Colors.grey),
-                                  );
-                                },
-                              ),
+                            errorBuilder: (_, __, ___) => Container(
+                              color: AppColors.primaryBlue.withOpacity(0.8),
+                              child: const Icon(Icons.store, size: 60, color: Colors.white54),
                             ),
-                          )
-                        else
+                          ),
                           Container(
-                            width: 56,
-                            height: 56,
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.store, size: 26, color: Colors.grey),
-                          ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                storeName ?? 'متجر #${widget.storeId}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.3),
+                                  Colors.black.withOpacity(0.6),
+                                ],
                               ),
-                              if (storeDescription.trim().isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  storeDescription,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                              if (storeAddress.trim().isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  storeAddress,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primaryBlue,
+                              AppColors.primaryBlue.withOpacity(0.7),
                             ],
                           ),
                         ),
+                        child: const Icon(Icons.store, size: 60, color: Colors.white54),
+                      ),
+              ),
+            ),
+
+            // Store Info Card
+            SliverToBoxAdapter(
+              child: Transform.translate(
+                offset: const Offset(0, -30),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'منتجات المتجر',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    child: Column(
+                      children: [
+                        // Profile Image and Name
+                        Row(
+                          children: [
+                            // Profile Image
+                            Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: _store?.profileImageUrl.isNotEmpty == true
+                                    ? Image.network(
+                                        _store!.profileImageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: Colors.grey[200],
+                                          child: const Icon(Icons.store, size: 30, color: Colors.grey),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.store, size: 30, color: Colors.grey),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Name and Description
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _store?.name ?? 'متجر',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (_store?.description.isNotEmpty == true) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _store!.description,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Rating and Follow Row
+                        Row(
+                          children: [
+                            // Rating Button
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _showRatingDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _userRating > 0 ? Icons.star : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _userRating > 0 ? _userRating.toStringAsFixed(0) : 'قيّم',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Follow Button
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _toggleFollow,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: _isFollowing
+                                        ? AppColors.primaryBlue
+                                        : AppColors.primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _isFollowing ? Icons.check : Icons.add,
+                                        color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _isFollowing ? 'متابَع' : 'متابعة',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+
+                        // Contact Info
+                        Row(
+                          children: [
+                            // Phone
+                            if (_store?.phoneNumber.isNotEmpty == true)
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: _callStore,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.phone, color: Colors.green, size: 18),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'الهاتف',
+                                              style: TextStyle(
+                                                color: Colors.grey[500],
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            Text(
+                                              _store!.phoneNumber,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // Map
+                            if (_store?.latitude != null && _store?.longitude != null)
+                              GestureDetector(
+                                onTap: _openMap,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.location_on, color: AppColors.primaryBlue, size: 18),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'الخريطة',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryBlue,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        // Address
+                        if (_store?.address.isNotEmpty == true) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined, color: Colors.grey[500], size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _store!.address,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                ),
+              ),
+            ),
+
+            // Products Header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    const Text(
+                      'منتجات المتجر',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_products.length}',
+                        style: TextStyle(
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
+            // Products Grid
             if (_isLoading && _products.isEmpty)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -213,7 +523,7 @@ class _StoreScreenState extends State<StoreScreen> {
                   child: Column(
                     children: [
                       Text(
-                        'حدث خطأ أثناء تحميل بيانات المتجر.\n$_error',
+                        'حدث خطأ أثناء تحميل بيانات المتجر.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
@@ -229,12 +539,23 @@ class _StoreScreenState extends State<StoreScreen> {
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.only(top: 48),
-                  child: Center(child: Text('لا توجد منتجات لهذا المتجر حالياً.')),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'لا توجد منتجات حالياً',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -256,7 +577,7 @@ class _StoreScreenState extends State<StoreScreen> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.75,
+                    childAspectRatio: 0.68,
                   ),
                 ),
               ),

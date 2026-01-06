@@ -9,6 +9,7 @@ class Store(models.Model):
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	address = models.CharField(max_length=255, blank=True)
+	phone_number = models.CharField(max_length=20, blank=True)
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 	type = models.CharField(max_length=10, choices=STORE_TYPE_CHOICES, default='physical')

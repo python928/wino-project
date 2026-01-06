@@ -53,6 +53,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Reload user data from storage and update profile type
+  /// Call this after role changes (user <-> merchant conversion)
+  void reloadFromStorage() {
+    final userData = StorageService.getUserData();
+    if (userData != null) {
+      try {
+        _user = User.fromJson(userData);
+        _activeProfileType = _user?.role == 'STORE' ? 'STORE' : 'USER';
+        notifyListeners();
+      } catch (e) {
+        print('AuthProvider: Error reloading user from storage: $e');
+      }
+    }
+  }
+
+  /// Set profile type directly (for role conversion)
+  void setProfileType(String type) {
+    _activeProfileType = type;
+    notifyListeners();
+  }
+
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _error = null;

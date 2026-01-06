@@ -8,8 +8,12 @@ import '../../core/providers/home_provider.dart';
 import '../../core/routing/routes.dart';
 import '../../core/utils/helpers.dart';
 import '../home/widgets/product_card.dart';
+import '../home/widgets/promotion_card.dart';
+import '../home/widgets/pack_card.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../shared_widgets/empty_state_widget.dart';
+import '../../data/repositories/store_repository.dart';
+import '../../data/models/backend_store_model.dart';
 
 class SearchResultsScreen extends StatefulWidget {
   final String? initialQuery;
@@ -38,6 +42,10 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
   String _selectedSort = 'الأحدث';
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
+
+  // Stores search
+  List<BackendStore> _searchedStores = [];
+  bool _isLoadingStores = false;
 
   final List<String> _sortOptions = [
     'الأحدث',
@@ -73,6 +81,26 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
       search: _searchController.text.isNotEmpty ? _searchController.text : null,
       categoryId: _selectedCategoryId,
     );
+    _searchStores();
+  }
+
+  Future<void> _searchStores() async {
+    setState(() => _isLoadingStores = true);
+    try {
+      final stores = await StoreRepository.searchStores(
+        query: _searchController.text.isNotEmpty ? _searchController.text : null,
+      );
+      if (mounted) {
+        setState(() {
+          _searchedStores = stores;
+          _isLoadingStores = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingStores = false);
+      }
+    }
   }
 
   void _showCategoryDialog() {
@@ -630,128 +658,13 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.65,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+            childAspectRatio: 0.68,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
           ),
           itemCount: offers.length,
           itemBuilder: (context, index) {
-            final offer = offers[index];
-            final product = offer.product;
-            return GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  Routes.productDetails,
-                  arguments: product,
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius:
-                              const BorderRadius.vertical(top: Radius.circular(16)),
-                          child: AspectRatio(
-                            aspectRatio: 1.0,
-                            child: (product.image == null || product.image!.isEmpty)
-                                ? Container(
-                                    color: Colors.grey[200],
-                                    alignment: Alignment.center,
-                                    child: const Icon(Icons.image,
-                                        size: 40, color: Colors.grey),
-                                  )
-                                : Image.network(
-                                    product.image!,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      color: Colors.grey[200],
-                                      alignment: Alignment.center,
-                                      child: const Icon(Icons.broken_image,
-                                          size: 40, color: Colors.grey),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '-${offer.discountPercentage}%',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Text(
-                                  Helpers.formatPrice(offer.newPrice),
-                                  style: const TextStyle(
-                                    color: AppColors.primaryBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  Helpers.formatPrice(product.price),
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 11,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return PromotionCard(offer: offers[index]);
           },
         );
       },
@@ -779,148 +692,13 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+            childAspectRatio: 0.68,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
           ),
           itemCount: packs.length,
           itemBuilder: (context, index) {
-            final pack = packs[index];
-            final discountPercent = pack.totalPrice > 0
-                ? ((pack.totalPrice - pack.discountPrice) / pack.totalPrice * 100)
-                    .round()
-                : 0;
-
-            return GestureDetector(
-              onTap: () {
-                Helpers.showSnackBar(context, 'عرض تفاصيل الحزمة قريباً');
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primaryBlue,
-                            AppColors.primaryBlue.withValues(alpha: 0.7)
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius:
-                            const BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Icon(
-                              Icons.inventory_2_rounded,
-                              size: 40,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ),
-                          if (discountPercent > 0)
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'وفر $discountPercent%',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${pack.products.length} منتجات',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pack.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Text(
-                                  Helpers.formatPrice(pack.discountPrice),
-                                  style: const TextStyle(
-                                    color: AppColors.primaryBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                if (pack.totalPrice > pack.discountPrice)
-                                  Text(
-                                    Helpers.formatPrice(pack.totalPrice),
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 12,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return PackCard(pack: packs[index]);
           },
         );
       },
@@ -928,138 +706,121 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
   }
 
   Widget _buildStoresTab() {
-    return Consumer<HomeProvider>(
-      builder: (context, homeProvider, child) {
-        final stores = homeProvider.featuredStores;
+    if (_isLoadingStores) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (homeProvider.isLoadingStores) {
-          return _buildGridShimmer();
-        }
+    if (_searchedStores.isEmpty) {
+      return const EmptyStateWidget(
+        icon: Icons.store_outlined,
+        title: 'لا توجد متاجر',
+        message: 'لم نجد أي متاجر تطابق بحثك',
+      );
+    }
 
-        if (stores.isEmpty) {
-          return const EmptyStateWidget(
-            icon: Icons.store_outlined,
-            title: 'لا توجد متاجر',
-            message: 'لا توجد متاجر متاحة حالياً',
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: stores.length,
-          itemBuilder: (context, index) {
-            final store = stores[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, Routes.store, arguments: store.id);
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    // Store Avatar
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: store.imageUrl.isNotEmpty
-                            ? NetworkImage(store.imageUrl)
-                            : null,
-                        child: store.imageUrl.isEmpty
-                            ? const Icon(Icons.store, color: Colors.grey, size: 24)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Store Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            store.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            store.description.isNotEmpty
-                                ? store.description
-                                : 'متجر محلي',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                store.rating.toStringAsFixed(1),
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Icon(Icons.location_on_outlined,
-                                  color: Colors.grey[500], size: 14),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  store.city ?? 'الجزائر',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Arrow
-                    Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
-                  ],
-                ),
-              ),
-            );
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _searchedStores.length,
+      itemBuilder: (context, index) {
+        final store = _searchedStores[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(context, Routes.store, arguments: store.id);
           },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Store Avatar
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage: store.profileImageUrl.isNotEmpty
+                        ? NetworkImage(store.profileImageUrl)
+                        : null,
+                    child: store.profileImageUrl.isEmpty
+                        ? const Icon(Icons.store, color: Colors.grey, size: 24)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Store Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        store.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        store.description.isNotEmpty
+                            ? store.description
+                            : 'متجر محلي',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              color: Colors.grey[500], size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              store.address.isNotEmpty ? store.address : 'الجزائر',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow
+                Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
+              ],
+            ),
+          ),
         );
       },
     );

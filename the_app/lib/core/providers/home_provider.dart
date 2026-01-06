@@ -207,18 +207,34 @@ class HomeProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Load stores for name enrichment
+      Map<int, String> storesById = {};
+      try {
+        final storesResp = await ApiService.get('/api/stores/stores/');
+        final storesList = storesResp is Map && storesResp.containsKey('results')
+            ? storesResp['results'] as List
+            : (storesResp is List ? storesResp : []);
+        for (final item in storesList) {
+          if (item is Map<String, dynamic>) {
+            storesById[item['id']] = item['name'] ?? 'متجر';
+          }
+        }
+      } catch (e) {
+        // If stores loading fails, continue without enrichment
+      }
+
       final data = await ApiService.get('/api/catalog/packs/');
-      
+
       if (data is Map<String, dynamic> && data['results'] != null) {
         // API returns {count: X, results: [...]}
         _featuredPacks = (data['results'] as List)
-            .map((json) => Pack.fromJson(json as Map<String, dynamic>))
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById))
             .take(10) // Limit to 10 packs
             .toList();
       } else if (data is List) {
         // Fallback: API returns a direct list
         _featuredPacks = data
-            .map((json) => Pack.fromJson(json as Map<String, dynamic>))
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById))
             .take(10) // Limit to 10 packs
             .toList();
       } else {

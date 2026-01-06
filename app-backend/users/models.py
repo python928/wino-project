@@ -8,13 +8,17 @@ class User(AbstractUser):
 		STORE = 'STORE', 'Store Owner'
 		ADMIN = 'ADMIN', 'Admin'
 
-	display_name = models.CharField(max_length=255, blank=True)
+	name = models.CharField(max_length=255)
 	phone = models.CharField(max_length=20, blank=True, null=True)
 	role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.USER)
 	profile_image = models.ImageField(upload_to='users/profiles/', blank=True, null=True)
 
+	# Remove inherited fields we don't need
+	first_name = None
+	last_name = None
+
 	def __str__(self) -> str:  # pragma: no cover - simple repr
-		return self.display_name or self.get_full_name() or self.username
+		return self.name or self.username
 
 	@property
 	def is_store_owner(self) -> bool:

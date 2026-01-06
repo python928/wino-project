@@ -142,8 +142,22 @@ class PostRepository {
       if (store['owner'] == userId) return store['id'];
     }
 
+    // Get user's name for the store
+    String storeName = 'متجر';
+    try {
+      final userResp = await ApiService.get('${ApiConfig.users}$userId/');
+      final userName = userResp['name']?.toString().trim();
+
+      if (userName != null && userName.isNotEmpty) {
+        storeName = userName; // Use user's name directly as store name
+      }
+    } catch (e) {
+      debugPrint('Failed to get user name for store: $e');
+      // Fall back to generic name
+    }
+
     final created = await ApiService.post(ApiConfig.stores, {
-      'name': 'متجري',
+      'name': storeName,
       'description': 'متجر جديد',
       'type': 'physical',
     });

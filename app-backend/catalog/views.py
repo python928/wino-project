@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import filters, permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -29,7 +30,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-	queryset = Product.objects.select_related('store', 'category').prefetch_related('images')
+	queryset = Product.objects.select_related('store', 'store__owner', 'category').prefetch_related('images')
 	serializer_class = ProductSerializer
 	filter_backends = [filters.SearchFilter, filters.OrderingFilter]
 	search_fields = ['name', 'description']
@@ -42,6 +43,19 @@ class ProductViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return [permissions.IsAuthenticated()]
+
+	def get_queryset(self):
+		queryset = super().get_queryset()
+		# For list/retrieve actions, only show products from active stores (owner role = STORE)
+		if self.action in ['list', 'retrieve']:
+			# Allow store owners to see their own products regardless of role
+			if self.request.user.is_authenticated:
+				queryset = queryset.filter(
+					models.Q(store__owner__role='STORE') | models.Q(store__owner=self.request.user)
+				)
+			else:
+				queryset = queryset.filter(store__owner__role='STORE')
+		return queryset
 
 
 class ProductImageViewSet(viewsets.ModelViewSet):
@@ -58,7 +72,7 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 
 
 class PackViewSet(viewsets.ModelViewSet):
-	queryset = Pack.objects.select_related('store').prefetch_related('images', 'pack_products')
+	queryset = Pack.objects.select_related('store', 'store__owner').prefetch_related('images', 'pack_products')
 	serializer_class = PackSerializer
 	filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
 	ordering_fields = ['created_at', 'discount']
@@ -70,6 +84,18 @@ class PackViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return [permissions.IsAuthenticated()]
+
+	def get_queryset(self):
+		queryset = super().get_queryset()
+		# For list/retrieve actions, only show packs from active stores (owner role = STORE)
+		if self.action in ['list', 'retrieve']:
+			if self.request.user.is_authenticated:
+				queryset = queryset.filter(
+					models.Q(store__owner__role='STORE') | models.Q(store__owner=self.request.user)
+				)
+			else:
+				queryset = queryset.filter(store__owner__role='STORE')
+		return queryset
 
 
 class PackProductViewSet(viewsets.ModelViewSet):
@@ -127,14 +153,63 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		product_id = self.request.data.get('product')
+		store_id = self.request.data.get('store')
 		store = None
+
 		if product_id:
 			try:
 				product = Product.objects.get(id=product_id)
 				store = product.store
 			except Product.DoesNotExist:
 				pass
+		elif store_id:
+			# Store-only review (rating a store directly)
+			try:
+				from stores.models import Store
+				store = Store.objects.get(id=store_id)
+			except Store.DoesNotExist:
+				pass
+
 		serializer.save(user=self.request.user, store=store)
+
+	@action(detail=False, methods=['post'], url_path='rate-store')
+	def rate_store(self, request):
+		"""Rate a store directly (create or update store review)."""
+		store_id = request.data.get('store')
+		rating = request.data.get('rating')
+		comment = request.data.get('comment', '')
+
+		if not store_id or not rating:
+			return Response({'error': 'store and rating are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			from stores.models import Store
+			store = Store.objects.get(id=store_id)
+		except Store.DoesNotExist:
+			return Response({'error': 'Store not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		# Create or update the store review
+		review, created = Review.objects.update_or_create(
+			user=request.user,
+			store=store,
+			product=None,
+			defaults={'rating': rating, 'comment': comment}
+		)
+
+		serializer = self.get_serializer(review)
+		return Response({
+			'status': 'created' if created else 'updated',
+			'review': serializer.data
+		}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+	@action(detail=False, methods=['get'], url_path='my-store-rating/(?P<store_id>[^/.]+)')
+	def my_store_rating(self, request, store_id=None):
+		"""Get current user's rating for a store."""
+		try:
+			review = Review.objects.get(user=request.user, store_id=store_id, product=None)
+			return Response({'rating': review.rating, 'comment': review.comment})
+		except Review.DoesNotExist:
+			return Response({'rating': 0, 'comment': ''})
 
 
 class IsFavoriteOwner(permissions.BasePermission):

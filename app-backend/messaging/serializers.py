@@ -20,8 +20,7 @@ class ConversationSerializer(serializers.Serializer):
     """Serializer for conversation list (grouped messages)"""
     user_id = serializers.IntegerField()
     username = serializers.CharField()
-    first_name = serializers.CharField(allow_blank=True)
-    last_name = serializers.CharField(allow_blank=True)
+    name = serializers.CharField()
     profile_image = serializers.CharField(allow_null=True)
     last_message = serializers.CharField()
     last_message_time = serializers.DateTimeField()

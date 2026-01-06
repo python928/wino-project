@@ -39,4 +39,24 @@ class StoreRepository {
 
     return null;
   }
+
+  /// Search stores by query
+  static Future<List<BackendStore>> searchStores({String? query}) async {
+    try {
+      final url = query != null && query.isNotEmpty
+          ? '${ApiConfig.stores}?search=$query'
+          : ApiConfig.stores;
+
+      final resp = await ApiService.get(url);
+      final list = _extractList(resp);
+
+      return list
+          .where((item) => item is Map<String, dynamic>)
+          .map((item) => BackendStore.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error searching stores: $e');
+      return [];
+    }
+  }
 }

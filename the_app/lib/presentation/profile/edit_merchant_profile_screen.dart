@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
@@ -8,6 +9,7 @@ import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/providers/auth_provider.dart';
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
@@ -40,6 +42,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   bool _isLoading = false;
   bool _isUploadingImage = false;
   String? _avatarUrl;
+  int? _storeId;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     _addressController = TextEditingController();
     _avatarUrl = widget.initialImage;
     _loadAddress();
+    _loadStoreId();
   }
 
   void _loadAddress() {
@@ -61,6 +65,27 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       if (userData != null) {
         _addressController.text = userData['location'] ?? userData['address'] ?? '';
       }
+    }
+  }
+
+  Future<void> _loadStoreId() async {
+    try {
+      final userData = StorageService.getUserData();
+      final userId = userData?['id'];
+      if (userId == null) return;
+
+      final response = await ApiService.get('${ApiConfig.stores}?owner=$userId');
+      final storesList = response is Map && response.containsKey('results')
+          ? response['results'] as List
+          : (response is List ? response : []);
+
+      if (storesList.isNotEmpty) {
+        setState(() {
+          _storeId = storesList.first['id'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading store ID: $e');
     }
   }
 
@@ -119,26 +144,32 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final updateData = {
-        'full_name': _nameController.text,
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-        'store_description': _descriptionController.text,
-        'location': _addressController.text,
-      };
-
       final userData = StorageService.getUserData();
       final userId = userData?['id'];
       if (userId == null) throw Exception('لا يمكن تحديد معرف المستخدم');
 
-      await ApiService.patch(ApiConfig.userDetail(userId), updateData);
+      // Update user data (email, phone)
+      final userUpdateData = {
+        'email': _emailController.text,
+        'phone': _phoneController.text,
+      };
+      await ApiService.patch(ApiConfig.userDetail(userId), userUpdateData);
 
+      // Update store data (name, description, address, phone_number)
+      if (_storeId != null) {
+        final storeUpdateData = {
+          'name': _nameController.text,
+          'description': _descriptionController.text,
+          'address': _addressController.text,
+          'phone_number': _phoneController.text,
+        };
+        await ApiService.patch(ApiConfig.storeDetail(_storeId!), storeUpdateData);
+      }
+
+      // Update local storage
       if (userData != null) {
-        userData['full_name'] = _nameController.text;
         userData['email'] = _emailController.text;
         userData['phone'] = _phoneController.text;
-        userData['store_description'] = _descriptionController.text;
-        userData['location'] = _addressController.text;
         await StorageService.saveUserData(userData);
       }
 
@@ -193,6 +224,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         userData['role'] = 'USER';
         userData['is_merchant'] = false;
         await StorageService.saveUserData(userData);
+      }
+
+      // Update AuthProvider to reflect new role
+      if (mounted) {
+        context.read<AuthProvider>().reloadFromStorage();
       }
 
       if (mounted) {

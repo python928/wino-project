@@ -77,7 +77,19 @@ class Review(models.Model):
 
 	class Meta:
 		ordering = ['-created_at']
-		unique_together = ['user', 'product']  # One review per user per product
+		# Allow one review per user per product OR per store (when product is null)
+		constraints = [
+			models.UniqueConstraint(
+				fields=['user', 'product'],
+				condition=models.Q(product__isnull=False),
+				name='unique_user_product_review'
+			),
+			models.UniqueConstraint(
+				fields=['user', 'store'],
+				condition=models.Q(product__isnull=True),
+				name='unique_user_store_review'
+			),
+		]
 
 
 class Favorite(models.Model):

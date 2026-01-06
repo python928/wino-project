@@ -77,8 +77,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 conversations[other.id] = {
                     'user_id': other.id,
                     'username': other.username,
-                    'first_name': other.first_name or '',
-                    'last_name': other.last_name or '',
+                    'name': other.name if hasattr(other, 'name') else other.username,
                     'profile_image': other.profile_image.url if other.profile_image else None,
                     'last_message': message.content,
                     'last_message_time': message.created_at,

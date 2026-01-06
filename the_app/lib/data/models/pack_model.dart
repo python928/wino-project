@@ -25,7 +25,31 @@ class Pack extends Equatable {
     required this.merchantName,
   });
 
-  factory Pack.fromJson(Map<String, dynamic> json) {
+  factory Pack.fromJson(Map<String, dynamic> json, {Map<int, String>? storesById}) {
+    // Extract merchant/store ID
+    int merchantId = 0;
+    if (json['merchant_id'] != null) {
+      merchantId = json['merchant_id'] as int;
+    } else if (json['store'] != null) {
+      merchantId = json['store'] is int ? json['store'] : (json['store']['id'] ?? 0);
+    }
+
+    // Extract merchant name from various possible sources
+    String merchantName = '';
+
+    // 1. Try merchant_name field
+    if (json['merchant_name'] != null && json['merchant_name'].toString().trim().isNotEmpty) {
+      merchantName = json['merchant_name'].toString().trim();
+    }
+    // 2. Try store object
+    else if (json['store'] is Map && json['store']['name'] != null) {
+      merchantName = json['store']['name'].toString().trim();
+    }
+    // 3. Try storesById map if provided
+    else if (storesById != null && merchantId > 0) {
+      merchantName = storesById[merchantId] ?? '';
+    }
+
     return Pack(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -37,8 +61,8 @@ class Pack extends Equatable {
       discountPrice: _parseDouble(json['discount_price']),
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String? ?? '',
-      merchantId: (json['merchant_id'] ?? json['store']) as int? ?? 0,
-      merchantName: json['merchant_name'] as String? ?? '',
+      merchantId: merchantId,
+      merchantName: merchantName,
     );
   }
 

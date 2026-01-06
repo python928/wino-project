@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import filters, permissions, viewsets
 
 from .models import Promotion, PromotionImage
@@ -10,7 +11,7 @@ class IsStoreOwner(permissions.BasePermission):
 
 
 class PromotionViewSet(viewsets.ModelViewSet):
-	queryset = Promotion.objects.select_related('store', 'product').prefetch_related('images')
+	queryset = Promotion.objects.select_related('store', 'store__owner', 'product').prefetch_related('images')
 	serializer_class = PromotionSerializer
 	filter_backends = [filters.OrderingFilter]
 	ordering_fields = ['start_date', 'end_date', 'percentage']
@@ -21,6 +22,18 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return [permissions.IsAuthenticated()]
+
+	def get_queryset(self):
+		queryset = super().get_queryset()
+		# For list/retrieve actions, only show promotions from active stores (owner role = STORE)
+		if self.action in ['list', 'retrieve']:
+			if self.request.user.is_authenticated:
+				queryset = queryset.filter(
+					models.Q(store__owner__role='STORE') | models.Q(store__owner=self.request.user)
+				)
+			else:
+				queryset = queryset.filter(store__owner__role='STORE')
+		return queryset
 
 
 class PromotionImageViewSet(viewsets.ModelViewSet):

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,6 +21,7 @@ import 'widgets/promo_banner.dart';
 import 'widgets/hot_deal_card.dart';
 import 'widgets/product_card.dart';
 import 'widgets/featured_store_card.dart';
+import 'main_navigation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -96,11 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     onSearchSubmitted: () {
                       if (_searchController.text.isNotEmpty) {
-                        Navigator.pushNamed(
-                          context,
-                          Routes.searchResults,
-                          arguments: {'query': _searchController.text},
-                        );
+                        // Navigate to search tab with query
+                        _navigateToSearchTab(_searchController.text);
                       }
                     },
                     onFilterTap: () => _showFilters(),
@@ -532,7 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () {
         // Navigate to pack details
-        Helpers.showSnackBar(context, 'عرض تفاصيل الحزمة قريباً');
+        Navigator.pushNamed(context, Routes.packDetails, arguments: pack);
       },
       child: Container(
         width: 200,
@@ -820,7 +819,15 @@ class _HomeScreenState extends State<HomeScreen> {
               return SizedBox(
                 width: 180,
                 child: GestureDetector(
-                  onTap: () => _navigateToProductDetails(product),
+                  onTap: () {
+                    // Create modified product with promotion pricing
+                    final productWithPromotion = product.copyWith(
+                      price: offer.newPrice,
+                      oldPrice: product.price,
+                      discountPercentage: offer.discountPercentage,
+                    );
+                    _navigateToProductDetails(productWithPromotion);
+                  },
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -960,6 +967,15 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamed(context, Routes.discovery);
   }
 
+  void _navigateToSearchTab(String query) {
+    // Find the MainNavigationScreen ancestor and switch to search tab
+    final mainNavState = context.findAncestorStateOfType<MainNavigationScreenState>();
+    if (mainNavState != null) {
+      mainNavState.navigateToSearchWithQuery(query);
+      _searchController.clear();
+    }
+  }
+
   void _showFilters() {
     Helpers.showSnackBar(context, 'الفلاتر قريباً');
   }
@@ -1047,7 +1063,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _getProductImage(dynamic product) {
     String? imageUrl;
-    
+
     // Handle PackProduct object
     if (product is PackProduct) {
       imageUrl = product.productImage;
@@ -1055,7 +1071,10 @@ class _HomeScreenState extends State<HomeScreen> {
       imageUrl = product['product_image'] as String?;
     }
 
-    if (imageUrl == null || imageUrl.isEmpty) {
+    // Get the full image URL using ApiConfig
+    final fullImageUrl = ApiConfig.getImageUrl(imageUrl);
+
+    if (fullImageUrl.isEmpty) {
       return Container(
         color: Colors.grey[200],
         child: const Icon(
@@ -1065,11 +1084,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-
-    // Handle relative URLs from backend
-    final fullImageUrl = imageUrl.startsWith('/') 
-        ? 'http://127.0.0.1:8000$imageUrl' 
-        : imageUrl;
 
     return Image.network(
       fullImageUrl,

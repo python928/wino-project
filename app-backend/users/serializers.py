@@ -8,17 +8,23 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'display_name', 'email', 'phone', 'role', 'profile_image', 'first_name', 'last_name', 'date_joined']
+        fields = ['id', 'username', 'name', 'email', 'phone', 'role', 'profile_image', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField(required=False, allow_blank=True)
+    name = serializers.CharField(required=True, max_length=255)
 
     class Meta:
         model = User
-        fields = ['username', 'display_name', 'email', 'password', 'phone', 'role', 'first_name', 'last_name']
+        fields = ['username', 'name', 'email', 'password', 'phone', 'role']
+
+    def validate_name(self, value):
+        if not value or len(value.strip()) < 2:
+            raise serializers.ValidationError('الاسم يجب أن يكون حرفين على الأقل')
+        return value.strip()
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():

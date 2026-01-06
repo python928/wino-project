@@ -110,7 +110,7 @@ class AuthService {
         'user_id': decoded['user_id'],
         'email': decoded['email'],
         'user_type': decoded['user_type'],
-        'full_name': decoded['full_name'],
+        'name': decoded['name'],
       };
     } catch (e) {
       debugPrint('❌ Error extracting user data: $e');

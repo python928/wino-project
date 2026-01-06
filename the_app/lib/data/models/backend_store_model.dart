@@ -6,9 +6,14 @@ class BackendStore {
   final String name;
   final String description;
   final String address;
+  final String phoneNumber;
+  final double? latitude;
+  final double? longitude;
   final String type;
   final String profileImageUrl;
   final String coverImageUrl;
+  final int followersCount;
+  final double averageRating;
 
   const BackendStore({
     required this.id,
@@ -16,9 +21,14 @@ class BackendStore {
     required this.name,
     required this.description,
     required this.address,
+    required this.phoneNumber,
+    this.latitude,
+    this.longitude,
     required this.type,
     required this.profileImageUrl,
     required this.coverImageUrl,
+    this.followersCount = 0,
+    this.averageRating = 0,
   });
 
   factory BackendStore.fromJson(Map<String, dynamic> json) {
@@ -33,9 +43,14 @@ class BackendStore {
           : 'متجر',
       description: json['description']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
+      phoneNumber: json['phone']?.toString() ?? json['phone_number']?.toString() ?? '',
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       type: json['type']?.toString() ?? 'physical',
       profileImageUrl: ApiConfig.getImageUrl(profileRaw),
       coverImageUrl: ApiConfig.getImageUrl(coverRaw),
+      followersCount: json['followers_count'] as int? ?? 0,
+      averageRating: (json['average_rating'] as num?)?.toDouble() ?? 0,
     );
   }
 }

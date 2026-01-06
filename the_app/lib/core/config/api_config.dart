@@ -28,6 +28,8 @@ class ApiConfig {
   static const String stores = '$api/stores/stores/';
   static String storeDetail(int id) => '$stores$id/';
   static const String followers = '$api/stores/followers/';
+  static const String followersToggle = '$api/stores/followers/toggle/';
+  static String followersCheck(int storeId) => '$api/stores/followers/check/$storeId/';
 
   // Catalog
   static const String catalog = '$api/catalog';
@@ -39,6 +41,8 @@ class ApiConfig {
   static const String packProducts = '$catalog/pack-products/';
   static const String packImages = '$catalog/pack-images/';
   static const String reviews = '$catalog/reviews/';
+  static const String reviewsRateStore = '$catalog/reviews/rate-store/';
+  static String reviewsMyStoreRating(int storeId) => '$catalog/reviews/my-store-rating/$storeId/';
   static const String favorites = '$catalog/favorites/';
   static const String favoritesToggle = '$catalog/favorites/toggle/';
 

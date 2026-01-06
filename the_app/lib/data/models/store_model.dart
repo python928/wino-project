@@ -282,9 +282,8 @@ class StoreReview extends Equatable {
     String userName = '';
     String? userAvatar;
     if (json['user'] is Map) {
-      userName = json['user']['display_name']?.toString() ??
-                 json['user']['username']?.toString() ??
-                 json['user']['name']?.toString() ?? '';
+      userName = json['user']['name']?.toString() ??
+                 json['user']['username']?.toString() ?? '';
       userAvatar = json['user']['profile_image']?.toString();
     } else {
       userName = json['user_name']?.toString() ?? json['user']?.toString() ?? '';
