@@ -29,24 +29,24 @@ class Category {
     );
   }
 
-  /// Get icon data based on category name
+  /// Get icon data based on category name (English only)
   IconData get iconData {
     final nameLower = name.toLowerCase();
-    if (nameLower.contains('إلكتروني') || nameLower.contains('electronic')) {
+    if (nameLower.contains('electronic')) {
       return Icons.smartphone;
-    } else if (nameLower.contains('أزياء') || nameLower.contains('ملابس') || nameLower.contains('fashion')) {
+    } else if (nameLower.contains('fashion') || nameLower.contains('clothing')) {
       return Icons.checkroom;
-    } else if (nameLower.contains('منزل') || nameLower.contains('home')) {
+    } else if (nameLower.contains('home')) {
       return Icons.chair;
-    } else if (nameLower.contains('رياضة') || nameLower.contains('sport')) {
+    } else if (nameLower.contains('sport')) {
       return Icons.sports_basketball;
-    } else if (nameLower.contains('تجميل') || nameLower.contains('beauty')) {
+    } else if (nameLower.contains('beauty')) {
       return Icons.face;
-    } else if (nameLower.contains('طعام') || nameLower.contains('food')) {
+    } else if (nameLower.contains('food')) {
       return Icons.restaurant;
-    } else if (nameLower.contains('كتب') || nameLower.contains('book')) {
+    } else if (nameLower.contains('book')) {
       return Icons.book;
-    } else if (nameLower.contains('سيارات') || nameLower.contains('car')) {
+    } else if (nameLower.contains('car')) {
       return Icons.directions_car;
     }
     return Icons.category;
@@ -216,7 +216,7 @@ class HomeProvider with ChangeNotifier {
             : (storesResp is List ? storesResp : []);
         for (final item in storesList) {
           if (item is Map<String, dynamic>) {
-            storesById[item['id']] = item['name'] ?? 'متجر';
+            storesById[item['id']] = item['name'] ?? 'Store';
           }
         }
       } catch (e) {
@@ -243,7 +243,7 @@ class HomeProvider with ChangeNotifier {
       _packsError = null;
     } catch (e) {
       _featuredPacks = [];
-      _packsError = 'فشل في تحميل الحزم: ${e.toString()}';
+      _packsError = 'Failed to load packs: ${e.toString()}';
     } finally {
       _isLoadingPacks = false;
       notifyListeners();
@@ -255,15 +255,18 @@ class HomeProvider with ChangeNotifier {
     await loadHomeData();
   }
 
-  /// Get default categories when API fails or returns empty
+  /// Get default categories when API fails or returns empty (English only)
   List<Category> _getDefaultCategories() {
     return const [
-      Category(id: 1, name: 'إلكترونيات'),
-      Category(id: 2, name: 'أزياء'),
-      Category(id: 3, name: 'منزل'),
-      Category(id: 4, name: 'رياضة'),
-      Category(id: 5, name: 'تجميل'),
-      Category(id: 6, name: 'طعام'),
+      Category(id: 1, name: 'Electronics'),
+      Category(id: 2, name: 'Fashion'),
+      Category(id: 3, name: 'Home'),
+      Category(id: 4, name: 'Sports'),
+      Category(id: 5, name: 'Beauty'),
+      Category(id: 6, name: 'Food'),
+      Category(id: 7, name: 'Product'),
+      Category(id: 8, name: 'Pack'),
+      Category(id: 9, name: 'Promotions'),
     ];
   }
 }

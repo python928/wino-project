@@ -94,17 +94,17 @@ class Post {
 
     // Handle store - can be an int ID or an object
     int storeId = 0;
-    String storeName = 'متجر محلي';
+    String storeName = 'Local Store';
     if (json['store'] is int) {
       storeId = json['store'];
     } else if (json['store'] is Map) {
       storeId = json['store']['id'] ?? 0;
-      storeName = json['store']['name'] ?? 'متجر محلي';
+      storeName = json['store']['name'] ?? 'Local Store';
     }
 
     // Handle category - can be an int ID, string, or object
     int? categoryId;
-    String categoryName = 'غير مصنف';
+    String categoryName = 'Uncategorized';
     if (json['category'] is int) {
       categoryId = json['category'];
       categoryName = 'Category $categoryId';
@@ -112,7 +112,7 @@ class Post {
       categoryName = json['category'];
     } else if (json['category'] is Map) {
       categoryId = json['category']['id'];
-      categoryName = json['category']['name'] ?? 'غير مصنف';
+      categoryName = json['category']['name'] ?? 'Uncategorized';
     }
 
     // Parse price
@@ -188,14 +188,14 @@ class Post {
   }) {
     final productId = json['id'] as int;
     final storeId = json['store'] as int;
-    final storeName = storesById?[storeId] ?? 'متجر محلي';
+    final storeName = storesById?[storeId] ?? 'Local Store';
 
     final user = usersById != null
         ? usersById[json['owner_id'] ?? storeId] // owner_id is not present; fall back to storeId
         : null;
 
     final categoryId = json['category'] as int?;
-    final categoryName = categoriesById?[categoryId] ?? (categoryId?.toString() ?? 'غير مصنف');
+    final categoryName = categoriesById?[categoryId] ?? (categoryId?.toString() ?? 'Uncategorized');
 
     final discountPct = promoPercentageByProduct?[productId];
     final double price = double.tryParse(json['price'].toString()) ?? 0;

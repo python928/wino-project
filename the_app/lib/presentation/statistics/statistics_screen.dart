@@ -14,8 +14,8 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  String _selectedPeriod = 'هذا الأسبوع';
-  final List<String> _periods = ['اليوم', 'هذا الأسبوع', 'هذا الشهر', 'هذا العام'];
+  String _selectedPeriod = 'This week';
+  final List<String> _periods = ['Today', 'This week', 'This month', 'This year'];
 
   @override
   void initState() {
@@ -33,11 +33,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
-          title: const Text('الإحصائيات'),
+          title: const Text('Statistics'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -58,21 +58,21 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               const SizedBox(height: 24),
 
               // Revenue Chart Section
-              _buildSectionTitle('الأرباح'),
+              _buildSectionTitle('Revenue'),
               const SizedBox(height: 12),
               _buildRevenueChart(),
 
               const SizedBox(height: 24),
 
               // Top Products Section
-              _buildSectionTitle('أفضل المنتجات'),
+              _buildSectionTitle('Top Products'),
               const SizedBox(height: 12),
               _buildTopProductsList(),
 
               const SizedBox(height: 24),
 
               // Activity Section
-              _buildSectionTitle('النشاط الأخير'),
+              _buildSectionTitle('Recent Activity'),
               const SizedBox(height: 12),
               _buildActivityList(),
             ],
@@ -137,7 +137,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           childAspectRatio: 1.5,
           children: [
             _buildStatCard(
-              title: 'إجمالي المشاهدات',
+              title: 'Total Views',
               value: '1,234',
               icon: Icons.visibility,
               color: Colors.blue,
@@ -145,7 +145,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               isPositive: true,
             ),
             _buildStatCard(
-              title: 'إجمالي المبيعات',
+              title: 'Total Sales',
               value: '45',
               icon: Icons.shopping_bag,
               color: Colors.green,
@@ -153,13 +153,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               isPositive: true,
             ),
             _buildStatCard(
-              title: 'المنتجات',
+              title: 'Products',
               value: totalProducts.toString(),
               icon: Icons.inventory,
               color: Colors.orange,
             ),
             _buildStatCard(
-              title: 'التخفيضات النشطة',
+              title: 'Active Discounts',
               value: totalOffers.toString(),
               icon: Icons.local_offer,
               color: Colors.red,
@@ -287,12 +287,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'إجمالي الأرباح',
+                    'Total Revenue',
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '12,500 د.ج',
+                    '12,500 DZD',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -331,13 +331,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _buildChartBar('سبت', 0.4),
-                _buildChartBar('أحد', 0.6),
-                _buildChartBar('إثن', 0.3),
-                _buildChartBar('ثلا', 0.8),
-                _buildChartBar('أرب', 0.5),
-                _buildChartBar('خمي', 0.9),
-                _buildChartBar('جمع', 0.7),
+                _buildChartBar('Sat', 0.4),
+                _buildChartBar('Sun', 0.6),
+                _buildChartBar('Mon', 0.3),
+                _buildChartBar('Tue', 0.8),
+                _buildChartBar('Wed', 0.5),
+                _buildChartBar('Thu', 0.9),
+                _buildChartBar('Fri', 0.7),
               ],
             ),
           ),
@@ -395,7 +395,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
                   const SizedBox(height: 12),
                   Text(
-                    'لا توجد منتجات بعد',
+                    'No products yet',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],
@@ -453,11 +453,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: Text(
-                  '${(index + 1) * 12} مبيعات',
+                  '${(index + 1) * 12} sales',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 trailing: Text(
-                  '${product.price.toStringAsFixed(0)} د.ج',
+                  '${product.price.toStringAsFixed(0)} DZD',
                   style: TextStyle(
                     color: AppColors.primaryPurple,
                     fontWeight: FontWeight.bold,
@@ -476,30 +476,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       _ActivityItem(
         icon: Icons.shopping_bag,
         color: Colors.green,
-        title: 'طلب جديد',
-        subtitle: 'تم استلام طلب جديد لمنتج "هاتف سامسونج"',
-        time: 'منذ 5 دقائق',
+        title: 'New Order',
+        subtitle: 'A new order was received for "Samsung Phone"',
+        time: '5 minutes ago',
       ),
       _ActivityItem(
         icon: Icons.star,
         color: Colors.amber,
-        title: 'تقييم جديد',
-        subtitle: 'حصل منتجك على تقييم 5 نجوم',
-        time: 'منذ ساعة',
+        title: 'New Review',
+        subtitle: 'Your product received a 5-star review',
+        time: '1 hour ago',
       ),
       _ActivityItem(
         icon: Icons.visibility,
         color: Colors.blue,
-        title: 'مشاهدات جديدة',
-        subtitle: 'متجرك حصل على 50 مشاهدة جديدة',
-        time: 'منذ 3 ساعات',
+        title: 'New Views',
+        subtitle: 'Your store received 50 new views',
+        time: '3 hours ago',
       ),
       _ActivityItem(
         icon: Icons.people,
         color: Colors.purple,
-        title: 'متابع جديد',
-        subtitle: 'شخص جديد بدأ بمتابعة متجرك',
-        time: 'منذ يوم',
+        title: 'New Follower',
+        subtitle: 'A new person started following your store',
+        time: '1 day ago',
       ),
     ];
 

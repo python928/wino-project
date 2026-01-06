@@ -55,7 +55,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     } catch (e) {
       debugPrint('Error picking images: $e');
       if (mounted) {
-        Helpers.showSnackBar(context, 'حدث خطأ أثناء اختيار الصور: $e', isError: true);
+        Helpers.showSnackBar(context, 'Error selecting images: $e', isError: true);
       }
     }
   }
@@ -81,13 +81,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
       
       if (mounted) {
         debugPrint('Product updated successfully');
-        Helpers.showSnackBar(context, 'تم تحديث المنتج بنجاح');
+        Helpers.showSnackBar(context, 'Product updated successfully');
         Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint('Error updating product: $e');
       if (mounted) {
-        Helpers.showSnackBar(context, 'فشل تحديث المنتج: $e');
+        Helpers.showSnackBar(context, 'Failed to update product: $e');
       }
     } finally {
       if (mounted) {
@@ -111,7 +111,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تعديل المنتج'),
+          title: const Text('Edit Product'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -130,11 +130,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    labelText: 'اسم المنتج',
+                    labelText: 'Product Name',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) =>
-                      value == null || value.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
+                      value == null || value.isEmpty ? 'Please enter product name' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -142,13 +142,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 TextFormField(
                   controller: _priceController,
                   decoration: const InputDecoration(
-                    labelText: 'السعر (د.ج)',
+                    labelText: 'Price (DZD)',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'الرجاء إدخال السعر';
-                    if (double.tryParse(value) == null) return 'الرجاء إدخال رقم صحيح';
+                    if (value == null || value.isEmpty) return 'Please enter price';
+                    if (double.tryParse(value) == null) return 'Please enter a valid number';
                     return null;
                   },
                 ),
@@ -158,7 +158,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 TextFormField(
                   controller: _categoryController,
                   decoration: const InputDecoration(
-                    labelText: 'التصنيف (اختياري)',
+                    labelText: 'Category (optional)',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -168,19 +168,19 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'وصف المنتج',
+                    labelText: 'Product Description',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
                   validator: (value) =>
-                      value == null || value.isEmpty ? 'الرجاء إدخال وصف المنتج' : null,
+                      value == null || value.isEmpty ? 'Please enter product description' : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Availability Toggle
                 SwitchListTile(
-                  title: const Text('عرض المنتج في المتجر'),
-                  subtitle: const Text('يمكنك إخفاء المنتج مؤقتاً دون حذفه'),
+                  title: const Text('Show product in store'),
+                  subtitle: const Text('You can temporarily hide the product without deleting it'),
                   value: _isAvailable,
                   onChanged: (bool value) {
                     setState(() {
@@ -195,7 +195,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: GradientButton(
-                    text: _isLoading ? 'جاري التحديث...' : 'حفظ التعديلات',
+                    text: _isLoading ? 'Updating...' : 'Save Changes',
                     onPressed: _isLoading ? () {} : _submit,
                     gradient: AppColors.primaryGradient,
                   ),
@@ -210,7 +210,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     onPressed: _isLoading ? null : _deleteProduct,
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     label: const Text(
-                      'حذف المنتج',
+                      'Delete Product',
                       style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                     ),
                     style: TextButton.styleFrom(
@@ -241,11 +241,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('الصور (أقصى 4)'),
+            const Text('Images (max 4)'),
             TextButton.icon(
               onPressed: _images.length >= 4 ? null : _pickImages,
               icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('إضافة صور'),
+              label: const Text('Add Images'),
             ),
           ],
         ),
@@ -266,7 +266,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   children: [
                     Icon(Icons.add_photo_alternate, size: 36, color: Colors.grey),
                     SizedBox(height: 6),
-                    Text('اختر صورة أساسية ثم 3 صور ثانوية'),
+                    Text('Choose main image then 3 secondary images'),
                   ],
                 ),
               ),
@@ -333,7 +333,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          isMain ? 'أساسية' : 'ثانوية',
+                          isMain ? 'Main' : 'Secondary',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
@@ -367,12 +367,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('حذف المنتج'),
-        content: const Text('هل أنت متأكد من أنك تريد حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.'),
+        title: const Text('Delete Product'),
+        content: const Text('Are you sure you want to delete this product? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -384,17 +384,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     .deletePost(widget.product.id);
                 
                 if (mounted) {
-                  Helpers.showSnackBar(context, 'تم حذف المنتج بنجاح');
+                  Helpers.showSnackBar(context, 'Product deleted successfully');
                   Navigator.pop(context, true); // Return true to refresh
                 }
               } catch (e) {
                 if (mounted) {
                   setState(() => _isLoading = false);
-                  Helpers.showSnackBar(context, 'فشل حذف المنتج: $e');
+                  Helpers.showSnackBar(context, 'Failed to delete product: $e');
                 }
               }
             },
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

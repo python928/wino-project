@@ -38,7 +38,7 @@ class HeaderLocationWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'موقعك الحالي',
+                    'Your current location',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textHint,
                     ),

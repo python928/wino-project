@@ -12,23 +12,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final List<NotificationItem> _notifications = [
     NotificationItem(
       type: NotificationType.order,
-      title: 'طلب جديد',
-      subtitle: 'لديك طلب جديد بقيمة 199 ر.س',
-      time: 'منذ 5 دقائق',
+      title: 'New Order',
+      subtitle: 'You have a new order worth 199 SAR',
+      time: '5 minutes ago',
       isNew: true,
     ),
     NotificationItem(
       type: NotificationType.follower,
-      title: 'متابع جديد',
-      subtitle: 'أحمد محمد بدأ بمتابعتك',
-      time: 'منذ ساعة',
+      title: 'New Follower',
+      subtitle: 'Ahmed Mohamed started following you',
+      time: '1 hour ago',
       isNew: true,
     ),
     NotificationItem(
       type: NotificationType.discount,
-      title: 'تخفيض ناجح',
-      subtitle: 'تم تطبيق التخفيض على 5 منتجات',
-      time: 'منذ 3 ساعات',
+      title: 'Discount Applied',
+      subtitle: 'Discount applied to 5 products',
+      time: '3 hours ago',
       isNew: false,
     ),
   ];
@@ -38,14 +38,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final newCount = _notifications.where((n) => n.isNew).length;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           title: const Text(
-            'الإشعارات',
+            'Notifications',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'لديك $newCount إشعارات جديدة',
+                      'You have $newCount new notifications',
                       style: TextStyle(
                         color: AppColors.primaryBlue,
                         fontWeight: FontWeight.w500,
@@ -90,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         });
                       },
                       child: Text(
-                        'قراءة الكل',
+                        'Mark all as read',
                         style: TextStyle(
                           color: AppColors.primaryBlue,
                           fontWeight: FontWeight.bold,
@@ -112,7 +112,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               size: 64, color: Colors.grey[300]),
                           const SizedBox(height: 16),
                           Text(
-                            'لا توجد إشعارات',
+                            'No notifications',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 16,

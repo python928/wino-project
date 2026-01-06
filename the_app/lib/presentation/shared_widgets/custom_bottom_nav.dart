@@ -32,33 +32,34 @@ class CustomBottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // حسابي (Profile) - Index 3
+              // Profile - Index 3
               _buildNavItem(
                 icon: Icons.person_outline_rounded,
                 selectedIcon: Icons.person_rounded,
-                label: 'حسابي',
+                label: 'Profile',
                 index: 3,
               ),
-              // الإشعارات (Notifications) - Index 2
+              // Notifications - Index 2
+                            // Notifications - Index 2
               _buildNavItemWithBadge(
                 icon: Icons.notifications_none_rounded,
                 selectedIcon: Icons.notifications_rounded,
-                label: 'الإشعارات',
+                label: 'Notifications',
                 index: 2,
                 badgeCount: notificationsBadgeCount,
               ),
-              // البحث (Search) - Index 1
+              // Search - Index 1
               _buildNavItem(
                 icon: Icons.search_outlined,
                 selectedIcon: Icons.search_rounded,
-                label: 'البحث',
+                label: 'Search',
                 index: 1,
               ),
-              // الرئيسية (Home) - Index 0
+              // Home - Index 0
               _buildNavItem(
                 icon: Icons.home_outlined,
                 selectedIcon: Icons.home_rounded,
-                label: 'الرئيسية',
+                label: 'Home',
                 index: 0,
               ),
             ],

@@ -32,7 +32,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
 	queryset = Product.objects.select_related('store', 'store__owner', 'category').prefetch_related('images')
 	serializer_class = ProductSerializer
-	filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+	# Enable filtering by store/category/status so profile pages only show the owner's products
+	filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
 	search_fields = ['name', 'description']
 	ordering_fields = ['created_at', 'price']
 	filterset_fields = ['store', 'category', 'available_status']

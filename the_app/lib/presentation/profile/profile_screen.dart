@@ -44,6 +44,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   int? _userId;
   bool _isUploadingImage = false;
   
+  // Real data from backend
+  int _followersCount = 0;
+  double _averageRating = 0.0;
+  
   // Store specific
   String? _storeCoverUrl;
   int? _storeId;
@@ -91,6 +95,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             _storeId = store['id'];
             _storeDescription = store['description'] ?? _storeDescription;
             _storeCoverUrl = store['cover_image'];
+            _followersCount = store['followers_count'] ?? 0;
+            _averageRating = (store['average_rating'] as num?)?.toDouble() ?? 0.0;
           });
         }
       }
@@ -122,9 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         
         await _fetchStoreData();
         
-        if (mounted) Helpers.showSnackBar(context, 'تم تحديث صورة الغلاف بنجاح');
+        if (mounted) Helpers.showSnackBar(context, 'Cover image updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'فشل تحديث صورة الغلاف: $e');
+        if (mounted) Helpers.showSnackBar(context, 'Failed to update cover image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingCover = false);
       }
@@ -132,8 +138,35 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _pickImage() async {
+    // Show dialog to choose between camera and gallery
+    final ImageSource? source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Choose image source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: AppColors.primaryBlue),
+                title: Text('Camera'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: AppColors.primaryBlue),
+                title: Text('Gallery'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null && _userId != null) {
       setState(() => _isUploadingImage = true);
@@ -160,9 +193,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         
         _loadUserData();
         
-        if (mounted) Helpers.showSnackBar(context, 'تم تحديث الصورة الشخصية بنجاح');
+        if (mounted) Helpers.showSnackBar(context, 'Profile image updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'فشل تحديث الصورة: $e');
+        if (mounted) Helpers.showSnackBar(context, 'Failed to update image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
@@ -186,8 +219,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       setState(() {
         _userId = userData['id'];
-        _userName = userData['name'] ?? userData['username'] ?? 'مستخدم';
-        _location = userData['location'] ?? 'الجزائر العاصمة';
+        _userName = userData['name'] ?? userData['username'] ?? 'User';
+        _location = userData['location'] ?? 'Algiers';
         // Use AuthProvider's activeProfileType for consistency
         _userType = isMerchantFromAuth ? 'merchant' : 'user';
         _storeDescription = userData['store_description'] ?? '';
@@ -210,6 +243,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           }
         });
       } else {
+        // For regular users, fetch user stats (followers)
+        _fetchUserStats();
         // Switching to user mode - clear merchant data
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -239,7 +274,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         MaterialPageRoute(builder: (context) => const SplashScreen()),
         (Route<dynamic> route) => false,
       );
-      Helpers.showSnackBar(context, 'تم تسجيل الخروج بنجاح!');
+      Helpers.showSnackBar(context, 'Logged out successfully!');
+    }
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    } else {
+      return count.toString();
+    }
+  }
+
+  Future<void> _fetchUserStats() async {
+    if (_userId == null) return;
+    try {
+      // Fetch user follower count from backend
+      final response = await ApiService.get('${ApiConfig.users}$_userId/');
+      if (response != null && mounted) {
+        setState(() {
+          _followersCount = response['followers_count'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user stats: $e');
     }
   }
 
@@ -272,7 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'الإعدادات',
+                      'Settings',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -290,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                       child: Icon(Icons.edit_outlined, color: AppColors.primaryBlue),
                     ),
-                    title: const Text('تعديل الملف الشخصي'),
+                    title: const Text('Edit Profile'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       Navigator.pop(context);
@@ -307,7 +367,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                       child: const Icon(Icons.favorite_outline, color: Colors.red),
                     ),
-                    title: const Text('المفضلة'),
+                    title: const Text('Favorites'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       Navigator.pop(context);
@@ -326,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       child: const Icon(Icons.logout, color: Colors.red),
                     ),
                     title: const Text(
-                      'تسجيل الخروج',
+                      'Logout',
                       style: TextStyle(color: Colors.red),
                     ),
                     onTap: () {
@@ -540,7 +600,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               child: IconButton(
                 onPressed: _showSettingsMenu,
                 icon: Icon(Icons.settings_outlined, color: Colors.grey[700]),
-                tooltip: 'الإعدادات',
+                tooltip: 'Settings',
               ),
             ),
 
@@ -561,16 +621,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     Expanded(
                       child: _buildStatItem(
                         icon: Icons.people_outline,
-                        value: '12.5K',
-                        label: 'المتابعين',
+                        value: _formatCount(_followersCount),
+                        label: 'Followers',
                       ),
                     ),
                     Container(width: 1, height: 40, color: Colors.grey[200]),
                     Expanded(
                       child: _buildStatItem(
                         icon: Icons.star_outline,
-                        value: '4.8',
-                        label: 'التقييم',
+                        value: _averageRating > 0 ? _averageRating.toStringAsFixed(1) : '0.0',
+                        label: 'Rating',
                       ),
                     ),
                     Container(width: 1, height: 40, color: Colors.grey[200]),
@@ -578,7 +638,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       child: _buildStatItem(
                         icon: Icons.inventory_2_outlined,
                         value: productCount.toString(),
-                        label: 'المنتجات',
+                        label: 'Products',
                       ),
                     ),
                   ],
@@ -609,7 +669,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             children: [
                               Icon(Icons.shopping_bag_outlined, color: Colors.grey[700], size: 20),
                               const SizedBox(width: 12),
-                              const Text('منتج جديد', style: TextStyle(fontSize: 14)),
+                              const Text('New Product', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -619,7 +679,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             children: [
                               Icon(Icons.percent, color: Colors.grey[700], size: 20),
                               const SizedBox(width: 12),
-                              const Text('تخفيض', style: TextStyle(fontSize: 14)),
+                              const Text('Discount', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -629,7 +689,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             children: [
                               Icon(Icons.inventory_2_outlined, color: Colors.grey[700], size: 20),
                               const SizedBox(width: 12),
-                              const Text('حزمة', style: TextStyle(fontSize: 14)),
+                              const Text('Pack', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -645,7 +705,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           children: [
                             Icon(Icons.add, size: 20, color: Colors.white),
                             SizedBox(width: 8),
-                            Text('نشر منشور', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                            Text('Publish Post', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                           ],
                         ),
                       ),
@@ -658,7 +718,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.pushNamed(context, Routes.statistics),
                       icon: Icon(Icons.bar_chart, size: 18, color: AppColors.primaryBlue),
-                      label: Text('التحليلات', style: TextStyle(color: AppColors.primaryBlue)),
+                      label: Text('Analytics', style: TextStyle(color: AppColors.primaryBlue)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: AppColors.primaryBlue),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -776,7 +836,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: ElevatedButton.icon(
             onPressed: _navigateToEditProfile,
             icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('تعديل البيانات'),
+            label: const Text('Edit Info'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: AppColors.textPrimary,
@@ -803,12 +863,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pushNamed(context, Routes.favorites),
-                  child: _buildAnalysisItem(value: '♡', label: 'المفضلة', icon: Icons.favorite_rounded, color: Colors.red),
+                  child: _buildAnalysisItem(value: '♡', label: 'Favorites', icon: Icons.favorite_rounded, color: Colors.red),
                 ),
                 _buildDivider(),
-                _buildAnalysisItem(value: '12', label: 'المتابعين', icon: Icons.people_alt_rounded, color: Colors.blue),
+                _buildAnalysisItem(value: _formatCount(_followersCount), label: 'Followers', icon: Icons.people_alt_rounded, color: Colors.blue),
                 _buildDivider(),
-                _buildAnalysisItem(value: '5', label: 'الطلبات', icon: Icons.shopping_bag_rounded, color: Colors.orange),
+                _buildAnalysisItem(value: '5', label: 'Orders', icon: Icons.shopping_bag_rounded, color: Colors.orange),
               ],
             ),
           ),
@@ -877,7 +937,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               provider.loadMyOffers(_storeId.toString());
               context.read<PackProvider>().loadMyPacks(_storeId!);
             }
-            provider.loadPosts();
+            // Removed provider.loadPosts() - only load user's own data
             provider.loadOffers();
           }
         });
@@ -904,18 +964,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('تعديل العرض', style: AppTextStyles.h4),
+                  Text('Edit Offer', style: AppTextStyles.h4),
                   const SizedBox(height: 12),
                   TextField(
                     controller: discountController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'نسبة التخفيض (%)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'Discount Percentage (%)', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('إظهار العرض'),
+                      const Text('Show Offer'),
                       Switch(value: isAvailable, onChanged: (val) => setStateSheet(() => isAvailable = val)),
                     ],
                   ),
@@ -930,13 +990,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             try {
                               await provider.updateOffer(offerId: offer.id, discountPercentage: discount, isAvailable: isAvailable);
                               if (mounted) Navigator.pop(context);
-                              Helpers.showSnackBar(context, 'تم تحديث العرض');
+                              Helpers.showSnackBar(context, 'Offer updated');
                             } catch (e) {
-                              Helpers.showSnackBar(context, 'فشل تحديث العرض: $e');
+                              Helpers.showSnackBar(context, 'Failed to update offer: $e');
                             }
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryPurple, foregroundColor: Colors.white),
-                          child: const Text('حفظ'),
+                          child: const Text('Save'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -947,13 +1007,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             try {
                               await provider.deleteOffer(offer.id);
                               if (mounted) Navigator.pop(context);
-                              Helpers.showSnackBar(context, 'تم حذف العرض');
+                              Helpers.showSnackBar(context, 'Offer deleted');
                             } catch (e) {
-                              Helpers.showSnackBar(context, 'فشل حذف العرض: $e');
+                              Helpers.showSnackBar(context, 'Failed to delete offer: $e');
                             }
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                          child: const Text('حذف'),
+                          child: const Text('Delete'),
                         ),
                       ),
                     ],
@@ -1013,10 +1073,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
                           tabs: const [
-                            Tab(text: 'الكل'),
-                            Tab(text: 'المنتجات'),
-                            Tab(text: 'التخفيضات'),
-                            Tab(text: 'الحزم'),
+                            Tab(text: 'All'),
+                            Tab(text: 'Products'),
+                            Tab(text: 'Discounts'),
+                            Tab(text: 'Packs'),
                           ],
                         ),
                       ),
@@ -1100,7 +1160,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'بحث في ${type == 'all' ? 'الكل' : type == 'product' ? 'المنتجات' : type == 'pack' ? 'الحزم' : 'التخفيضات'}...',
+                  hintText: 'Search in ${type == 'all' ? 'All' : type == 'product' ? 'Products' : type == 'pack' ? 'Packs' : 'Discounts'}...',
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   filled: true,
@@ -1117,7 +1177,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         children: const [
                           Icon(Icons.inventory_2_outlined, size: 60, color: AppColors.textHint),
                           SizedBox(height: 12),
-                          Text('لا يوجد محتوى هنا بعد', style: TextStyle(color: AppColors.textSecondary)),
+                          Text('No content here yet', style: TextStyle(color: AppColors.textSecondary)),
                         ],
                       ),
                     )
@@ -1158,7 +1218,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             title: '${item.name}\n${_buildProductSummary(item.products)}',
                             price: item.discountPrice,
                             customImageWidget: StackedProductImages(products: item.products),
-                            bottomLeftText: '${item.products.length} منتج',
+                            bottomLeftText: '${item.products.length} products',
                             bottomLeftIcon: Icons.inventory_2_outlined,
                             onTap: () {
                               // Navigate to pack details
@@ -1215,27 +1275,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('الحساب', style: AppTextStyles.h4),
+          Text('Account', style: AppTextStyles.h4),
           const SizedBox(height: 12),
           _buildMenuContainer([
-            _MenuItem(icon: Icons.favorite_outline, title: 'المفضلة', onTap: () => Navigator.pushNamed(context, Routes.favorites)),
-            _MenuItem(icon: Icons.location_on_outlined, title: 'عناويني', subtitle: _location, onTap: () {}),
-            _MenuItem(icon: Icons.notifications_none_rounded, title: 'الإشعارات', badge: '3', onTap: () {}),
-            _MenuItem(icon: Icons.credit_card_outlined, title: 'طرق الدفع', onTap: () {}),
+            _MenuItem(icon: Icons.favorite_outline, title: 'Favorites', onTap: () => Navigator.pushNamed(context, Routes.favorites)),
+            _MenuItem(icon: Icons.location_on_outlined, title: 'My Addresses', subtitle: _location, onTap: () {}),
+            _MenuItem(icon: Icons.notifications_none_rounded, title: 'Notifications', badge: '3', onTap: () {}),
+            _MenuItem(icon: Icons.credit_card_outlined, title: 'Payment Methods', onTap: () {}),
           ]),
           const SizedBox(height: 24),
-          Text('عام', style: AppTextStyles.h4),
+          Text('General', style: AppTextStyles.h4),
           const SizedBox(height: 12),
           _buildMenuContainer([
-            _MenuItem(icon: Icons.language, title: 'اللغة', subtitle: 'العربية', onTap: () {}),
-            _MenuItem(icon: Icons.help_outline_rounded, title: 'المساعدة والدعم', onTap: () {}),
+            _MenuItem(icon: Icons.language, title: 'Language', subtitle: 'Arabic', onTap: () {}),
+            _MenuItem(icon: Icons.help_outline_rounded, title: 'Help & Support', onTap: () {}),
           ]),
           const SizedBox(height: 24),
           Container(
             decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withValues(alpha: 0.1))),
             child: ListTile(
               leading: Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: Colors.red, size: 20)),
-              title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
               onTap: _handleLogout,
             ),
@@ -1407,7 +1467,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   String _buildProductSummary(List<dynamic> products) {
-    if (products.isEmpty) return 'حزمة فارغة';
+    if (products.isEmpty) return 'Empty pack';
     
     final maxItems = 3;
     final itemsToShow = products.take(maxItems).toList();
@@ -1432,7 +1492,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }).where((item) => item != null).toList();
     
     if (validItems.isEmpty) {
-      return '${products.length} منتجات';
+      return '${products.length} products';
     }
     
     String summary = validItems.join(' + ');

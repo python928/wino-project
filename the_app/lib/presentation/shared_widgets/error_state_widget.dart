@@ -11,7 +11,7 @@ class ErrorStateWidget extends StatelessWidget {
 
   const ErrorStateWidget({
     super.key,
-    this.message = 'حدث خطأ ما',
+    this.message = 'An error occurred',
     this.details,
     this.onRetry,
     this.icon = Icons.error_outline_rounded,
@@ -68,7 +68,7 @@ class ErrorStateWidget extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('إعادة المحاولة'),
+                label: const Text('Retry'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryPurple,
                   side: const BorderSide(color: AppColors.primaryPurple),
@@ -99,8 +99,8 @@ class NetworkErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorStateWidget(
       icon: Icons.wifi_off_rounded,
-      message: 'لا يوجد اتصال بالإنترنت',
-      details: 'يرجى التحقق من اتصالك والمحاولة مرة أخرى',
+      message: 'No internet connection',
+      details: 'Please check your connection and try again.',
       onRetry: onRetry,
     );
   }
@@ -116,8 +116,8 @@ class ServerErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorStateWidget(
       icon: Icons.cloud_off_rounded,
-      message: 'خطأ في الخادم',
-      details: 'نعتذر، حدث خطأ ما. يرجى المحاولة لاحقاً',
+      message: 'Server error',
+      details: 'Sorry, something went wrong. Please try again later.',
       onRetry: onRetry,
     );
   }

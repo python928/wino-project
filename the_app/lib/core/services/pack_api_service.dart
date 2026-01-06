@@ -15,7 +15,7 @@ class PackApiService {
             : (storesResp is List ? storesResp : []);
         for (final item in storesList) {
           if (item is Map<String, dynamic>) {
-            storesById[item['id']] = item['name'] ?? 'متجر';
+            storesById[item['id']] = item['name'] ?? 'Store';
           }
         }
       } catch (e) {

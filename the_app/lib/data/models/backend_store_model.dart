@@ -38,9 +38,9 @@ class BackendStore {
     return BackendStore(
       id: json['id'] as int,
       ownerId: (json['owner'] as int?) ?? 0,
-      name: (json['name']?.toString().trim().isNotEmpty ?? false)
+        name: (json['name']?.toString().trim().isNotEmpty ?? false)
           ? json['name'].toString()
-          : 'متجر',
+          : 'Store',
       description: json['description']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       phoneNumber: json['phone']?.toString() ?? json['phone_number']?.toString() ?? '',

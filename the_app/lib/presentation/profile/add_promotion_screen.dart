@@ -77,7 +77,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                         child: TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
-                            hintText: 'ابحث عن منتج...',
+                            hintText: 'Search for product...',
                             prefixIcon: const Icon(Icons.search),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -90,7 +90,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       ),
                       Expanded(
                         child: filteredPosts.isEmpty
-                            ? const Center(child: Text('لا توجد منتجات مطابقة'))
+                            ? const Center(child: Text('No matching products found'))
                             : ListView.builder(
                                 controller: scrollController,
                                 itemCount: filteredPosts.length,
@@ -134,7 +134,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                                       ),
                                     ),
                                     title: Text(post.title),
-                                    subtitle: Text('${post.price} د.ج'),
+                                    subtitle: Text('${post.price} DZD'),
                                     onTap: () {
                                       Navigator.pop(context);
                                       _onProductSelected(post);
@@ -193,7 +193,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'تخفيض موجود',
+                  'Existing Discount',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
@@ -268,7 +268,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'هذا المنتج لديه تخفيض بالفعل. هل تريد تعديله؟',
+                'This product already has a discount. Do you want to edit it?',
                 style: TextStyle(color: Colors.grey),
               ),
             ],
@@ -276,7 +276,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -293,7 +293,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                 backgroundColor: AppColors.primaryBlue,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('تعديل التخفيض', style: TextStyle(color: Colors.white)),
+              child: const Text('Edit Discount', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -330,7 +330,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _selectedProduct == null) {
       if (_selectedProduct == null) {
-        Helpers.showSnackBar(context, 'الرجاء اختيار منتج');
+        Helpers.showSnackBar(context, 'Please select a product');
       }
       return;
     }
@@ -349,7 +349,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         );
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'تم تعديل التخفيض بنجاح');
+          Helpers.showSnackBar(context, 'Discount edited successfully');
           Navigator.pop(context, true);
         }
       } else {
@@ -360,13 +360,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         );
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'تم إضافة التخفيض بنجاح');
+          Helpers.showSnackBar(context, 'Discount added successfully');
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'فشل ${_isEditMode ? 'تعديل' : 'إضافة'} التخفيض: $e');
+        Helpers.showSnackBar(context, 'Failed to ${_isEditMode ? 'edit' : 'add'} discount: $e');
       }
     } finally {
       if (mounted) {
@@ -381,7 +381,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isEditMode ? 'تعديل التخفيض' : 'إضافة تخفيض'),
+          title: Text(_isEditMode ? 'Edit Discount' : 'Add Discount'),
           backgroundColor: Colors.transparent,
           elevation: 0,
           flexibleSpace: Container(
@@ -398,7 +398,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'اختر المنتج',
+                  'Select Product',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
@@ -454,7 +454,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           ),
                         Expanded(
                           child: Text(
-                            _selectedProduct?.title ?? 'اضغط لاختيار منتج...',
+                            _selectedProduct?.title ?? 'Tap to select product...',
                             style: TextStyle(
                               color: _selectedProduct == null ? Colors.grey : Colors.black,
                             ),
@@ -481,7 +481,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('السعر الأصلي:'),
+                            const Text('Original Price:'),
                             Text(
                               Helpers.formatPrice(_selectedProduct!.price),
                               style: const TextStyle(
@@ -497,7 +497,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('نسبة التخفيض:'),
+                            const Text('Discount Percentage:'),
                             Text(
                               _discountPercentageController.text.isEmpty 
                                   ? '0%' 
@@ -514,11 +514,11 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('السعر الجديد:'),
+                            const Text('New Price:'),
                             Text(
                               _newPriceController.text.isEmpty 
                                   ? Helpers.formatPrice(_selectedProduct!.price)
-                                  : '${_newPriceController.text} د.ج',
+                                  : '${_newPriceController.text} DZD',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
@@ -541,15 +541,15 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           controller: _discountPercentageController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'نسبة التخفيض (%)',
+                            labelText: 'Discount Percentage (%)',
                             border: OutlineInputBorder(),
                             suffixText: '%',
                           ),
                           onChanged: _onPercentageChanged,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'مطلوب';
+                            if (value == null || value.isEmpty) return 'Required';
                             final n = double.tryParse(value);
-                            if (n == null || n <= 0 || n >= 100) return 'غير صالح';
+                            if (n == null || n <= 0 || n >= 100) return 'Invalid';
                             return null;
                           },
                         ),
@@ -562,16 +562,16 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           controller: _newPriceController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'السعر الجديد',
+                            labelText: 'New Price',
                             border: OutlineInputBorder(),
-                            suffixText: 'د.ج',
+                            suffixText: 'DZD',
                           ),
                           onChanged: _onNewPriceChanged,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'مطلوب';
+                            if (value == null || value.isEmpty) return 'Required';
                             final n = double.tryParse(value);
                             final original = _selectedProduct!.price;
-                            if (n == null || n <= 0 || n >= original) return 'غير صالح';
+                            if (n == null || n <= 0 || n >= original) return 'Invalid';
                             return null;
                           },
                         ),
@@ -586,8 +586,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     width: double.infinity,
                     child: GradientButton(
                       text: _isLoading
-                          ? 'جاري الحفظ...'
-                          : (_isEditMode ? 'حفظ التعديلات' : 'تطبيق التخفيض'),
+                          ? 'Saving...'
+                          : (_isEditMode ? 'Save Changes' : 'Apply Discount'),
                       onPressed: _isLoading ? () {} : _submit,
                       gradient: AppColors.primaryGradient,
                     ),

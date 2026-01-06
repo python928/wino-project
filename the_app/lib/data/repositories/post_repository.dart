@@ -22,7 +22,7 @@ class PostRepository {
     final map = <int, String>{};
     for (final item in list) {
       final store = item as Map<String, dynamic>;
-      map[store['id']] = store['name'] ?? 'متجر';
+      map[store['id']] = store['name'] ?? 'Store';
     }
     return map;
   }
@@ -33,7 +33,7 @@ class PostRepository {
     final map = <int, String>{};
     for (final item in list) {
       final category = item as Map<String, dynamic>;
-      map[category['id']] = category['name'] ?? 'غير مصنف';
+      map[category['id']] = category['name'] ?? 'Uncategorized';
     }
     return map;
   }
@@ -130,10 +130,10 @@ class PostRepository {
 
   static Future<int> _ensureStoreForCurrentUser() async {
     final token = await StorageService.getAccessToken();
-    if (token == null) throw Exception('لا يوجد توكن نشط');
+    if (token == null) throw Exception('No active token');
     final decoded = JWTValidator.decodePayload(token) ?? {};
     final userId = decoded['user_id'];
-    if (userId == null) throw Exception('لا يمكن استخراج user_id من التوكن');
+    if (userId == null) throw Exception('Cannot extract user_id from token');
 
     final storesResp = await ApiService.get(ApiConfig.stores);
     final list = _extractList(storesResp);
@@ -143,7 +143,7 @@ class PostRepository {
     }
 
     // Get user's name for the store
-    String storeName = 'متجر';
+    String storeName = 'Store';
     try {
       final userResp = await ApiService.get('${ApiConfig.users}$userId/');
       final userName = userResp['name']?.toString().trim();
@@ -158,7 +158,7 @@ class PostRepository {
 
     final created = await ApiService.post(ApiConfig.stores, {
       'name': storeName,
-      'description': 'متجر جديد',
+      'description': 'New store',
       'type': 'physical',
     });
     return created['id'];
@@ -178,7 +178,7 @@ class PostRepository {
     bool hidePrice = false,
   }) async {
     try {
-      final categoryId = await _ensureCategory(category.isEmpty ? 'عام' : category);
+      final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
       final storeId = await _ensureStoreForCurrentUser();
 
       final productPayload = {
@@ -237,7 +237,7 @@ class PostRepository {
     List<File> newImages = const [],
   }) async {
     try {
-      final categoryId = await _ensureCategory(category.isEmpty ? 'عام' : category);
+      final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
       final fields = {
         'name': title,
         'description': description,

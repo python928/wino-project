@@ -260,7 +260,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ),
                 Text(
-                  '${Helpers.formatDistance(widget.product.distance)} منك',
+                  '${Helpers.formatDistance(widget.product.distance)} away',
                   style: AppTextStyles.bodySmall,
                 ),
               ],
@@ -282,10 +282,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('الوصف', style: AppTextStyles.h3),
+          Text('Description', style: AppTextStyles.h3),
           const SizedBox(height: AppTheme.spacing12),
           Text(
-            'منتج عالي الجودة يوفر لك أفضل تجربة استخدام. تم تصميمه بعناية ليلبي احتياجاتك اليومية ويدوم معك لفترة طويلة.',
+            'A high-quality product that provides you with the best user experience. Carefully designed to meet your daily needs and last a long time.',
             style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
           ),
         ],
@@ -299,11 +299,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('المواصفات', style: AppTextStyles.h3),
+          Text('Specifications', style: AppTextStyles.h3),
           const SizedBox(height: AppTheme.spacing12),
-          _buildSpecRow('الحالة', 'جديد'),
-          _buildSpecRow('الضمان', 'سنة واحدة'),
-          _buildSpecRow('التوصيل', 'مجاني'),
+          _buildSpecRow('Condition', 'New'),
+          _buildSpecRow('Warranty', 'One year'),
+          _buildSpecRow('Delivery', 'Free'),
         ],
       ),
     );
@@ -368,11 +368,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             // Add to Cart Button
             Expanded(
               child: GradientButton(
-                text: 'أضف للسلة',
+                text: 'Add to Cart',
                 onPressed: () {
                   Helpers.showSnackBar(
                     context,
-                    'تمت إضافة المنتج للسلة',
+                    'Product added to cart',
                   );
                 },
               ),

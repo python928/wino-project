@@ -19,7 +19,7 @@ class SearchBarWidget extends StatelessWidget {
     this.onSearchChanged,
     this.onSearchSubmitted,
     this.controller,
-    this.hintText = 'ابحث عن المنتجات، المتاجر...',
+    this.hintText = 'Search for products, stores...',
     this.isActive = false,
   });
 

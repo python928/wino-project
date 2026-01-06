@@ -75,7 +75,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
           markerId: const MarkerId('current_location'),
           position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          infoWindow: const InfoWindow(title: 'موقعك الحالي'),
+          infoWindow: const InfoWindow(title: 'Your current location'),
         ),
       );
     }
@@ -92,7 +92,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
             ),
             infoWindow: InfoWindow(
               title: store.name,
-              snippet: store.isOpen ? 'مفتوح' : 'مغلق',
+              snippet: store.isOpen ? 'Open' : 'Closed',
             ),
             onTap: () => _onStoreMarkerTap(store),
           ),
@@ -124,7 +124,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('خريطة المتاجر'),
+          title: const Text('Store Map'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -151,7 +151,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: _initializeMap,
-                              child: const Text('إعادة المحاولة'),
+                              child: const Text('Retry'),
                             ),
                           ],
                         ),
@@ -294,7 +294,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          store.isOpen ? 'مفتوح' : 'مغلق',
+                          store.isOpen ? 'Open' : 'Closed',
                           style: TextStyle(
                             color: store.isOpen ? Colors.green : Colors.red,
                             fontSize: 13,
@@ -338,7 +338,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                     );
                   },
                   icon: const Icon(Icons.store, size: 18),
-                  label: const Text('عرض المتجر'),
+                  label: const Text('View Store'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryPurple,
                     side: BorderSide(color: AppColors.primaryPurple),
@@ -357,7 +357,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                     );
                   },
                   icon: const Icon(Icons.message, size: 18),
-                  label: const Text('تواصل'),
+                  label: const Text('Contact'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryPurple,
                     foregroundColor: Colors.white,

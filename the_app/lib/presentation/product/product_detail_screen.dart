@@ -85,13 +85,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _submitReview() async {
     if (_userRating == 0) {
-      Helpers.showSnackBar(context, 'الرجاء اختيار تقييم');
+      Helpers.showSnackBar(context, 'Please select a rating');
       return;
     }
 
     // Check if user is logged in
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'يجب تسجيل الدخول لإضافة تقييم', isError: true);
+      Helpers.showSnackBar(context, 'You must be logged in to add a review', isError: true);
       return;
     }
 
@@ -107,7 +107,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _isEditingReview = false;
           _hasUserReview = true;
         });
-        Helpers.showSnackBar(context, 'تم تحديث تقييمك بنجاح');
+        Helpers.showSnackBar(context, 'Your review was updated successfully');
       } else {
         await ApiService.post(ApiConfig.reviews, {
           'product': widget.product.id,
@@ -115,14 +115,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           'comment': _commentController.text.trim(),
         });
         setState(() => _hasUserReview = true);
-        Helpers.showSnackBar(context, 'تم إرسال تقييمك بنجاح');
+        Helpers.showSnackBar(context, 'Your review was submitted successfully');
       }
       _loadReviews();
     } catch (e) {
       debugPrint('Error submitting review: $e');
-      String errorMessage = _isEditingReview ? 'فشل في تحديث التقييم' : 'فشل في إرسال التقييم';
+      String errorMessage = _isEditingReview ? 'Failed to update review' : 'Failed to submit review';
       if (e.toString().contains('unique') || e.toString().contains('already')) {
-        errorMessage = 'لقد قمت بتقييم هذا المنتج مسبقاً';
+        errorMessage = 'You have already reviewed this product';
         setState(() => _hasUserReview = true);
       }
       Helpers.showSnackBar(context, errorMessage, isError: true);
@@ -166,7 +166,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _toggleFavorite() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'يجب تسجيل الدخول لإضافة للمفضلة', isError: true);
+      Helpers.showSnackBar(context, 'You must be logged in to add to favorites', isError: true);
       return;
     }
 
@@ -184,11 +184,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
       Helpers.showSnackBar(
         context,
-        _isFavorited ? 'تمت الإضافة للمفضلة' : 'تمت الإزالة من المفضلة',
+        _isFavorited ? 'Added to favorites' : 'Removed from favorites',
       );
     } catch (e) {
       debugPrint('Error toggling favorite: $e');
-      Helpers.showSnackBar(context, 'حدث خطأ', isError: true);
+      Helpers.showSnackBar(context, 'An error occurred', isError: true);
     } finally {
       setState(() => _isTogglingFavorite = false);
     }
@@ -253,7 +253,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     child: const Icon(Icons.share, color: AppColors.textPrimary),
                   ),
-                  onPressed: () => Helpers.showSnackBar(context, 'مشاركة المنتج'),
+                  onPressed: () => Helpers.showSnackBar(context, 'Share product'),
                 ),
                 IconButton(
                   icon: Container(
@@ -406,7 +406,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  product.isAvailable ? 'متوفر' : 'غير متوفر',
+                                  product.isAvailable ? 'Available' : 'Not Available',
                                   style: AppTextStyles.bodySmall.copyWith(
                                     color: product.isAvailable ? Colors.green : Colors.red,
                                     fontWeight: FontWeight.w600,
@@ -445,7 +445,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ),
                                   ),
                                   Text(
-                                    'اضغط لزيارة المتجر',
+                                    'Tap to visit store',
                                     style: AppTextStyles.bodySmall.copyWith(
                                       color: AppColors.textSecondary,
                                     ),
@@ -467,7 +467,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('الوصف', style: AppTextStyles.h4),
+                          Text('Description', style: AppTextStyles.h4),
                           const SizedBox(height: 12),
                           AnimatedCrossFade(
                             firstChild: Text(
@@ -497,7 +497,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 setState(() => _isDescriptionExpanded = !_isDescriptionExpanded);
                               },
                               child: Text(
-                                _isDescriptionExpanded ? 'عرض أقل' : 'عرض المزيد',
+                                _isDescriptionExpanded ? 'Show less' : 'Show more',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.primaryPurple,
                                 ),
@@ -564,7 +564,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     icon: const Icon(Icons.chat, color: Colors.green),
                     onPressed: () => _launchWhatsApp(
                       '0555555555',
-                      'مرحباً، أريد الاستفسار عن: ${product.title}',
+                      'Hello, I would like to inquire about: ${product.title}',
                     ),
                   ),
                 ),
@@ -572,10 +572,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 // Contact seller button
                 Expanded(
                   child: GradientButton(
-                    text: 'تواصل مع البائع',
+                    text: 'Contact Seller',
                     icon: Icons.message,
                     onPressed: () {
-                      Helpers.showSnackBar(context, 'فتح المحادثة مع البائع');
+                      Helpers.showSnackBar(context, 'Opening chat with seller');
                     },
                   ),
                 ),
@@ -705,13 +705,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'سجل الدخول لإضافة تقييم',
+                      'Log in to add a review',
                       style: AppTextStyles.bodyMedium.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
-                      'شارك رأيك مع الآخرين',
+                      'Share your opinion with others',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -724,7 +724,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Navigator.pushNamed(context, Routes.login);
                 },
                 child: Text(
-                  'تسجيل الدخول',
+                  'Log In',
                   style: TextStyle(color: AppColors.primaryPurple),
                 ),
               ),
@@ -743,7 +743,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Row(
               children: [
-                Text('تقييمك', style: AppTextStyles.h4),
+                Text('Your Rating', style: AppTextStyles.h4),
                 const Spacer(),
                 // Edit button
                 GestureDetector(
@@ -760,7 +760,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Icon(Icons.edit, color: AppColors.primaryPurple, size: 16),
                         const SizedBox(width: 4),
                         Text(
-                          'تعديل',
+                          'Edit',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.primaryPurple,
                             fontWeight: FontWeight.w600,
@@ -783,7 +783,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const Icon(Icons.check_circle, color: Colors.green, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        'تم التقييم',
+                        'Rated',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.green,
                           fontWeight: FontWeight.w600,
@@ -835,12 +835,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Row(
               children: [
-                Text('تعديل تقييمك', style: AppTextStyles.h4),
+                Text('Edit Your Rating', style: AppTextStyles.h4),
                 const Spacer(),
                 TextButton(
                   onPressed: _cancelEditingReview,
                   child: Text(
-                    'إلغاء',
+                    'Cancel',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
@@ -874,7 +874,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               controller: _commentController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'اكتب تعليقك هنا (اختياري)...',
+                hintText: 'Write your comment here (optional)...',
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 filled: true,
                 fillColor: Colors.grey[50],
@@ -917,7 +917,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       )
                     : const Text(
-                        'حفظ التعديلات',
+                        'Save Changes',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -936,7 +936,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('قيّم هذا المنتج', style: AppTextStyles.h4),
+          Text('Rate This Product', style: AppTextStyles.h4),
           const SizedBox(height: 12),
 
           // Star rating
@@ -965,7 +965,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             controller: _commentController,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'اكتب تعليقك هنا (اختياري)...',
+              hintText: 'Write your comment here (optional)...',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
               fillColor: Colors.grey[50],
@@ -1008,7 +1008,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     )
                   : const Text(
-                      'إرسال التقييم',
+                      'Submit Review',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -1039,13 +1039,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
               const SizedBox(height: 8),
               Text(
-                'لا توجد تقييمات بعد',
+                'No reviews yet',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
               ),
               Text(
-                'كن أول من يقيّم هذا المنتج',
+                'Be the first to review this product',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textHint,
                 ),
@@ -1063,7 +1063,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           Row(
             children: [
-              Text('التقييمات', style: AppTextStyles.h4),
+              Text('Reviews', style: AppTextStyles.h4),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1088,7 +1088,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               final review = _reviews[index];
               final rating = review['rating'] ?? 0;
               final comment = review['comment'] ?? '';
-              final userName = review['user_name'] ?? review['username'] ?? 'مستخدم';
+              final userName = review['user_name'] ?? review['username'] ?? 'User';
               final createdAt = DateTime.tryParse(review['created_at'] ?? '') ?? DateTime.now();
 
               return Container(
@@ -1107,7 +1107,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           radius: 16,
                           backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                           child: Text(
-                            userName.isNotEmpty ? userName[0].toUpperCase() : 'م',
+                            userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                             style: TextStyle(
                               color: AppColors.primaryPurple,
                               fontWeight: FontWeight.bold,
@@ -1166,10 +1166,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: TextButton(
                 onPressed: () {
                   // Could show all reviews in a modal
-                  Helpers.showSnackBar(context, 'عرض كل التقييمات قريباً');
+                  Helpers.showSnackBar(context, 'Show all reviews coming soon');
                 },
                 child: Text(
-                  'عرض كل التقييمات (${_reviews.length})',
+                  'Show All Reviews (${_reviews.length})',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.primaryPurple,
                   ),

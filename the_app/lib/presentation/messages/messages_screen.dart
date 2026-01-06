@@ -34,7 +34,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: CustomAppBar(
-          title: 'الرسائل',
+          title: 'Messages',
           showBackButton: false,
           actions: [
             IconButton(
@@ -58,8 +58,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             if (provider.conversations.isEmpty) {
               return const EmptyStateWidget(
                 icon: Icons.chat_bubble_outline,
-                title: 'لا توجد رسائل',
-                message: 'ابدأ محادثة مع المتاجر للحصول على الدعم',
+                title: 'No messages',
+                message: 'Start a conversation with stores for support',
               );
             }
 
@@ -126,13 +126,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
             Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'تعذر تحميل الرسائل',
+              'Failed to load messages',
               style: AppTextStyles.h3,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى',
+              'Please check your internet connection and try again',
               style: TextStyle(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
@@ -140,7 +140,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             OutlinedButton.icon(
               onPressed: () => provider.loadConversations(),
               icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة'),
+              label: const Text('Retry'),
             ),
           ],
         ),

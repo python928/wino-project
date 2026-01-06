@@ -100,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     } catch (e) {
       debugPrint('⚠️ Network error during validation: $e');
       
-      // إذا لا يوجد إنترنت والتوكن غير منتهي محلياً - ادخل أوفلاين
+      // If there is no internet and the token is not expired locally - go offline
       final currentToken = await StorageService.getAccessToken();
       if (currentToken != null && !JWTValidator.isExpired(currentToken)) {
         debugPrint('ℹ️ Entering offline mode');
@@ -135,17 +135,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void _navigateToHomeOffline() {
     if (!mounted) return;
     
-    // عرض رسالة للمستخدم بأنه في وضع عدم الاتصال
+    // Show a message to the user that they are offline
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
     );
     
-    // عرض snackbar بعد التنقل
+    // Show snackbar after navigation
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('أنت في وضع عدم الاتصال - بعض الميزات غير متاحة'),
+            content: Text('You are offline - some features are unavailable'),
             duration: Duration(seconds: 3),
             backgroundColor: Colors.orange,
           ),
@@ -220,7 +220,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'تسوق محلي، اكتشف جديد',
+                    'Shop local, discover new',
                     style: AppTextStyles.bodyLarge.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                     ),

@@ -38,10 +38,10 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
 
   // Build screens dynamically to pass search query
   List<Widget> get _screens => [
-    const HomeScreen(),           // 0 - الرئيسية
-    SearchTabScreen(initialQuery: _searchQuery),      // 1 - البحث
-    const NotificationsScreen(),  // 2 - الإشعارات
-    const ProfileScreen(),        // 3 - حسابي
+    const HomeScreen(),           // 0 - Home
+    SearchTabScreen(initialQuery: _searchQuery),      // 1 - Search
+    const NotificationsScreen(),  // 2 - Notifications
+    const ProfileScreen(),        // 3 - Profile
   ];
 
   @override

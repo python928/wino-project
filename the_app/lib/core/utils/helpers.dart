@@ -15,9 +15,9 @@ class Helpers {
   // Format distance
   static String formatDistance(double distance) {
     if (distance < 1) {
-      return '${(distance * 1000).toInt()} م';
+      return '${(distance * 1000).toInt()} m';
     }
-    return '${distance.toStringAsFixed(1)} كم';
+    return '${distance.toStringAsFixed(1)} km';
   }
 
   // Format rating
@@ -26,7 +26,7 @@ class Helpers {
   }
 
   // Format price with currency
-  static String formatPrice(double price, {String currency = 'دج'}) {
+  static String formatPrice(double price, {String currency = 'DZD'}) {
     return '${price.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]},',
@@ -80,21 +80,21 @@ class Helpers {
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {
         if (difference.inMinutes == 0) {
-          return 'الآن';
+          return 'now';
         }
-        return 'منذ ${difference.inMinutes} دقيقة';
+        return '${difference.inMinutes} minutes ago';
       }
-      return 'منذ ${difference.inHours} ساعة';
+      return '${difference.inHours} hours ago';
     } else if (difference.inDays == 1) {
-      return 'أمس';
+      return 'Yesterday';
     } else if (difference.inDays < 7) {
-      return 'منذ ${difference.inDays} أيام';
+      return '${difference.inDays} days ago';
     } else if (difference.inDays < 30) {
       final weeks = (difference.inDays / 7).floor();
-      return 'منذ $weeks أسبوع';
+      return '$weeks weeks ago';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
-      return 'منذ $months شهر';
+      return '$months months ago';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

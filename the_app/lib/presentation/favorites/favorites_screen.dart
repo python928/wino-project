@@ -66,7 +66,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       debugPrint('Error loading favorites: $e');
       setState(() {
         _isLoading = false;
-        _error = 'حدث خطأ في تحميل المفضلة';
+        _error = 'An error occurred while loading favorites';
       });
     }
   }
@@ -81,9 +81,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         _favorites.removeWhere((p) => p.id == product.id);
       });
 
-      Helpers.showSnackBar(context, 'تمت الإزالة من المفضلة');
+      Helpers.showSnackBar(context, 'Removed from favorites');
     } catch (e) {
-      Helpers.showSnackBar(context, 'حدث خطأ', isError: true);
+      Helpers.showSnackBar(context, 'An error occurred', isError: true);
     }
   }
 
@@ -94,7 +94,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
-          title: const Text('المفضلة'),
+          title: const Text('Favorites'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -124,7 +124,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadFavorites,
-              child: const Text('إعادة المحاولة'),
+              child: const Text('Retry'),
             ),
           ],
         ),
@@ -214,7 +214,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'سجل الدخول لعرض المفضلة',
+              'Log in to view your favorites',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -223,7 +223,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'قم بتسجيل الدخول لحفظ منتجاتك المفضلة',
+              'Log in to save your favorite products',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -243,7 +243,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
                 elevation: 0,
               ),
-              child: const Text('تسجيل الدخول'),
+              child: const Text('Log In'),
             ),
           ],
         ),
@@ -272,7 +272,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'لا توجد منتجات مفضلة',
+              'No favorite products',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -281,7 +281,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'أضف منتجات إلى المفضلة لتجدها هنا بسهولة',
+              'Add products to your favorites to find them here easily',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -301,7 +301,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
                 elevation: 0,
               ),
-              child: const Text('استكشف المنتجات'),
+              child: const Text('Explore Products'),
             ),
           ],
         ),

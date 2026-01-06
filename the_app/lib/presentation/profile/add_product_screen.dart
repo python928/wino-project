@@ -38,7 +38,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'حدث خطأ أثناء اختيار الصور', isError: true);
+        Helpers.showSnackBar(context, 'Error selecting images', isError: true);
       }
     }
   }
@@ -46,7 +46,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_images.isEmpty) {
-      Helpers.showSnackBar(context, 'الرجاء إضافة صورة واحدة على الأقل');
+      Helpers.showSnackBar(context, 'Please add at least one image');
       return;
     }
 
@@ -65,12 +65,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
       );
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'تم نشر المنتج بنجاح');
+        Helpers.showSnackBar(context, 'Product published successfully');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'فشل نشر المنتج: $e');
+        Helpers.showSnackBar(context, 'Failed to publish product: $e');
       }
     } finally {
       if (mounted) {
@@ -95,7 +95,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text('نشر منتج جديد'),
+          title: const Text('Publish New Product'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -115,13 +115,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Image Section
-                      _buildLabel('صور المنتج'),
+                      _buildLabel('Product Images'),
                       const SizedBox(height: 12),
                       _buildImagePicker(),
                       const SizedBox(height: 8),
                       Center(
                         child: Text(
-                          'يمكنك إضافة حتى 5 صور للمنتج',
+                          'You can add up to 5 product images',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[500],
@@ -131,18 +131,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       const SizedBox(height: 24),
 
                       // Product Name
-                      _buildLabel('اسم المنتج', required: true),
+                      _buildLabel('Product Name', required: true),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _titleController,
-                        decoration: _inputDecoration('أدخل اسم المنتج'),
+                        decoration: _inputDecoration('Enter product name'),
                         validator: (value) =>
-                            value == null || value.isEmpty ? 'الرجاء إدخال اسم المنتج' : null,
+                            value == null || value.isEmpty ? 'Please enter product name' : null,
                       ),
                       const SizedBox(height: 20),
 
                       // Price
-                      _buildLabel('السعر', required: true),
+                      _buildLabel('Price', required: true),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _priceController,
@@ -157,7 +157,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          suffixText: 'ر.س',
+                          suffixText: 'DZD',
                           suffixStyle: TextStyle(
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
@@ -168,37 +168,37 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         textAlign: TextAlign.left,
                         validator: (value) {
                           if (!_showPrice) return null;
-                          if (value == null || value.isEmpty) return 'الرجاء إدخال السعر';
+                          if (value == null || value.isEmpty) return 'Please enter price';
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
 
                       // Category
-                      _buildLabel('الصنف', required: true),
+                      _buildLabel('Category', required: true),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _categoryController,
-                        decoration: _inputDecoration('أدخل صنف المنتج'),
+                        decoration: _inputDecoration('Enter product category'),
                         validator: (value) =>
-                            value == null || value.isEmpty ? 'الرجاء إدخال صنف المنتج' : null,
+                            value == null || value.isEmpty ? 'Please enter product category' : null,
                       ),
                       const SizedBox(height: 20),
 
                       // Description
-                      _buildLabel('الوصف'),
+                      _buildLabel('Description'),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _descriptionController,
-                        decoration: _inputDecoration('أضف وصفاً للمنتج..'),
+                        decoration: _inputDecoration('Add product description..'),
                         maxLines: 3,
                       ),
                       const SizedBox(height: 20),
 
                       // Show Price Toggle
                       _buildToggleOption(
-                        title: 'عرض السعر',
-                        subtitle: 'إظهار السعر للعملاء',
+                        title: 'Show Price',
+                        subtitle: 'Show price to customers',
                         value: _showPrice,
                         onChanged: (value) {
                           setState(() => _showPrice = value);
@@ -208,8 +208,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       // Availability Toggle
                       _buildToggleOption(
-                        title: 'المنتج متوفر',
-                        subtitle: 'هل المنتج متوفر للبيع؟',
+                        title: 'Product Available',
+                        subtitle: 'Is the product available for sale?',
                         value: _isAvailable,
                         onChanged: (value) {
                           setState(() => _isAvailable = value);
@@ -250,7 +250,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                           )
                         : const Icon(Icons.add),
-                    label: Text(_isLoading ? 'جاري النشر...' : 'نشر المنتج'),
+                    label: Text(_isLoading ? 'Publishing...' : 'Publish Product'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       foregroundColor: Colors.white,
@@ -328,7 +328,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               Icon(Icons.camera_alt_outlined, size: 32, color: Colors.grey[500]),
               const SizedBox(height: 8),
               Text(
-                'إضافة صورة',
+                'Add Image',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
@@ -361,7 +361,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.add, size: 28, color: Colors.grey[500]),
-                    Text('إضافة', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    Text('Add', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   ],
                 ),
               ),

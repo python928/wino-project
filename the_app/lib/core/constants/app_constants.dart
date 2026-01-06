@@ -10,8 +10,8 @@ class AppConstants {
   static const String usCountryCode = 'US';
   
   // Default Values
-  static const String defaultLocation = 'الجزائر العاصمة';
-  static const String defaultCurrency = 'دج';
+  static const String defaultLocation = 'Algiers';
+  static const String defaultCurrency = 'DZD';
   
   // Pagination
   static const int defaultPageSize = 20;
@@ -63,13 +63,13 @@ class AppConstants {
   static const int cacheMaxAge = 3600; // 1 hour in seconds
   
   // Messages
-  static const String errorGeneric = 'حدث خطأ ما، يرجى المحاولة مرة أخرى';
-  static const String errorNetwork = 'تحقق من اتصالك بالإنترنت';
-  static const String errorNotFound = 'لم يتم العثور على النتائج';
-  static const String successGeneric = 'تمت العملية بنجاح';
+  static const String errorGeneric = 'An error occurred, please try again.';
+  static const String errorNetwork = 'Check your internet connection.';
+  static const String errorNotFound = 'No results found.';
+  static const String successGeneric = 'Operation completed successfully.';
   
   // Search
-  static const String searchHint = 'ابحث عن المنتجات، المتاجر...';
+  static const String searchHint = 'Search for products, stores...';
   static const int minSearchLength = 2;
   static const int searchDebounceMilliseconds = 500;
 }

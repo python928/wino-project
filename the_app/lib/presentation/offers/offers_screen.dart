@@ -25,14 +25,14 @@ class _OffersScreenState extends State<OffersScreen> {
         return Scaffold(
           backgroundColor: AppColors.scaffoldBackground,
           appBar: const CustomAppBar(
-            title: 'العروض الساخنة',
+            title: 'Hot Deals',
             showBackButton: false,
           ),
           body: hotDeals.isEmpty
               ? const EmptyStateWidget(
                   icon: Icons.local_offer_outlined,
-              title: 'لا توجد عروض حالياً',
-              message: 'سنعلمك عندما تصبح هناك عروض جديدة',
+              title: 'No offers currently',
+              message: 'We will notify you when new offers are available',
             )
           : SingleChildScrollView(
               child: Column(
@@ -67,7 +67,7 @@ class _OffersScreenState extends State<OffersScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'العروض تنتهي خلال',
+                                'Offers end in',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -96,7 +96,7 @@ class _OffersScreenState extends State<OffersScreen> {
                       horizontal: AppTheme.spacing20,
                     ),
                     child: Text(
-                      'جميع العروض',
+                      'All Offers',
                       style: AppTextStyles.h2,
                     ),
                   ),

@@ -26,19 +26,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   // Selected type dropdown
-  String _selectedType = 'الكل';
+  String _selectedType = 'All';
   final List<Map<String, dynamic>> _typeOptions = [
-    {'label': 'الكل', 'icon': Icons.apps},
-    {'label': 'المنتجات', 'icon': Icons.shopping_bag_outlined},
-    {'label': 'التخفيضات', 'icon': Icons.local_offer_outlined},
-    {'label': 'الحزم', 'icon': Icons.inventory_2_outlined},
-    {'label': 'المتاجر', 'icon': Icons.store_outlined},
+    {'label': 'All', 'icon': Icons.apps},
+    {'label': 'Products', 'icon': Icons.shopping_bag_outlined},
+    {'label': 'Discounts', 'icon': Icons.local_offer_outlined},
+    {'label': 'Packs', 'icon': Icons.inventory_2_outlined},
+    {'label': 'Stores', 'icon': Icons.store_outlined},
   ];
 
   // Filters
-  String _selectedCategory = 'الكل';
+  String _selectedCategory = 'All';
   int? _selectedCategoryId;
-  String _selectedSort = 'الأحدث';
+  String _selectedSort = 'Newest';
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
 
@@ -47,14 +47,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   bool _isLoadingStores = false;
 
   // How many categories to show before "show all"
-  static const int _maxVisibleCategories = 10;
+  static const int _maxVisibleCategories = 3;
 
   final List<String> _sortOptions = [
-    'الأحدث',
-    'الأقدم',
-    'الأعلى تقييماً',
-    'الأقل سعراً',
-    'الأعلى سعراً',
+    'Newest',
+    'Oldest',
+    'Highest Rated',
+    'Lowest Price',
+    'Highest Price',
   ];
 
   @override
@@ -136,20 +136,20 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         builder: (context, setDialogState) {
           final filteredCategories = searchQuery.isEmpty
               ? categories
-              : categories.where((c) => c.name.contains(searchQuery)).toList();
+              : categories.where((c) => c.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
 
           return Directionality(
             textDirection: TextDirection.rtl,
             child: Container(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+                minHeight: MediaQuery.of(context).size.height * 0.5,
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Handle bar
                   Container(
@@ -170,19 +170,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         const Icon(Icons.category_outlined, color: AppColors.primaryBlue),
                         const SizedBox(width: 10),
                         const Text(
-                          'اختر الفئة',
+                          'All Categories',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         const Spacer(),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, size: 20),
+                            child: const Icon(Icons.close, size: 18),
                           ),
                         ),
                       ],
@@ -197,49 +197,97 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         setDialogState(() => searchQuery = value);
                       },
                       decoration: InputDecoration(
-                        hintText: 'ابحث في الفئات...',
+                        hintText: 'Search in categories...',
                         hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[500]),
+                        prefixIcon: Icon(Icons.search, size: 20, color: AppColors.primaryBlue),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: Colors.grey[50],
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.primaryBlue, width: 1),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Categories as chips
-                  Flexible(
+                  // Categories grid
+                  Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 10,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // "All" category chip
+                          // "All" category
                           _buildDialogCategoryChip(
-                            name: 'الكل',
-                            isSelected: _selectedCategory == 'الكل',
+                            name: 'All',
+                            isSelected: _selectedCategory == 'All',
                             onTap: () {
-                              _selectCategory(null, 'الكل');
+                              _selectCategory(null, 'All');
                               Navigator.pop(context);
                             },
                           ),
-                          // Category chips
-                          ...filteredCategories.map((category) {
-                            return _buildDialogCategoryChip(
-                              name: category.name,
-                              isSelected: _selectedCategory == category.name,
-                              onTap: () {
-                                _selectCategory(category.id, category.name);
-                                Navigator.pop(context);
-                              },
-                            );
-                          }),
+                          const SizedBox(height: 12),
+                          
+                          // Categories count
+                          if (filteredCategories.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                'Categories (${filteredCategories.length})',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          
+                          // Categories wrap
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 10,
+                            children: filteredCategories.map((category) {
+                              return _buildDialogCategoryChip(
+                                name: category.name,
+                                isSelected: _selectedCategory == category.name,
+                                onTap: () {
+                                  _selectCategory(category.id, category.name);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }).toList(),
+                          ),
+                          
+                          // No results message
+                          if (filteredCategories.isEmpty && searchQuery.isNotEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(40),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.search_off,
+                                      size: 48,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No matching categories found',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -299,23 +347,23 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'الفلاتر',
+                        'Filters',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       TextButton(
                         onPressed: () {
                           setSheetState(() {
-                            _selectedSort = 'الأحدث';
+                            _selectedSort = 'Newest';
                             _priceRange = const RangeValues(0, 100000);
                             _minRating = 0;
                           });
                         },
-                        child: const Text('إعادة تعيين'),
+                        child: const Text('Reset'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text('الترتيب حسب', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Sort by', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -340,9 +388,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('نطاق السعر', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Price Range', style: TextStyle(fontWeight: FontWeight.w600)),
                       Text(
-                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} د.ج',
+                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
                         style: const TextStyle(
                             color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
                       ),
@@ -366,7 +414,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('الحد الأدنى للتقييم',
+                      const Text('Minimum Rating',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       Row(
                         children: [
@@ -408,7 +456,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         ),
                       ),
                       child: const Text(
-                        'تطبيق الفلاتر',
+                        'Apply Filters',
                         style:
                             TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
@@ -450,7 +498,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _performSearch(),
                         decoration: InputDecoration(
-                          hintText: 'ابحث عن منتجات، متاجر...',
+                          hintText: 'Search for products, stores...',
                           hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                           prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 22),
                           suffixIcon: _searchController.text.isNotEmpty
@@ -496,27 +544,33 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Type dropdown
+                  // Type dropdown - smaller width
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    width: MediaQuery.of(context).size.width * 0.5, // Reduced width
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: AppColors.scaffoldBackground,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedType,
                         isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down),
+                        isDense: true, // More compact
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        style: const TextStyle(fontSize: 14, color: Colors.black),
                         items: _typeOptions.map((option) {
                           return DropdownMenuItem<String>(
                             value: option['label'] as String,
                             child: Row(
                               children: [
-                                Icon(option['icon'] as IconData, size: 20, color: AppColors.primaryBlue),
-                                const SizedBox(width: 10),
-                                Text(option['label'] as String),
+                                Icon(option['icon'] as IconData, size: 16, color: AppColors.primaryBlue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  option['label'] as String,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
                               ],
                             ),
                           );
@@ -537,7 +591,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             _buildCategoriesSection(),
 
             // Active filters indicator
-            if (_selectedCategory != 'الكل' ||
+            if (_selectedCategory != 'All' ||
                 _minRating > 0 ||
                 _priceRange.start > 0 ||
                 _priceRange.end < 100000)
@@ -549,7 +603,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     const Icon(Icons.filter_list, size: 16, color: AppColors.primaryBlue),
                     const SizedBox(width: 8),
                     const Text(
-                      'فلاتر نشطة',
+                      'Active Filters',
                       style: TextStyle(
                           color: AppColors.primaryBlue,
                           fontWeight: FontWeight.w500,
@@ -559,16 +613,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedCategory = 'الكل';
+                          _selectedCategory = 'All';
                           _selectedCategoryId = null;
-                          _selectedSort = 'الأحدث';
+                          _selectedSort = 'Newest';
                           _priceRange = const RangeValues(0, 100000);
                           _minRating = 0;
                         });
                         _performSearch();
                       },
                       child: const Text(
-                        'مسح الكل',
+                        'Clear All',
                         style: TextStyle(
                             color: Colors.red,
                             fontWeight: FontWeight.w500,
@@ -617,9 +671,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   return Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: _buildCategoryChip(
-                      name: 'الكل',
-                      isSelected: _selectedCategory == 'الكل',
-                      onTap: () => _selectCategory(null, 'الكل'),
+                      name: 'All',
+                      isSelected: _selectedCategory == 'All',
+                      onTap: () => _selectCategory(null, 'All'),
                     ),
                   );
                 }
@@ -678,18 +732,30 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return GestureDetector(
       onTap: _showAllCategoriesDialog,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.primaryBlue.withOpacity(0.1),
           borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
         ),
-        child: Text(
-          'المزيد +',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primaryBlue,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'View All',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_left,
+              size: 16,
+              color: AppColors.primaryBlue,
+            ),
+          ],
         ),
       ),
     );
@@ -697,15 +763,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   Widget _buildContent() {
     switch (_selectedType) {
-      case 'الكل':
+      case 'All':
         return _buildAllContent();
-      case 'المنتجات':
+      case 'Products':
         return _buildProductsContent();
-      case 'التخفيضات':
+      case 'Discounts':
         return _buildDiscountsContent();
-      case 'الحزم':
+      case 'Packs':
         return _buildPacksContent();
-      case 'المتاجر':
+      case 'Stores':
         return _buildStoresContent();
       default:
         return _buildAllContent();
@@ -747,8 +813,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         if (!hasProducts && !hasOffers && !hasPacks && !hasStores) {
           return const EmptyStateWidget(
             icon: Icons.search_off,
-            title: 'لا توجد نتائج',
-            message: 'لم نجد أي نتائج تطابق بحثك',
+            title: 'No results found',
+            message: 'We couldn\'t find any results matching your search',
           );
         }
 
@@ -759,8 +825,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             children: [
               // Products section
               if (hasProducts) ...[
-                _buildSectionHeader('المنتجات', filteredProducts.length, () {
-                  setState(() => _selectedType = 'المنتجات');
+                _buildSectionHeader('Products', filteredProducts.length, () {
+                  setState(() => _selectedType = 'Products');
                 }),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -794,8 +860,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
               // Offers section
               if (hasOffers) ...[
-                _buildSectionHeader('التخفيضات', offers.length, () {
-                  setState(() => _selectedType = 'التخفيضات');
+                _buildSectionHeader('Discounts', offers.length, () {
+                  setState(() => _selectedType = 'Discounts');
                 }),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -819,8 +885,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
               // Packs section
               if (hasPacks) ...[
-                _buildSectionHeader('الحزم', packs.length, () {
-                  setState(() => _selectedType = 'الحزم');
+                _buildSectionHeader('Packs', packs.length, () {
+                  setState(() => _selectedType = 'Packs');
                 }),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -844,8 +910,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
               // Stores section
               if (hasStores) ...[
-                _buildSectionHeader('المتاجر', _searchedStores.length, () {
-                  setState(() => _selectedType = 'المتاجر');
+                _buildSectionHeader('Stores', _searchedStores.length, () {
+                  setState(() => _selectedType = 'Stores');
                 }),
                 const SizedBox(height: 12),
                 ...(_searchedStores.take(3).map((store) => _buildStoreCard(store))),
@@ -888,7 +954,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         GestureDetector(
           onTap: onViewAll,
           child: const Text(
-            'عرض الكل',
+            'View All',
             style: TextStyle(
               color: AppColors.primaryBlue,
               fontWeight: FontWeight.w500,
@@ -937,7 +1003,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    store.address.isNotEmpty ? store.address : 'الجزائر',
+                    store.address.isNotEmpty ? store.address : 'Algeria',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
@@ -972,18 +1038,18 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         switch (_selectedSort) {
-          case 'الأقدم':
+          case 'Oldest':
             products = List.from(products)..sort((a, b) => a.id.compareTo(b.id));
             break;
-          case 'الأعلى تقييماً':
+          case 'Highest Rated':
             products =
                 List.from(products)..sort((a, b) => b.rating.compareTo(a.rating));
             break;
-          case 'الأقل سعراً':
+          case 'Lowest Price':
             products =
                 List.from(products)..sort((a, b) => a.price.compareTo(b.price));
             break;
-          case 'الأعلى سعراً':
+          case 'Highest Price':
             products =
                 List.from(products)..sort((a, b) => b.price.compareTo(a.price));
             break;
@@ -992,8 +1058,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         if (products.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.search_off,
-            title: 'لا توجد منتجات',
-            message: 'لم نجد أي منتجات تطابق بحثك',
+            title: 'No products found',
+            message: 'We couldn\'t find any products matching your search',
           );
         }
 
@@ -1036,8 +1102,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         if (offers.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.local_offer_outlined,
-            title: 'لا توجد تخفيضات',
-            message: 'لا توجد تخفيضات متاحة حالياً',
+            title: 'No discounts found',
+            message: 'No discounts available at the moment',
           );
         }
 
@@ -1070,8 +1136,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         if (packs.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.inventory_2_outlined,
-            title: 'لا توجد حزم',
-            message: 'لا توجد حزم متاحة حالياً',
+            title: 'No packs found',
+            message: 'No packs available at the moment',
           );
         }
 
@@ -1100,8 +1166,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     if (_searchedStores.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.store_outlined,
-        title: 'لا توجد متاجر',
-        message: 'لم نجد أي متاجر تطابق بحثك',
+        title: 'No stores found',
+        message: 'We couldn\'t find any stores matching your search',
       );
     }
 
@@ -1171,7 +1237,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       Text(
                         store.description.isNotEmpty
                             ? store.description
-                            : 'متجر محلي',
+                            : 'Local Store',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1187,7 +1253,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              store.address.isNotEmpty ? store.address : 'الجزائر',
+                              store.address.isNotEmpty ? store.address : 'Algeria',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

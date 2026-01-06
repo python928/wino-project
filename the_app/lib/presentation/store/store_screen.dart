@@ -65,7 +65,7 @@ class _StoreScreenState extends State<StoreScreen> {
     setState(() => _isFollowing = !_isFollowing);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isFollowing ? 'تم متابعة المتجر' : 'تم إلغاء المتابعة'),
+        content: Text(_isFollowing ? 'Store followed' : 'Unfollowed'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -79,11 +79,11 @@ class _StoreScreenState extends State<StoreScreen> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('تقييم المتجر', textAlign: TextAlign.center),
+          title: const Text('Rate Store', textAlign: TextAlign.center),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('كيف تقيم تجربتك مع هذا المتجر؟'),
+              const Text('How would you rate your experience with this store?'),
               const SizedBox(height: 20),
               StatefulBuilder(
                 builder: (context, setDialogState) {
@@ -112,20 +112,20 @@ class _StoreScreenState extends State<StoreScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 setState(() => _userRating = tempRating);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('شكراً على تقييمك!')),
+                  const SnackBar(content: Text('Thank you for your rating!')),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
               ),
-              child: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+              child: const Text('Confirm', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -144,7 +144,7 @@ class _StoreScreenState extends State<StoreScreen> {
   Future<void> _openMap() async {
     if (_store?.latitude == null || _store?.longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الموقع غير متاح')),
+        const SnackBar(content: Text('Location unavailable')),
       );
       return;
     }
@@ -273,7 +273,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _store?.name ?? 'متجر',
+                                    _store?.name ?? 'Store',
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -322,7 +322,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _userRating > 0 ? _userRating.toStringAsFixed(0) : 'قيّم',
+                                        _userRating > 0 ? _userRating.toStringAsFixed(0) : 'Rate',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: Colors.amber,
@@ -356,7 +356,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _isFollowing ? 'متابَع' : 'متابعة',
+                                        _isFollowing ? 'Following' : 'Follow',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: _isFollowing ? Colors.white : AppColors.primaryBlue,
@@ -398,7 +398,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'الهاتف',
+                                              'Phone',
                                               style: TextStyle(
                                                 color: Colors.grey[500],
                                                 fontSize: 11,
@@ -434,7 +434,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                       Icon(Icons.location_on, color: AppColors.primaryBlue, size: 18),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'الخريطة',
+                                        'Map',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: AppColors.primaryBlue,
@@ -481,7 +481,7 @@ class _StoreScreenState extends State<StoreScreen> {
                 child: Row(
                   children: [
                     const Text(
-                      'منتجات المتجر',
+                      'Store Products',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -523,13 +523,13 @@ class _StoreScreenState extends State<StoreScreen> {
                   child: Column(
                     children: [
                       Text(
-                        'حدث خطأ أثناء تحميل بيانات المتجر.',
+                        'Error loading store data.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _loadStore,
-                        child: const Text('إعادة المحاولة'),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
@@ -545,7 +545,7 @@ class _StoreScreenState extends State<StoreScreen> {
                         Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
                         SizedBox(height: 12),
                         Text(
-                          'لا توجد منتجات حالياً',
+                          'No products currently available',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],

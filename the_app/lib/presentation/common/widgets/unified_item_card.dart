@@ -189,7 +189,7 @@ class UnifiedItemCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  'غير متوفر',
+                  'Unavailable',
                   style: TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class UnifiedItemCard extends StatelessWidget {
         Icon(Icons.phone_outlined, size: 12, color: AppColors.primary),
         const SizedBox(width: 4),
         Text(
-          'اتصل للسعر',
+          'Call for price',
           style: TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,

@@ -19,8 +19,8 @@ class AppConfig {
   static const String termsUrl = 'https://dzlocal.dz/terms';
   
   // Default Values
-  static const String defaultLocation = 'الجزائر العاصمة';
-  static const String defaultCurrency = 'دج';
+  static const String defaultLocation = 'Algiers';
+  static const String defaultCurrency = 'DZD';
   static const String defaultLanguage = 'ar';
   static const String defaultCountryCode = 'DZ';
   
@@ -64,20 +64,20 @@ class AppConfig {
   
   // Categories
   static const List<String> categories = [
-    'إلكترونيات',
-    'أزياء',
-    'منزل',
-    'رياضة',
-    'طعام',
-    'تجميل',
+    'Electronics',
+    'Fashion',
+    'Home',
+    'Sports',
+    'Food',
+    'Beauty',
   ];
   
   // Sort Options
   static const List<Map<String, String>> sortOptions = [
-    {'key': 'newest', 'label': 'الأحدث'},
-    {'key': 'price_low', 'label': 'الأقل سعراً'},
-    {'key': 'price_high', 'label': 'الأعلى سعراً'},
-    {'key': 'rating', 'label': 'الأعلى تقييماً'},
+    {'key': 'newest', 'label': 'Newest'},
+    {'key': 'price_low', 'label': 'Lowest Price'},
+    {'key': 'price_high', 'label': 'Highest Price'},
+    {'key': 'rating', 'label': 'Top Rated'},
   ];
   
   // Notification Settings
@@ -86,7 +86,7 @@ class AppConfig {
   static const bool defaultSmsNotifications = false;
   
   // Debug Mode
-  static const bool isDebugMode = true; // غير إلى false في الإنتاج
+  static const bool isDebugMode = true; // Set to false in production
   
   // Log Settings
   static const bool enableLogging = true;

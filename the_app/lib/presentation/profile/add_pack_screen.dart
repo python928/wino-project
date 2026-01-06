@@ -92,7 +92,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
   void _addProductToPack(Post product) {
     final provider = context.read<PackProvider>();
     if (provider.selectedProducts.any((p) => p.id == product.id)) {
-      Helpers.showSnackBar(context, 'هذا المنتج موجود مسبقاً في الحزمة');
+      Helpers.showSnackBar(context, 'This product already exists in the pack');
       return;
     }
     HapticFeedback.lightImpact();
@@ -125,27 +125,27 @@ class _AddPackScreenState extends State<AddPackScreen> {
     final provider = context.read<PackProvider>();
     setState(() => _formError = null);
     if (provider.selectedProducts.isEmpty) {
-      setState(() => _formError = 'اختر منتجات الحزمة أولاً');
+      setState(() => _formError = 'Select pack products first');
       return;
     }
     if (_packNameController.text.trim().isEmpty) {
-      setState(() => _formError = 'أدخل اسم الحزمة');
+      setState(() => _formError = 'Enter pack name');
       return;
     }
     if (_packPriceController.text.isEmpty || double.tryParse(_packPriceController.text) == null) {
-      setState(() => _formError = 'أدخل سعر بيع الحزمة');
+      setState(() => _formError = 'Enter pack sale price');
       return;
     }
     final enteredPrice = double.tryParse(_packPriceController.text) ?? 0.0;
     if (enteredPrice >= provider.totalPrice) {
-      setState(() => _formError = 'سعر الحزمة يجب أن يكون أقل من مجموع أسعار المنتجات');
+      setState(() => _formError = 'Pack price must be less than the total price of products');
       return;
     }
     final auth = context.read<AuthProvider>();
     final userId = auth.user?.id;
     
     if (userId == null) {
-       setState(() => _formError = 'يجب تسجيل الدخول أولاً');
+       setState(() => _formError = 'Must login first');
        return;
     }
 
@@ -155,22 +155,22 @@ class _AddPackScreenState extends State<AddPackScreen> {
       final store = await storeProvider.getMyStore(userId);
       
       if (store == null) {
-         setState(() => _formError = 'لم يتم العثور على متجر لهذا المستخدم');
+         setState(() => _formError = 'No store found for this user');
          return;
       }
 
       await provider.submitPack(
         name: _packNameController.text.trim(),
-        description: 'حزمة منشورة من التطبيق',
+        description: 'Pack published from app',
         discountPrice: enteredPrice,
         merchantId: store.id,
       );
       if (mounted) {
-        Helpers.showSnackBar(context, 'تم نشر الحزمة بنجاح');
+        Helpers.showSnackBar(context, 'Pack published successfully');
         Navigator.pop(context, true);
       }
     } catch (e) {
-      setState(() => _formError = 'حدث خطأ أثناء النشر: ${provider.error ?? e.toString()}');
+      setState(() => _formError = 'Error during publishing: ${provider.error ?? e.toString()}');
     }
   }
 
@@ -179,7 +179,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
       builder: (context, postProvider, child) {
         final products = postProvider.myPosts;
         if (products.isEmpty) {
-           return const Center(child: Text('لا توجد نتائج'));
+           return const Center(child: Text('No results found'));
         }
         return SizedBox(
           height: 300,
@@ -192,7 +192,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
               return ListTile(
                 leading: SizedBox(width: 50, height: 50, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: _safeThumb(product.image))),
                 title: Text(product.title),
-                subtitle: Text('${product.price} د.ج'),
+                subtitle: Text('${product.price} DZD'),
                 trailing: const Icon(Icons.add_circle, color: AppColors.primary),
                 onTap: () => _addProductToPack(product),
               );
@@ -215,8 +215,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 children: [
                   Icon(Icons.shopping_basket_outlined, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('لم تقم بإضافة أي منتجات للحزمة بعد', style: TextStyle(color: Colors.grey)),
-                  Text('استخدم البحث أعلاه لإضافة منتجات', style: TextStyle(color: Colors.grey)),
+                  Text('You haven\'t added any products to the pack yet', style: TextStyle(color: Colors.grey)),
+                  Text('Use the search above to add products', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
@@ -232,9 +232,9 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 color: Colors.grey[200],
                 child: const Row(
                   children: [
-                    Expanded(flex: 3, child: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Text('الكمية', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                    Expanded(flex: 2, child: Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.end)),
+                    Expanded(flex: 3, child: Text('Product', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 2, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                    Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.end)),
                   ],
                 ),
               ),
@@ -302,7 +302,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(product.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            Text('${product.price} د.ج', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                            Text('${product.price} DZD', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -344,7 +344,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 Expanded(
                   flex: 2,
                   child: Text(
-                    '${total.toStringAsFixed(0)} د.ج',
+                    '${total.toStringAsFixed(0)} DZD',
                     textAlign: TextAlign.end,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
@@ -379,7 +379,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 TextField(
                   controller: _packNameController,
                   decoration: InputDecoration(
-                    labelText: 'اسم الحزمة *',
+                    labelText: 'Pack Name *',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -388,8 +388,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('مجموع أسعار المنتجات:', style: TextStyle(color: Colors.grey)),
-                    Text('${totalPrice.toStringAsFixed(2)} د.ج', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text('Total Product Prices:', style: TextStyle(color: Colors.grey)),
+                    Text('${totalPrice.toStringAsFixed(2)} DZD', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -400,8 +400,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                         controller: _packPriceController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'سعر بيع الحزمة',
-                          suffixText: 'د.ج',
+                          labelText: 'Pack Sale Price',
+                          suffixText: 'DZD',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
@@ -411,9 +411,9 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text('التوفير', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        const Text('Savings', style: TextStyle(fontSize: 10, color: Colors.grey)),
                         Text(
-                          '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} د.ج',
+                          '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} DZD',
                           style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -443,7 +443,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     ),
                     child: provider.isSubmitting 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('نشر الحزمة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : const Text('Publish Pack', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -462,7 +462,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('نشر حزمة جديدة'),
+          title: const Text('Create New Pack'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -475,7 +475,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'ابحث عن منتج لإضافته...',
+                  hintText: 'Search for product to add...',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: isSearching
                       ? IconButton(

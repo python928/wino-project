@@ -19,7 +19,7 @@ class PackCard extends StatelessWidget {
   });
 
   String _buildProductSummary() {
-    if (pack.products.isEmpty) return 'حزمة فارغة';
+    if (pack.products.isEmpty) return 'Empty pack';
 
     final maxItems = 3;
     final itemsToShow = pack.products.take(maxItems).toList();
@@ -36,7 +36,7 @@ class PackCard extends StatelessWidget {
     }).where((item) => item != null).toList();
 
     if (validItems.isEmpty) {
-      return '${pack.products.length} منتجات';
+      return '${pack.products.length} products';
     }
 
     String summary = validItems.join(' + ');
@@ -60,8 +60,8 @@ class PackCard extends StatelessWidget {
       price: pack.discountPrice,
       oldPrice: pack.totalPrice > pack.discountPrice ? pack.totalPrice : null,
       discountPercentage: discountPercent > 0 ? discountPercent : null,
-      customBadge: discountPercent > 0 ? 'وفر $discountPercent%' : null,
-      bottomLeftText: '${pack.products.length} منتج',
+      customBadge: discountPercent > 0 ? 'Save $discountPercent%' : null,
+      bottomLeftText: '${pack.products.length} product${pack.products.length == 1 ? '' : 's'}',
       bottomLeftIcon: Icons.inventory_2_outlined,
       onTap: onTap ?? () {
         Navigator.pushNamed(context, Routes.packDetails, arguments: pack);

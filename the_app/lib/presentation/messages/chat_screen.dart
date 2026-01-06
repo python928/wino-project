@@ -69,10 +69,10 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('فشل إرسال الرسالة'),
+            content: const Text('Failed to send message'),
             backgroundColor: Colors.red,
             action: SnackBarAction(
-              label: 'إعادة المحاولة',
+              label: 'Retry',
               textColor: Colors.white,
               onPressed: () {
                 _messageController.text = content;
@@ -131,7 +131,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'متصل',
+                      'Online',
                       style: TextStyle(
                         color: Colors.green[600],
                         fontSize: 12,
@@ -245,7 +245,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           maxLines: 4,
                           minLines: 1,
                           decoration: InputDecoration(
-                            hintText: 'اكتب رسالتك...',
+                            hintText: 'Type your message...',
                             hintStyle: TextStyle(color: Colors.grey[500]),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
@@ -338,11 +338,11 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          const Text('تعذر تحميل الرسائل'),
+          const Text('Failed to load messages'),
           const SizedBox(height: 16),
           OutlinedButton(
             onPressed: () => provider.loadMessages(widget.userId),
-            child: const Text('إعادة المحاولة'),
+            child: const Text('Retry'),
           ),
         ],
       ),
@@ -357,7 +357,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'لا توجد رسائل بعد',
+            'No messages yet',
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 16,
@@ -365,7 +365,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'ابدأ المحادثة الآن!',
+            'Start the conversation now!',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -382,9 +382,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     String dateText;
     if (diff.inDays == 0) {
-      dateText = 'اليوم';
-    } else if (diff.inDays == 1) {
-      dateText = 'أمس';
+      dateText = 'Today';
+    } else if (difference.inDays == 1) {
+      dateText = 'Yesterday';
     } else {
       dateText = '${date.day}/${date.month}/${date.year}';
     }
@@ -484,7 +484,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String _formatTime(DateTime time) {
     final hour = time.hour;
     final minute = time.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'م' : 'ص';
+    final period = hour >= 12 ? 'PM' : 'AM';
     final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     return '$hour12:$minute $period';
   }
@@ -506,7 +506,7 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.block),
-                title: const Text('حظر المستخدم'),
+                title: const Text('Block User'),
                 onTap: () {
                   Navigator.pop(context);
                   // Block user
@@ -514,7 +514,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.flag_outlined),
-                title: const Text('الإبلاغ'),
+                title: const Text('Report'),
                 onTap: () {
                   Navigator.pop(context);
                   // Report
@@ -522,7 +522,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('حذف المحادثة', style: TextStyle(color: Colors.red)),
+                title: const Text('Delete Conversation', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   // Delete conversation

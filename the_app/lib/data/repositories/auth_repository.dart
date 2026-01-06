@@ -13,7 +13,7 @@ class AuthRepository {
       final refresh = tokenResponse['refresh'];
 
       if (access == null || refresh == null) {
-        throw Exception('لم يتم استلام التوكنات من الخادم');
+        throw Exception('Tokens not received from server');
       }
 
       // IMPORTANT: Save tokens BEFORE making any authenticated requests
@@ -25,7 +25,7 @@ class AuthRepository {
       final decoded = JwtDecoder.decode(access);
       final userId = decoded['user_id'];
       if (userId == null) {
-        throw Exception('لم يتم إيجاد user_id داخل التوكن');
+        throw Exception('user_id not found in token');
       }
 
       // Now fetch profile (token is saved, so ApiService can use it)
@@ -50,7 +50,7 @@ class AuthRepository {
         },
       };
     } catch (e) {
-      throw Exception('فشل تسجيل الدخول: $e');
+      throw Exception('Login failed: $e');
     }
   }
 
@@ -63,7 +63,7 @@ class AuthRepository {
       final userPayload = response['user'] as Map<String, dynamic>?;
 
       if (access == null || refresh == null) {
-        throw Exception('لم يتم استلام التوكنات بعد التسجيل');
+        throw Exception('Tokens not received after registration');
       }
 
       // IMPORTANT: Save tokens BEFORE any potential authenticated requests
@@ -84,7 +84,7 @@ class AuthRepository {
         },
       };
     } catch (e) {
-      throw Exception('فشل التسجيل: $e');
+      throw Exception('Registration failed: $e');
     }
   }
 

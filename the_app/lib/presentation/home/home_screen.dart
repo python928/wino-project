@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Header
                   HeaderLocationWidget(
-                    currentLocation: 'الجزائر العاصمة',
+                    currentLocation: 'Algiers',
                     notificationCount: 3,
                     onLocationTap: () => _showLocationPicker(),
                     onNotificationTap: () => _showNotifications(),
@@ -108,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing24),
 
                   // Categories Section
-                  _buildSectionHeader('الفئات', 'عرض الكل', () {}),
+                  _buildSectionHeader('Categories', 'View All', () {}),
                   const SizedBox(height: AppTheme.spacing16),
                   _buildCategoriesSection(),
 
@@ -116,8 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Promo Banner
                   PromoBanner(
-                    title: 'عرض المستخدم\nالجديد!',
-                    subtitle: 'احصل على خصم 15% على\nطلبك الأول',
+                    title: 'New User\nOffer!',
+                    subtitle: 'Get 15% off\nyour first order',
                     icon: Icons.percent,
                     onTap: () => _showPromoDetails(),
                   ),
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing24),
 
                   // Featured Stores Section
-                  _buildSectionHeader('المتاجر المميزة', 'عرض الكل', () {
+                  _buildSectionHeader('Featured Stores', 'View All', () {
                     Navigator.pushNamed(context, Routes.discovery);
                   }),
                   const SizedBox(height: AppTheme.spacing16),
@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing24),
 
                   // Offers/Discounts Section
-                  _buildSectionHeader('التخفيضات', 'عرض الكل', () {
+                  _buildSectionHeader('Discounts', 'View All', () {
                     Navigator.pushNamed(context, Routes.offers);
                   }),
                   const SizedBox(height: AppTheme.spacing16),
@@ -150,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing24),
 
                   // Recent Products Section
-                  _buildSectionHeader('أحدث المنتجات', 'عرض الكل', () {
+                  _buildSectionHeader('Latest Products', 'View All', () {
                     Navigator.pushNamed(context, Routes.discovery);
                   }),
                   const SizedBox(height: AppTheme.spacing16),
@@ -159,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing24),
 
                   // Packages Section
-                  _buildSectionHeader('الحزم المميزة', 'عرض الكل', () {
+                  _buildSectionHeader('Featured Packs', 'View All', () {
                     Navigator.pushNamed(context, Routes.discovery, arguments: {'tab': 'packs'});
                   }),
                   const SizedBox(height: AppTheme.spacing16),
@@ -296,12 +296,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.store_outlined, size: 40, color: Colors.grey[400]),
                   const SizedBox(height: 8),
                   Text(
-                    'تعذر تحميل المتاجر',
+                    'Failed to load stores',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: () => homeProvider.loadFeaturedStores(),
-                    child: const Text('إعادة المحاولة'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -315,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 160,
             child: Center(
               child: Text(
-                'لا توجد متاجر مميزة حالياً',
+                'No featured stores at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -370,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Title
           const Text(
-            'عروض\nساخنة',
+            'Hot\nDeals',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               height: 1.1,
@@ -431,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 220,
             child: Center(
               child: Text(
-                'لا توجد عروض ساخنة حالياً',
+                'No hot deals at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -480,12 +480,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey[400]),
                   const SizedBox(height: 8),
                   Text(
-                    'تعذر تحميل الحزم',
+                    'Failed to load packs',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: () => homeProvider.loadFeaturedPacks(),
-                    child: const Text('إعادة المحاولة'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -499,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 200,
             child: Center(
               child: Text(
-                'لا توجد حزم متوفرة حالياً',
+                'No packs available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -578,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'وفر $discountPercent%',
+                          'Save $discountPercent%',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -598,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${pack.products.length} منتجات',
+                        '${pack.products.length} Products',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -691,12 +691,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.shopping_bag_outlined, size: 40, color: Colors.grey[400]),
                   const SizedBox(height: 8),
                   Text(
-                    'تعذر تحميل المنتجات',
+                    'Failed to load products',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: () => homeProvider.loadRecentProducts(),
-                    child: const Text('إعادة المحاولة'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -710,7 +710,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 220,
             child: Center(
               child: Text(
-                'لا توجد منتجات حالياً',
+                'No products available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -781,12 +781,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.local_offer_outlined, size: 40, color: Colors.grey[400]),
                   const SizedBox(height: 8),
                   Text(
-                    'تعذر تحميل التخفيضات',
+                    'Failed to load discounts',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: () => postProvider.loadOffers(),
-                    child: const Text('إعادة المحاولة'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -799,7 +799,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 220,
             child: Center(
               child: Text(
-                'لا توجد تخفيضات حالياً',
+                'No discounts available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -956,7 +956,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Navigation Methods ====================
 
   void _showLocationPicker() {
-    Helpers.showSnackBar(context, 'اختيار الموقع قريباً');
+    Helpers.showSnackBar(context, 'Location selection coming soon');
   }
 
   void _showNotifications() {
@@ -977,7 +977,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showFilters() {
-    Helpers.showSnackBar(context, 'الفلاتر قريباً');
+    Helpers.showSnackBar(context, 'Filters coming soon');
   }
 
   void _navigateToCategory(int categoryId, String categoryName) {
@@ -989,7 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showPromoDetails() {
-    Helpers.showSnackBar(context, 'عرض المستخدم الجديد');
+    Helpers.showSnackBar(context, 'New User Offer');
   }
 
   void _navigateToProductDetails(Post product) {
@@ -1001,7 +1001,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleFavorite(Post product) {
-    Helpers.showSnackBar(context, 'تمت الإضافة إلى المفضلة');
+    Helpers.showSnackBar(context, 'Added to favorites');
   }
 
   Widget _buildStackedProductImages(List<dynamic> products) {
@@ -1100,7 +1100,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _buildProductSummary(List<dynamic> products) {
-    if (products.isEmpty) return 'حزمة فارغة';
+    if (products.isEmpty) return 'Empty pack';
     
     final maxItems = 3;
     final itemsToShow = products.take(maxItems).toList();
@@ -1125,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).where((item) => item != null).toList();
     
     if (validItems.isEmpty) {
-      return '${products.length} منتجات';
+      return '${products.length} Products';
     }
     
     String summary = validItems.join(' + ');

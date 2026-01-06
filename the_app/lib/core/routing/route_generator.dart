@@ -229,8 +229,8 @@ class RouteGenerator {
   static Route<dynamic> _invalidArgsRoute(RouteSettings settings) {
     return MaterialPageRoute(
       builder: (_) => _SimpleRouteErrorScreen(
-        title: 'بيانات غير صحيحة',
-        message: 'لا يمكن فتح هذه الصفحة لأن البيانات المرسلة غير صحيحة.',
+        title: 'Invalid Data',
+        message: 'This page cannot be opened because the provided data is invalid.',
         routeName: settings.name,
       ),
       settings: settings,
@@ -240,8 +240,8 @@ class RouteGenerator {
   static Route<dynamic> _notFoundRoute(RouteSettings settings) {
     return MaterialPageRoute(
       builder: (_) => _SimpleRouteErrorScreen(
-        title: 'الصفحة غير موجودة',
-        message: 'هذه الصفحة غير متوفرة حالياً.',
+        title: 'Page Not Found',
+        message: 'This page is currently unavailable.',
         routeName: settings.name,
       ),
       settings: settings,
@@ -281,7 +281,7 @@ class _SimpleRouteErrorScreen extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('رجوع'),
+                child: const Text('Back'),
               ),
             ],
           ),

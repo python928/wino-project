@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     print('LoginScreen: Login button pressed');
     if (!_formKey.currentState!.validate()) {
       print('LoginScreen: Form validation failed');
-      Helpers.showSnackBar(context, 'الرجاء إدخال بيانات الدخول الصحيحة.');
+      Helpers.showSnackBar(context, 'Please enter correct login credentials.');
       return;
     }
 
@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       print('LoginScreen: No network connection');
       if (mounted) {
         Helpers.showSnackBar(
-            context, 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.');
+            context, 'Network connection failed. Please check your internet connection.');
       }
       setState(() {
         _isLoading = false;
@@ -73,14 +73,14 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success && mounted) {
         print(
             'LoginScreen: Login successful, navigating to MainNavigationScreen');
-        Helpers.showSnackBar(context, 'تم تسجيل الدخول بنجاح!');
+        Helpers.showSnackBar(context, 'Login successful!');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       } else if (!success && mounted) {
         print('LoginScreen: Login failed');
         final errorMsg =
-            authProvider.error ?? 'فشل تسجيل الدخول، تحقق من البيانات.';
+            authProvider.error ?? 'Login failed, check your credentials.';
         Helpers.showSnackBar(context, errorMsg);
       }
     } catch (e) {
@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('❌ Login Error: $e');
       if (mounted) {
         Helpers.showSnackBar(
-            context, 'فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
+            context, 'Server connection failed. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -272,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     Text(
-                      'السوق المحلي المتميز',
+                      'Premium Local Marketplace',
                       style: GoogleFonts.cairo(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -298,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'تسجيل الدخول',
+                          'Login',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.cairo(
                             fontSize: 24,
@@ -311,15 +311,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Email Field
                         _buildLuxuryTextField(
                           controller: _emailController,
-                          labelText: 'البريد الإلكتروني',
+                          labelText: 'Email',
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value!.isEmpty) {
-                              return 'الرجاء إدخال البريد الإلكتروني';
+                              return 'Please enter email address';
                             }
                             if (!value.contains('@')) {
-                              return 'صيغة البريد الإلكتروني غير صحيحة';
+                              return 'Invalid email format';
                             }
                             return null;
                           },
@@ -328,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Password Field
                         _buildLuxuryPasswordField(
                           controller: _passwordController,
-                          labelText: 'كلمة المرور',
+                          labelText: 'Password',
                           isVisible: _isPasswordVisible,
                           toggleVisibility: () {
                             setState(() {
@@ -337,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           validator: (value) {
                             if (value!.isEmpty) {
-                              return 'الرجاء إدخال كلمة المرور';
+                              return 'Please enter password';
                             }
                             return null;
                           },
@@ -350,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onTap: () {
                               Helpers.showSnackBar(
                                 context,
-                                'سيتم الانتقال إلى شاشة استعادة كلمة المرور',
+                                'Will navigate to password reset screen',
                               );
                             },
                             child: Padding(
@@ -359,7 +359,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 vertical: 8,
                               ),
                               child: Text(
-                                'نسيت كلمة المرور؟',
+                                'Forgot Password?',
                                 style: GoogleFonts.cairo(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -394,7 +394,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 )
                               : Text(
-                                  'تسجيل الدخول',
+                                  'Login',
                                   style: GoogleFonts.cairo(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -408,29 +408,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'لا تملك حساباً بعد؟',
-                              style: GoogleFonts.cairo(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.neutralMedium,
+                            Flexible(
+                              child: Text(
+                                'Don\'t have an account yet?',
+                                style: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppColors.neutralMedium,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (context) => const RegisterScreen(),
+                            Flexible(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => const RegisterScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Create Account',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryGold,
                                   ),
-                                );
-                              },
-                              child: Text(
-                                'أنشئ حسابك الآن',
-                                style: GoogleFonts.cairo(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryGold,
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),

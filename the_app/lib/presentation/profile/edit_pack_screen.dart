@@ -82,18 +82,18 @@ class _EditPackScreenState extends State<EditPackScreen> {
 
   Future<void> _submit() async {
     if (_selectedProducts.isEmpty) {
-      Helpers.showSnackBar(context, 'اختر منتجات الحزمة أولاً');
+      Helpers.showSnackBar(context, 'Select pack products first');
       return;
     }
     if (_packPriceController.text.isEmpty || double.tryParse(_packPriceController.text) == null) {
-      Helpers.showSnackBar(context, 'أدخل سعر بيع الحزمة');
+      Helpers.showSnackBar(context, 'Enter the pack sale price');
       return;
     }
     setState(() => _isLoading = true);
     // TODO: Call backend to update pack
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
-      Helpers.showSnackBar(context, 'تم تعديل الحزمة بنجاح');
+      Helpers.showSnackBar(context, 'Pack updated successfully');
       Navigator.pop(context, true);
     }
     setState(() => _isLoading = false);
@@ -107,7 +107,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تعديل الحزمة'),
+          title: const Text('Edit Pack'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -118,7 +118,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
               padding: const EdgeInsets.all(12.0),
               child: TextField(
                 decoration: const InputDecoration(
-                  hintText: 'ابحث عن منتج لإضافته',
+                  hintText: 'Search for product to add',
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(),
                 ),
@@ -134,10 +134,10 @@ class _EditPackScreenState extends State<EditPackScreen> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: const [
-                        DataColumn(label: Text('صورة')),
-                        DataColumn(label: Text('اسم المنتج')),
-                        DataColumn(label: Text('السعر')),
-                        DataColumn(label: Text('الكمية')),
+                        DataColumn(label: Text('Image')),
+                        DataColumn(label: Text('Product Name')),
+                        DataColumn(label: Text('Price')),
+                        DataColumn(label: Text('Quantity')),
                       ],
                       rows: allProducts.map((product) {
                         final selected = _selectedProducts.contains(product);
@@ -161,7 +161,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            DataCell(Text('${product.price.toStringAsFixed(2)} د.ج')),
+                            DataCell(Text('${product.price.toStringAsFixed(2)} DZD')),
                             DataCell(
                               Row(
                                 children: [
@@ -196,13 +196,13 @@ class _EditPackScreenState extends State<EditPackScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('السعر الإجمالي للمنتجات: ${_totalProductsPrice.toStringAsFixed(2)} د.ج'),
+                  Text('Total Products Price: ${_totalProductsPrice.toStringAsFixed(2)} DZD'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _packPriceController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'سعر بيع الحزمة',
+                      labelText: 'Pack Sale Price',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -210,7 +210,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: GradientButton(
-                      text: _isLoading ? 'جاري التعديل...' : 'حفظ التعديلات',
+                      text: _isLoading ? 'Updating...' : 'Save Changes',
                       onPressed: _isLoading ? () {} : _submit,
                       gradient: AppColors.primaryGradient,
                     ),

@@ -66,8 +66,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                         Row(
                           children: [
                             // Discount Price
-                            Text(
-                              '${widget.pack.discountPrice.toStringAsFixed(0)} د.ج',
+                                Text(
+                                  '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
                               style: AppTextStyles.h2.copyWith(
                                 color: AppColors.primaryOrange,
                                 fontSize: 24,
@@ -77,8 +77,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
                             // Original Price
                             if (discountPercent > 0) ...[
-                              Text(
-                                '${widget.pack.totalPrice.toStringAsFixed(0)} د.ج',
+                                  Text(
+                                    '${widget.pack.totalPrice.toStringAsFixed(0)} DZD',
                                 style: AppTextStyles.bodyMedium.copyWith(
                                   decoration: TextDecoration.lineThrough,
                                   color: AppColors.textHint,
@@ -98,7 +98,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  'وفر $discountPercent%',
+                                      'Save $discountPercent%',
                                   style: AppTextStyles.bodySmall.copyWith(
                                     color: AppColors.primaryOrange,
                                     fontWeight: FontWeight.bold,
@@ -121,8 +121,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                             children: [
                               const Icon(Icons.inventory_2_outlined, color: AppColors.primaryBlue),
                               const SizedBox(width: 8),
-                              Text(
-                                'تحتوي على ${widget.pack.products.length} منتج',
+                                  Text(
+                                    'Contains ${widget.pack.products.length} products',
                                 style: AppTextStyles.bodyMedium.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -226,8 +226,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'المنتجات المتضمنة',
+              Text(
+                'Included Products',
             style: AppTextStyles.h3.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 16),
@@ -280,7 +280,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${product.productPrice.toStringAsFixed(0)} د.ج',
+                  '${product.productPrice.toStringAsFixed(0)} DZD',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -314,8 +314,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'الوصف',
+              Text(
+                'Description',
             style: AppTextStyles.h3.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 12),
@@ -335,7 +335,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                   _isDescriptionExpanded = !_isDescriptionExpanded;
                 });
               },
-              child: Text(_isDescriptionExpanded ? 'عرض أقل' : 'عرض المزيد'),
+                  child: Text(_isDescriptionExpanded ? 'Show less' : 'Show more'),
             ),
         ],
       ),
@@ -349,8 +349,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'معلومات التاجر',
+              Text(
+                'Merchant Info',
             style: AppTextStyles.h3.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 16),
@@ -413,15 +413,15 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'السعر الإجمالي',
+                        Text(
+                          'Total Price',
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Text(
-                          '${widget.pack.discountPrice.toStringAsFixed(0)} د.ج',
+                              '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
                           style: AppTextStyles.h2.copyWith(
                             color: AppColors.primaryOrange,
                             fontSize: 20,
@@ -430,7 +430,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                         if (discountPercent > 0) ...[
                           const SizedBox(width: 8),
                           Text(
-                            '${widget.pack.totalPrice.toStringAsFixed(0)} د.ج',
+                                '${widget.pack.totalPrice.toStringAsFixed(0)} DZD',
                             style: AppTextStyles.bodySmall.copyWith(
                               decoration: TextDecoration.lineThrough,
                               color: AppColors.textHint,
@@ -449,9 +449,9 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
             SizedBox(
               width: double.infinity,
               child: GradientButton(
-                text: 'تواصل مع التاجر',
+                    text: 'Contact Merchant',
                 onPressed: () {
-                  Helpers.showSnackBar(context, 'يمكنك التواصل مع التاجر لشراء هذه الحزمة');
+                      Helpers.showSnackBar(context, 'You can contact the merchant to purchase this pack');
                 },
               ),
             ),

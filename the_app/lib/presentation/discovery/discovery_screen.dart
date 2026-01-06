@@ -27,11 +27,11 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = 'الكل';
+  String _selectedCategory = 'All';
   int? _selectedCategoryId;
 
   // Filters
-  String _selectedSort = 'الأحدث';
+  String _selectedSort = 'Newest';
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
 
@@ -40,11 +40,11 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
   bool _isLoadingStores = false;
 
   final List<String> _sortOptions = [
-    'الأحدث',
-    'الأقدم',
-    'الأعلى تقييماً',
-    'الأقل سعراً',
-    'الأعلى سعراً',
+    'Newest',
+    'Oldest',
+    'Highest Rated',
+    'Lowest Price',
+    'Highest Price',
   ];
 
   @override
@@ -57,7 +57,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
       if (args is Map<String, dynamic>) {
         if (args['categoryId'] != null) {
           _selectedCategoryId = args['categoryId'];
-          _selectedCategory = args['categoryName'] ?? 'الكل';
+          _selectedCategory = args['categoryName'] ?? 'All';
           _loadProducts();
         }
         if (args['tab'] == 'packs') {
@@ -120,7 +120,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
             children: [
               const Icon(Icons.category_outlined, color: AppColors.primaryBlue),
               const SizedBox(width: 8),
-              const Text('اختر الفئة', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Select Category', style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
           content: SizedBox(
@@ -131,7 +131,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                 // Search in categories
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'ابحث في الفئات...',
+                    hintText: 'Search in categories...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
                     fillColor: Colors.grey[100],
@@ -153,24 +153,24 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _selectedCategory == 'الكل'
+                            color: _selectedCategory == 'All'
                                 ? AppColors.primaryBlue.withOpacity(0.1)
                                 : Colors.grey[100],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.apps,
-                            color: _selectedCategory == 'الكل' ? AppColors.primaryBlue : Colors.grey,
+                            color: _selectedCategory == 'All' ? AppColors.primaryBlue : Colors.grey,
                             size: 20,
                           ),
                         ),
-                        title: const Text('الكل'),
-                        trailing: _selectedCategory == 'الكل'
+                        title: const Text('All'),
+                        trailing: _selectedCategory == 'All'
                             ? const Icon(Icons.check_circle, color: AppColors.primaryBlue)
                             : null,
                         onTap: () {
                           setState(() {
-                            _selectedCategory = 'الكل';
+                            _selectedCategory = 'All';
                             _selectedCategoryId = null;
                           });
                           Navigator.pop(context);
@@ -214,7 +214,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
+              child: const Text('Cancel'),
             ),
           ],
         ),
@@ -244,25 +244,25 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'الفلاتر',
+                        'Filters',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       TextButton(
                         onPressed: () {
                           setSheetState(() {
-                            _selectedSort = 'الأحدث';
+                            _selectedSort = 'Newest';
                             _priceRange = const RangeValues(0, 100000);
                             _minRating = 0;
                           });
                         },
-                        child: const Text('إعادة تعيين'),
+                        child: const Text('Reset'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Sort by
-                  const Text('الترتيب حسب', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Sort by', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -289,9 +289,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('نطاق السعر', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Price Range', style: TextStyle(fontWeight: FontWeight.w600)),
                       Text(
-                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} د.ج',
+                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
                         style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -316,7 +316,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('الحد الأدنى للتقييم', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Minimum Rating', style: TextStyle(fontWeight: FontWeight.w600)),
                       Row(
                         children: [
                           const Icon(Icons.star, color: Colors.amber, size: 18),
@@ -359,7 +359,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                         ),
                       ),
                       child: const Text(
-                        'تطبيق الفلاتر',
+                        'Apply Filters',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -381,7 +381,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
-          title: const Text('استكشاف', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('Discovery', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Colors.white,
           elevation: 0,
           actions: [
@@ -389,7 +389,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
             IconButton(
               onPressed: _showFiltersSheet,
               icon: const Icon(Icons.tune, color: AppColors.textPrimary),
-              tooltip: 'الفلاتر',
+              tooltip: 'Filters',
             ),
           ],
           bottom: PreferredSize(
@@ -405,10 +405,10 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontSize: 13),
                 tabs: const [
-                  Tab(text: 'المنتجات'),
-                  Tab(text: 'التخفيضات'),
-                  Tab(text: 'الحزم'),
-                  Tab(text: 'المتاجر'),
+                  Tab(text: 'Products'),
+                  Tab(text: 'Discounts'),
+                  Tab(text: 'Packs'),
+                  Tab(text: 'Stores'),
                 ],
               ),
             ),
@@ -428,7 +428,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                       controller: _searchController,
                       onChanged: _onSearch,
                       decoration: InputDecoration(
-                        hintText: 'ابحث...',
+                        hintText: 'Search...',
                         prefixIcon: const Icon(Icons.search, color: AppColors.textHint),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -481,7 +481,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
             ),
 
             // Active filters indicator
-            if (_selectedCategory != 'الكل' || _minRating > 0 || _priceRange.start > 0 || _priceRange.end < 100000)
+            if (_selectedCategory != 'All' || _minRating > 0 || _priceRange.start > 0 || _priceRange.end < 100000)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: AppColors.primaryBlue.withOpacity(0.05),
@@ -490,23 +490,23 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                     const Icon(Icons.filter_list, size: 16, color: AppColors.primaryBlue),
                     const SizedBox(width: 8),
                     const Text(
-                      'فلاتر نشطة',
+                      'Active Filters',
                       style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w500, fontSize: 12),
                     ),
                     const Spacer(),
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedCategory = 'الكل';
+                          _selectedCategory = 'All';
                           _selectedCategoryId = null;
-                          _selectedSort = 'الأحدث';
+                          _selectedSort = 'Newest';
                           _priceRange = const RangeValues(0, 100000);
                           _minRating = 0;
                         });
                         _loadProducts();
                       },
                       child: const Text(
-                        'مسح الكل',
+                        'Clear All',
                         style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 12),
                       ),
                     ),
@@ -544,8 +544,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
         if (products.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.search_off,
-            title: 'لا توجد منتجات',
-            message: 'لم نجد أي منتجات تطابق بحثك',
+            title: 'No products found',
+            message: 'We couldn\'t find any products matching your search',
           );
         }
 
@@ -588,8 +588,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
         if (offers.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.local_offer_outlined,
-            title: 'لا توجد تخفيضات',
-            message: 'لا توجد تخفيضات متاحة حالياً',
+            title: 'No discounts found',
+            message: 'No discounts available at the moment',
           );
         }
 
@@ -622,8 +622,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
         if (packs.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.inventory_2_outlined,
-            title: 'لا توجد حزم',
-            message: 'لا توجد حزم متاحة حالياً',
+            title: 'No packs found',
+            message: 'No packs available at the moment',
           );
         }
 
@@ -652,8 +652,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
     if (_searchedStores.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.store_outlined,
-        title: 'لا توجد متاجر',
-        message: 'لم نجد أي متاجر تطابق بحثك',
+        title: 'No stores found',
+        message: 'We couldn\'t find any stores matching your search',
       );
     }
 
@@ -723,7 +723,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        store.description.isNotEmpty ? store.description : 'متجر محلي',
+                        store.description.isNotEmpty ? store.description : 'Local store',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -739,7 +739,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              store.address.isNotEmpty ? store.address : 'الجزائر',
+                              store.address.isNotEmpty ? store.address : 'Algeria',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

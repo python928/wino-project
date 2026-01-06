@@ -224,7 +224,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
             : (storesResp is List ? storesResp : []);
         for (final item in storesList) {
           if (item is Map<String, dynamic>) {
-            storesById[item['id']] = item['name'] ?? 'متجر';
+            storesById[item['id']] = item['name'] ?? 'Store';
           }
         }
       } catch (e) {
@@ -283,7 +283,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isFollowing ? 'تم متابعة المتجر' : 'تم إلغاء المتابعة'),
+            content: Text(isFollowing ? 'Store followed' : 'Store unfollowed'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -291,7 +291,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ: $e')),
+          SnackBar(content: Text('Error occurred: $e')),
         );
       }
     } finally {
@@ -311,11 +311,11 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
           builder: (context, setDialogState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('تقييم المتجر', textAlign: TextAlign.center),
+              title: const Text('Rate Store', textAlign: TextAlign.center),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('كيف تقيم تجربتك مع هذا المتجر؟'),
+                  const Text('How would you rate your experience with this store?'),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -340,7 +340,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
               actions: [
                 TextButton(
                   onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
-                  child: const Text('إلغاء'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: isSubmitting || tempRating == 0
@@ -360,7 +360,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                               setState(() => _userRating = tempRating);
                               Navigator.pop(dialogContext);
                               ScaffoldMessenger.of(this.context).showSnackBar(
-                                const SnackBar(content: Text('شكراً على تقييمك!')),
+                                const SnackBar(content: Text('Thank you for your rating!')),
                               );
                               // Reload store info to get updated average rating
                               _loadStoreInfo();
@@ -369,7 +369,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             setDialogState(() => isSubmitting = false);
                             if (mounted) {
                               ScaffoldMessenger.of(this.context).showSnackBar(
-                                SnackBar(content: Text('حدث خطأ: $e')),
+                                SnackBar(content: Text('Error occurred: $e')),
                               );
                             }
                           }
@@ -386,7 +386,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             color: Colors.white,
                           ),
                         )
-                      : const Text('تأكيد', style: TextStyle(color: Colors.white)),
+                      : const Text('Confirm', style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -400,7 +400,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     if (_store?.latitude == null || _store?.longitude == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('موقع المتجر غير متوفر')),
+          const SnackBar(content: Text('Store location not available')),
         );
       }
       return;
@@ -424,7 +424,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح الخريطة')),
+          const SnackBar(content: Text('Unable to open map')),
         );
       }
     }
@@ -434,7 +434,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     if (_store?.phoneNumber == null || _store!.phoneNumber.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('رقم الهاتف غير متوفر')),
+          const SnackBar(content: Text('Phone number not available')),
         );
       }
       return;
@@ -450,7 +450,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر الاتصال')),
+          const SnackBar(content: Text('Could not connect')),
         );
       }
     }
@@ -467,7 +467,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
             return [
               // App Bar with store name
               SliverAppBar(
-                title: Text(_store?.name ?? 'متجر #${widget.storeId}'),
+                title: Text(_store?.name ?? 'Store #${widget.storeId}'),
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.textPrimary,
                 elevation: 0,
@@ -496,9 +496,9 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                     ),
                     unselectedLabelStyle: const TextStyle(fontSize: 14),
                     tabs: const [
-                      Tab(text: 'المنتجات'),
-                      Tab(text: 'التخفيضات'),
-                      Tab(text: 'الحزم'),
+                      Tab(text: 'Products'),
+                      Tab(text: 'Discounts'),
+                      Tab(text: 'Packs'),
                     ],
                   ),
                 ),
@@ -633,7 +633,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                     const Icon(Icons.star, color: Colors.amber, size: 18),
                     const SizedBox(width: 4),
                     Text(
-                      _storeRating > 0 ? _storeRating.toStringAsFixed(1) : 'جديد',
+                      _storeRating > 0 ? _storeRating.toStringAsFixed(1) : 'New',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.amber,
@@ -657,7 +657,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                     Icon(Icons.people, color: AppColors.primaryBlue, size: 18),
                     const SizedBox(width: 4),
                     Text(
-                      '$_followersCount متابع',
+                      '$_followersCount Followers',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryBlue,
@@ -695,7 +695,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _userRating > 0 ? 'تقييمك: ${_userRating.toStringAsFixed(0)}' : 'قيّم المتجر',
+                          _userRating > 0 ? 'Your Rating: ${_userRating.toStringAsFixed(0)}' : 'Rate Store',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.amber[700],
@@ -738,7 +738,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                _isFollowing ? 'متابَع' : 'متابعة',
+                                _isFollowing ? 'Following' : 'Follow',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: _isFollowing ? Colors.white : AppColors.primaryBlue,
@@ -784,7 +784,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'رقم الهاتف',
+                                'Phone Number',
                                 style: TextStyle(
                                   color: Colors.grey[500],
                                   fontSize: 12,
@@ -832,7 +832,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'العنوان',
+                                'Address',
                                 style: TextStyle(
                                   color: Colors.grey[500],
                                   fontSize: 12,
@@ -865,7 +865,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                       Icon(Icons.info_outline, color: Colors.grey[400], size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'لا توجد معلومات اتصال',
+                        'No contact information available',
                         style: TextStyle(
                           color: Colors.grey[500],
                           fontSize: 13,
@@ -927,8 +927,8 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     if (_products.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.inventory_2_outlined,
-        title: 'لا توجد منتجات',
-        message: 'لم ينشر هذا المتجر أي منتجات بعد',
+        title: 'No products found',
+        message: 'This store hasn\'t published any products yet',
       );
     }
 
@@ -964,8 +964,8 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     if (_offers.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.local_offer_outlined,
-        title: 'لا توجد تخفيضات',
-        message: 'لا توجد تخفيضات نشطة حالياً في هذا المتجر',
+        title: 'No discounts found',
+        message: 'No active discounts in this store at the moment',
       );
     }
 
@@ -992,8 +992,8 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     if (_packs.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.inventory_2_outlined,
-        title: 'لا توجد حزم',
-        message: 'لا توجد حزم متاحة حالياً في هذا المتجر',
+        title: 'No packs found',
+        message: 'No packs available in this store at the moment',
       );
     }
 
@@ -1026,7 +1026,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'حدث خطأ أثناء تحميل بيانات المتجر',
+              'An error occurred while loading store data',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -1043,7 +1043,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('إعادة المحاولة'),
+              child: const Text('Retry'),
             ),
           ],
         ),

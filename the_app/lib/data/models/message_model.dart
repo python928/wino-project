@@ -104,14 +104,14 @@ class Conversation {
       // Today - show time
       final hour = lastMessageTime.hour;
       final minute = lastMessageTime.minute.toString().padLeft(2, '0');
-      final period = hour >= 12 ? 'م' : 'ص';
+      final period = hour >= 12 ? 'PM' : 'AM';
       final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
       return '$hour12:$minute $period';
     } else if (diff.inDays == 1) {
-      return 'أمس';
+      return 'Yesterday';
     } else if (diff.inDays < 7) {
       // This week - show day name
-      const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       return days[lastMessageTime.weekday % 7];
     } else {
       // Show date

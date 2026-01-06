@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _registerUser() async {
     if (!_formKey.currentState!.validate()) {
-      Helpers.showSnackBar(context, 'الرجاء ملء جميع الحقول المطلوبة بشكل صحيح.');
+      Helpers.showSnackBar(context, 'Please fill in all required fields correctly.');
       return;
     }
 
@@ -60,19 +60,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final success = await authProvider.register(registrationData);
 
       if (success && mounted) {
-        Helpers.showSnackBar(context, 'تم التسجيل بنجاح! مرحباً بك');
+        Helpers.showSnackBar(context, 'Registration successful! Welcome');
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           (route) => false,
         );
       } else if (!success && mounted) {
-        final errorMsg = authProvider.error ?? 'تعذر إكمال التسجيل، حاول مجدداً';
+        final errorMsg = authProvider.error ?? 'Unable to complete registration, try again';
         Helpers.showSnackBar(context, errorMsg);
       }
     } catch (e) {
       debugPrint('Registration Error: $e');
       if (mounted) {
-        Helpers.showSnackBar(context, 'فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
+        Helpers.showSnackBar(context, 'Failed to connect to server. Please try again.');
       }
     }
 
@@ -214,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     Text(
-                      'السوق المحلي المتميز',
+                      'Premium Local Marketplace',
                       style: GoogleFonts.cairo(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -240,7 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'إنشاء حساب جديد',
+                          'Create New Account',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.cairo(
                             fontSize: 24,
@@ -253,10 +253,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Name Field
                         _buildTextField(
                           controller: _nameController,
-                          labelText: 'الاسم',
+                          labelText: 'Name',
                           icon: Icons.person_outline,
                           validator: (value) {
-                            if (value!.isEmpty) return 'الرجاء إدخال الاسم';
+                            if (value!.isEmpty) return 'Please enter name';
                             return null;
                           },
                         ),
@@ -264,12 +264,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Email Field
                         _buildTextField(
                           controller: _emailController,
-                          labelText: 'البريد الإلكتروني',
+                          labelText: 'Email',
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value!.isEmpty) return 'الرجاء إدخال البريد الإلكتروني';
-                            if (!value.contains('@')) return 'صيغة البريد الإلكتروني غير صحيحة';
+                            if (value!.isEmpty) return 'Please enter email address';
+                            if (!value.contains('@')) return 'Invalid email format';
                             return null;
                           },
                         ),
@@ -277,11 +277,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Phone Field
                         _buildTextField(
                           controller: _phoneController,
-                          labelText: 'رقم الهاتف',
+                          labelText: 'Phone Number',
                           icon: Icons.phone_outlined,
                           keyboardType: TextInputType.phone,
                           validator: (value) {
-                            if (value!.isEmpty) return 'الرجاء إدخال رقم الهاتف';
+                            if (value!.isEmpty) return 'Please enter phone number';
                             return null;
                           },
                         ),
@@ -289,14 +289,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Password Field
                         _buildPasswordField(
                           controller: _passwordController,
-                          labelText: 'كلمة المرور',
+                          labelText: 'Password',
                           isVisible: _isPasswordVisible,
                           toggleVisibility: () {
                             setState(() => _isPasswordVisible = !_isPasswordVisible);
                           },
                           validator: (value) {
-                            if (value!.isEmpty) return 'الرجاء إدخال كلمة المرور';
-                            if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                            if (value!.isEmpty) return 'Please enter password';
+                            if (value.length < 6) return 'Password must be at least 6 characters';
                             return null;
                           },
                         ),
@@ -325,7 +325,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 )
                               : Text(
-                                  'إنشاء حساب',
+                                  'Create Account',
                                   style: GoogleFonts.cairo(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -340,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'لديك حساب بالفعل؟',
+                              'Already have an account?',
                               style: GoogleFonts.cairo(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
@@ -355,7 +355,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 );
                               },
                               child: Text(
-                                'تسجيل الدخول',
+                                'Login',
                                 style: GoogleFonts.cairo(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,

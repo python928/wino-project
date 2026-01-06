@@ -48,7 +48,7 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      if (mounted) Helpers.showSnackBar(context, 'لا يمكن فتح تطبيق الهاتف');
+      if (mounted) Helpers.showSnackBar(context, 'Cannot open phone app');
     }
   }
 
@@ -62,7 +62,7 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      if (mounted) Helpers.showSnackBar(context, 'لا يمكن فتح واتساب');
+      if (mounted) Helpers.showSnackBar(context, 'Cannot open WhatsApp');
     }
   }
 
@@ -102,7 +102,7 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
       actions: [
         IconButton(
           icon: const Icon(Icons.share, color: AppColors.textPrimary),
-          onPressed: () => Helpers.showSnackBar(context, 'مشاركة المتجر'),
+          onPressed: () => Helpers.showSnackBar(context, 'Share store'),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
@@ -178,13 +178,13 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
           children: [
             Expanded(
               child: GradientButton(
-                text: isFollowing ? 'متابَع' : 'متابعة',
+                text: isFollowing ? 'Following' : 'Follow',
                 icon: isFollowing ? Icons.check : Icons.add,
                 onPressed: () {
                   provider.toggleFollow(widget.store.id);
                   Helpers.showSnackBar(
                     context,
-                    isFollowing ? 'تم إلغاء المتابعة' : 'تمت المتابعة',
+                    isFollowing ? 'Unfollowed' : 'Following',
                   );
                 },
               ),
@@ -194,14 +194,14 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
             if (widget.store.phone.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.chat, color: Colors.green),
-                tooltip: 'واتساب',
+                tooltip: 'WhatsApp',
                 onPressed: () => _launchWhatsApp(widget.store.phone),
               ),
             // Call button
             if (widget.store.phone.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.call, color: AppColors.primaryPurple),
-                tooltip: 'اتصال',
+                tooltip: 'Call',
                 onPressed: () => _launchPhone(widget.store.phone),
               ),
           ],
@@ -254,9 +254,9 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
           indicatorColor: AppColors.primaryPurple,
           labelStyle: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
           tabs: const [
-            Tab(text: 'المنتجات'),
-            Tab(text: 'عن المتجر'),
-            Tab(text: 'التقييمات'),
+            Tab(text: 'Products'),
+            Tab(text: 'About Store'),
+            Tab(text: 'Reviews'),
           ],
         ),
       ),
@@ -289,12 +289,12 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'لا توجد منتجات حالياً',
+                  'No products currently available',
                   style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'سيتم إضافة المنتجات قريباً',
+                  'Products will be added soon',
                   style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[400]),
                 ),
               ],
@@ -356,14 +356,14 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('عن المتجر', style: AppTextStyles.h3),
+          Text('About Store', style: AppTextStyles.h3),
           const SizedBox(height: AppTheme.spacing12),
           Text(widget.store.description, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
           const SizedBox(height: AppTheme.spacing24),
-          Text('أوقات العمل', style: AppTextStyles.h3),
+          Text('Working Hours', style: AppTextStyles.h3),
           const SizedBox(height: AppTheme.spacing12),
-          _buildWorkingHour('السبت - الخميس', '09:00 - 21:00'),
-          _buildWorkingHour('الجمعة', '14:00 - 21:00'),
+          _buildWorkingHour('Saturday - Thursday', '09:00 - 21:00'),
+          _buildWorkingHour('Friday', '14:00 - 21:00'),
         ],
       ),
     );

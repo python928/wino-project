@@ -37,9 +37,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
   final TextEditingController _searchController = TextEditingController();
 
   // Filters
-  String _selectedCategory = 'الكل';
+  String _selectedCategory = 'All';
   int? _selectedCategoryId;
-  String _selectedSort = 'الأحدث';
+  String _selectedSort = 'Newest';
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
 
@@ -48,11 +48,11 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
   bool _isLoadingStores = false;
 
   final List<String> _sortOptions = [
-    'الأحدث',
-    'الأقدم',
-    'الأعلى تقييماً',
-    'الأقل سعراً',
-    'الأعلى سعراً',
+    'Newest',
+    'Oldest',
+    'Highest Rated',
+    'Lowest Price',
+    'Highest Price',
   ];
 
   @override
@@ -61,7 +61,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
     _tabController = TabController(length: 4, vsync: this);
     _searchController.text = widget.initialQuery ?? '';
     _selectedCategoryId = widget.initialCategoryId;
-    _selectedCategory = widget.initialCategoryName ?? 'الكل';
+    _selectedCategory = widget.initialCategoryName ?? 'All';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _performSearch();
@@ -123,7 +123,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                 children: [
                   const Icon(Icons.category_outlined, color: AppColors.primaryBlue),
                   const SizedBox(width: 8),
-                  const Text('اختر الفئة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const Text('Select Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 ],
               ),
               content: SizedBox(
@@ -138,7 +138,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                         setDialogState(() => searchQuery = value);
                       },
                       decoration: InputDecoration(
-                        hintText: 'ابحث في الفئات...',
+                        hintText: 'Search in categories...',
                         prefixIcon: const Icon(Icons.search, size: 20),
                         filled: true,
                         fillColor: Colors.grey[100],
@@ -159,24 +159,24 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: _selectedCategory == 'الكل'
+                                color: _selectedCategory == 'All'
                                     ? AppColors.primaryBlue.withOpacity(0.1)
                                     : Colors.grey[100],
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
                                 Icons.apps,
-                                color: _selectedCategory == 'الكل' ? AppColors.primaryBlue : Colors.grey,
+                                color: _selectedCategory == 'All' ? AppColors.primaryBlue : Colors.grey,
                                 size: 20,
                               ),
                             ),
-                            title: const Text('الكل'),
-                            trailing: _selectedCategory == 'الكل'
+                            title: const Text('All'),
+                            trailing: _selectedCategory == 'All'
                                 ? const Icon(Icons.check_circle, color: AppColors.primaryBlue)
                                 : null,
                             onTap: () {
                               setState(() {
-                                _selectedCategory = 'الكل';
+                                _selectedCategory = 'All';
                                 _selectedCategoryId = null;
                               });
                               Navigator.pop(context);
@@ -222,7 +222,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('إلغاء'),
+                  child: const Text('Cancel'),
                 ),
               ],
             ),
@@ -254,25 +254,25 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'الفلاتر',
+                        'Filters',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       TextButton(
                         onPressed: () {
                           setSheetState(() {
-                            _selectedSort = 'الأحدث';
+                            _selectedSort = 'Newest';
                             _priceRange = const RangeValues(0, 100000);
                             _minRating = 0;
                           });
                         },
-                        child: const Text('إعادة تعيين'),
+                        child: const Text('Reset'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Sort by
-                  const Text('الترتيب حسب', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Sort by', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -299,9 +299,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('نطاق السعر', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Price Range', style: TextStyle(fontWeight: FontWeight.w600)),
                       Text(
-                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} د.ج',
+                        '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
                         style: const TextStyle(
                             color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
                       ),
@@ -327,7 +327,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('الحد الأدنى للتقييم',
+                      const Text('Minimum Rating',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       Row(
                         children: [
@@ -371,7 +371,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                         ),
                       ),
                       child: const Text(
-                        'تطبيق الفلاتر',
+                        'Apply Filters',
                         style:
                             TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
@@ -410,7 +410,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _performSearch(),
               decoration: InputDecoration(
-                hintText: 'ابحث...',
+                hintText: 'Search...',
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 22),
                 suffixIcon: _searchController.text.isNotEmpty
@@ -435,7 +435,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
             IconButton(
               onPressed: _showFiltersSheet,
               icon: const Icon(Icons.tune, color: AppColors.textPrimary),
-              tooltip: 'الفلاتر',
+              tooltip: 'Filters',
             ),
           ],
           bottom: PreferredSize(
@@ -451,10 +451,10 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontSize: 13),
                 tabs: const [
-                  Tab(text: 'المنتجات'),
-                  Tab(text: 'التخفيضات'),
-                  Tab(text: 'الحزم'),
-                  Tab(text: 'المتاجر'),
+                  Tab(text: 'Products'),
+                  Tab(text: 'Discounts'),
+                  Tab(text: 'Packs'),
+                  Tab(text: 'Stores'),
                 ],
               ),
             ),
@@ -503,7 +503,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
             ),
 
             // Active filters indicator
-            if (_selectedCategory != 'الكل' ||
+            if (_selectedCategory != 'All' ||
                 _minRating > 0 ||
                 _priceRange.start > 0 ||
                 _priceRange.end < 100000)
@@ -515,7 +515,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                     const Icon(Icons.filter_list, size: 16, color: AppColors.primaryBlue),
                     const SizedBox(width: 8),
                     const Text(
-                      'فلاتر نشطة',
+                      'Active Filters',
                       style: TextStyle(
                           color: AppColors.primaryBlue,
                           fontWeight: FontWeight.w500,
@@ -525,16 +525,16 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedCategory = 'الكل';
+                          _selectedCategory = 'All';
                           _selectedCategoryId = null;
-                          _selectedSort = 'الأحدث';
+                          _selectedSort = 'Newest';
                           _priceRange = const RangeValues(0, 100000);
                           _minRating = 0;
                         });
                         _performSearch();
                       },
                       child: const Text(
-                        'مسح الكل',
+                        'Clear All',
                         style: TextStyle(
                             color: Colors.red,
                             fontWeight: FontWeight.w500,
@@ -585,18 +585,18 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
 
         // Apply sorting
         switch (_selectedSort) {
-          case 'الأقدم':
+          case 'Oldest':
             products = List.from(products)..sort((a, b) => a.id.compareTo(b.id));
             break;
-          case 'الأعلى تقييماً':
+          case 'Highest Rated':
             products =
                 List.from(products)..sort((a, b) => b.rating.compareTo(a.rating));
             break;
-          case 'الأقل سعراً':
+          case 'Lowest Price':
             products =
                 List.from(products)..sort((a, b) => a.price.compareTo(b.price));
             break;
-          case 'الأعلى سعراً':
+          case 'Highest Price':
             products =
                 List.from(products)..sort((a, b) => b.price.compareTo(a.price));
             break;
@@ -605,8 +605,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
         if (products.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.search_off,
-            title: 'لا توجد منتجات',
-            message: 'لم نجد أي منتجات تطابق بحثك',
+            title: 'No products found',
+            message: 'We couldn\'t find any products matching your search',
           );
         }
 
@@ -649,8 +649,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
         if (offers.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.local_offer_outlined,
-            title: 'لا توجد تخفيضات',
-            message: 'لا توجد تخفيضات متاحة حالياً',
+            title: 'No discounts found',
+            message: 'No discounts available at the moment',
           );
         }
 
@@ -683,8 +683,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
         if (packs.isEmpty) {
           return const EmptyStateWidget(
             icon: Icons.inventory_2_outlined,
-            title: 'لا توجد حزم',
-            message: 'لا توجد حزم متاحة حالياً',
+            title: 'No packs found',
+            message: 'No packs available at the moment',
           );
         }
 
@@ -713,8 +713,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
     if (_searchedStores.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.store_outlined,
-        title: 'لا توجد متاجر',
-        message: 'لم نجد أي متاجر تطابق بحثك',
+        title: 'No stores found',
+        message: 'We couldn\'t find any stores matching your search',
       );
     }
 
@@ -786,7 +786,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                       Text(
                         store.description.isNotEmpty
                             ? store.description
-                            : 'متجر محلي',
+                            : 'Local store',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -802,7 +802,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              store.address.isNotEmpty ? store.address : 'الجزائر',
+                              store.address.isNotEmpty ? store.address : 'Algeria',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
