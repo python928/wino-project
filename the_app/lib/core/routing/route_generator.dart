@@ -13,7 +13,6 @@ import '../../presentation/profile/edit_product_screen.dart';
 import '../../presentation/profile/add_pack_screen.dart';
 import '../../presentation/profile/edit_pack_screen.dart';
 import '../../presentation/profile/add_promotion_screen.dart';
-import '../../presentation/store_map/store_map_screen.dart';
 import '../../presentation/statistics/statistics_screen.dart';
 import '../../presentation/favorites/favorites_screen.dart';
 import '../../presentation/discovery/discovery_screen.dart';
@@ -137,13 +136,7 @@ class RouteGenerator {
           child: const AddPromotionScreen(),
         );
 
-      // ===== MAP & DISCOVERY =====
-      case Routes.storeMap:
-        return _slideTransition(
-          settings: settings,
-          child: const StoreMapScreen(),
-        );
-
+      // ===== DISCOVERY =====
       case Routes.discovery:
         return _slideTransition(
           settings: settings,

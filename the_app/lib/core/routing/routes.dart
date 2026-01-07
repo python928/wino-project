@@ -26,7 +26,6 @@ class Routes {
   static const String store = '/store';
   static const String storeSearch = '/store-search';
   static const String nearbyStores = '/nearby-stores';
-  static const String storeMap = '/store-map';
   
   // Cart & Orders
   static const String cart = '/cart';

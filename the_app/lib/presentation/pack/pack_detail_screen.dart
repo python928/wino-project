@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/pack_model.dart';
 import '../../core/config/api_config.dart';
 import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/helpers.dart';
-import '../shared_widgets/gradient_button.dart';
 
 class PackDetailScreen extends StatefulWidget {
   final Pack pack;
@@ -22,147 +20,41 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final discountPercent = widget.pack.totalPrice > widget.pack.discountPrice
-        ? (((widget.pack.totalPrice - widget.pack.discountPrice) / widget.pack.totalPrice) * 100).round()
+        ? (((widget.pack.totalPrice - widget.pack.discountPrice) /
+                    widget.pack.totalPrice) *
+                100)
+            .round()
         : 0;
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.scaffoldBackground,
-        body: CustomScrollView(
-          slivers: [
-            // App Bar
-            SliverAppBar(
-              title: Text(widget.pack.name),
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.textPrimary,
-              elevation: 0,
-              pinned: true,
-              floating: false,
-            ),
-
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Products Images Section
-                  _buildProductsImagesSection(),
-
-                  // Pack Info Card
-                  Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Pack Name
-                        Text(
-                          widget.pack.name,
-                          style: AppTextStyles.h2.copyWith(fontSize: 22),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Price Section
-                        Row(
-                          children: [
-                            // Discount Price
-                                Text(
-                                  '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
-                              style: AppTextStyles.h2.copyWith(
-                                color: AppColors.primaryOrange,
-                                fontSize: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Original Price
-                            if (discountPercent > 0) ...[
-                                  Text(
-                                    '${widget.pack.totalPrice.toStringAsFixed(0)} DZD',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: AppColors.textHint,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-
-                            const Spacer(),
-
-                            // Discount Badge
-                            if (discountPercent > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryOrange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                      'Save $discountPercent%',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.primaryOrange,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Products Count
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.scaffoldBackground,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.inventory_2_outlined, color: AppColors.primaryBlue),
-                              const SizedBox(width: 8),
-                                  Text(
-                                    'Contains ${widget.pack.products.length} products',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Products List
-                  _buildProductsList(),
-
-                  const SizedBox(height: 8),
-
-                  // Description
-                  if (widget.pack.description.isNotEmpty) _buildDescriptionSection(),
-
-                  const SizedBox(height: 8),
-
-                  // Merchant Info
-                  _buildMerchantSection(),
-
-                  const SizedBox(height: 100), // Space for bottom button
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildPackInfo(discountPercent),
+                const SizedBox(height: 12),
+                _buildProductsList(),
+                const SizedBox(height: 12),
+                if (widget.pack.description.isNotEmpty) ...[
+                  _buildDescriptionSection(),
+                  const SizedBox(height: 12),
                 ],
-              ),
+                _buildMerchantSection(),
+                const SizedBox(height: 100),
+              ],
             ),
-          ],
-        ),
-
-        // Bottom Action Bar
-        bottomNavigationBar: _buildBottomBar(discountPercent),
+          ),
+        ],
       ),
+      bottomNavigationBar: _buildBottomBar(discountPercent),
     );
   }
 
-  Widget _buildProductsImagesSection() {
+  Widget _buildAppBar() {
     final images = widget.pack.products
         .where((p) => p.productImage.isNotEmpty)
         .map((p) => ApiConfig.getImageUrl(p.productImage))
@@ -170,65 +62,230 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
         .take(4)
         .toList();
 
-    if (images.isEmpty) {
-      return Container(
-        height: 250,
-        color: Colors.grey[200],
-        child: const Center(
-          child: Icon(Icons.inventory_2, size: 80, color: Colors.grey),
+    return SliverAppBar(
+      expandedHeight: 280,
+      pinned: true,
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          ),
         ),
-      );
-    }
-
-    return Container(
-      height: 250,
-      color: Colors.white,
-      child: images.length == 1
-          ? Image.network(
-              images[0],
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.image, size: 60, color: Colors.grey),
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(8),
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.2,
-              ),
-              itemCount: images.length > 4 ? 4 : images.length,
-              itemBuilder: (context, index) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    images[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.image, size: 40, color: Colors.grey),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          color: Colors.white,
+          child: images.isEmpty
+              ? Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.inventory_2_rounded,
+                      size: 64,
+                      color: AppColors.primaryBlue,
                     ),
                   ),
-                );
-              },
+                )
+              : images.length == 1
+                  ? Image.network(
+                      images[0],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.2,
+                      ),
+                      itemCount: images.length > 4 ? 4 : images.length,
+                      itemBuilder: (context, index) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              images[index],
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: AppColors.neutral100,
+      child: Icon(Icons.image_rounded, size: 40, color: AppColors.textTertiary),
+    );
+  }
+
+  Widget _buildPackInfo(int discountPercent) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.pack.name,
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          // Price Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
+                style: AppTextStyles.h2.copyWith(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (discountPercent > 0) ...[
+                const SizedBox(width: 10),
+                Text(
+                  '${widget.pack.totalPrice.toStringAsFixed(0)} DZD',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    decoration: TextDecoration.lineThrough,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+              const Spacer(),
+              if (discountPercent > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.successGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.savings_outlined, size: 16, color: AppColors.successGreen),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Save $discountPercent%',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.successGreen,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Products Count Badge
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Contains ${widget.pack.products.length} products',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildProductsList() {
     return Container(
-      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-              Text(
-                'Included Products',
-            style: AppTextStyles.h3.copyWith(fontSize: 18),
+          Text(
+            'Included Products',
+            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           ...widget.pack.products.map((product) => _buildProductItem(product)),
@@ -244,28 +301,41 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.scaffoldBackground,
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           // Product Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              width: 60,
-              height: 60,
-              color: Colors.grey[200],
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
               child: imageUrl.isNotEmpty
                   ? Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.grey),
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.image_rounded,
+                        color: AppColors.textTertiary,
+                      ),
                     )
-                  : const Icon(Icons.image, color: Colors.grey),
+                  : Icon(Icons.image_rounded, color: AppColors.textTertiary),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
 
           // Product Info
           Expanded(
@@ -281,24 +351,26 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${product.productPrice.toStringAsFixed(0)} DZD',
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Quantity
+          // Quantity Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
+              color: AppColors.primaryBlue,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'x${product.quantity}',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primaryBlue,
-                fontWeight: FontWeight.bold,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -309,33 +381,49 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   Widget _buildDescriptionSection() {
     return Container(
-      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-              Text(
-                'Description',
-            style: AppTextStyles.h3.copyWith(fontSize: 18),
+          Text(
+            'Description',
+            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
           Text(
             widget.pack.description,
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
-              height: 1.5,
+              height: 1.6,
             ),
             maxLines: _isDescriptionExpanded ? null : 3,
             overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
           ),
           if (widget.pack.description.length > 100)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _isDescriptionExpanded = !_isDescriptionExpanded;
-                });
-              },
-                  child: Text(_isDescriptionExpanded ? 'Show less' : 'Show more'),
+            GestureDetector(
+              onTap: () => setState(() => _isDescriptionExpanded = !_isDescriptionExpanded),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _isDescriptionExpanded ? 'Show less' : 'Show more',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primaryBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -344,17 +432,28 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   Widget _buildMerchantSection() {
     return Container(
-      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-              Text(
-                'Merchant Info',
-            style: AppTextStyles.h3.copyWith(fontSize: 18),
+          Text(
+            'Merchant',
+            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
-          InkWell(
+          GestureDetector(
             onTap: () {
               Navigator.pushNamed(
                 context,
@@ -362,24 +461,65 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 arguments: widget.pack.merchantId,
               );
             },
-            borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.scaffoldBackground,
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.store, color: AppColors.primaryBlue, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.pack.merchantName,
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primaryBlue.withOpacity(0.1),
+                          AppColors.primaryBlue.withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.storefront_rounded,
+                      color: AppColors.primaryBlue,
+                      size: 24,
                     ),
                   ),
-                  const Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.pack.merchantName,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Visit store',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -391,68 +531,92 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   Widget _buildBottomBar(int discountPercent) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            // Price Summary
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                        Text(
-                          'Total Price',
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            // Price Info
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Price',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
+                        style: AppTextStyles.h4.copyWith(
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (discountPercent > 0) ...[
+                        const SizedBox(width: 8),
                         Text(
-                              '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
-                          style: AppTextStyles.h2.copyWith(
-                            color: AppColors.primaryOrange,
-                            fontSize: 20,
+                          '${widget.pack.totalPrice.toStringAsFixed(0)}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            decoration: TextDecoration.lineThrough,
+                            color: AppColors.textTertiary,
                           ),
                         ),
-                        if (discountPercent > 0) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                                '${widget.pack.totalPrice.toStringAsFixed(0)} DZD',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              decoration: TextDecoration.lineThrough,
-                              color: AppColors.textHint,
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(width: 16),
 
             // Action Button
-            SizedBox(
-              width: double.infinity,
-              child: GradientButton(
-                    text: 'Contact Merchant',
-                onPressed: () {
-                      Helpers.showSnackBar(context, 'You can contact the merchant to purchase this pack');
-                },
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Helpers.showSnackBar(
+                      context,
+                      'You can contact the merchant to purchase this pack',
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.message_outlined, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Contact',
+                        style: AppTextStyles.buttonText.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

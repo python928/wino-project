@@ -91,12 +91,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       if (stores.isNotEmpty) {
         final store = stores.first;
         if (mounted) {
+          // Parse store address
+          String storeLocation = 'Select Location';
+          final storeAddress = store['address']?.toString() ?? '';
+          if (storeAddress.isNotEmpty && storeAddress != 'Algeria') {
+            storeLocation = storeAddress;
+          }
+
           setState(() {
             _storeId = store['id'];
             _storeDescription = store['description'] ?? _storeDescription;
             _storeCoverUrl = store['cover_image'];
             _followersCount = store['followers_count'] ?? 0;
             _averageRating = (store['average_rating'] as num?)?.toDouble() ?? 0.0;
+            _location = storeLocation;
           });
         }
       }
@@ -217,10 +225,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       final authProvider = context.read<AuthProvider>();
       final isMerchantFromAuth = authProvider.activeProfileType == 'STORE';
 
+      // Parse address to show wilaya/baladiya
+      String locationDisplay = 'Select Location';
+      final address = userData['address']?.toString() ?? userData['location']?.toString() ?? '';
+      if (address.isNotEmpty && address != 'Algeria') {
+        locationDisplay = address;
+      }
+
       setState(() {
         _userId = userData['id'];
         _userName = userData['name'] ?? userData['username'] ?? 'User';
-        _location = userData['location'] ?? 'Algiers';
+        _location = locationDisplay;
         // Use AuthProvider's activeProfileType for consistency
         _userType = isMerchantFromAuth ? 'merchant' : 'user';
         _storeDescription = userData['store_description'] ?? '';
@@ -814,63 +829,28 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
-            const SizedBox(width: 4),
-            Text(
-              _location,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // Edit profile button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ElevatedButton.icon(
-            onPressed: _navigateToEditProfile,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Edit Info'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.textPrimary,
-              elevation: 2,
-              shadowColor: AppColors.shadowColor,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 32),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+        const SizedBox(height: 6),
+        // Location with wilaya/baladiya
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryBlue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        const SizedBox(height: 24),
-        // Stats card
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [AppColors.softShadow],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, Routes.favorites),
-                  child: _buildAnalysisItem(value: '♡', label: 'Favorites', icon: Icons.favorite_rounded, color: Colors.red),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_on, size: 16, color: AppColors.primaryBlue),
+              const SizedBox(width: 4),
+              Text(
+                _location,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w500,
                 ),
-                _buildDivider(),
-                _buildAnalysisItem(value: _formatCount(_followersCount), label: 'Followers', icon: Icons.people_alt_rounded, color: Colors.blue),
-                _buildDivider(),
-                _buildAnalysisItem(value: '5', label: 'Orders', icon: Icons.shopping_bag_rounded, color: Colors.orange),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
@@ -1275,26 +1255,51 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Account', style: AppTextStyles.h4),
-          const SizedBox(height: 12),
+          // Account Section
           _buildMenuContainer([
-            _MenuItem(icon: Icons.favorite_outline, title: 'Favorites', onTap: () => Navigator.pushNamed(context, Routes.favorites)),
-            _MenuItem(icon: Icons.location_on_outlined, title: 'My Addresses', subtitle: _location, onTap: () {}),
-            _MenuItem(icon: Icons.notifications_none_rounded, title: 'Notifications', badge: '3', onTap: () {}),
-            _MenuItem(icon: Icons.credit_card_outlined, title: 'Payment Methods', onTap: () {}),
+            _MenuItem(
+              icon: Icons.person_outline,
+              title: 'Information',
+              subtitle: 'Edit your profile',
+              onTap: _navigateToEditProfile,
+            ),
+            _MenuItem(
+              icon: Icons.favorite_outline,
+              title: 'Favorites',
+              onTap: () => Navigator.pushNamed(context, Routes.favorites),
+            ),
           ]),
-          const SizedBox(height: 24),
-          Text('General', style: AppTextStyles.h4),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+
+          // General Section
           _buildMenuContainer([
-            _MenuItem(icon: Icons.language, title: 'Language', subtitle: 'Arabic', onTap: () {}),
-            _MenuItem(icon: Icons.help_outline_rounded, title: 'Help & Support', onTap: () {}),
+            _MenuItem(
+              icon: Icons.language,
+              title: 'Language',
+              subtitle: 'Arabic',
+              onTap: () {},
+            ),
+            _MenuItem(
+              icon: Icons.help_outline_rounded,
+              title: 'Help & Support',
+              onTap: () {},
+            ),
           ]),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // Logout
           Container(
-            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withValues(alpha: 0.1))),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
+            ),
             child: ListTile(
-              leading: Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: Colors.red, size: 20)),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+              ),
               title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
               onTap: _handleLogout,

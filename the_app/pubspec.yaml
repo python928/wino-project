@@ -73,9 +73,6 @@ dependencies:
   # Commerce Specific
   share_plus: ^10.0.2              # Social sharing
   url_launcher: ^6.3.0             # External links
-  geolocator: ^12.0.0              # Location services
-  geocoding: ^3.0.0                # Address from coordinates
-  google_maps_flutter: ^2.5.0      # Maps for store discovery
   local_auth: ^2.3.0               # Biometric auth
   
 

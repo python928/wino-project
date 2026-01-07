@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
@@ -29,23 +27,20 @@ class EditCustomerProfileScreen extends StatefulWidget {
   State<EditCustomerProfileScreen> createState() => _EditCustomerProfileScreenState();
 }
 
-class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> 
-    with SingleTickerProviderStateMixin {
+class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TabController _tabController;
   bool _isLoading = false;
-  
+
   // Location data
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
   String _selectedAddress = '';
-  double? _selectedLatitude;
-  double? _selectedLongitude;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _nameController = TextEditingController(text: widget.initialName);
     _emailController = TextEditingController(text: widget.initialEmail);
     _phoneController = TextEditingController(text: widget.initialPhone);
@@ -54,7 +49,6 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -64,13 +58,21 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
   Future<void> _loadUserLocation() async {
     final userData = StorageService.getUserData();
     if (userData != null) {
+      final address = userData['address']?.toString() ?? '';
       setState(() {
-        _selectedAddress = userData['address'] ?? '';
-        _selectedLatitude = userData['latitude'] != null 
-            ? double.tryParse(userData['latitude'].toString()) : null;
-        _selectedLongitude = userData['longitude'] != null 
-            ? double.tryParse(userData['longitude'].toString()) : null;
+        _selectedAddress = address;
+        _parseAddressToWilayaBaladiya(address);
       });
+    }
+  }
+
+  void _parseAddressToWilayaBaladiya(String address) {
+    if (address.contains(',')) {
+      final parts = address.split(',').map((e) => e.trim()).toList();
+      if (parts.length >= 2) {
+        _selectedBaladiya = parts[0];
+        _selectedWilaya = parts[1];
+      }
     }
   }
 
@@ -87,8 +89,6 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
         'email': _emailController.text,
         'phone': _phoneController.text,
         'address': _selectedAddress,
-        'latitude': _selectedLatitude,
-        'longitude': _selectedLongitude,
       };
 
       final userData = StorageService.getUserData();
@@ -103,8 +103,6 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
         userData['email'] = _emailController.text;
         userData['phone'] = _phoneController.text;
         userData['address'] = _selectedAddress;
-        userData['latitude'] = _selectedLatitude;
-        userData['longitude'] = _selectedLongitude;
         await StorageService.saveUserData(userData);
       }
 
@@ -126,25 +124,22 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
       context,
       MaterialPageRoute(
         builder: (context) => LocationPickerScreen(
-          initialLocation: _selectedLatitude != null && _selectedLongitude != null
-              ? LatLng(_selectedLatitude!, _selectedLongitude!)
-              : null,
-          initialAddress: _selectedAddress,
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
         ),
       ),
     );
 
     if (result != null) {
       setState(() {
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
         _selectedAddress = result.address;
-        _selectedLatitude = result.coordinates.latitude;
-        _selectedLongitude = result.coordinates.longitude;
       });
     }
   }
 
   Future<void> _becomeSeller() async {
-    // Navigate to Become Seller screen
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const BecomeMerchantScreen()),
@@ -153,271 +148,276 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Edit Profile',
-          style: AppTextStyles.h3,
-        ),
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primaryBlue,
-          labelColor: AppColors.primaryBlue,
-          unselectedLabelColor: AppColors.textSecondary,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.person),
-              text: 'Information',
+    final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.neutral100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textPrimary),
             ),
-            Tab(
-              icon: Icon(Icons.location_on),
-              text: 'Location',
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text('Edit Profile', style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
+          centerTitle: true,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            // User Avatar Header
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryBlue, AppColors.primaryBlue.withValues(alpha: 0.6)],
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 48,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person_rounded, size: 48, color: AppColors.primaryBlue),
+                ),
+              ),
             ),
+            const SizedBox(height: 32),
+
+            // Form Fields
+            _buildFormField(
+              label: 'Full Name',
+              controller: _nameController,
+              hint: 'Enter your full name',
+              icon: Icons.person_rounded,
+            ),
+            _buildFormField(
+              label: 'Email',
+              controller: _emailController,
+              hint: 'email@example.com',
+              icon: Icons.email_rounded,
+              keyboardType: TextInputType.emailAddress,
+              textDirection: TextDirection.ltr,
+            ),
+            _buildFormField(
+              label: 'Phone Number',
+              controller: _phoneController,
+              hint: '+213 XXX XXX XXX',
+              icon: Icons.phone_rounded,
+              keyboardType: TextInputType.phone,
+              textDirection: TextDirection.ltr,
+            ),
+
+            const SizedBox(height: 8),
+
+            // Location Section
+            Text('Location', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _selectLocation,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: hasLocation
+                      ? AppColors.successGreen.withValues(alpha: 0.08)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: hasLocation
+                        ? AppColors.successGreen.withValues(alpha: 0.3)
+                        : AppColors.neutral200,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadowLight,
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: hasLocation
+                            ? AppColors.successGreen.withValues(alpha: 0.1)
+                            : AppColors.primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        hasLocation ? Icons.check_circle : Icons.add_location_rounded,
+                        color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasLocation ? '$_selectedBaladiya, $_selectedWilaya' : 'Select your location',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: hasLocation ? AppColors.textPrimary : AppColors.primaryBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (!hasLocation)
+                            Text(
+                              'Tap to choose wilaya and baladiya',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          if (hasLocation)
+                            Text(
+                              'Tap to change',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Save Button
+            _buildPrimaryButton(
+              label: 'Save Changes',
+              onPressed: _isLoading ? null : _saveProfile,
+              isLoading: _isLoading,
+              color: AppColors.primaryBlue,
+            ),
+            const SizedBox(height: 16),
+
+            // Become Seller Button
+            _buildSecondaryButton(
+              label: 'Become a Seller',
+              onPressed: _becomeSeller,
+              icon: Icons.store_rounded,
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    TextDirection? textDirection,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInformationTab(),
-          _buildLocationTab(),
+          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadowLight,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              textDirection: textDirection,
+              textAlign: textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
+              style: AppTextStyles.bodyMedium,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+                prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInformationTab() {
-    return ListView(
-      padding: const EdgeInsets.all(AppTheme.spacing20),
-      children: [
-          // Form Fields
-          Text('Name', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppTheme.spacing8),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              hintText: 'Enter your full name',
-              prefixIcon: const Icon(Icons.person, color: AppColors.textHint),
-              border: OutlineInputBorder(borderRadius: AppTheme.mediumRadius),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing20),
-
-          Text('Email', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppTheme.spacing8),
-          TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              hintText: 'Enter your email address',
-              prefixIcon: const Icon(Icons.email, color: AppColors.textHint),
-              border: OutlineInputBorder(borderRadius: AppTheme.mediumRadius),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing20),
-
-          Text('Phone Number', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppTheme.spacing8),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              hintText: 'Enter your phone number',
-              prefixIcon: const Icon(Icons.phone, color: AppColors.textHint),
-              border: OutlineInputBorder(borderRadius: AppTheme.mediumRadius),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing32),
-
-          // Save Button
-          ElevatedButton(
-            onPressed: _isLoading ? null : _saveProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-              shape: RoundedRectangleBorder(borderRadius: AppTheme.mediumRadius),
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : Text('Save Changes', style: AppTextStyles.bodyLarge.copyWith(color: Colors.white)),
-          ),
-          const SizedBox(height: AppTheme.spacing16),
-
-          // Become Seller Button
-          OutlinedButton(
-            onPressed: _becomeSeller,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.primaryPurple, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-              shape: RoundedRectangleBorder(borderRadius: AppTheme.mediumRadius),
-            ),
-            child: Text(
-              'Become Seller',
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primaryPurple),
-            ),
-          ),
-        ],
-      );
+  Widget _buildPrimaryButton({
+    required String label,
+    required VoidCallback? onPressed,
+    required Color color,
+    bool isLoading = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
+        child: isLoading
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              )
+            : Text(label, style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600)),
+      ),
+    );
   }
 
-  Widget _buildLocationTab() {
-    return ListView(
-      padding: const EdgeInsets.all(AppTheme.spacing20),
-      children: [
-        Text(
-          'Location Information',
-          style: AppTextStyles.h4.copyWith(
-            color: AppColors.textPrimary,
-          ),
+  Widget _buildSecondaryButton({
+    required String label,
+    required VoidCallback onPressed,
+    required IconData icon,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: AppColors.primaryPurple),
+        label: Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryPurple, fontWeight: FontWeight.w600)),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: AppColors.primaryPurple, width: 2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        const SizedBox(height: AppTheme.spacing16),
-        
-        Text(
-          'Current Location',
-          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: AppTheme.spacing8),
-        
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.location_on,
-                color: AppColors.primaryBlue,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _selectedAddress.isEmpty 
-                      ? 'No location selected' 
-                      : _selectedAddress,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: _selectedAddress.isEmpty 
-                        ? AppColors.textSecondary 
-                        : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppTheme.spacing16),
-        
-        ElevatedButton.icon(
-          onPressed: _selectLocation,
-          icon: const Icon(Icons.edit_location),
-          label: Text(
-            _selectedAddress.isEmpty ? 'Select Location' : 'Change Location',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        
-        if (_selectedLatitude != null && _selectedLongitude != null) ...[
-          const SizedBox(height: AppTheme.spacing16),
-          Text(
-            'Coordinates',
-            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: AppTheme.spacing8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.explore,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Latitude: ${_selectedLatitude!.toStringAsFixed(6)}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.explore_off,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Longitude: ${_selectedLongitude!.toStringAsFixed(6)}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-        
-        const SizedBox(height: AppTheme.spacing32),
-        
-        // Save Button for location tab
-        ElevatedButton(
-          onPressed: _isLoading ? null : _saveProfile,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryOrange,
-            padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-            shape: RoundedRectangleBorder(borderRadius: AppTheme.mediumRadius),
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                )
-              : Text('Save Location', style: AppTextStyles.bodyLarge.copyWith(color: Colors.white)),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -437,56 +437,46 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
   final _storeAddressController = TextEditingController();
   final _storePhoneController = TextEditingController();
   bool _isLoading = false;
-  LatLng? _selectedLocation;
-  String _selectedLocationText = '';
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
-  
+
   void _loadUserData() {
-    // Pre-fill available data from user data
     final userData = StorageService.getUserData();
     if (userData != null) {
-      // Auto-fill phone number
       _storePhoneController.text = userData['phone'] ?? '';
-      
-      // Auto-generate store name from user name if available
       final userName = userData['name']?.toString() ?? '';
       if (userName.isNotEmpty) {
         _storeNameController.text = '$userName Store';
+        _storeDescriptionController.text =
+            'Welcome to $userName Store! We offer quality products with excellent service.';
       }
-      
-      // Add sample description if user name is available
-      if (userName.isNotEmpty) {
-        _storeDescriptionController.text = 
-          'Welcome to $userName Store! We offer quality products with excellent service.';
-      }
-      
-      // Set default address if not available
       if (_storeAddressController.text.isEmpty) {
         _storeAddressController.text = 'Algeria';
       }
     }
   }
-  
+
   Future<void> _openLocationPicker() async {
     final result = await Navigator.push<LocationResult>(
       context,
       MaterialPageRoute(
         builder: (context) => LocationPickerScreen(
-          initialLocation: _selectedLocation,
-          initialAddress: _selectedLocationText,
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
         ),
       ),
     );
-    
+
     if (result != null) {
       setState(() {
-        _selectedLocation = result.coordinates;
-        _selectedLocationText = result.address;
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
         _storeAddressController.text = result.address;
       });
     }
@@ -521,12 +511,6 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
         'phone_number': _storePhoneController.text.trim(),
         'type': 'physical',
       };
-      
-      // Add location coordinates if selected
-      if (_selectedLocation != null) {
-        storeData['latitude'] = _selectedLocation!.latitude.toString();
-        storeData['longitude'] = _selectedLocation!.longitude.toString();
-      }
 
       await ApiService.post(ApiConfig.stores, storeData);
 
@@ -548,7 +532,6 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
 
       if (mounted) {
         Helpers.showSnackBar(context, 'Congratulations! Your store has been created successfully');
-        // Pop twice to go back to profile screen
         Navigator.pop(context);
         Navigator.pop(context, true);
       }
@@ -563,50 +546,60 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.scaffoldBackground,
+        backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
+          surfaceTintColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: AppColors.textPrimary),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.neutral100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textPrimary),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text(
-            'Create Your Store',
-            style: AppTextStyles.h3,
-          ),
+          title: Text('Create Your Store', style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
           centerTitle: true,
         ),
         body: ListView(
-          padding: const EdgeInsets.all(AppTheme.spacing20),
+          padding: const EdgeInsets.all(20),
           children: [
-            // Simple header section
+            // Header Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryPurple, AppColors.primaryPurple.withValues(alpha: 0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                    color: AppColors.primaryPurple.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryPurple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.store_rounded, 
-                      color: AppColors.primaryPurple, size: 24),
+                    child: const Icon(Icons.store_rounded, color: Colors.white, size: 28),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -614,15 +607,13 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Create Your Store',
-                          style: AppTextStyles.h3,
+                          'Start Selling Today',
+                          style: AppTextStyles.h4.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Enter your store details to start selling',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                          style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.9)),
                         ),
                       ],
                     ),
@@ -630,19 +621,19 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.spacing24),
-            
-            // Form section
+            const SizedBox(height: 24),
+
+            // Form Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                    color: AppColors.shadowLight,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -651,26 +642,11 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
-                    // Store Name
-                    Text('Store Name *', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: AppTheme.spacing8),
-                    TextFormField(
+                    _buildFormField(
+                      label: 'Store Name *',
                       controller: _storeNameController,
-                      decoration: InputDecoration(
-                        hintText: 'Example: Elegant Store',
-                        border: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
+                      hint: 'Example: Elegant Store',
+                      icon: Icons.store_rounded,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter store name';
@@ -678,189 +654,194 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: AppTheme.spacing20),
-
-                    // Store Description
-                    Text('Store Description', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: AppTheme.spacing8),
-                    TextFormField(
+                    _buildFormField(
+                      label: 'Store Description',
                       controller: _storeDescriptionController,
+                      hint: 'Describe your store and products...',
+                      icon: Icons.description_rounded,
                       maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Describe your store and products...',
-                        border: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
                     ),
-                    const SizedBox(height: AppTheme.spacing20),
+                    _buildFormField(
+                      label: 'Phone Number',
+                      controller: _storePhoneController,
+                      hint: '+213 XXX XXX XXX',
+                      icon: Icons.phone_rounded,
+                      keyboardType: TextInputType.phone,
+                      textDirection: TextDirection.ltr,
+                    ),
 
-                    // Store Address
-                    Text('Address', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: AppTheme.spacing8),
-                    TextFormField(
-                      controller: _storeAddressController,
-                      decoration: InputDecoration(
-                        hintText: 'Example: Algeria, Oran',
-                        border: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacing8),
-                    
-                    // Location picker button
+                    // Location Section
+                    Text('Store Location', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
                     InkWell(
                       onTap: _openLocationPicker,
+                      borderRadius: BorderRadius.circular(14),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: hasLocation
+                              ? AppColors.successGreen.withValues(alpha: 0.08)
+                              : AppColors.primaryBlue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: AppColors.primaryBlue.withOpacity(0.3),
+                            color: hasLocation
+                                ? AppColors.successGreen.withValues(alpha: 0.3)
+                                : AppColors.primaryBlue.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              Icons.location_on,
-                              color: AppColors.primaryBlue,
-                              size: 20,
+                              hasLocation ? Icons.check_circle : Icons.add_location_rounded,
+                              color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                              size: 22,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                _selectedLocationText.isNotEmpty 
-                                  ? 'Location: $_selectedLocationText'
-                                  : 'Choose location on map',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.primaryBlue,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasLocation ? '$_selectedBaladiya, $_selectedWilaya' : 'Select store location',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (!hasLocation)
+                                    Text(
+                                      'Tap to choose wilaya and baladiya',
+                                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                                    ),
+                                ],
                               ),
                             ),
                             Icon(
                               Icons.arrow_forward_ios,
-                              color: AppColors.primaryBlue,
+                              color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
                               size: 16,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spacing20),
-
-                    // Store Phone
-                    Text('Phone Number', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: AppTheme.spacing8),
-                    TextFormField(
-                      controller: _storePhoneController,
-                      keyboardType: TextInputType.phone,
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(
-                        hintText: '+213 XXX XXX XXX',
-                        hintTextDirection: TextDirection.ltr,
-                        border: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppTheme.mediumRadius,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: AppTheme.spacing20),
-            
-            // Benefits section
+            const SizedBox(height: 20),
+
+            // Benefits Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                    color: AppColors.shadowLight,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Seller Benefits:', 
-                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Seller Benefits', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
                   _buildBenefitItem(Icons.inventory_2_rounded, 'Add products and packs'),
                   _buildBenefitItem(Icons.local_offer_rounded, 'Create promotional offers'),
                   _buildBenefitItem(Icons.message_rounded, 'Communicate with customers'),
+                  _buildBenefitItem(Icons.analytics_rounded, 'View store statistics'),
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.spacing24),
-            
-            // Create button
+            const SizedBox(height: 24),
+
+            // Create Button
             SizedBox(
               width: double.infinity,
+              height: 56,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _convertToMerchant,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryPurple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
                 child: _isLoading
                     ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white, 
-                          strokeWidth: 2
-                        ),
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                       )
                     : Text(
                         'Create Store and Start Selling',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600),
                       ),
               ),
             ),
-            const SizedBox(height: AppTheme.spacing20),
+            const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    TextDirection? textDirection,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textDirection: textDirection,
+            textAlign: textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
+            maxLines: maxLines,
+            validator: validator,
+            style: AppTextStyles.bodyMedium,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+              prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.neutral200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.neutral200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primaryPurple, width: 2),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.errorRed),
+              ),
+              filled: true,
+              fillColor: AppColors.neutral50,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -873,22 +854,16 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primaryPurple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.primaryPurple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.primaryPurple, size: 18),
+            child: Icon(icon, color: AppColors.primaryPurple, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              text, 
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-              ),
-            ),
+            child: Text(text, style: AppTextStyles.bodyMedium),
           ),
-          Icon(Icons.check_circle_outline, 
-            color: Colors.green[600], size: 18),
+          Icon(Icons.check_circle, color: AppColors.successGreen, size: 20),
         ],
       ),
     );

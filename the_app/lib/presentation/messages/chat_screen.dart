@@ -383,7 +383,7 @@ class _ChatScreenState extends State<ChatScreen> {
     String dateText;
     if (diff.inDays == 0) {
       dateText = 'Today';
-    } else if (difference.inDays == 1) {
+    } else if (diff.inDays == 1) {
       dateText = 'Yesterday';
     } else {
       dateText = '${date.day}/${date.month}/${date.year}';

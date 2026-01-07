@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/constants/algeria_wilayas_baladiat.dart';
 
 class LocationResult {
-  final LatLng coordinates;
+  final String wilaya;
+  final String baladiya;
   final String address;
 
-  LocationResult({required this.coordinates, required this.address});
+  LocationResult({
+    required this.wilaya,
+    required this.baladiya,
+    required this.address,
+  });
 }
 
 class LocationPickerScreen extends StatefulWidget {
-  final LatLng? initialLocation;
-  final String? initialAddress;
+  final String? initialWilaya;
+  final String? initialBaladiya;
 
   const LocationPickerScreen({
     super.key,
-    this.initialLocation,
-    this.initialAddress,
+    this.initialWilaya,
+    this.initialBaladiya,
   });
 
   @override
@@ -29,448 +30,398 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  LatLng? _selectedLocation;
-  String _selectedAddress = '';
-  bool _isLoading = false;
-  bool _showManualInput = true; // Show manual input by default
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _lngController = TextEditingController();
-
-  // Default to Algiers
-  static const LatLng _defaultLocation = LatLng(36.7538, 3.0588);
-
-  // For wilaya/baladiya dropdowns
   String? _selectedWilaya;
   String? _selectedBaladiya;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   List<String> get _wilayaList => algeriaWilayasBaladiat.keys.toList();
+
+  List<String> get _filteredWilayaList {
+    if (_searchQuery.isEmpty) return _wilayaList;
+    return _wilayaList
+        .where((w) => w.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+  }
+
   List<String> get _baladiyaList => _selectedWilaya != null
       ? algeriaWilayasBaladiat[_selectedWilaya!] ?? []
       : [];
 
+  List<String> get _filteredBaladiyaList {
+    if (_searchQuery.isEmpty) return _baladiyaList;
+    return _baladiyaList
+        .where((b) => b.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedLocation = widget.initialLocation ?? _defaultLocation;
-    _selectedAddress = widget.initialAddress ?? '';
-
-    // Initialize controllers with existing data
-    _addressController.text = _selectedAddress;
-    if (_selectedLocation != null) {
-      _latController.text = _selectedLocation!.latitude.toString();
-      _lngController.text = _selectedLocation!.longitude.toString();
-    }
+    _selectedWilaya = widget.initialWilaya;
+    _selectedBaladiya = widget.initialBaladiya;
   }
 
   @override
   void dispose() {
-    _addressController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _confirmLocation() {
-    if (_showManualInput) {
-      // Get location from manual input
-      final address = (_selectedWilaya ?? '') +
-          (_selectedBaladiya != null ? ', $_selectedBaladiya' : '');
-      double? lat, lng;
-
-      try {
-        lat = double.parse(_latController.text.trim());
-        lng = double.parse(_lngController.text.trim());
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter valid coordinates')),
-        );
-        return;
-      }
-
-      if (_selectedWilaya == null || _selectedBaladiya == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select wilaya and baladiya')),
-        );
-        return;
-      }
-
-      Navigator.pop(
-        context,
-        LocationResult(
-          coordinates: LatLng(lat, lng),
-          address: address,
+    if (_selectedWilaya == null || _selectedBaladiya == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select wilaya and baladiya'),
+          backgroundColor: AppColors.errorRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
-    } else if (_selectedLocation != null) {
-      Navigator.pop(
-        context,
-        LocationResult(
-          coordinates: _selectedLocation!,
-          address:
-              _selectedAddress.isEmpty ? 'Selected location' : _selectedAddress,
-        ),
-      );
+      return;
     }
+
+    final address = '$_selectedBaladiya, $_selectedWilaya';
+    Navigator.pop(
+      context,
+      LocationResult(
+        wilaya: _selectedWilaya!,
+        baladiya: _selectedBaladiya!,
+        address: address,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Choose Location',
-          style: AppTextStyles.h3,
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location, color: AppColors.primaryBlue),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_forward_ios, size: 18, color: AppColors.textPrimary),
             onPressed: () {
-              setState(() => _showManualInput = true);
-              _getCurrentLocationManual();
+              if (_selectedWilaya != null && _selectedBaladiya == null) {
+                setState(() {
+                  _selectedWilaya = null;
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              } else {
+                Navigator.pop(context);
+              }
             },
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Mode toggle
-          Container(
-            margin: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => setState(() => _showManualInput = true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _showManualInput
-                          ? AppColors.primaryBlue
-                          : Colors.grey[200],
-                      foregroundColor:
-                          _showManualInput ? Colors.white : Colors.grey[600],
-                      elevation: 0,
-                    ),
-                    child: const Text('Manual Input'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => setState(() => _showManualInput = false),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !_showManualInput
-                          ? AppColors.primaryBlue
-                          : Colors.grey[200],
-                      foregroundColor:
-                          !_showManualInput ? Colors.white : Colors.grey[600],
-                      elevation: 0,
-                    ),
-                    child: const Text('Map View'),
-                  ),
-                ),
-              ],
-            ),
+          title: Text(
+            _selectedWilaya == null ? 'Select Wilaya' : 'Select Baladiya',
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
           ),
-
-          // Content
-          Expanded(
-            child: _showManualInput ? _buildManualInput() : _buildMapView(),
-          ),
-
-          // Confirm button
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _confirmLocation,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Confirm Location',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildManualInput() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Enter Location Details',
-            style: AppTextStyles.h4.copyWith(
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Wilaya dropdown
-          Text('Wilaya',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedWilaya,
-            items: _wilayaList.map((w) => DropdownMenuItem(value: w, child: Text(w))).toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedWilaya = val;
-                _selectedBaladiya = null;
-                _addressController.text = '';
-              });
-            },
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Colors.white,
-              hintText: 'Select wilaya',
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Baladiya dropdown
-          Text('Baladiya',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedBaladiya,
-            items: _baladiyaList
-                .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                .toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedBaladiya = val;
-                _addressController.text = val ?? '';
-              });
-            },
-            decoration: InputDecoration(
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Colors.white,
-              hintText: 'Select baladiya',
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Coordinates section
-          Text(
-            'Coordinates (Optional)',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Latitude field
-          TextFormField(
-            controller: _latController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Latitude',
-              hintText: '36.7538',
-              prefixIcon: const Icon(Icons.explore),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Longitude field
-          TextFormField(
-            controller: _lngController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Longitude',
-              hintText: '3.0588',
-              prefixIcon: const Icon(Icons.explore_off),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Current location button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _getCurrentLocationManual,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location),
-              label: Text(
-                  _isLoading ? 'Getting Location...' : 'Use Current Location'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMapView() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
+          centerTitle: true,
+        ),
+        body: Column(
           children: [
+            // Search bar
             Container(
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
-                border: Border(
-                  bottom: BorderSide(color: Colors.orange[200]!),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.neutral200),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                style: AppTextStyles.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: _selectedWilaya == null ? 'Search wilaya...' : 'Search baladiya...',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.close, color: AppColors.textSecondary, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                              _searchController.clear();
+                            });
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.orange[700]),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Map requires Google Maps API key. Use Manual Input instead.',
-                      style: TextStyle(
-                        color: Colors.orange[700],
-                        fontSize: 14,
+            ),
+
+            // Selected wilaya chip (when selecting baladiya)
+            if (_selectedWilaya != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_city, size: 16, color: AppColors.primaryBlue),
+                          const SizedBox(width: 6),
+                          Text(
+                            _selectedWilaya!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedWilaya = null;
+                                _selectedBaladiya = null;
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                            },
+                            child: Icon(Icons.close, size: 16, color: AppColors.primaryBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 8),
+
+            // List
+            Expanded(
+              child: _selectedWilaya == null ? _buildWilayaList() : _buildBaladiyaList(),
+            ),
+
+            // Confirm button (only show when both selected)
+            if (_selectedWilaya != null && _selectedBaladiya != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadowLight,
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _confirmLocation,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$_selectedBaladiya, $_selectedWilaya',
+                            style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Container(
-                color: Colors.grey[100],
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.map,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Map View Unavailable',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Please use Manual Input',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _getCurrentLocationManual() async {
-    setState(() => _isLoading = true);
+  Widget _buildWilayaList() {
+    final wilayas = _filteredWilayaList;
 
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied');
-        }
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+    if (wilayas.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48, color: AppColors.textTertiary),
+            const SizedBox(height: 12),
+            Text('No wilaya found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
       );
-
-      setState(() {
-        _latController.text = position.latitude.toString();
-        _lngController.text = position.longitude.toString();
-        _selectedLocation = LatLng(position.latitude, position.longitude);
-      });
-
-      // Try to get address
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          final place = placemarks.first;
-          String address = [
-            place.street,
-            place.locality,
-            place.country,
-          ].where((s) => s != null && s.isNotEmpty).join(', ');
-
-          _addressController.text = address;
-        }
-      } catch (e) {
-        print('Reverse geocoding error: $e');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting location: $e')),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
     }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: wilayas.length,
+      itemBuilder: (context, index) {
+        final wilaya = wilayas[index];
+        final baladiyaCount = algeriaWilayasBaladiat[wilaya]?.length ?? 0;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedWilaya = wilaya;
+                  _selectedBaladiya = null;
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.neutral200),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            wilaya,
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '$baladiyaCount baladiyat',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_back_ios, size: 14, color: AppColors.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBaladiyaList() {
+    final baladiyat = _filteredBaladiyaList;
+
+    if (baladiyat.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48, color: AppColors.textTertiary),
+            const SizedBox(height: 12),
+            Text('No baladiya found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: baladiyat.length,
+      itemBuilder: (context, index) {
+        final baladiya = baladiyat[index];
+        final isSelected = _selectedBaladiya == baladiya;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: isSelected ? AppColors.successGreen.withValues(alpha: 0.1) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () => setState(() => _selectedBaladiya = baladiya),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppColors.successGreen : AppColors.neutral200,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.successGreen.withValues(alpha: 0.2)
+                            : AppColors.neutral100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          isSelected ? Icons.check : Icons.location_city,
+                          color: isSelected ? AppColors.successGreen : AppColors.textSecondary,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        baladiya,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected ? AppColors.successGreen : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(Icons.check_circle, color: AppColors.successGreen, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

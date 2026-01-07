@@ -33,6 +33,14 @@ class AppColors {
   static const Color neutralLight = Color(0xFFF3F4F6);          // Light gray
   static const Color neutralLightest = Color(0xFFFFFFFF);       // Pure white
 
+  // Extended neutral palette
+  static const Color neutral50 = Color(0xFFFAFAFA);             // Very light gray bg
+  static const Color neutral100 = Color(0xFFF5F5F5);            // Light gray bg
+  static const Color neutral200 = Color(0xFFE5E5E5);            // Light border
+  static const Color neutral300 = Color(0xFFD4D4D4);            // Medium border
+  static const Color neutral400 = Color(0xFFA3A3A3);            // Muted text
+  static const Color neutral500 = Color(0xFF737373);            // Secondary text
+
   // ===== SURFACE COLORS =====
   static const Color surfacePrimary = Color(0xFFFFFFFF);        // White
   static const Color surfaceSecondary = Color(0xFFF9FAFB);      // Very light gray
@@ -205,6 +213,10 @@ class AppColors {
 
   // Shadow colors
   static const Color shadowColor = Color(0x15000000);
+  static const Color shadowLight = Color(0x0D000000);           // Light shadow
+
+  // Text colors
+  static const Color textTertiary = Color(0xFF9CA3AF);          // Tertiary text
 
   // Notification colors
   static const Color notificationBlue = Color(0xFFDBEAFE);
