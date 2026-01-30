@@ -68,7 +68,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlueLight,
+                  color: AppColors.primaryLightShade,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -77,7 +77,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     Text(
                       'You have $newCount new notifications',
                       style: TextStyle(
-                        color: AppColors.primaryBlue,
+                        color: AppColors.primaryColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -92,7 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       child: Text(
                         'Mark all as read',
                         style: TextStyle(
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -212,7 +212,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _getNotificationColor(NotificationType type) {
     switch (type) {
       case NotificationType.order:
-        return AppColors.primaryBlue;
+        return AppColors.primaryColor;
       case NotificationType.follower:
         return AppColors.successGreen;
       case NotificationType.discount:

@@ -140,8 +140,8 @@ class _RegisterScreenState extends State<RegisterScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.primaryBlue,
-                AppColors.primaryBlue.withOpacity(0.7)
+                AppColors.primaryColor,
+                AppColors.primaryColor.withOpacity(0.7)
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -149,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryBlue.withOpacity(0.3),
+                color: AppColors.primaryColor.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -162,7 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Text(
           'Join Us',
           style: AppTextStyles.h1.copyWith(
-            color: AppColors.primaryBlue,
+            color: AppColors.primaryColor,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
           ),
@@ -272,13 +272,13 @@ class _RegisterScreenState extends State<RegisterScreen>
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _registerUser,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
+                  backgroundColor: AppColors.primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
-                  disabledBackgroundColor: AppColors.primaryBlue.withOpacity(0.6),
+                  disabledBackgroundColor: AppColors.primaryColor.withOpacity(0.6),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -319,7 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   child: Text(
                     'Sign In',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -390,7 +390,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+              borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),

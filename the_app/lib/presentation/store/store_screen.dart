@@ -123,7 +123,7 @@ class _StoreScreenState extends State<StoreScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
+                backgroundColor: AppColors.primaryColor,
               ),
               child: const Text('Confirm', style: TextStyle(color: Colors.white)),
             ),
@@ -168,7 +168,7 @@ class _StoreScreenState extends State<StoreScreen> {
             SliverAppBar(
               expandedHeight: 200,
               pinned: true,
-              backgroundColor: AppColors.primaryBlue,
+              backgroundColor: AppColors.primaryColor,
               flexibleSpace: FlexibleSpaceBar(
                 background: _store?.coverImageUrl.isNotEmpty == true
                     ? Stack(
@@ -178,7 +178,7 @@ class _StoreScreenState extends State<StoreScreen> {
                             _store!.coverImageUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.primaryBlue.withOpacity(0.8),
+                              color: AppColors.primaryColor.withOpacity(0.8),
                               child: const Icon(Icons.store, size: 60, color: Colors.white54),
                             ),
                           ),
@@ -202,8 +202,8 @@ class _StoreScreenState extends State<StoreScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppColors.primaryBlue,
-                              AppColors.primaryBlue.withOpacity(0.7),
+                              AppColors.primaryColor,
+                              AppColors.primaryColor.withOpacity(0.7),
                             ],
                           ),
                         ),
@@ -342,8 +342,8 @@ class _StoreScreenState extends State<StoreScreen> {
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   decoration: BoxDecoration(
                                     color: _isFollowing
-                                        ? AppColors.primaryBlue
-                                        : AppColors.primaryBlue.withOpacity(0.1),
+                                        ? AppColors.primaryColor
+                                        : AppColors.primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Row(
@@ -351,7 +351,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                     children: [
                                       Icon(
                                         _isFollowing ? Icons.check : Icons.add,
-                                        color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                        color: _isFollowing ? Colors.white : AppColors.primaryColor,
                                         size: 20,
                                       ),
                                       const SizedBox(width: 6),
@@ -359,7 +359,7 @@ class _StoreScreenState extends State<StoreScreen> {
                                         _isFollowing ? 'Following' : 'Follow',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                          color: _isFollowing ? Colors.white : AppColors.primaryColor,
                                         ),
                                       ),
                                     ],
@@ -426,18 +426,18 @@ class _StoreScreenState extends State<StoreScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryBlue.withOpacity(0.1),
+                                    color: AppColors.primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.location_on, color: AppColors.primaryBlue, size: 18),
+                                      Icon(Icons.location_on, color: AppColors.primaryColor, size: 18),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Map',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryBlue,
+                                          color: AppColors.primaryColor,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -491,13 +491,13 @@ class _StoreScreenState extends State<StoreScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withOpacity(0.1),
+                        color: AppColors.primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${_products.length}',
                         style: TextStyle(
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),

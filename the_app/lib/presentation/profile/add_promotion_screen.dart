@@ -254,7 +254,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                               Text(
                                 Helpers.formatPrice(offer.newPrice),
                                 style: const TextStyle(
-                                  color: AppColors.primaryBlue,
+                                  color: AppColors.primaryColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -290,7 +290,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
+                backgroundColor: AppColors.primaryColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Edit Discount', style: TextStyle(color: Colors.white)),

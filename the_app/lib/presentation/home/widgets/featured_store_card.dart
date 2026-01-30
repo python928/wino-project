@@ -128,10 +128,10 @@ class FeaturedStoreCard extends StatelessWidget {
                   ),
 
                   // Category
-                  if (store.category != null) ...[
+                  if (store.category.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      store.category!,
+                      store.category,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -188,7 +188,7 @@ class FeaturedStoreCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             AppColors.primaryPurple.withValues(alpha: 0.3),
-            AppColors.primaryBlue.withValues(alpha: 0.3),
+            AppColors.primaryColor.withValues(alpha: 0.3),
           ],
         ),
       ),
@@ -279,9 +279,9 @@ class StoreListCard extends StatelessWidget {
                   ),
 
                   // Category
-                  if (store.category != null)
+                  if (store.category.isNotEmpty)
                     Text(
-                      store.category!,
+                      store.category,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,

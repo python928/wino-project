@@ -7,7 +7,6 @@ import '../../presentation/home/main_navigation_screen.dart';
 import '../../presentation/product/product_detail_screen.dart';
 import '../../presentation/pack/pack_detail_screen.dart';
 import '../../presentation/store/enhanced_store_screen.dart';
-import '../../presentation/store_details/store_details_screen.dart';
 import '../../presentation/profile/add_product_screen.dart';
 import '../../presentation/profile/edit_product_screen.dart';
 import '../../presentation/profile/add_pack_screen.dart';
@@ -18,7 +17,6 @@ import '../../presentation/favorites/favorites_screen.dart';
 import '../../presentation/discovery/discovery_screen.dart';
 import '../../presentation/search/search_results_screen.dart';
 import '../../data/models/post_model.dart';
-import '../../data/models/store_model.dart';
 import '../../data/models/pack_model.dart';
 import 'routes.dart';
 

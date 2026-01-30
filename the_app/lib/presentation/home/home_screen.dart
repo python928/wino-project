@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_constants.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
@@ -60,9 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+    return Scaffold(  // Removed Directionality - will inherit LTR from parent
         backgroundColor: AppColors.scaffoldBackground,
         body: SafeArea(
           child: RefreshIndicator(
@@ -75,73 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                  // Header
-                  HeaderLocationWidget(
-                    currentLocation: 'Algiers',
-                    notificationCount: 3,
-                    onLocationTap: () => _showLocationPicker(),
-                    onNotificationTap: () => _showNotifications(),
-                  ),
-
-                  const SizedBox(height: AppTheme.spacing20),
-
-                  // Search Bar
-                  SearchBarWidget(
-                    isActive: true,
-                    controller: _searchController,
-                    onSearchChanged: (query) {
-                      if (query.isNotEmpty) {
-                        context.read<PostProvider>().onSearchQueryChanged(query);
-                      }
-                    },
-                    onSearchSubmitted: () {
-                      if (_searchController.text.isNotEmpty) {
-                        // Navigate to search tab with query
-                        _navigateToSearchTab(_searchController.text);
-                      }
-                    },
-                    onFilterTap: () => _showFilters(),
-                  ),
-
-                  const SizedBox(height: AppTheme.spacing24),
-
-                  // Categories Section
-                  _buildSectionHeader('Categories', 'View All', () {}),
-                  const SizedBox(height: AppTheme.spacing16),
-                  _buildCategoriesSection(),
-
-                  const SizedBox(height: AppTheme.spacing24),
-
-                  // Promo Banner
-                  PromoBanner(
-                    title: 'New User\nOffer!',
-                    subtitle: 'Get 15% off\nyour first order',
-                    icon: Icons.percent,
-                    onTap: () => _showPromoDetails(),
-                  ),
-
-                  const SizedBox(height: AppTheme.spacing24),
-
-                  // Featured Stores Section
-                  _buildSectionHeader('Featured Stores', 'View All', () {
-                    Navigator.pushNamed(context, Routes.discovery);
-                  }),
-                  const SizedBox(height: AppTheme.spacing16),
-                  _buildFeaturedStoresSection(),
-
-                  const SizedBox(height: AppTheme.spacing24),
-
-                  // Hot Deals Section
-                  _buildHotDealsHeader(),
-                  const SizedBox(height: AppTheme.spacing16),
-                  _buildHotDealsSection(),
-
-                  const SizedBox(height: AppTheme.spacing24),
-
-                  // Offers/Discounts Section
-                  _buildSectionHeader('Discounts', 'View All', () {
+                  // Promotions Section at Top (like screenshot)
+                  _buildSectionHeader('Special Offers', 'See All', () {
                     Navigator.pushNamed(context, Routes.offers);
                   }),
                   const SizedBox(height: AppTheme.spacing16),
@@ -149,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: AppTheme.spacing24),
 
-                  // Recent Products Section
+                  // Latest Products Section
                   _buildSectionHeader('Latest Products', 'View All', () {
                     Navigator.pushNamed(context, Routes.discovery);
                   }),
@@ -165,14 +101,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppTheme.spacing16),
                   _buildPacksSection(),
 
+                  const SizedBox(height: AppTheme.spacing24),
+
+                  // Featured Stores Section (at bottom)
+                  _buildSectionHeader('Featured Stores', 'View All', () {
+                    Navigator.pushNamed(context, Routes.discovery);
+                  }),
+                  const SizedBox(height: AppTheme.spacing16),
+                  _buildFeaturedStoresSection(),
+
                   const SizedBox(height: 100),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   // ==================== Section Headers ====================
@@ -534,15 +478,15 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushNamed(context, Routes.packDetails, arguments: pack);
       },
       child: Container(
-        width: 200,
+        width: AppConstants.productCardWidth,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppConstants.cardRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              blurRadius: AppConstants.spacing12,
+              offset: const Offset(0, AppConstants.cardElevation),
             ),
           ],
         ),
@@ -551,14 +495,14 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // Pack Header with gradient
             Container(
-              height: 80,
+              height: AppConstants.spacing40 * 2,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.primaryPurple, AppColors.primaryPurple.withValues(alpha: 0.7)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppConstants.cardRadius)),
               ),
               child: Stack(
                 children: [
@@ -726,7 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
             itemBuilder: (context, index) {
               return SizedBox(
-                width: 180,
+                width: AppConstants.productCardWidth,
                 child: ProductCard(
                   product: products[index],
                   onTap: () => _navigateToProductDetails(products[index]),
@@ -817,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final offer = offers[index];
               final product = offer.product;
               return SizedBox(
-                width: 180,
+                width: AppConstants.productCardWidth,
                 child: GestureDetector(
                   onTap: () {
                     // Create modified product with promotion pricing
@@ -831,12 +775,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppConstants.cardRadius),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          blurRadius: AppConstants.spacing12,
+                          offset: const Offset(0, AppConstants.cardElevation),
                         ),
                       ],
                     ),
@@ -847,15 +791,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         Stack(
                           children: [
                             ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(AppConstants.cardRadius)),
                               child: SizedBox(
-                                height: 130,
+                                height: AppConstants.spacing32 * 4,
                                 width: double.infinity,
                                 child: (product.image == null || product.image!.isEmpty)
                                     ? Container(
                                         color: Colors.grey[200],
                                         alignment: Alignment.center,
-                                        child: const Icon(Icons.image, size: 40, color: Colors.grey),
+                                        child: const Icon(Icons.image, size: AppConstants.iconXL, color: Colors.grey),
                                       )
                                     : Image.network(
                                         product.image!,

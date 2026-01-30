@@ -334,7 +334,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryBlue.withValues(alpha: 0.2),
+                            color: AppColors.primaryColor.withValues(alpha: 0.2),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -365,7 +365,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.primaryBlue, AppColors.primaryBlue.withValues(alpha: 0.8)],
+                            colors: [AppColors.primaryColor, AppColors.primaryColor.withValues(alpha: 0.8)],
                           ),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
@@ -578,7 +578,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: AppColors.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,

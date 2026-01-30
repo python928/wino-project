@@ -7,35 +7,35 @@ import 'app_colors.dart';
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
-      fontFamily: GoogleFonts.cairo().fontFamily,
-      primaryColor: AppColors.primaryBlue,
+      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      primaryColor: AppColors.primaryColor,
       scaffoldBackgroundColor: AppColors.scaffoldBackground,
       useMaterial3: true,
       textTheme: _buildTextTheme(),
 
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primaryBlue,
-        primary: AppColors.primaryBlue,
+        seedColor: AppColors.primaryColor,
+        primary: AppColors.primaryColor,
         secondary: AppColors.accentTeal,
         surface: AppColors.surfacePrimary,
         error: AppColors.errorRed,
         brightness: Brightness.light,
       ),
 
-      // Clean AppBar
+      // Clean AppBar (matching lib design system)
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
-        elevation: 0,
+        elevation: 0,  // Flat design
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
         ),
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        titleTextStyle: GoogleFonts.cairo(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
+        iconTheme: const IconThemeData(color: AppColors.blackColor),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 16,  // 16px title font
+          fontWeight: FontWeight.w500,
+          color: AppColors.blackColor,
         ),
         toolbarHeight: 56,
         centerTitle: true,
@@ -53,62 +53,64 @@ class AppTheme {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
 
-      // Input Design
+      // Input Design (matching screenshots - outlined style)
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
+        filled: false,  // No fill - clean outlined style
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.borderPrimary),
+          borderRadius: BorderRadius.circular(24),  // Pill shape like screenshots
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.borderPrimary),
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: AppColors.blackColor20, width: 1.5),  // Light border
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),  // Purple on focus
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.errorRed, width: 1),
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: AppColors.errorRed, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: GoogleFonts.cairo(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        hintStyle: GoogleFonts.plusJakartaSans(
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: AppColors.textHint,
+          color: AppColors.greyColor,
         ),
       ),
 
-      // Button Themes
+      // Button Themes (pill-shaped like screenshots)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: AppColors.primaryColor,  // Purple background
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          minimumSize: const Size(double.infinity, 54),  // Taller buttons
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(27),  // Pill shape (half of height)
           ),
-          textStyle: GoogleFonts.cairo(
-            fontSize: 14,
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
 
-      // Outlined Button Theme
+      // Outlined Button Theme (pill-shaped)
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryBlue,
-          side: BorderSide(color: AppColors.primaryBlue, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          foregroundColor: AppColors.primaryColor,
+          backgroundColor: Colors.transparent,
+          side: BorderSide(color: AppColors.primaryColor, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(27),  // Pill shape
           ),
-          textStyle: GoogleFonts.cairo(
-            fontSize: 14,
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -117,8 +119,8 @@ class AppTheme {
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryBlue,
-          textStyle: GoogleFonts.cairo(
+          foregroundColor: AppColors.primaryColor,  // Purple text
+          textStyle: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -129,19 +131,19 @@ class AppTheme {
         ),
       ),
 
-      // Bottom Navigation
+      // Bottom Navigation (matching lib design system)
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
-        selectedItemColor: AppColors.primaryBlue,
-        unselectedItemColor: AppColors.textHint,
-        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppColors.primaryColor,  // Purple selected
+        unselectedItemColor: Colors.transparent,  // Transparent unselected
+        type: BottomNavigationBarType.fixed,  // Fixed type for 5 items
         elevation: 0,
-        selectedLabelStyle: GoogleFonts.cairo(
-          fontSize: 11,
+        selectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 12,  // 12px font size
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.cairo(
-          fontSize: 11,
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -155,11 +157,11 @@ class AppTheme {
 
       // Floating Action Button
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: AppColors.primaryColor,
         elevation: 4,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
-        extendedTextStyle: GoogleFonts.cairo(
+        extendedTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -181,35 +183,35 @@ class AppTheme {
       // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceSecondary,
-        selectedColor: AppColors.primaryBlueLight,
+        selectedColor: AppColors.primaryLightShade,
         disabledColor: AppColors.surfaceTertiary,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: AppColors.borderPrimary),
         ),
-        labelStyle: GoogleFonts.cairo(
+        labelStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
-        secondaryLabelStyle: GoogleFonts.cairo(
+        secondaryLabelStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: AppColors.primaryBlue,
+          color: AppColors.primaryColor,
         ),
       ),
 
       // Tab Bar Theme
       tabBarTheme: TabBarThemeData(
-        labelColor: AppColors.primaryBlue,
+        labelColor: AppColors.primaryColor,
         unselectedLabelColor: AppColors.textSecondary,
-        indicatorColor: AppColors.primaryBlue,
+        indicatorColor: AppColors.primaryColor,
         indicatorSize: TabBarIndicatorSize.label,
-        labelStyle: GoogleFonts.cairo(
+        labelStyle: GoogleFonts.plusJakartaSans(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.cairo(
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -225,10 +227,25 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primaryBlue;
+            return AppColors.primaryColor;
           }
           return AppColors.borderPrimary;
         }),
+      ),
+
+      // Checkbox Theme (from lib design system)
+      checkboxTheme: CheckboxThemeData(
+        checkColor: WidgetStateProperty.all(Colors.white),  // White checkmark
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primaryColor;
+          }
+          return Colors.transparent;
+        }),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),  // Rounded corners
+        ),
+        side: BorderSide(color: AppColors.whiteColor40),
       ),
     );
   }
@@ -236,79 +253,79 @@ class AppTheme {
   // Typography System
   static TextTheme _buildTextTheme() {
     return TextTheme(
-      displayLarge: GoogleFonts.cairo(
+      displayLarge: GoogleFonts.plusJakartaSans(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
       ),
-      displayMedium: GoogleFonts.cairo(
+      displayMedium: GoogleFonts.plusJakartaSans(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      displaySmall: GoogleFonts.cairo(
+      displaySmall: GoogleFonts.plusJakartaSans(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineLarge: GoogleFonts.cairo(
+      headlineLarge: GoogleFonts.plusJakartaSans(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineMedium: GoogleFonts.cairo(
+      headlineMedium: GoogleFonts.plusJakartaSans(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineSmall: GoogleFonts.cairo(
+      headlineSmall: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.cairo(
+      titleLarge: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      titleMedium: GoogleFonts.cairo(
+      titleMedium: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      titleSmall: GoogleFonts.cairo(
+      titleSmall: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-      bodyLarge: GoogleFonts.cairo(
+      bodyLarge: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       ),
-      bodyMedium: GoogleFonts.cairo(
+      bodyMedium: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.4,
       ),
-      bodySmall: GoogleFonts.cairo(
+      bodySmall: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
       ),
-      labelLarge: GoogleFonts.cairo(
+      labelLarge: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      labelMedium: GoogleFonts.cairo(
+      labelMedium: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-      labelSmall: GoogleFonts.cairo(
+      labelSmall: GoogleFonts.plusJakartaSans(
         fontSize: 10,
         fontWeight: FontWeight.w400,
         color: AppColors.textHint,

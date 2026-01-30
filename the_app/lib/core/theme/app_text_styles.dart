@@ -10,7 +10,7 @@ class AppTextStyles {
     Color color = AppColors.textPrimary,
     double? height,
   }) {
-    return GoogleFonts.cairo(
+    return GoogleFonts.plusJakartaSans(
       fontSize: size,
       fontWeight: weight,
       color: color,
@@ -37,13 +37,13 @@ class AppTextStyles {
   static TextStyle get categoryLabel => _base(size: 12, weight: FontWeight.w600);
   static TextStyle get ratingText => _base(size: 12, weight: FontWeight.w600, color: AppColors.ratingYellow);
   static TextStyle get hintText => _base(size: 14, color: AppColors.textHint);
-  static TextStyle get linkText => _base(size: 14, weight: FontWeight.w600, color: AppColors.primaryBlue);
+  static TextStyle get linkText => _base(size: 14, weight: FontWeight.w600, color: AppColors.primaryColor);
   static TextStyle get badgeText => _base(size: 10, weight: FontWeight.w600, color: Colors.white);
   static TextStyle get timerText => _base(size: 14, weight: FontWeight.w700, color: Colors.white);
   static TextStyle get discountText => _base(size: 11, weight: FontWeight.w700, color: Colors.white);
   static TextStyle get promoTitle => _base(size: 20, weight: FontWeight.w700, color: Colors.white);
   static TextStyle get promoSubtitle => _base(size: 12, color: const Color(0xB3FFFFFF));
-  static TextStyle get navLabelActive => _base(size: 11, weight: FontWeight.w600, color: AppColors.primaryBlue);
+  static TextStyle get navLabelActive => _base(size: 11, weight: FontWeight.w600, color: AppColors.primaryColor);
   static TextStyle get navLabelInactive => _base(size: 11, weight: FontWeight.w500, color: AppColors.textHint);
 
   // Form labels
@@ -57,7 +57,7 @@ class AppTextStyles {
   static TextStyle get notificationTime => _base(size: 11, weight: FontWeight.w400, color: AppColors.textHint);
 
   // Tab styles
-  static TextStyle get tabActive => _base(size: 14, weight: FontWeight.w600, color: AppColors.primaryBlue);
+  static TextStyle get tabActive => _base(size: 14, weight: FontWeight.w600, color: AppColors.primaryColor);
   static TextStyle get tabInactive => _base(size: 14, weight: FontWeight.w500, color: AppColors.textSecondary);
 
   // Stats

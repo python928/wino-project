@@ -93,10 +93,10 @@ class AppDecorations {
     );
   }
 
-  /// Info badge (blue background)
+  /// Info badge (purple background)
   static BoxDecoration infoBadge() {
     return BoxDecoration(
-      color: AppColors.primaryBlue,
+      color: AppColors.primaryColor,
       borderRadius: BorderRadius.circular(8),
     );
   }
@@ -346,4 +346,121 @@ class AppDecorations {
         blurRadius: 8,
         offset: const Offset(0, 4),
       );
+
+  // ==================== PRODUCT-SPECIFIC ====================
+
+  /// Product card decoration (from lib design system)
+  static BoxDecoration productCard({
+    Color? color,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: AppColors.blackColor10,
+        width: 1.5,
+      ),
+    );
+  }
+
+  /// Store card decoration
+  static BoxDecoration storeCard({
+    Color? color,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: AppColors.borderPrimary,
+        width: 1,
+      ),
+      boxShadow: [softShadow],
+    );
+  }
+
+  // ==================== SEARCH & FILTERS ====================
+
+  /// Search bar decoration (from lib design system)
+  static BoxDecoration searchBar({
+    Color? fillColor,
+  }) {
+    return BoxDecoration(
+      color: fillColor ?? AppColors.lightGreyColor,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.transparent,
+        width: 0,
+      ),
+    );
+  }
+
+  /// Filter chip decoration
+  static BoxDecoration filterChip({
+    required bool isActive,
+  }) {
+    return BoxDecoration(
+      color: isActive ? AppColors.primaryColor : Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: isActive ? AppColors.primaryColor : AppColors.blackColor20,
+        width: 1.5,
+      ),
+    );
+  }
+
+  // ==================== CIRCULAR ====================
+
+  /// Circle decoration (for avatars, icons, etc.)
+  static BoxDecoration circle({
+    Color? color,
+    Border? border,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      shape: BoxShape.circle,
+      border: border,
+    );
+  }
+
+  /// Circle with border
+  static BoxDecoration circleBordered({
+    Color? color,
+    Color? borderColor,
+    double? borderWidth,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      shape: BoxShape.circle,
+      border: Border.all(
+        color: borderColor ?? AppColors.borderPrimary,
+        width: borderWidth ?? 2,
+      ),
+    );
+  }
+
+  // ==================== BOTTOM SHEETS & MODALS ====================
+
+  /// Bottom sheet decoration (from lib design system)
+  static BoxDecoration bottomSheet({
+    Color? color,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(24),
+        topRight: Radius.circular(24),
+      ),
+    );
+  }
+
+  /// Modal decoration
+  static BoxDecoration modal({
+    Color? color,
+  }) {
+    return BoxDecoration(
+      color: color ?? Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [strongShadow],
+    );
+  }
 }

@@ -124,14 +124,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           height: 80,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.primaryBlue, AppColors.primaryBlue.withValues(alpha: 0.7)],
+              colors: [AppColors.primaryColor, AppColors.primaryColor.withValues(alpha: 0.7)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryBlue.withValues(alpha: 0.3),
+                color: AppColors.primaryColor.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         Text(
           'DZ Local',
           style: AppTextStyles.h1.copyWith(
-            color: AppColors.primaryBlue,
+            color: AppColors.primaryColor,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
           ),
@@ -252,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 child: Text(
                   'Forgot Password?',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -267,13 +267,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _loginUser,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
+                  backgroundColor: AppColors.primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
-                  disabledBackgroundColor: AppColors.primaryBlue.withValues(alpha: 0.6),
+                  disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -315,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   child: Text(
                     'Sign Up',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -388,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+              borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),

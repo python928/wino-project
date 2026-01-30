@@ -173,7 +173,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       child: Icon(Icons.arrow_back, size: 18, color: AppColors.textPrimary),
                     ),
                   ),
-                Icon(Icons.location_on_rounded, color: AppColors.primaryBlue, size: 22),
+                Icon(Icons.location_on_rounded, color: AppColors.primaryColor, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -241,12 +241,12 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.05),
+                  color: AppColors.primaryColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, size: 16, color: AppColors.primaryBlue),
+                    Icon(Icons.check_circle, size: 16, color: AppColors.primaryColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -254,7 +254,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                             ? '${_selectedBaladiyat[_currentWilaya]!.length} baladiyat selected'
                             : 'All baladiyat in $_currentWilaya',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -291,7 +291,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 child: ElevatedButton(
                   onPressed: _confirmFilter,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -411,12 +411,12 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryBlue.withOpacity(0.08) : Colors.transparent,
+          color: isSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: isSelected ? AppColors.primaryBlue : AppColors.textSecondary),
+            Icon(icon, size: 18, color: isSelected ? AppColors.primaryColor : AppColors.textSecondary),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -426,7 +426,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                     title,
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? AppColors.primaryBlue : AppColors.textPrimary,
+                      color: isSelected ? AppColors.primaryColor : AppColors.textPrimary,
                     ),
                   ),
                   Text(
@@ -459,7 +459,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryBlue.withOpacity(0.05) : Colors.transparent,
+          color: isSelected ? AppColors.primaryColor.withOpacity(0.05) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -502,7 +502,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                         wilaya,
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.primaryBlue : AppColors.textPrimary,
+                          color: isSelected ? AppColors.primaryColor : AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -511,7 +511,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         margin: const EdgeInsets.only(right: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -544,10 +544,10 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primaryBlue : Colors.transparent,
+        color: isSelected ? AppColors.primaryColor : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isSelected ? AppColors.primaryBlue : AppColors.neutral300,
+          color: isSelected ? AppColors.primaryColor : AppColors.neutral300,
           width: 1.5,
         ),
       ),
@@ -580,7 +580,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: wilayaSelected ? AppColors.primaryBlue.withOpacity(0.08) : Colors.transparent,
+              color: wilayaSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -588,7 +588,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 Icon(
                   Icons.select_all,
                   size: 18,
-                  color: wilayaSelected ? AppColors.primaryBlue : AppColors.textSecondary,
+                  color: wilayaSelected ? AppColors.primaryColor : AppColors.textSecondary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -596,7 +596,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                     wilayaSelected ? 'Deselect $_currentWilaya' : 'Select all $_currentWilaya',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: wilayaSelected ? AppColors.primaryBlue : AppColors.textPrimary,
+                      color: wilayaSelected ? AppColors.primaryColor : AppColors.textPrimary,
                     ),
                   ),
                 ),

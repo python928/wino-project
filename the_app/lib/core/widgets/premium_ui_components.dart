@@ -522,7 +522,7 @@ class PremiumUIComponents {
                     style: GoogleFonts.cairo(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBlueDark,
+                      color: AppColors.primaryDark,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -530,7 +530,7 @@ class PremiumUIComponents {
                     price,
                     style: GoogleFonts.cairo(
                       fontSize: 14,
-                      color: AppColors.primaryBlueLight,
+                      color: AppColors.primaryLightShade,
                     ),
                   ),
                 ],

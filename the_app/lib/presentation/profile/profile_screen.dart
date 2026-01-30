@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_constants.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
@@ -156,12 +157,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt, color: AppColors.primaryBlue),
+                leading: Icon(Icons.camera_alt, color: AppColors.primaryColor),
                 title: Text('Camera'),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
-                leading: Icon(Icons.photo_library, color: AppColors.primaryBlue),
+                leading: Icon(Icons.photo_library, color: AppColors.primaryColor),
                 title: Text('Gallery'),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
@@ -354,16 +355,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppConstants.spacing16),
                   // Edit Profile
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                        color: AppColors.primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.edit_outlined, color: AppColors.primaryBlue),
+                      child: Icon(Icons.edit_outlined, color: AppColors.primaryColor),
                     ),
                     title: const Text('Edit Profile'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -535,7 +536,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               ),
                               child: _isUploadingImage
                                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Icon(Icons.camera_alt, size: 16, color: AppColors.primaryBlue),
+                                  : Icon(Icons.camera_alt, size: 16, color: AppColors.primaryColor),
                             ),
                           ),
                         ],
@@ -568,15 +569,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.location_on, size: 14, color: AppColors.primaryBlue),
+                  Icon(Icons.location_on, size: 14, color: AppColors.primaryColor),
                   const SizedBox(width: 4),
                   Text(
                     _location,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                       decoration: TextDecoration.underline,
-                      decorationColor: AppColors.primaryBlue,
+                      decorationColor: AppColors.primaryColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -604,7 +605,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ],
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppConstants.spacing16),
 
             // Settings icon button
             Container(
@@ -623,12 +624,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
             // Stats Row - matching the reference image style
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing20),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
                   border: Border.all(color: Colors.grey[200]!),
                 ),
                 child: Row(
@@ -661,7 +662,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppConstants.spacing16),
 
             // Action Buttons - Publish Post + Analytics
             Padding(
@@ -710,34 +711,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                       ],
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing14),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue,
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add, size: 20, color: Colors.white),
-                            SizedBox(width: 8),
+                            Icon(Icons.add, size: AppConstants.spacing20, color: Colors.white),
+                            SizedBox(width: AppConstants.spacing8),
                             Text('Publish Post', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppConstants.spacing12),
                   // Analytics Button (Outlined)
                   Expanded(
                     flex: 1,
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.pushNamed(context, Routes.statistics),
-                      icon: Icon(Icons.bar_chart, size: 18, color: AppColors.primaryBlue),
-                      label: Text('Analytics', style: TextStyle(color: AppColors.primaryBlue)),
+                      icon: Icon(Icons.bar_chart, size: AppConstants.spacing18, color: AppColors.primaryColor),
+                      label: Text('Analytics', style: TextStyle(color: AppColors.primaryColor)),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.primaryBlue),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: AppColors.primaryColor),
+                        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusMedium)),
                       ),
                     ),
                   ),
@@ -745,7 +746,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppConstants.spacing16),
           ],
         );
       },
@@ -755,8 +756,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildStatItem({required IconData icon, required String value, required String label}) {
     return Column(
       children: [
-        Icon(icon, size: 24, color: Colors.grey[600]),
-        const SizedBox(height: 8),
+        Icon(icon, size: AppConstants.iconMedium, color: Colors.grey[600]),
+        const SizedBox(height: AppConstants.spacing8),
         Text(
           value,
           style: const TextStyle(
@@ -834,19 +835,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
+            color: AppColors.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppConstants.radiusXL),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_on, size: 16, color: AppColors.primaryBlue),
-              const SizedBox(width: 4),
+              Icon(Icons.location_on, size: AppConstants.iconSmall, color: AppColors.primaryColor),
+              const SizedBox(width: AppConstants.spacing4),
               Text(
                 _location,
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -959,7 +960,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       Switch(value: isAvailable, onChanged: (val) => setStateSheet(() => isAvailable = val)),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppConstants.spacing16),
                   Row(
                     children: [
                       Expanded(
@@ -1012,8 +1013,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final bool isMerchant = authProvider.activeProfileType == 'STORE';
-    final Color primaryColor = isMerchant ? AppColors.primaryBlue : AppColors.primaryBlue;
-    final Gradient primaryGradient = isMerchant ? AppColors.deepGradient : AppColors.goldGradient;
+    final Color primaryColor = isMerchant ? AppColors.primaryColor : AppColors.primaryColor;
+    final Gradient primaryGradient = isMerchant ? AppColors.deepGradient : AppColors.purpleGradient;
 
     // Detect profile type change and reload data
     if (_lastProfileType != null && _lastProfileType != authProvider.activeProfileType) {
@@ -1045,9 +1046,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         color: Colors.white,
                         child: TabBar(
                           controller: _tabController,
-                          labelColor: AppColors.primaryBlue,
+                          labelColor: AppColors.primaryColor,
                           unselectedLabelColor: Colors.grey[500],
-                          indicatorColor: AppColors.primaryBlue,
+                          indicatorColor: AppColors.primaryColor,
                           indicatorWeight: 3,
                           indicatorSize: TabBarIndicatorSize.label,
                           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -1291,21 +1292,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Container(
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppConstants.cardRadius),
               border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
             ),
             child: ListTile(
               leading: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppConstants.spacing8),
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+                child: const Icon(Icons.logout_rounded, color: Colors.red, size: AppConstants.spacing20),
               ),
-              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: AppConstants.fontSizeSubtitle)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: AppConstants.iconSmall, color: Colors.red),
               onTap: _handleLogout,
             ),
           ),
-          const SizedBox(height: 80),
+          const SizedBox(height: AppConstants.spacing40),
         ],
       ),
     );
@@ -1314,7 +1315,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildAnalysisItem({required String value, required String label, required IconData icon, required Color color}) {
     return Column(
       children: [
-        Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 24)),
+        Container(padding: const EdgeInsets.all(AppConstants.spacing10), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: AppConstants.iconMedium)),
         const SizedBox(height: 8),
         Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -1328,24 +1329,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildMenuContainer(List<_MenuItem> items) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [AppColors.softShadow]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.cardRadius), boxShadow: [AppColors.softShadow]),
       child: Column(
         children: items.map((item) {
           final isLast = items.last == item;
           return Column(
             children: [
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: AppColors.scaffoldBackground, shape: BoxShape.circle), child: Icon(item.icon, color: AppColors.textPrimary, size: 20)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing16, vertical: AppConstants.spacing4),
+                leading: Container(padding: const EdgeInsets.all(AppConstants.spacing8), decoration: const BoxDecoration(color: AppColors.scaffoldBackground, shape: BoxShape.circle), child: Icon(item.icon, color: AppColors.textPrimary, size: AppConstants.spacing20)),
                 title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: item.subtitle != null ? Text(item.subtitle!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
+                subtitle: item.subtitle != null ? Text(item.subtitle!, style: const TextStyle(fontSize: AppConstants.fontSizeCaption, color: AppColors.textSecondary)) : null,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (item.badge != null)
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)), child: Text(item.badge!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textHint),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing8, vertical: AppConstants.spacing2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(AppConstants.spacing10)), child: Text(item.badge!, style: const TextStyle(color: Colors.white, fontSize: AppConstants.fontSizeSmall, fontWeight: FontWeight.bold))),
+                    const SizedBox(width: AppConstants.spacing8),
+                    const Icon(Icons.arrow_forward_ios, size: AppConstants.spacing14, color: AppColors.textHint),
                   ],
                 ),
                 onTap: item.onTap,

@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
 
-/// Modern Blue Color Palette - Clean Shopping Experience
+/// Modern Purple Color Palette - Professional Shopping Experience
 class AppColors {
   // ===== PRIMARY COLORS =====
-  /// Modern blue tones for the app
-  static const Color primaryBlue = Color(0xFF3B82F6);           // Main blue for buttons
+  /// Modern purple primary color (migrated from lib design system)
+  static const Color primaryColor = Color(0xFF7B61FF);          // Main purple for buttons and accents
   static const Color primaryDeep = Color(0xFF1E3A5F);           // Deep navy for headers
   static const Color primaryLight = Color(0xFFF8FAFC);          // Light background
-  static const Color primaryBlueDark = Color(0xFF2563EB);       // Darker blue for pressed states
-  static const Color primaryBlueLight = Color(0xFFDBEAFE);      // Light blue for backgrounds
 
-  // Legacy alias
-  static const Color primaryGold = primaryBlue;
-  static const Color primaryOrange = primaryBlue;
+  // Purple variations
+  static const Color primaryDark = Color(0xFF6C56DD);           // Darker purple for pressed states
+  static const Color primaryLightShade = Color(0xFFEFECFF);     // Light purple for backgrounds
+
+  // Backward compatibility - map old blue to new purple
+  @Deprecated('Use primaryColor instead')
+  static const Color primaryBlue = primaryColor;
+  @Deprecated('Use primaryColor instead')
+  static const Color primaryBlueDark = primaryDark;
+  @Deprecated('Use primaryLightShade instead')
+  static const Color primaryBlueLight = primaryLightShade;
+
+  // Legacy aliases
+  static const Color primaryGold = primaryColor;
+  static const Color primaryOrange = primaryColor;
   static const Color primaryPurple = primaryDeep;
 
   // ===== ACCENT COLORS =====
@@ -21,10 +31,35 @@ class AppColors {
   static const Color accentPurple = Color(0xFF8B5CF6);          // Purple
 
   // ===== STATUS & SEMANTIC COLORS =====
-  static const Color successGreen = Color(0xFF10B981);          // Success green
-  static const Color warningAmber = Color(0xFFF59E0B);          // Warning amber
-  static const Color errorRed = Color(0xFFEF4444);              // Error red
-  static const Color infoBlue = Color(0xFF3B82F6);              // Info blue
+  /// Status colors matching lib design system
+  static const Color successGreen = Color(0xFF2ED573);          // Success green
+  static const Color warningAmber = Color(0xFFFFBE21);          // Warning amber
+  static const Color errorRed = Color(0xFFEA5B5B);              // Error red
+  static const Color infoBlue = Color(0xFF7B61FF);              // Info purple
+
+  // ===== BLACK & WHITE OPACITY SCALES (from lib design system) =====
+  /// Black color with opacity variations
+  static const Color blackColor = Color(0xFF16161E);            // Base black
+  static const Color blackColor80 = Color(0xFF45454B);          // 80% opacity
+  static const Color blackColor60 = Color(0xFF737378);          // 60% opacity
+  static const Color blackColor40 = Color(0xFFA2A2A5);          // 40% opacity
+  static const Color blackColor20 = Color(0xFFD0D0D2);          // 20% opacity
+  static const Color blackColor10 = Color(0xFFE8E8E9);          // 10% opacity
+  static const Color blackColor5 = Color(0xFFF3F3F4);           // 5% opacity
+
+  /// White color with opacity variations
+  static const Color whiteColor = Colors.white;                 // Base white
+  static const Color whiteColor80 = Color(0xFFCCCCCC);          // 80% opacity
+  static const Color whiteColor60 = Color(0xFF999999);          // 60% opacity
+  static const Color whiteColor40 = Color(0xFF666666);          // 40% opacity
+  static const Color whiteColor20 = Color(0xFF333333);          // 20% opacity
+  static const Color whiteColor10 = Color(0xFF191919);          // 10% opacity
+  static const Color whiteColor5 = Color(0xFF0D0D0D);           // 5% opacity
+
+  /// Additional greys from lib
+  static const Color greyColor = Color(0xFFB8B5C3);
+  static const Color lightGreyColor = Color(0xFFF8F8F9);
+  static const Color darkGreyColor = Color(0xFF1C1C25);
 
   // ===== NEUTRAL PALETTE =====
   static const Color neutralDarkest = Color(0xFF1F2937);        // Near black
@@ -48,12 +83,13 @@ class AppColors {
   static const Color surfaceOverlay = Color(0x40000000);        // 25% black overlay
 
   // ===== GRADIENTS =====
-  static const LinearGradient goldGradient = LinearGradient(
+  /// Purple gradients matching lib design system
+  static const LinearGradient purpleGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF3B82F6),  // Primary blue
-      Color(0xFF2563EB),  // Darker blue
+      Color(0xFF7B61FF),  // Primary purple
+      Color(0xFF6C56DD),  // Darker purple
     ],
   );
 
@@ -66,14 +102,11 @@ class AppColors {
     ],
   );
 
-  static const LinearGradient blueGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF3B82F6),
-      Color(0xFF1D4ED8),
-    ],
-  );
+  // Backward compatibility
+  @Deprecated('Use purpleGradient instead')
+  static const LinearGradient blueGradient = purpleGradient;
+  @Deprecated('Use purpleGradient instead')
+  static const LinearGradient goldGradient = purpleGradient;
 
   static const LinearGradient roseGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -97,8 +130,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFDBEAFE),
-      Color(0xFF3B82F6),
+      Color(0xFFEFECFF),  // Light purple
+      Color(0xFF7B61FF),  // Primary purple
     ],
   );
 
@@ -127,14 +160,18 @@ class AppColors {
     ),
   ];
 
-  static const List<BoxShadow> goldShadow = [
+  static const List<BoxShadow> purpleShadow = [
     BoxShadow(
-      color: Color(0x1A3B82F6),
+      color: Color(0x1A7B61FF),  // Purple with opacity
       offset: Offset(0, 4),
       blurRadius: 8,
       spreadRadius: 0,
     ),
   ];
+
+  // Backward compatibility
+  @Deprecated('Use purpleShadow instead')
+  static const List<BoxShadow> goldShadow = purpleShadow;
 
   static const List<BoxShadow> innerShadow = [
     BoxShadow(
@@ -148,14 +185,18 @@ class AppColors {
   // ===== INTERACTIVE STATES =====
   static const Color hoverOverlay = Color(0x08000000);
   static const Color pressedOverlay = Color(0x12000000);
-  static const Color focusedOverlay = Color(0x153B82F6);
+  static const Color focusedOverlay = Color(0x157B61FF);        // Purple focus
   static const Color disabledOverlay = Color(0x40FFFFFF);
 
   // ===== BORDER COLORS =====
   static const Color borderPrimary = Color(0xFFE5E7EB);         // Light gray border
   static const Color borderSecondary = Color(0xFFF3F4F6);       // Very light border
-  static const Color borderGold = Color(0x603B82F6);            // Blue border
+  static const Color borderPurple = Color(0x607B61FF);          // Purple border
   static const Color borderTeal = Color(0x6014B8A6);            // Teal border
+
+  // Backward compatibility
+  @Deprecated('Use borderPurple instead')
+  static const Color borderGold = borderPurple;
 
   // ===== PRODUCT CARD COLORS =====
   static const Color productCardBg = Color(0xFFFFFFFF);
@@ -169,7 +210,7 @@ class AppColors {
   static const Color storeBadgeGold = Color(0xFFF59E0B);        // Gold/amber
   static const Color storeBadgeSilver = Color(0xFF9CA3AF);      // Silver
   static const Color storeBadgeBronze = Color(0xFFD97706);      // Bronze
-  static const Color storeVerifiedBadge = Color(0xFF3B82F6);    // Blue verified
+  static const Color storeVerifiedBadge = Color(0xFF7B61FF);    // Purple verified
 
   // ===== BACKWARD COMPATIBILITY =====
   static const Color backgroundLight = surfacePrimary;
@@ -178,7 +219,7 @@ class AppColors {
   static const Color textHint = Color(0xFF9CA3AF);
   static const Color cardBackground = productCardBg;
   static const Color cardWhite = surfacePrimary;
-  static const Color scaffoldBackground = Color(0xFFFAFAFA);
+  static const Color scaffoldBackground = Colors.white;  // Pure white background
   static const Color searchBarBackground = surfaceSecondary;
   static const Color ratingYellow = Color(0xFFF59E0B);
   static const Color borderLight = borderPrimary;
@@ -192,20 +233,19 @@ class AppColors {
   );
 
   // Legacy gradient mappings
-  static const LinearGradient primaryGradient = blueGradient;
-  static const LinearGradient purpleGradient = deepGradient;
+  static const LinearGradient primaryGradient = purpleGradient;
 
   // Backward-compatible aliases
-  static const Color primary = primaryBlue;
-  static const Color merchantStart = Color(0xFF3B82F6);
-  static const Color merchantEnd = Color(0xFF1D4ED8);
-  static const Color userStart = Color(0xFFDBEAFE);
-  static const Color userEnd = Color(0xFF3B82F6);
+  static const Color primary = primaryColor;
+  static const Color merchantStart = Color(0xFF7B61FF);         // Purple
+  static const Color merchantEnd = Color(0xFF6C56DD);           // Darker purple
+  static const Color userStart = Color(0xFFEFECFF);             // Light purple
+  static const Color userEnd = Color(0xFF7B61FF);               // Purple
 
   // Category colors
-  static const Color categoryElectronics = Color(0xFF3B82F6);
+  static const Color categoryElectronics = Color(0xFF7B61FF);   // Purple
   static const Color categoryFashion = Color(0xFFEC4899);
-  static const Color categoryHome = Color(0xFF10B981);
+  static const Color categoryHome = Color(0xFF2ED573);          // Success green
   static const Color categorySports = Color(0xFFF59E0B);
 
   // Deal colors
@@ -219,9 +259,13 @@ class AppColors {
   static const Color textTertiary = Color(0xFF9CA3AF);          // Tertiary text
 
   // Notification colors
-  static const Color notificationBlue = Color(0xFFDBEAFE);
+  static const Color notificationPurple = Color(0xFFEFECFF);    // Light purple
   static const Color notificationGreen = Color(0xFFD1FAE5);
   static const Color notificationYellow = Color(0xFFFEF3C7);
+
+  // Backward compatibility
+  @Deprecated('Use notificationPurple instead')
+  static const Color notificationBlue = notificationPurple;
 
   // ===== UTILITY METHODS =====
   static Color withOpacity(Color color, double opacity) {

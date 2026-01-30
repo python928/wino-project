@@ -252,7 +252,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         : const Icon(Icons.add),
                     label: Text(_isLoading ? 'Publishing...' : 'Publish Product'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
+                      backgroundColor: AppColors.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -427,8 +427,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: AppColors.primaryBlue,
-              activeTrackColor: AppColors.primaryBlueLight,
+              activeColor: AppColors.primaryColor,
+              activeTrackColor: AppColors.primaryLightShade,
               inactiveThumbColor: Colors.grey[400],
               inactiveTrackColor: Colors.grey[300],
             ),

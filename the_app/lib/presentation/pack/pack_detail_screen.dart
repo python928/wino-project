@@ -95,13 +95,13 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      color: AppColors.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
                       Icons.inventory_2_rounded,
                       size: 64,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                     ),
                   ),
                 )
@@ -187,7 +187,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
               Text(
                 '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
                 style: AppTextStyles.h2.copyWith(
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -232,7 +232,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.08),
+              color: AppColors.primaryColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -240,12 +240,12 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.15),
+                    color: AppColors.primaryColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.inventory_2_outlined,
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                     size: 20,
                   ),
                 ),
@@ -254,7 +254,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                   'Contains ${widget.pack.products.length} products',
                   style: AppTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                   ),
                 ),
               ],
@@ -363,7 +363,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue,
+              color: AppColors.primaryColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -419,7 +419,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                 child: Text(
                   _isDescriptionExpanded ? 'Show less' : 'Show more',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -475,15 +475,15 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primaryBlue.withOpacity(0.1),
-                          AppColors.primaryBlue.withOpacity(0.05),
+                          AppColors.primaryColor.withOpacity(0.1),
+                          AppColors.primaryColor.withOpacity(0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.storefront_rounded,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                       size: 24,
                     ),
                   ),
@@ -502,7 +502,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                         Text(
                           'Visit store',
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primaryBlue,
+                            color: AppColors.primaryColor,
                           ),
                         ),
                       ],
@@ -563,7 +563,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                       Text(
                         '${widget.pack.discountPrice.toStringAsFixed(0)} DZD',
                         style: AppTextStyles.h4.copyWith(
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -596,7 +596,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

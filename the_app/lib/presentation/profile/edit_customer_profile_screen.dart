@@ -182,13 +182,13 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [AppColors.primaryBlue, AppColors.primaryBlue.withValues(alpha: 0.6)],
+                    colors: [AppColors.primaryColor, AppColors.primaryColor.withValues(alpha: 0.6)],
                   ),
                 ),
                 child: CircleAvatar(
                   radius: 48,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person_rounded, size: 48, color: AppColors.primaryBlue),
+                  child: Icon(Icons.person_rounded, size: 48, color: AppColors.primaryColor),
                 ),
               ),
             ),
@@ -253,12 +253,12 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                       decoration: BoxDecoration(
                         color: hasLocation
                             ? AppColors.successGreen.withValues(alpha: 0.1)
-                            : AppColors.primaryBlue.withValues(alpha: 0.1),
+                            : AppColors.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         hasLocation ? Icons.check_circle : Icons.add_location_rounded,
-                        color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                        color: hasLocation ? AppColors.successGreen : AppColors.primaryColor,
                         size: 22,
                       ),
                     ),
@@ -270,7 +270,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                           Text(
                             hasLocation ? '$_selectedBaladiya, $_selectedWilaya' : 'Select your location',
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: hasLocation ? AppColors.textPrimary : AppColors.primaryBlue,
+                              color: hasLocation ? AppColors.textPrimary : AppColors.primaryColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -289,7 +289,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                     ),
                     Icon(
                       Icons.arrow_forward_ios,
-                      color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                      color: hasLocation ? AppColors.successGreen : AppColors.primaryColor,
                       size: 16,
                     ),
                   ],
@@ -304,7 +304,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
               label: 'Save Changes',
               onPressed: _isLoading ? null : _saveProfile,
               isLoading: _isLoading,
-              color: AppColors.primaryBlue,
+              color: AppColors.primaryColor,
             ),
             const SizedBox(height: 16),
 
@@ -681,19 +681,19 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                         decoration: BoxDecoration(
                           color: hasLocation
                               ? AppColors.successGreen.withValues(alpha: 0.08)
-                              : AppColors.primaryBlue.withValues(alpha: 0.08),
+                              : AppColors.primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: hasLocation
                                 ? AppColors.successGreen.withValues(alpha: 0.3)
-                                : AppColors.primaryBlue.withValues(alpha: 0.3),
+                                : AppColors.primaryColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               hasLocation ? Icons.check_circle : Icons.add_location_rounded,
-                              color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                              color: hasLocation ? AppColors.successGreen : AppColors.primaryColor,
                               size: 22,
                             ),
                             const SizedBox(width: 12),
@@ -704,7 +704,7 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                                   Text(
                                     hasLocation ? '$_selectedBaladiya, $_selectedWilaya' : 'Select store location',
                                     style: AppTextStyles.bodyMedium.copyWith(
-                                      color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                                      color: hasLocation ? AppColors.successGreen : AppColors.primaryColor,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -718,7 +718,7 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                             ),
                             Icon(
                               Icons.arrow_forward_ios,
-                              color: hasLocation ? AppColors.successGreen : AppColors.primaryBlue,
+                              color: hasLocation ? AppColors.successGreen : AppColors.primaryColor,
                               size: 16,
                             ),
                           ],

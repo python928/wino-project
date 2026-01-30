@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:glassmorphism/glassmorphism.dart';
-
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_constants.dart';
+import '../../../core/theme/app_decorations.dart';
 
+/// Modern category item with clean design (lib style)
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -24,34 +25,22 @@ class CategoryItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Category Icon Container
-          GlassmorphicContainer(
+          // Category Icon Container - Clean modern design
+          Container(
             width: 75,
             height: 75,
-            borderRadius: 20.0,
-            blur: 15.0,
-            alignment: Alignment.center,
-            border: 2.0,
-            linearGradient: LinearGradient(
-              colors: [
-                color.withOpacity(0.2),
-                color.withOpacity(0.1),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderGradient: LinearGradient(
-              colors: [
-                color.withOpacity(0.5),
-                color.withOpacity(0.3),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1.5,
+              ),
             ),
             child: Icon(
               icon,
-              color: Colors.white,
-              size: 28,
+              color: color,
+              size: 32,
             ),
           ),
           const SizedBox(height: 8),

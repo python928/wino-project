@@ -118,7 +118,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
         child: AlertDialog(
           title: Row(
             children: [
-              const Icon(Icons.category_outlined, color: AppColors.primaryBlue),
+              const Icon(Icons.category_outlined, color: AppColors.primaryColor),
               const SizedBox(width: 8),
               const Text('Select Category', style: TextStyle(fontWeight: FontWeight.bold)),
             ],
@@ -154,19 +154,19 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: _selectedCategory == 'All'
-                                ? AppColors.primaryBlue.withOpacity(0.1)
+                                ? AppColors.primaryColor.withOpacity(0.1)
                                 : Colors.grey[100],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.apps,
-                            color: _selectedCategory == 'All' ? AppColors.primaryBlue : Colors.grey,
+                            color: _selectedCategory == 'All' ? AppColors.primaryColor : Colors.grey,
                             size: 20,
                           ),
                         ),
                         title: const Text('All'),
                         trailing: _selectedCategory == 'All'
-                            ? const Icon(Icons.check_circle, color: AppColors.primaryBlue)
+                            ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
                             : null,
                         onTap: () {
                           setState(() {
@@ -182,19 +182,19 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: _selectedCategory == category.name
-                                ? AppColors.primaryBlue.withOpacity(0.1)
+                                ? AppColors.primaryColor.withOpacity(0.1)
                                 : Colors.grey[100],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.category,
-                            color: _selectedCategory == category.name ? AppColors.primaryBlue : Colors.grey,
+                            color: _selectedCategory == category.name ? AppColors.primaryColor : Colors.grey,
                             size: 20,
                           ),
                         ),
                         title: Text(category.name),
                         trailing: _selectedCategory == category.name
-                            ? const Icon(Icons.check_circle, color: AppColors.primaryBlue)
+                            ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
                             : null,
                         onTap: () {
                           setState(() {
@@ -275,9 +275,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                         onSelected: (selected) {
                           setSheetState(() => _selectedSort = option);
                         },
-                        selectedColor: AppColors.primaryBlue.withOpacity(0.2),
+                        selectedColor: AppColors.primaryColor.withOpacity(0.2),
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.primaryBlue : Colors.grey[700],
+                          color: isSelected ? AppColors.primaryColor : Colors.grey[700],
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       );
@@ -292,7 +292,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                       const Text('Price Range', style: TextStyle(fontWeight: FontWeight.w600)),
                       Text(
                         '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
-                        style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -301,7 +301,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                     min: 0,
                     max: 100000,
                     divisions: 100,
-                    activeColor: AppColors.primaryBlue,
+                    activeColor: AppColors.primaryColor,
                     labels: RangeLabels(
                       '${_priceRange.start.toInt()}',
                       '${_priceRange.end.toInt()}',
@@ -352,7 +352,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                         // TODO: Apply filters to products
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
+                        backgroundColor: AppColors.primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -398,9 +398,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
               color: Colors.white,
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppColors.primaryBlue,
+                labelColor: AppColors.primaryColor,
                 unselectedLabelColor: AppColors.textHint,
-                indicatorColor: AppColors.primaryBlue,
+                indicatorColor: AppColors.primaryColor,
                 indicatorWeight: 3,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontSize: 13),
@@ -462,7 +462,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.category_outlined, size: 20, color: AppColors.primaryBlue),
+                          const Icon(Icons.category_outlined, size: 20, color: AppColors.primaryColor),
                           const SizedBox(width: 6),
                           Text(
                             _selectedCategory.length > 8
@@ -484,14 +484,14 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> with SingleTickerProv
             if (_selectedCategory != 'All' || _minRating > 0 || _priceRange.start > 0 || _priceRange.end < 100000)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: AppColors.primaryBlue.withOpacity(0.05),
+                color: AppColors.primaryColor.withOpacity(0.05),
                 child: Row(
                   children: [
-                    const Icon(Icons.filter_list, size: 16, color: AppColors.primaryBlue),
+                    const Icon(Icons.filter_list, size: 16, color: AppColors.primaryColor),
                     const SizedBox(width: 8),
                     const Text(
                       'Active Filters',
-                      style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w500, fontSize: 12),
+                      style: TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.w500, fontSize: 12),
                     ),
                     const Spacer(),
                     GestureDetector(

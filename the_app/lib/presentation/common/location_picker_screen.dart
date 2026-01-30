@@ -166,18 +166,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                        color: AppColors.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.location_city, size: 16, color: AppColors.primaryBlue),
+                          Icon(Icons.location_city, size: 16, color: AppColors.primaryColor),
                           const SizedBox(width: 6),
                           Text(
                             _selectedWilaya!,
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primaryBlue,
+                              color: AppColors.primaryColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -191,7 +191,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                                 _searchController.clear();
                               });
                             },
-                            child: Icon(Icons.close, size: 16, color: AppColors.primaryBlue),
+                            child: Icon(Icons.close, size: 16, color: AppColors.primaryColor),
                           ),
                         ],
                       ),
@@ -228,7 +228,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     child: ElevatedButton(
                       onPressed: _confirmLocation,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
+                        backgroundColor: AppColors.primaryColor,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -304,14 +304,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                        color: AppColors.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Text(
                           '${index + 1}',
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.primaryBlue,
+                            color: AppColors.primaryColor,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

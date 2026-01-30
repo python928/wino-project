@@ -3,8 +3,12 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
 import '../../core/providers/post_provider.dart';
+import '../../core/routing/routes.dart';
 import '../shared_widgets/custom_bottom_nav.dart';
 import 'home_screen.dart';
+import '../discovery/discovery_screen.dart';
+import '../favorites/favorites_screen.dart';
+import '../store/stores_list_screen.dart';
 import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
@@ -36,11 +40,11 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // Build screens dynamically to pass search query
+  // Build screens dynamically (4 screens for 4-item bottom nav)
   List<Widget> get _screens => [
     const HomeScreen(),           // 0 - Home
-    SearchTabScreen(initialQuery: _searchQuery),      // 1 - Search
-    const NotificationsScreen(),  // 2 - Notifications
+    const FavoritesScreen(),      // 1 - Favorites
+    const StoresListScreen(),     // 2 - My Stores (Followed)
     const ProfileScreen(),        // 3 - Profile
   ];
 
@@ -91,9 +95,68 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,  // Changed to LTR
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
+          ),
+          leadingWidth: 56,
+          centerTitle: false,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Location',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.greyColor,
+                ),
+              ),
+              Text(
+                'Algiers, Algeria',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.blackColor,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            // Search Icon
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SearchTabScreen(initialQuery: null),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.search_outlined, size: 24),
+              color: AppColors.blackColor,
+            ),
+            // Notification Icon
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notifications_none_rounded, size: 24),
+              color: AppColors.blackColor,
+            ),
+          ],
+        ),
         body: IndexedStack(
           index: _selectedIndex,
           children: _screens,
@@ -101,7 +164,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
         bottomNavigationBar: CustomBottomNavBar(
           selectedIndex: _selectedIndex,
           onItemTapped: _onItemTapped,
-          notificationsBadgeCount: 2,
         ),
       ),
     );

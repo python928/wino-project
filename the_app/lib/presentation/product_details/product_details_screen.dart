@@ -127,7 +127,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               backgroundDecoration: const BoxDecoration(color: Colors.white),
               loadingBuilder: (context, event) => Center(
                 child: CircularProgressIndicator(
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                   value: event == null
                       ? 0
                       : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
@@ -150,7 +150,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       height: 8,
                       decoration: BoxDecoration(
                         color: _currentImageIndex == index
-                            ? AppColors.primaryBlue
+                            ? AppColors.primaryColor
                             : Colors.grey.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -234,7 +234,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               Text(
                 Helpers.formatPrice(widget.product.price),
                 style: AppTextStyles.h2.copyWith(
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -295,8 +295,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primaryBlue.withOpacity(0.1),
-                  AppColors.primaryBlue.withOpacity(0.05),
+                  AppColors.primaryColor.withOpacity(0.1),
+                  AppColors.primaryColor.withOpacity(0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(14),
@@ -308,7 +308,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
                   Icons.storefront_rounded,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                   size: 24,
                 ),
               ),
@@ -428,10 +428,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
+              color: AppColors.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 18, color: AppColors.primaryBlue),
+            child: Icon(icon, size: 18, color: AppColors.primaryColor),
           ),
           const SizedBox(width: 12),
           Text(
@@ -501,7 +501,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     Helpers.showSnackBar(context, 'Product added to cart');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

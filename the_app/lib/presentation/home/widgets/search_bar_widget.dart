@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_constants.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -29,39 +31,18 @@ class SearchBarWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
       child: Row(
         children: [
-          // Filter Button
-          Container(
-            height: 55,
-            width: 55,
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: AppTheme.mediumRadius,
-              boxShadow: AppColors.primaryShadow,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onFilterTap,
-                borderRadius: AppTheme.mediumRadius,
-                child: const Icon(
-                  Icons.tune_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: AppTheme.spacing12),
-
-          // Search Field
+          // Search Field (outlined style like screenshots - full width)
           Expanded(
             child: isActive
                 ? Container(
                     height: 55,
                     decoration: BoxDecoration(
-                      color: AppColors.searchBarBackground,
-                      borderRadius: AppTheme.mediumRadius,
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(27.5),  // Pill shape
+                      border: Border.all(
+                        color: AppColors.primaryColor,
+                        width: 1.5,
+                      ),
                     ),
                     child: TextField(
                       controller: controller,
@@ -73,8 +54,8 @@ class SearchBarWidget extends StatelessWidget {
                         hintStyle: AppTextStyles.hintText,
                         prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: AppColors.textHint,
-                          size: 28,
+                          color: AppColors.greyColor,
+                          size: 24,
                         ),
                         suffixIcon: controller != null && controller!.text.isNotEmpty
                             ? IconButton(
@@ -84,7 +65,10 @@ class SearchBarWidget extends StatelessWidget {
                                   onSearchChanged?.call('');
                                 },
                               )
-                            : null,
+                            : IconButton(
+                                icon: Icon(Icons.tune_rounded, color: AppColors.greyColor),
+                                onPressed: onFilterTap,
+                              ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppTheme.spacing16,
@@ -101,15 +85,19 @@ class SearchBarWidget extends StatelessWidget {
                         horizontal: AppTheme.spacing16,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.searchBarBackground,
-                        borderRadius: AppTheme.mediumRadius,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(27.5),  // Pill shape
+                        border: Border.all(
+                          color: AppColors.primaryColor,
+                          width: 1.5,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             Icons.search_rounded,
-                            color: AppColors.textHint,
-                            size: 28,
+                            color: AppColors.greyColor,
+                            size: 24,
                           ),
                           const SizedBox(width: AppTheme.spacing12),
                           Expanded(
@@ -117,6 +105,11 @@ class SearchBarWidget extends StatelessWidget {
                               hintText,
                               style: AppTextStyles.hintText,
                             ),
+                          ),
+                          Icon(
+                            Icons.tune_rounded,
+                            color: AppColors.greyColor,
+                            size: 24,
                           ),
                         ],
                       ),

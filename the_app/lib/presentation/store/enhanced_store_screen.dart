@@ -375,7 +375,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.primaryColor,
                   ),
                   child: isSubmitting
                       ? const SizedBox(
@@ -486,9 +486,9 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                 delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    labelColor: AppColors.primaryBlue,
+                    labelColor: AppColors.primaryColor,
                     unselectedLabelColor: AppColors.textHint,
-                    indicatorColor: AppColors.primaryBlue,
+                    indicatorColor: AppColors.primaryColor,
                     indicatorWeight: 3,
                     labelStyle: const TextStyle(
                       fontWeight: FontWeight.bold,
@@ -648,19 +648,19 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  color: AppColors.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people, color: AppColors.primaryBlue, size: 18),
+                    Icon(Icons.people, color: AppColors.primaryColor, size: 18),
                     const SizedBox(width: 4),
                     Text(
                       '$_followersCount Followers',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primaryBlue,
+                        color: AppColors.primaryColor,
                         fontSize: 13,
                       ),
                     ),
@@ -716,8 +716,8 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
                       color: _isFollowing
-                          ? AppColors.primaryBlue
-                          : AppColors.primaryBlue.withOpacity(0.1),
+                          ? AppColors.primaryColor
+                          : AppColors.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: _isLoadingFollow
@@ -733,7 +733,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             children: [
                               Icon(
                                 _isFollowing ? Icons.check : Icons.add,
-                                color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                color: _isFollowing ? Colors.white : AppColors.primaryColor,
                                 size: 22,
                               ),
                               const SizedBox(width: 8),
@@ -741,7 +741,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                                 _isFollowing ? 'Following' : 'Follow',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: _isFollowing ? Colors.white : AppColors.primaryBlue,
+                                  color: _isFollowing ? Colors.white : AppColors.primaryColor,
                                   fontSize: 14,
                                 ),
                               ),
@@ -821,10 +821,10 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            color: AppColors.primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.location_on, color: AppColors.primaryBlue, size: 20),
+                          child: Icon(Icons.location_on, color: AppColors.primaryColor, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -851,7 +851,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                           ),
                         ),
                         if (_store!.latitude != null && _store!.longitude != null)
-                          Icon(Icons.map, color: AppColors.primaryBlue, size: 20),
+                          Icon(Icons.map, color: AppColors.primaryColor, size: 20),
                       ],
                     ),
                   ),
@@ -897,7 +897,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
         ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.primaryBlue),
+            Icon(icon, size: 20, color: AppColors.primaryColor),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -1040,7 +1040,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
             ElevatedButton(
               onPressed: _loadStoreData,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
+                backgroundColor: AppColors.primaryColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Retry'),

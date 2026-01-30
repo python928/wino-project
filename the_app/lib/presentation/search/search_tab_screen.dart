@@ -312,11 +312,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         height: 52,
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primaryBlue.withOpacity(0.1)
+              ? AppColors.primaryColor.withOpacity(0.1)
               : const Color(0xFFF5F6F8),
           borderRadius: BorderRadius.circular(16),
           border: isActive
-              ? Border.all(color: AppColors.primaryBlue, width: 1.5)
+              ? Border.all(color: AppColors.primaryColor, width: 1.5)
               : null,
         ),
         child: Stack(
@@ -324,7 +324,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           children: [
             Icon(
               icon,
-              color: isActive ? AppColors.primaryBlue : AppColors.textSecondary,
+              color: isActive ? AppColors.primaryColor : AppColors.textSecondary,
               size: 24,
             ),
             if (badge != null)
@@ -334,7 +334,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
@@ -378,8 +378,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     gradient: isSelected
                         ? LinearGradient(
                             colors: [
-                              AppColors.primaryBlue,
-                              AppColors.primaryBlue.withOpacity(0.85),
+                              AppColors.primaryColor,
+                              AppColors.primaryColor.withOpacity(0.85),
                             ],
                           )
                         : null,
@@ -388,7 +388,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.primaryBlue.withOpacity(0.3),
+                              color: AppColors.primaryColor.withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -480,11 +480,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryBlue.withOpacity(0.1)
+              ? AppColors.primaryColor.withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primaryBlue : AppColors.neutral200,
+            color: isSelected ? AppColors.primaryColor : AppColors.neutral200,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -493,7 +493,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? AppColors.primaryBlue : AppColors.textSecondary,
+            color: isSelected ? AppColors.primaryColor : AppColors.textSecondary,
           ),
         ),
       ),
@@ -504,9 +504,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primaryBlue.withOpacity(0.05),
+        color: AppColors.primaryColor.withOpacity(0.05),
         border: Border(
-          bottom: BorderSide(color: AppColors.primaryBlue.withOpacity(0.1)),
+          bottom: BorderSide(color: AppColors.primaryColor.withOpacity(0.1)),
         ),
       ),
       child: Row(
@@ -514,13 +514,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
+              color: AppColors.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.filter_list_rounded,
               size: 16,
-              color: AppColors.primaryBlue,
+              color: AppColors.primaryColor,
             ),
           ),
           const SizedBox(width: 10),
@@ -580,19 +580,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.primaryBlue),
+          Icon(icon, size: 14, color: AppColors.primaryColor),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: AppColors.primaryBlue,
+              color: AppColors.primaryColor,
             ),
           ),
         ],
@@ -684,7 +684,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.primaryBlue
+                                    ? AppColors.primaryColor
                                     : AppColors.neutral100,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -720,13 +720,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withOpacity(0.1),
+                              color: AppColors.primaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
                               style: TextStyle(
-                                color: AppColors.primaryBlue,
+                                color: AppColors.primaryColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -737,10 +737,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       const SizedBox(height: 8),
                       SliderTheme(
                         data: SliderThemeData(
-                          activeTrackColor: AppColors.primaryBlue,
+                          activeTrackColor: AppColors.primaryColor,
                           inactiveTrackColor: AppColors.neutral200,
-                          thumbColor: AppColors.primaryBlue,
-                          overlayColor: AppColors.primaryBlue.withOpacity(0.1),
+                          thumbColor: AppColors.primaryColor,
+                          overlayColor: AppColors.primaryColor.withOpacity(0.1),
                           trackHeight: 4,
                         ),
                         child: RangeSlider(
@@ -840,7 +840,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         _performSearch();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
+                        backgroundColor: AppColors.primaryColor,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -1128,7 +1128,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withOpacity(0.1),
+                color: AppColors.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1136,7 +1136,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                 ),
               ),
             ),
@@ -1147,7 +1147,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.08),
+              color: AppColors.primaryColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -1155,7 +1155,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Text(
                   'View All',
                   style: TextStyle(
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primaryColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -1164,7 +1164,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Icon(
                   Icons.arrow_forward_rounded,
                   size: 16,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primaryColor,
                 ),
               ],
             ),
@@ -1202,8 +1202,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primaryBlue.withOpacity(0.1),
-                    AppColors.primaryBlue.withOpacity(0.05),
+                    AppColors.primaryColor.withOpacity(0.1),
+                    AppColors.primaryColor.withOpacity(0.05),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(14),
@@ -1216,14 +1216,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.storefront_rounded,
-                          color: AppColors.primaryBlue,
+                          color: AppColors.primaryColor,
                           size: 28,
                         ),
                       ),
                     )
                   : Icon(
                       Icons.storefront_rounded,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryColor,
                       size: 28,
                     ),
             ),
@@ -1317,13 +1317,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withOpacity(0.1),
+                color: AppColors.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
                 Icons.search_off_rounded,
                 size: 48,
-                color: AppColors.primaryBlue,
+                color: AppColors.primaryColor,
               ),
             ),
             const SizedBox(height: 24),
@@ -1347,7 +1347,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 icon: Icon(Icons.filter_alt_off_rounded, size: 18),
                 label: Text('Clear Filters'),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
+                  foregroundColor: AppColors.primaryColor,
                 ),
               ),
           ],
@@ -1515,7 +1515,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildStoresContent() {
     if (_isLoadingStores) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+        child: CircularProgressIndicator(color: AppColors.primaryColor),
       );
     }
 
