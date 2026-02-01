@@ -3,12 +3,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/post_model.dart';
 import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_input_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
+import '../../core/widgets/app_button.dart';
 import '../shared_widgets/gradient_button.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -222,7 +224,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         : 0;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         body: CustomScrollView(
@@ -492,16 +494,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             duration: const Duration(milliseconds: 200),
                           ),
                           if (product.description.length > 150)
-                            TextButton(
+                            AppTextButton(
+                              text: _isDescriptionExpanded ? 'Show less' : 'Show more',
                               onPressed: () {
                                 setState(() => _isDescriptionExpanded = !_isDescriptionExpanded);
                               },
-                              child: Text(
-                                _isDescriptionExpanded ? 'Show less' : 'Show more',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primaryPurple,
-                                ),
-                              ),
                             ),
                         ],
                       ),
@@ -719,14 +716,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ],
                 ),
               ),
-              TextButton(
+              AppTextButton(
+                text: 'Log In',
                 onPressed: () {
                   Navigator.pushNamed(context, Routes.login);
                 },
-                child: Text(
-                  'Log In',
-                  style: TextStyle(color: AppColors.primaryPurple),
-                ),
               ),
             ],
           ),
@@ -837,12 +831,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 Text('Edit Your Rating', style: AppTextStyles.h4),
                 const Spacer(),
-                TextButton(
+                AppTextButton(
+                  text: 'Cancel',
                   onPressed: _cancelEditingReview,
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
                 ),
               ],
             ),
@@ -873,58 +864,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             TextField(
               controller: _commentController,
               maxLines: 3,
-              decoration: InputDecoration(
+              decoration: AppInputDecorations.multiline(
                 hintText: 'Write your comment here (optional)...',
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                filled: true,
-                fillColor: Colors.grey[50],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primaryPurple),
-                ),
               ),
             ),
 
             const SizedBox(height: 16),
 
             // Update button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmittingReview ? null : _submitReview,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isSubmittingReview
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Save Changes',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-              ),
+            AppPrimaryButton(
+              text: 'Save Changes',
+              onPressed: _submitReview,
+              isLoading: _isSubmittingReview,
             ),
           ],
         ),
@@ -964,58 +915,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           TextField(
             controller: _commentController,
             maxLines: 3,
-            decoration: InputDecoration(
+            decoration: AppInputDecorations.multiline(
               hintText: 'Write your comment here (optional)...',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primaryPurple),
-              ),
             ),
           ),
 
           const SizedBox(height: 16),
 
           // Submit button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isSubmittingReview ? null : _submitReview,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryPurple,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _isSubmittingReview
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Submit Review',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-            ),
+          AppPrimaryButton(
+            text: 'Submit Review',
+            onPressed: _submitReview,
+            isLoading: _isSubmittingReview,
           ),
         ],
       ),
@@ -1163,17 +1074,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           if (_reviews.length > 5)
             Center(
-              child: TextButton(
+              child: AppTextButton(
+                text: 'Show All Reviews (${_reviews.length})',
                 onPressed: () {
                   // Could show all reviews in a modal
                   Helpers.showSnackBar(context, 'Show all reviews coming soon');
                 },
-                child: Text(
-                  'Show All Reviews (${_reviews.length})',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryPurple,
-                  ),
-                ),
               ),
             ),
         ],

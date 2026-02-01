@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
@@ -74,18 +76,11 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(16),
-                        child: TextField(
+                        child: AppSearchField(
                           controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Search for product...',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                          ),
-                          onChanged: (val) => setStateSheet(() {}),
+                          hintText: 'Search for product...',
+                          onChanged: (_) => setStateSheet(() {}),
+                          compact: true,
                         ),
                       ),
                       Expanded(
@@ -177,7 +172,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: TextDirection.ltr,
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
@@ -274,11 +269,11 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
             ],
           ),
           actions: [
-            TextButton(
+            AppTextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              text: 'Cancel',
             ),
-            ElevatedButton(
+            AppPrimaryButton(
               onPressed: () {
                 Navigator.pop(context);
                 setState(() {
@@ -289,11 +284,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   _newPriceController.text = offer.newPrice.toStringAsFixed(2);
                 });
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Edit Discount', style: TextStyle(color: Colors.white)),
+              text: 'Edit Discount',
             ),
           ],
         ),
@@ -378,7 +369,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
           title: Text(_isEditMode ? 'Edit Discount' : 'Add Discount'),
@@ -537,14 +528,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     children: [
                       // Discount Percentage
                       Expanded(
-                        child: TextFormField(
+                        child: AppTextField(
                           controller: _discountPercentageController,
+                          label: 'Discount Percentage (%)',
+                          hint: '0',
+                          icon: Icons.percent,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Discount Percentage (%)',
-                            border: OutlineInputBorder(),
-                            suffixText: '%',
-                          ),
+                          suffixText: '%',
                           onChanged: _onPercentageChanged,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Required';
@@ -558,14 +548,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       
                       // New Price
                       Expanded(
-                        child: TextFormField(
+                        child: AppTextField(
                           controller: _newPriceController,
+                          label: 'New Price',
+                          hint: '0',
+                          icon: Icons.attach_money,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'New Price',
-                            border: OutlineInputBorder(),
-                            suffixText: 'DZD',
-                          ),
+                          suffixText: 'DZD',
                           onChanged: _onNewPriceChanged,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Required';
@@ -584,12 +573,12 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   // Submit Button
                   SizedBox(
                     width: double.infinity,
-                    child: GradientButton(
+                    child: AppPrimaryButton(
                       text: _isLoading
                           ? 'Saving...'
                           : (_isEditMode ? 'Save Changes' : 'Apply Discount'),
-                      onPressed: _isLoading ? () {} : _submit,
-                      gradient: AppColors.primaryGradient,
+                      isLoading: _isLoading,
+                      onPressed: _isLoading ? null : _submit,
                     ),
                   ),
                 ],

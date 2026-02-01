@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../shared_widgets/gradient_button.dart';
 import '../home/widgets/product_card.dart';
 import '../../core/providers/store_provider.dart';
+import '../../core/widgets/app_button.dart';
 
 class StoreDetailsScreen extends StatefulWidget {
   final Store store;
@@ -414,7 +415,10 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
         ),
         Padding(
           padding: const EdgeInsets.all(AppTheme.spacing16),
-          child: ElevatedButton(onPressed: () => Helpers.showSnackBar(context, 'Leave a Review'), child: const Text('Add Review')),
+          child: AppPrimaryButton(
+            text: 'Add Review',
+            onPressed: () => Helpers.showSnackBar(context, 'Leave a Review'),
+          ),
         ),
       ],
     );

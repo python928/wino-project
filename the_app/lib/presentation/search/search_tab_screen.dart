@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
@@ -13,11 +14,18 @@ import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/backend_store_model.dart';
 import '../common/location_filter_picker.dart';
+import '../../core/widgets/app_button.dart';
+import '../common/location_picker_screen.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
+  final String? initialType;
 
-  const SearchTabScreen({super.key, this.initialQuery});
+  const SearchTabScreen({
+    super.key,
+    this.initialQuery,
+    this.initialType,
+  });
 
   @override
   State<SearchTabScreen> createState() => _SearchTabScreenState();
@@ -46,6 +54,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   // Location filter
   LocationFilterResult? _locationFilter;
+  String _selectedLocation = 'All Algeria';
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
 
   // Stores search
   List<BackendStore> _searchedStores = [];
@@ -62,6 +73,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize selected type from widget parameter
+    if (widget.initialType != null && widget.initialType!.isNotEmpty) {
+      _selectedType = widget.initialType!;
+    }
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
     }
@@ -177,6 +192,55 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Location Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _showLocationPicker,
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Location',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: AppColors.greyColor,
+                              ),
+                            ),
+                            Text(
+                              _selectedLocation,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.blackColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Modern Header
             _buildHeader(),
 
@@ -217,72 +281,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             children: [
               // Search Field
               Expanded(
-                child: Container(
+                child: SizedBox(
                   height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F6F8),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: TextField(
+                  child: AppSearchField(
                     controller: _searchController,
                     focusNode: _searchFocus,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _performSearch(),
-                    style: AppTextStyles.bodyMedium,
-                    decoration: InputDecoration(
-                      hintText: 'Search products, stores...',
-                      hintStyle: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                      prefixIcon: Container(
-                        padding: const EdgeInsets.all(14),
-                        child: Icon(
-                          Icons.search_rounded,
-                          color: AppColors.textSecondary,
-                          size: 24,
-                        ),
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.neutral300,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                                _performSearch();
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                    ),
-                    onChanged: (value) => setState(() {}),
+                    hintText: 'Search products, stores...',
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: _performSearch,
+                    onClear: _performSearch,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-
-              // Location Button
-              _buildHeaderButton(
-                icon: Icons.location_on_rounded,
-                isActive: _locationFilter?.hasFilters == true,
-                badge: _locationFilter?.hasFilters == true
-                    ? _getLocationBadgeCount()
-                    : null,
-                onTap: _showLocationFilter,
               ),
               const SizedBox(width: 8),
 
@@ -635,7 +644,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       'Filters',
                       style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    TextButton(
+                    AppTextButton(
+                      text: 'Reset',
                       onPressed: () {
                         setSheetState(() {
                           _selectedSort = 'Newest';
@@ -643,13 +653,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           _minRating = 0;
                         });
                       },
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          color: AppColors.errorRed,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -830,29 +833,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   ],
                 ),
                 child: SafeArea(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        setState(() {});
-                        _performSearch();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        'Apply Filters',
-                        style: AppTextStyles.buttonText.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  child: AppPrimaryButton(
+                    text: 'Apply Filters',
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {});
+                      _performSearch();
+                    },
                   ),
                 ),
               ),
@@ -1550,5 +1537,26 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         },
       ),
     );
+  }
+
+  void _showLocationPicker() async {
+    final result = await Navigator.push<LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
+        _selectedLocation = result.address;
+      });
+      _performSearch();
+    }
   }
 }

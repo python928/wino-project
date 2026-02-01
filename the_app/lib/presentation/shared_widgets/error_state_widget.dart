@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_button.dart';
 
 class ErrorStateWidget extends StatelessWidget {
   final String message;
@@ -65,21 +66,11 @@ class ErrorStateWidget extends StatelessWidget {
             // Retry Button
             if (onRetry != null) ...[
               const SizedBox(height: AppTheme.spacing24),
-              OutlinedButton.icon(
+              AppSecondaryButton(
+                text: 'Retry',
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryPurple,
-                  side: const BorderSide(color: AppColors.primaryPurple),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacing24,
-                    vertical: AppTheme.spacing12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppTheme.mediumRadius,
-                  ),
-                ),
+                icon: Icons.refresh,
+                width: 150,
               ),
             ],
           ],

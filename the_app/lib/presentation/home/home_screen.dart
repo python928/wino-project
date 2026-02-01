@@ -7,6 +7,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/auth_provider.dart';
@@ -16,13 +17,15 @@ import '../profile/edit_product_screen.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../shared_widgets/error_state_widget.dart';
 import 'widgets/header_location_widget.dart';
-import 'widgets/search_bar_widget.dart';
 import 'widgets/category_item.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/hot_deal_card.dart';
 import 'widgets/product_card.dart';
 import 'widgets/featured_store_card.dart';
+import 'widgets/pack_card.dart';
+import 'widgets/promotion_card.dart';
 import 'main_navigation_screen.dart';
+import '../common/location_picker_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +37,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  String _selectedLocation = 'Algiers, Algeria';
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
 
   @override
   void initState() {
@@ -59,6 +65,26 @@ class _HomeScreenState extends State<HomeScreen> {
     postProvider.loadOffers();
   }
 
+  void _showLocationPicker() async {
+    final result = await Navigator.push<LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
+        _selectedLocation = result.address;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(  // Removed Directionality - will inherit LTR from parent
@@ -74,11 +100,71 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Location Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _showLocationPicker,
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Location',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: AppColors.greyColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    _selectedLocation,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.blackColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Spacer(),
+                        // Search Icon Button
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, Routes.searchTab);
+                          },
+                          icon: Icon(Icons.search_outlined, size: 24),
+                          color: AppColors.blackColor,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 16),
 
                   // Promotions Section at Top (like screenshot)
-                  _buildSectionHeader('Special Offers', 'See All', () {
-                    Navigator.pushNamed(context, Routes.offers);
+                  _buildSectionHeader('Discounts', 'See All', () {
+                    Navigator.pushNamed(context, Routes.searchTab, arguments: {'type': 'Discounts'});
                   }),
                   const SizedBox(height: AppTheme.spacing16),
                   _buildOffersSection(),
@@ -87,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Latest Products Section
                   _buildSectionHeader('Latest Products', 'View All', () {
-                    Navigator.pushNamed(context, Routes.discovery);
+                    Navigator.pushNamed(context, Routes.searchTab, arguments: {'type': 'Products'});
                   }),
                   const SizedBox(height: AppTheme.spacing16),
                   _buildRecentProductsSection(),
@@ -96,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Packages Section
                   _buildSectionHeader('Featured Packs', 'View All', () {
-                    Navigator.pushNamed(context, Routes.discovery, arguments: {'tab': 'packs'});
+                    Navigator.pushNamed(context, Routes.searchTab, arguments: {'type': 'Packs'});
                   }),
                   const SizedBox(height: AppTheme.spacing16),
                   _buildPacksSection(),
@@ -105,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Featured Stores Section (at bottom)
                   _buildSectionHeader('Featured Stores', 'View All', () {
-                    Navigator.pushNamed(context, Routes.discovery);
+                    Navigator.pushNamed(context, Routes.searchTab, arguments: {'type': 'Stores'});
                   }),
                   const SizedBox(height: AppTheme.spacing16),
                   _buildFeaturedStoresSection(),
@@ -243,9 +329,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Failed to load stores',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
-                  TextButton(
+                  AppTextButton(
+                    text: 'Retry',
                     onPressed: () => homeProvider.loadFeaturedStores(),
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -427,9 +513,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Failed to load packs',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
-                  TextButton(
+                  AppTextButton(
+                    text: 'Retry',
                     onPressed: () => homeProvider.loadFeaturedPacks(),
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -638,9 +724,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Failed to load products',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
-                  TextButton(
+                  AppTextButton(
+                    text: 'Retry',
                     onPressed: () => homeProvider.loadRecentProducts(),
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -728,9 +814,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Failed to load discounts',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
-                  TextButton(
+                  AppTextButton(
+                    text: 'Retry',
                     onPressed: () => postProvider.loadOffers(),
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -899,16 +985,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ==================== Navigation Methods ====================
 
-  void _showLocationPicker() {
-    Helpers.showSnackBar(context, 'Location selection coming soon');
-  }
-
   void _showNotifications() {
     Navigator.pushNamed(context, Routes.notifications);
   }
 
   void _navigateToSearch() {
-    Navigator.pushNamed(context, Routes.discovery);
+    Navigator.pushNamed(context, Routes.searchTab);
   }
 
   void _navigateToSearchTab(String query) {
@@ -927,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToCategory(int categoryId, String categoryName) {
     Navigator.pushNamed(
       context,
-      Routes.discovery,
+      Routes.searchTab,
       arguments: {'categoryId': categoryId, 'categoryName': categoryName},
     );
   }

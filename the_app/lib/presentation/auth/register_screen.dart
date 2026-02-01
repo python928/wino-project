@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
 import '../home/main_navigation_screen.dart';
 import 'login_screen.dart';
@@ -24,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _phoneController = TextEditingController();
 
   bool _isLoading = false;
-  bool _isPasswordVisible = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -198,7 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Name Field
-            _buildTextField(
+            AppTextField(
               controller: _nameController,
               label: 'Full Name',
               hint: 'Enter your name',
@@ -213,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 16),
 
             // Email Field
-            _buildTextField(
+            AppTextField(
               controller: _emailController,
               label: 'Email Address',
               hint: 'Enter your email',
@@ -232,7 +233,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 16),
 
             // Phone Field
-            _buildTextField(
+            AppTextField(
               controller: _phoneController,
               label: 'Phone Number',
               hint: '+213 XXX XXX XXX',
@@ -248,12 +249,12 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 16),
 
             // Password Field
-            _buildTextField(
+            AppTextField(
               controller: _passwordController,
               label: 'Password',
               hint: 'Enter your password',
               icon: Icons.lock_outlined,
-              isPassword: true,
+              obscureText: true,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your password';
@@ -267,36 +268,10 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 24),
 
             // Register Button
-            SizedBox(
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _registerUser,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                  disabledBackgroundColor: AppColors.primaryColor.withOpacity(0.6),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        'Create Account',
-                        style: AppTextStyles.buttonText.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-              ),
+            AppPrimaryButton(
+              text: 'Create Account',
+              onPressed: _registerUser,
+              isLoading: _isLoading,
             ),
             const SizedBox(height: 24),
 
@@ -332,79 +307,4 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    bool isPassword = false,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: isPassword && !_isPasswordVisible,
-          textDirection: TextDirection.ltr,
-          textAlign: TextAlign.left,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle:
-                AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-            prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _isPasswordVisible
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: AppColors.textSecondary,
-                      size: 22,
-                    ),
-                    onPressed: () =>
-                        setState(() => _isPasswordVisible = !_isPasswordVisible),
-                  )
-                : null,
-            filled: true,
-            fillColor: AppColors.neutral50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.neutral200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.neutral200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.errorRed),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.errorRed, width: 2),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-        ),
-      ],
-    );
-  }
 }

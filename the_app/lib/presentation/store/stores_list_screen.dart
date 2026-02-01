@@ -5,6 +5,7 @@ import '../../core/routing/routes.dart';
 import '../../data/models/backend_store_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/shimmer_loading.dart';
+import '../../core/widgets/app_button.dart';
 
 /// Stores list screen for bottom navigation
 /// Shows all available stores with search and filter
@@ -12,10 +13,10 @@ class StoresListScreen extends StatefulWidget {
   const StoresListScreen({super.key});
 
   @override
-  State<StoresListScreen> createState() => _StoresListScreenState();
+  State<StoresListScreen> createState() => StoresListScreenState();
 }
 
-class _StoresListScreenState extends State<StoresListScreen> {
+class StoresListScreenState extends State<StoresListScreen> {
   bool _isLoading = true;
   List<BackendStore> _stores = [];
   String? _error;
@@ -26,14 +27,22 @@ class _StoresListScreenState extends State<StoresListScreen> {
     _loadStores();
   }
 
-  Future<void> _loadStores() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+  void refresh() {
+    _loadStores();
+  }
 
-      final stores = await StoreRepository.searchStores();  // Use searchStores (returns all when no query)
+  Future<void> _loadStores() async {
+    // Show loading locally only if empty
+    if (_stores.isEmpty) {
+      if (mounted) setState(() => _isLoading = true);
+    }
+    
+    // Clear error
+    if (mounted) setState(() => _error = null);
+
+    try {
+      // Use getFollowedStores as per user request ("stores i have make follow to them")
+      final stores = await StoreRepository.getFollowedStores();
 
       if (mounted) {
         setState(() {
@@ -299,9 +308,9 @@ class _StoresListScreenState extends State<StoresListScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppConstants.spacing24),
-          ElevatedButton(
+          AppPrimaryButton(
+            text: 'إعادة المحاولة',
             onPressed: _loadStores,
-            child: const Text('إعادة المحاولة'),
           ),
         ],
       ),

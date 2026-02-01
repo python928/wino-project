@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
@@ -21,13 +23,16 @@ import '../auth/splash_screen.dart';
 import 'edit_customer_profile_screen.dart';
 import 'edit_merchant_profile_screen.dart';
 import 'add_product_screen.dart';
-import '../home/widgets/product_card.dart'; // Import ProductCard
-import 'add_promotion_screen.dart'; // Import AddPromotionScreen
-import 'edit_product_screen.dart'; // Import EditProductScreen
-import 'add_pack_screen.dart'; // Import AddPackScreen
-import '../common/widgets/unified_item_card.dart'; // Import UnifiedItemCard
-import '../common/widgets/stacked_product_images.dart'; // Import StackedProductImages
-import '../common/constants/card_constants.dart'; // Import CardConstants
+import '../home/widgets/product_card.dart';
+import 'add_promotion_screen.dart';
+import 'edit_product_screen.dart';
+import 'add_pack_screen.dart';
+import '../../core/widgets/cards/unified_item_card.dart';
+import '../common/widgets/stacked_product_images.dart';
+import '../common/constants/card_constants.dart';
+import 'widgets/profile_merchant_header.dart';
+import 'widgets/profile_user_header.dart';
+import 'widgets/profile_post_filter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -36,7 +41,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = 'Loading...';
   String _userType = 'user';
   String _location = 'Loading...';
@@ -57,14 +62,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  late TabController _tabController;
+  // Filter state for toggle buttons (replaces dropdown)
+  int _selectedFilterIndex = 0; // 0=all, 1=product, 2=promotion, 3=pack
 
   String? _lastProfileType;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text);
     });
@@ -214,9 +219,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Helper method to convert filter index to type string
+  String _getFilterType(int index) {
+    const types = ['all', 'product', 'promotion', 'pack'];
+    return types[index];
   }
 
   Future<void> _loadUserData() async {
@@ -327,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
       builder: (context) {
         return Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: TextDirection.ltr,
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -421,441 +431,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildMerchantHeader(Color primaryColor, Gradient primaryGradient) {
-    return Consumer<PostProvider>(
-      builder: (context, postProvider, child) {
-        final productCount = postProvider.myPosts.length;
-        final offerCount = postProvider.myOffers.length;
-
-        return Column(
-          children: [
-            // Cover Image Section
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Cover Image
-                Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryDeep.withValues(alpha: 0.1),
-                  ),
-                  child: (_storeCoverUrl != null && _storeCoverUrl!.isNotEmpty)
-                      ? Image.network(
-                          _storeCoverUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              decoration: BoxDecoration(gradient: primaryGradient),
-                              alignment: Alignment.center,
-                              child: const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(decoration: BoxDecoration(gradient: primaryGradient));
-                          },
-                        )
-                      : Container(decoration: BoxDecoration(gradient: primaryGradient)),
-                ),
-                // Camera icon on cover (top-right)
-                Positioned(
-                  top: 40,
-                  right: 16,
-                  child: GestureDetector(
-                    onTap: _isUploadingCover ? null : _pickCoverImage,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        shape: BoxShape.circle,
-                      ),
-                      child: _isUploadingCover
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-                // Avatar positioned at bottom-center of cover
-                Positioned(
-                  bottom: -50,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _isUploadingImage ? null : _pickImage,
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.grey.shade100,
-                              child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                                  ? ClipOval(
-                                      child: Image.network(
-                                        _avatarUrl!,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.store, size: 45, color: Colors.grey),
-                                      ),
-                                    )
-                                  : const Icon(Icons.store, size: 45, color: Colors.grey),
-                            ),
-                          ),
-                          // Camera icon for avatar
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.grey[300]!, width: 1),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: _isUploadingImage
-                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Icon(Icons.camera_alt, size: 16, color: AppColors.primaryColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 60),
-
-            // Store name centered under avatar
-            Text(
-              _userName,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            // Location - clickable link
-            GestureDetector(
-              onTap: () {
-                // TODO: Open map or location screen
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_on, size: 14, color: AppColors.primaryColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    _location,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primaryColor,
-                      decoration: TextDecoration.underline,
-                      decorationColor: AppColors.primaryColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-
-            // Store description
-            if (_storeDescription.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  _storeDescription,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-
-            const SizedBox(height: AppConstants.spacing16),
-
-            // Settings icon button
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                onPressed: _showSettingsMenu,
-                icon: Icon(Icons.settings_outlined, color: Colors.grey[700]),
-                tooltip: 'Settings',
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Stats Row - matching the reference image style
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.people_outline,
-                        value: _formatCount(_followersCount),
-                        label: 'Followers',
-                      ),
-                    ),
-                    Container(width: 1, height: 40, color: Colors.grey[200]),
-                    Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.star_outline,
-                        value: _averageRating > 0 ? _averageRating.toStringAsFixed(1) : '0.0',
-                        label: 'Rating',
-                      ),
-                    ),
-                    Container(width: 1, height: 40, color: Colors.grey[200]),
-                    Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.inventory_2_outlined,
-                        value: productCount.toString(),
-                        label: 'Products',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppConstants.spacing16),
-
-            // Action Buttons - Publish Post + Analytics
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  // Publish Post Button with Dropdown
-                  Expanded(
-                    flex: 2,
-                    child: PopupMenuButton<String>(
-                      onSelected: _handlePostMenuSelection,
-                      offset: const Offset(0, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      color: Colors.white,
-                      elevation: 8,
-                      itemBuilder: (context) => [
-                        PopupMenuItem<String>(
-                          value: 'product',
-                          child: Row(
-                            children: [
-                              Icon(Icons.shopping_bag_outlined, color: Colors.grey[700], size: 20),
-                              const SizedBox(width: 12),
-                              const Text('New Product', style: TextStyle(fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'discount',
-                          child: Row(
-                            children: [
-                              Icon(Icons.percent, color: Colors.grey[700], size: 20),
-                              const SizedBox(width: 12),
-                              const Text('Discount', style: TextStyle(fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'pack',
-                          child: Row(
-                            children: [
-                              Icon(Icons.inventory_2_outlined, color: Colors.grey[700], size: 20),
-                              const SizedBox(width: 12),
-                              const Text('Pack', style: TextStyle(fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing14),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add, size: AppConstants.spacing20, color: Colors.white),
-                            SizedBox(width: AppConstants.spacing8),
-                            Text('Publish Post', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacing12),
-                  // Analytics Button (Outlined)
-                  Expanded(
-                    flex: 1,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pushNamed(context, Routes.statistics),
-                      icon: Icon(Icons.bar_chart, size: AppConstants.spacing18, color: AppColors.primaryColor),
-                      label: Text('Analytics', style: TextStyle(color: AppColors.primaryColor)),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.primaryColor),
-                        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusMedium)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppConstants.spacing16),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildStatItem({required IconData icon, required String value, required String label}) {
-    return Column(
-      children: [
-        Icon(icon, size: AppConstants.iconMedium, color: Colors.grey[600]),
-        const SizedBox(height: AppConstants.spacing8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
+    return ProfileMerchantHeader(
+      userName: _userName,
+      location: _location,
+      storeDescription: _storeDescription,
+      avatarUrl: _avatarUrl,
+      storeCoverUrl: _storeCoverUrl,
+      isUploadingImage: _isUploadingImage,
+      isUploadingCover: _isUploadingCover,
+      followersCount: _followersCount,
+      averageRating: _averageRating,
+      onPickImage: _pickImage,
+      onPickCoverImage: _pickCoverImage,
+      onSettingsTap: _showSettingsMenu,
+      onPostMenuSelection: _handlePostMenuSelection,
+      primaryGradient: primaryGradient,
     );
   }
 
   Widget _buildUserHeader(Color primaryColor, Gradient primaryGradient) {
-    return Column(
-      children: [
-        const SizedBox(height: 40),
-        // Avatar centered
-        GestureDetector(
-          onTap: _isUploadingImage ? null : _pickImage,
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey.shade200,
-                child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                    ? ClipOval(
-                        child: Image.network(
-                          _avatarUrl!,
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50, color: Colors.grey),
-                        ),
-                      )
-                    : const Icon(Icons.person, size: 50, color: Colors.grey),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: _isUploadingImage
-                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // User name
-        Text(
-          _userName,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        // Location with wilaya/baladiya
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppConstants.radiusXL),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.location_on, size: AppConstants.iconSmall, color: AppColors.primaryColor),
-              const SizedBox(width: AppConstants.spacing4),
-              Text(
-                _location,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.primaryColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+    return ProfileUserHeader(
+      userName: _userName,
+      location: _location,
+      avatarUrl: _avatarUrl,
+      isUploadingImage: _isUploadingImage,
+      onPickImage: _pickImage,
+      primaryColor: primaryColor,
     );
   }
 
@@ -947,10 +548,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 children: [
                   Text('Edit Offer', style: AppTextStyles.h4),
                   const SizedBox(height: 12),
-                  TextField(
+                  AppTextField(
                     controller: discountController,
+                    label: 'Discount Percentage (%)',
+                    hint: '0',
+                    icon: Icons.percent,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Discount Percentage (%)', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -964,7 +567,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton(
+                        child: AppPrimaryButton(
+                          text: 'Save',
                           onPressed: () async {
                             final provider = context.read<PostProvider>();
                             final discount = int.tryParse(discountController.text);
@@ -976,13 +580,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               Helpers.showSnackBar(context, 'Failed to update offer: $e');
                             }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryPurple, foregroundColor: Colors.white),
-                          child: const Text('Save'),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton(
+                        child: AppDangerButton(
+                          text: 'Delete',
                           onPressed: () async {
                             final provider = context.read<PostProvider>();
                             try {
@@ -993,8 +596,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               Helpers.showSnackBar(context, 'Failed to delete offer: $e');
                             }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                          child: const Text('Delete'),
                         ),
                       ),
                     ],
@@ -1028,56 +629,38 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _lastProfileType = authProvider.activeProfileType;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: DefaultTabController(
-          length: 4,
-          child: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(
-                  child: isMerchant ? _buildMerchantHeader(primaryColor, primaryGradient) : _buildUserHeader(primaryColor, primaryGradient),
+        body: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: isMerchant
+                  ? _buildMerchantHeader(primaryColor, primaryGradient)
+                  : _buildUserHeader(primaryColor, primaryGradient),
+            ),
+            if (isMerchant)
+              SliverToBoxAdapter(
+                child: ProfilePostFilter(
+                  selectedIndex: _selectedFilterIndex,
+                  onFilterChanged: (index) {
+                    setState(() => _selectedFilterIndex = index);
+                  },
+                  searchController: _searchController,
+                  onSearchChanged: (value) {
+                    setState(() => _searchQuery = value);
+                  },
                 ),
-                if (isMerchant)
-                  SliverPersistentHeader(
-                    delegate: _SliverAppBarDelegate(
-                      Container(
-                        color: Colors.white,
-                        child: TabBar(
-                          controller: _tabController,
-                          labelColor: AppColors.primaryColor,
-                          unselectedLabelColor: Colors.grey[500],
-                          indicatorColor: AppColors.primaryColor,
-                          indicatorWeight: 3,
-                          indicatorSize: TabBarIndicatorSize.label,
-                          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-                          tabs: const [
-                            Tab(text: 'All'),
-                            Tab(text: 'Products'),
-                            Tab(text: 'Discounts'),
-                            Tab(text: 'Packs'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    pinned: true,
-                  ),
-              ];
-            },
-            body: isMerchant
-                ? TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildMerchantPosts(type: 'all'),
-                      _buildMerchantPosts(type: 'product'),
-                      _buildMerchantPosts(type: 'promotion'),
-                      _buildMerchantPosts(type: 'pack'),
-                    ],
-                  )
-                : SingleChildScrollView(child: _buildUserMenu()),
-          ),
+              ),
+            if (isMerchant)
+              SliverToBoxAdapter(
+                child: _buildMerchantPosts(type: _getFilterType(_selectedFilterIndex)),
+              )
+            else
+              SliverToBoxAdapter(
+                child: _buildUserMenu(),
+              ),
+          ],
         ),
       ),
     );
@@ -1138,19 +721,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           children: [
             Padding(
               padding: const EdgeInsets.all(AppTheme.spacing20),
-              child: TextField(
+              child: AppSearchField(
                 controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search in ${type == 'all' ? 'All' : type == 'product' ? 'Products' : type == 'pack' ? 'Packs' : 'Discounts'}...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+                hintText: 'Search in ${type == 'all' ? 'All' : type == 'product' ? 'Products' : type == 'pack' ? 'Packs' : 'Discounts'}...',
+                onChanged: (_) => setState(() {}),
               ),
             ),
-            Expanded(
+            SizedBox(
+              height: MediaQuery.of(context).size.height - 500, // Adjust based on header height
               child: filteredItems.isEmpty
                   ? Center(
                       child: Column(

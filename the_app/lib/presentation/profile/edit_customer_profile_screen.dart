@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
@@ -151,7 +153,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -195,27 +197,32 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
             const SizedBox(height: 32),
 
             // Form Fields
-            _buildFormField(
-              label: 'Full Name',
+            AppTextField(
               controller: _nameController,
+              label: 'Full Name',
               hint: 'Enter your full name',
               icon: Icons.person_rounded,
+              style: AppTextFieldStyle.profile,
             ),
-            _buildFormField(
-              label: 'Email',
+            const SizedBox(height: 20),
+            AppTextField(
               controller: _emailController,
+              label: 'Email',
               hint: 'email@example.com',
               icon: Icons.email_rounded,
               keyboardType: TextInputType.emailAddress,
               textDirection: TextDirection.ltr,
+              style: AppTextFieldStyle.profile,
             ),
-            _buildFormField(
-              label: 'Phone Number',
+            const SizedBox(height: 20),
+            AppTextField(
               controller: _phoneController,
+              label: 'Phone Number',
               hint: '+213 XXX XXX XXX',
               icon: Icons.phone_rounded,
               keyboardType: TextInputType.phone,
               textDirection: TextDirection.ltr,
+              style: AppTextFieldStyle.profile,
             ),
 
             const SizedBox(height: 8),
@@ -300,122 +307,21 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
             const SizedBox(height: 32),
 
             // Save Button
-            _buildPrimaryButton(
-              label: 'Save Changes',
-              onPressed: _isLoading ? null : _saveProfile,
+            AppPrimaryButton(
+              text: 'Save Changes',
+              onPressed: _saveProfile,
               isLoading: _isLoading,
-              color: AppColors.primaryColor,
             ),
             const SizedBox(height: 16),
 
             // Become Seller Button
-            _buildSecondaryButton(
-              label: 'Become a Seller',
+            AppSecondaryButton(
+              text: 'Become a Seller',
               onPressed: _becomeSeller,
               icon: Icons.store_rounded,
             ),
             const SizedBox(height: 20),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    TextDirection? textDirection,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowLight,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              textDirection: textDirection,
-              textAlign: textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
-              style: AppTextStyles.bodyMedium,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-                prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrimaryButton({
-    required String label,
-    required VoidCallback? onPressed,
-    required Color color,
-    bool isLoading = false,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-              )
-            : Text(label, style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600)),
-      ),
-    );
-  }
-
-  Widget _buildSecondaryButton({
-    required String label,
-    required VoidCallback onPressed,
-    required IconData icon,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: AppColors.primaryPurple),
-        label: Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryPurple, fontWeight: FontWeight.w600)),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.primaryPurple, width: 2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );
@@ -549,7 +455,7 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
     final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -642,9 +548,9 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildFormField(
-                      label: 'Store Name *',
+                    AppTextField(
                       controller: _storeNameController,
+                      label: 'Store Name *',
                       hint: 'Example: Elegant Store',
                       icon: Icons.store_rounded,
                       validator: (value) {
@@ -654,16 +560,18 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
                         return null;
                       },
                     ),
-                    _buildFormField(
-                      label: 'Store Description',
+                    const SizedBox(height: 20),
+                    AppTextField(
                       controller: _storeDescriptionController,
+                      label: 'Store Description',
                       hint: 'Describe your store and products...',
                       icon: Icons.description_rounded,
                       maxLines: 3,
                     ),
-                    _buildFormField(
-                      label: 'Phone Number',
+                    const SizedBox(height: 20),
+                    AppTextField(
                       controller: _storePhoneController,
+                      label: 'Phone Number',
                       hint: '+213 XXX XXX XXX',
                       icon: Icons.phone_rounded,
                       keyboardType: TextInputType.phone,
@@ -761,87 +669,14 @@ class _BecomeMerchantScreenState extends State<BecomeMerchantScreen> {
             const SizedBox(height: 24),
 
             // Create Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _convertToMerchant,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryPurple,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : Text(
-                        'Create Store and Start Selling',
-                        style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600),
-                      ),
-              ),
+            AppPrimaryButton(
+              text: 'Create Store and Start Selling',
+              onPressed: _convertToMerchant,
+              isLoading: _isLoading,
             ),
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFormField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    TextDirection? textDirection,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            textDirection: textDirection,
-            textAlign: textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
-            maxLines: maxLines,
-            validator: validator,
-            style: AppTextStyles.bodyMedium,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-              prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.neutral200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.neutral200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.primaryPurple, width: 2),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.errorRed),
-              ),
-              filled: true,
-              fillColor: AppColors.neutral50,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-          ),
-        ],
       ),
     );
   }

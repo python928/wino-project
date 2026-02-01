@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/dummy/product_model.dart';
+import '../../core/widgets/app_button.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -496,29 +497,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             Expanded(
               child: SizedBox(
                 height: 52,
-                child: ElevatedButton(
+                child: AppPrimaryButton(
+                  text: 'Add to Cart',
+                  icon: Icons.shopping_cart_outlined,
                   onPressed: () {
                     Helpers.showSnackBar(context, 'Product added to cart');
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.shopping_cart_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Add to Cart',
-                        style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),

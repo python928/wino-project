@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/card_styles.dart';
 import '../../../data/models/post_model.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -20,11 +21,7 @@ class HotDealCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 160,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [AppColors.softShadow],
-        ),
+        decoration: CardStyles.standard(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

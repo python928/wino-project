@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_button.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
@@ -65,22 +66,10 @@ class EmptyStateWidget extends StatelessWidget {
             // Action Button
             if (actionText != null && onActionPressed != null) ...[
               const SizedBox(height: AppTheme.spacing24),
-              ElevatedButton(
+              AppPrimaryButton(
+                text: actionText!,
                 onPressed: onActionPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryPurple,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacing32,
-                    vertical: AppTheme.spacing16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppTheme.mediumRadius,
-                  ),
-                ),
-                child: Text(
-                  actionText!,
-                  style: AppTextStyles.buttonText,
-                ),
+                width: 200,
               ),
             ],
           ],

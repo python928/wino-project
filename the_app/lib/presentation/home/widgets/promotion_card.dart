@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/routing/routes.dart';
 import '../../../data/models/offer_model.dart';
-import '../../common/widgets/unified_item_card.dart';
+import '../../../core/widgets/cards/unified_item_card.dart';
 
 /// Unified Promotion Card using UnifiedItemCard
 /// Displays promotions/offers consistently across home, search, and discovery screens

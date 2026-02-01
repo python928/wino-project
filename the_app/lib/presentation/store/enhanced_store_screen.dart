@@ -19,6 +19,7 @@ import '../home/widgets/pack_card.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../home/main_navigation_screen.dart';
+import '../../core/widgets/app_button.dart';
 
 /// Enhanced Store Visit Page with complete information and tabs
 /// Shows: Store info (name, description, address, phone, location) + Tabs (Products, Promotions, Packs)
@@ -306,7 +307,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     showDialog(
       context: context,
       builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: TextDirection.ltr,
         child: StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
@@ -338,12 +339,14 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                 ],
               ),
               actions: [
-                TextButton(
+                AppTextButton(
+                  text: 'Cancel',
                   onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
                 ),
-                ElevatedButton(
-                  onPressed: isSubmitting || tempRating == 0
+                AppPrimaryButton(
+                  text: 'Confirm',
+                  isLoading: isSubmitting,
+                  onPressed: tempRating == 0
                       ? null
                       : () async {
                           setDialogState(() => isSubmitting = true);
@@ -374,19 +377,6 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
                             }
                           }
                         },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Confirm', style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -459,7 +449,7 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         body: NestedScrollView(
@@ -1037,13 +1027,9 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
+            AppPrimaryButton(
               onPressed: _loadStoreData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Retry'),
+              text: 'Retry',
             ),
           ],
         ),

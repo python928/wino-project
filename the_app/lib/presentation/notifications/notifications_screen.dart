@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_button.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -81,7 +82,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    TextButton(
+                    AppTextButton(
+                      text: 'Mark all as read',
                       onPressed: () {
                         setState(() {
                           for (var n in _notifications) {
@@ -89,13 +91,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           }
                         });
                       },
-                      child: Text(
-                        'Mark all as read',
-                        style: TextStyle(
-                          color: AppColors.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ),
                   ],
                 ),

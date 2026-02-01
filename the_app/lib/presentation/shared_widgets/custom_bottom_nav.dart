@@ -56,9 +56,44 @@ class CustomBottomNavBar extends StatelessWidget {
             icon: Icon(Icons.store_outlined, size: 24, color: selectedIndex == 2 ? AppColors.primaryColor : AppColors.greyColor),
             label: 'My Stores',
           ),
-          // Profile - Index 3
+          // Notifications - Index 3
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24, color: selectedIndex == 3 ? AppColors.primaryColor : AppColors.greyColor),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(Icons.notifications_none_rounded, size: 24, color: selectedIndex == 3 ? AppColors.primaryColor : AppColors.greyColor),
+                if (notificationsBadgeCount != null && notificationsBadgeCount! > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        notificationsBadgeCount! > 9 ? '9+' : notificationsBadgeCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'Notifications',
+          ),
+          // Profile - Index 4
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded, size: 24, color: selectedIndex == 4 ? AppColors.primaryColor : AppColors.greyColor),
             label: 'Profile',
           ),
         ],

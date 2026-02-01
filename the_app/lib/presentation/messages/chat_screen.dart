@@ -7,6 +7,7 @@ import '../../core/providers/message_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../data/models/message_model.dart';
 import '../shared_widgets/shimmer_loading.dart';
+import '../../core/widgets/app_button.dart';
 
 class ChatScreen extends StatefulWidget {
   final int userId;
@@ -88,7 +89,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
@@ -241,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: TextField(
                           controller: _messageController,
                           focusNode: _focusNode,
-                          textDirection: TextDirection.rtl,
+                          textDirection: TextDirection.ltr,
                           maxLines: 4,
                           minLines: 1,
                           decoration: InputDecoration(
@@ -340,9 +341,9 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(height: 16),
           const Text('Failed to load messages'),
           const SizedBox(height: 16),
-          OutlinedButton(
+          AppSecondaryButton(
+            text: 'Retry',
             onPressed: () => provider.loadMessages(widget.userId),
-            child: const Text('Retry'),
           ),
         ],
       ),

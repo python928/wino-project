@@ -7,6 +7,7 @@ import '../../core/providers/post_provider.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
 import '../shared_widgets/gradient_button.dart';
+import '../../core/widgets/app_button.dart';
 
 class EditProductScreen extends StatefulWidget {
   final Post product;
@@ -108,7 +109,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Edit Product'),
@@ -370,19 +371,20 @@ class _EditProductScreenState extends State<EditProductScreen> {
         title: const Text('Delete Product'),
         content: const Text('Are you sure you want to delete this product? This action cannot be undone.'),
         actions: [
-          TextButton(
+          AppTextButton(
+            text: 'Cancel',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
           ),
-          TextButton(
+          AppDangerButton(
+            text: 'Delete',
             onPressed: () async {
               Navigator.pop(context); // Close dialog
               setState(() => _isLoading = true);
-              
+
               try {
                 await Provider.of<PostProvider>(context, listen: false)
                     .deletePost(widget.product.id);
-                
+
                 if (mounted) {
                   Helpers.showSnackBar(context, 'Product deleted successfully');
                   Navigator.pop(context, true); // Return true to refresh
@@ -394,7 +396,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

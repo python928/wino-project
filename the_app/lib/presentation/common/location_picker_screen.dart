@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/constants/algeria_wilayas_baladiat.dart';
 
 class LocationResult {
@@ -95,7 +96,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -222,29 +223,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   ],
                 ),
                 child: SafeArea(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _confirmLocation,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$_selectedBaladiya, $_selectedWilaya',
-                            style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: AppPrimaryButton(
+                    text: '$_selectedBaladiya, $_selectedWilaya',
+                    onPressed: _confirmLocation,
+                    icon: Icons.check_circle,
                   ),
                 ),
               ),

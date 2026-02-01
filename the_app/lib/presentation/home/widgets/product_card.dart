@@ -3,7 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../data/models/post_model.dart';
-import '../../common/widgets/unified_item_card.dart';
+import '../../../core/widgets/cards/unified_item_card.dart';
 
 class ProductCard extends StatelessWidget {
   final Post product;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/app_decorations.dart';
+import '../../../core/theme/card_styles.dart';
 import '../../../core/components/skeleton_loader.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -58,18 +59,7 @@ class UnifiedItemCard extends StatelessWidget {
     return GestureDetector(
       onTap: isUnavailable ? null : onTap,
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: AppConstants.spacing12,
-              offset: Offset(0, AppConstants.cardElevation),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
+        decoration: CardStyles.standard(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

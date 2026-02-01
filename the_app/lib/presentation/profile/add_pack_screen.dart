@@ -6,6 +6,8 @@ import '../../core/providers/pack_provider.dart';
 import '../../core/providers/store_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/premium_ui_components.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
 import 'package:flutter/services.dart';
@@ -376,13 +378,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                AppTextField(
                   controller: _packNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Pack Name *',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
+                  label: 'Pack Name *',
+                  hint: 'Enter pack name',
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -396,15 +395,12 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: AppTextField(
                         controller: _packPriceController,
+                        label: 'Pack Sale Price',
+                        hint: '0',
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Pack Sale Price',
-                          suffixText: 'DZD',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
+                        suffixText: 'DZD',
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -431,20 +427,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: provider.isSubmitting ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: provider.isSubmitting 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Publish Pack', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
+                AppPrimaryButton(
+                  text: 'Publish Pack',
+                  onPressed: _submit,
+                  isLoading: provider.isSubmitting,
                 ),
               ],
             ),
@@ -459,7 +445,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
     final isSearching = _searchController.text.isNotEmpty;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Create New Pack'),
@@ -472,26 +458,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
             // Search Bar
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: TextField(
+              child: AppSearchField(
                 controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search for product to add...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: isSearching
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            FocusScope.of(context).unfocus();
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                hintText: 'Search for product to add...',
+                onChanged: (_) => setState(() {}),
+                onClear: () => FocusScope.of(context).unfocus(),
               ),
             ),
 

@@ -5,6 +5,7 @@ import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
 
 class PackDetailScreen extends StatefulWidget {
   final Pack pack;
@@ -588,34 +589,15 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
             Expanded(
               child: SizedBox(
                 height: 52,
-                child: ElevatedButton(
+                child: AppPrimaryButton(
+                  text: 'Contact',
+                  icon: Icons.message_outlined,
                   onPressed: () {
                     Helpers.showSnackBar(
                       context,
                       'You can contact the merchant to purchase this pack',
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.message_outlined, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Contact',
-                        style: AppTextStyles.buttonText.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),

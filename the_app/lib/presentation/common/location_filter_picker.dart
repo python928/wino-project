@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/algeria_wilayas_baladiat.dart';
+import '../../core/widgets/app_button.dart';
 
 class LocationFilterResult {
   final List<String> selectedWilayas;
@@ -199,34 +201,14 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
           // Search
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
+            child: SizedBox(
               height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F6F8),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
+              child: AppSearchField(
                 controller: _searchController,
+                hintText: _currentWilaya == null ? 'Search wilayas...' : 'Search baladiyat...',
                 onChanged: (value) => setState(() => _searchQuery = value),
-                style: AppTextStyles.bodyMedium,
-                decoration: InputDecoration(
-                  hintText: _currentWilaya == null ? 'Search wilayas...' : 'Search baladiyat...',
-                  hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
-                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 18),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _searchController.clear();
-                            });
-                          },
-                          child: Icon(Icons.close, size: 16, color: AppColors.textSecondary),
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
+                onClear: () => setState(() => _searchQuery = ''),
+                compact: true,
               ),
             ),
           ),
@@ -288,23 +270,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
               child: SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: ElevatedButton(
+                child: AppPrimaryButton(
+                  text: _getButtonText(),
                   onPressed: _confirmFilter,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    _getButtonText(),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ),
               ),
             ),

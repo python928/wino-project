@@ -14,8 +14,7 @@ import '../../presentation/profile/edit_pack_screen.dart';
 import '../../presentation/profile/add_promotion_screen.dart';
 import '../../presentation/statistics/statistics_screen.dart';
 import '../../presentation/favorites/favorites_screen.dart';
-import '../../presentation/discovery/discovery_screen.dart';
-import '../../presentation/search/search_results_screen.dart';
+import '../../presentation/search/search_tab_screen.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import 'routes.dart';
@@ -134,21 +133,26 @@ class RouteGenerator {
           child: const AddPromotionScreen(),
         );
 
-      // ===== DISCOVERY =====
-      case Routes.discovery:
+
+
+      // ===== SEARCH TAB =====
+      case Routes.searchTab:
+        final args = settings.arguments as Map<String, dynamic>?;
         return _slideTransition(
           settings: settings,
-          child: const DiscoveryScreen(),
+          child: SearchTabScreen(
+            initialQuery: args?['query'],
+            initialType: args?['type'],
+          ),
         );
 
       case Routes.searchResults:
         final args = settings.arguments as Map<String, dynamic>?;
         return _slideTransition(
           settings: settings,
-          child: SearchResultsScreen(
+          child: SearchTabScreen(
             initialQuery: args?['query'],
-            initialCategoryId: args?['categoryId'],
-            initialCategoryName: args?['categoryName'],
+            initialType: args?['type'],
           ),
         );
 

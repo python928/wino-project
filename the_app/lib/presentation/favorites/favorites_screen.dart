@@ -9,6 +9,7 @@ import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
 import '../home/widgets/product_card.dart';
+import '../../core/widgets/app_button.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -90,7 +91,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
@@ -122,9 +123,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             const SizedBox(height: 16),
             Text(_error!, style: AppTextStyles.bodyMedium),
             const SizedBox(height: 16),
-            ElevatedButton(
+            AppPrimaryButton(
+              text: 'Retry',
               onPressed: _loadFavorites,
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -232,18 +233,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
+            AppPrimaryButton(
+              text: 'Log In',
               onPressed: () => Navigator.pushNamed(context, Routes.login),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Text('Log In'),
             ),
           ],
         ),
@@ -290,18 +282,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, Routes.discovery),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Text('Explore Products'),
+            AppPrimaryButton(
+              text: 'Explore Products',
+              onPressed: () => Navigator.pushNamed(context, Routes.searchTab),
             ),
           ],
         ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/routing/routes.dart';
 import '../../../data/models/pack_model.dart';
-import '../../common/widgets/unified_item_card.dart';
+import '../../../core/widgets/cards/unified_item_card.dart';
 import '../../common/widgets/stacked_product_images.dart';
 
 /// Unified Pack Card using UnifiedItemCard

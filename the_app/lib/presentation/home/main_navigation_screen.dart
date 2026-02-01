@@ -6,7 +6,6 @@ import '../../core/providers/post_provider.dart';
 import '../../core/routing/routes.dart';
 import '../shared_widgets/custom_bottom_nav.dart';
 import 'home_screen.dart';
-import '../discovery/discovery_screen.dart';
 import '../favorites/favorites_screen.dart';
 import '../store/stores_list_screen.dart';
 import '../search/search_tab_screen.dart';
@@ -40,12 +39,13 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // Build screens dynamically (4 screens for 4-item bottom nav)
+  // Build screens dynamically (5 screens for 5-item bottom nav)
   List<Widget> get _screens => [
     const HomeScreen(),           // 0 - Home
     const FavoritesScreen(),      // 1 - Favorites
     const StoresListScreen(),     // 2 - My Stores (Followed)
-    const ProfileScreen(),        // 3 - Profile
+    NotificationsScreen(),        // 3 - Notifications
+    const ProfileScreen(),        // 4 - Profile
   ];
 
   @override
@@ -94,11 +94,14 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Only show AppBar on Home (0) tab - removed for now as screens have their own headers
+    final showAppBar = false;
+
     return Directionality(
       textDirection: TextDirection.ltr,  // Changed to LTR
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        appBar: AppBar(
+        appBar: showAppBar ? AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           leading: Padding(
@@ -156,7 +159,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
               color: AppColors.blackColor,
             ),
           ],
-        ),
+        ) : null,
         body: IndexedStack(
           index: _selectedIndex,
           children: _screens,

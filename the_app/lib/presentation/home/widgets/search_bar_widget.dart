@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_constants.dart';
-import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_text_field.dart';
 
 class SearchBarWidget extends StatelessWidget {
   final VoidCallback? onSearchTap;
@@ -31,89 +30,49 @@ class SearchBarWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
       child: Row(
         children: [
-          // Search Field (outlined style like screenshots - full width)
           Expanded(
-            child: isActive
-                ? Container(
-                    height: 55,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(27.5),  // Pill shape
-                      border: Border.all(
-                        color: AppColors.primaryColor,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: controller,
-                      onChanged: onSearchChanged,
-                      onSubmitted: (_) => onSearchSubmitted?.call(),
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: hintText,
-                        hintStyle: AppTextStyles.hintText,
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: AppColors.greyColor,
-                          size: 24,
-                        ),
-                        suffixIcon: controller != null && controller!.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear, color: AppColors.textHint),
-                                onPressed: () {
-                                  controller!.clear();
-                                  onSearchChanged?.call('');
-                                },
-                              )
-                            : IconButton(
-                                icon: Icon(Icons.tune_rounded, color: AppColors.greyColor),
-                                onPressed: onFilterTap,
-                              ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacing16,
-                          vertical: 16,
-                        ),
-                      ),
-                    ),
+            child: isActive && controller != null
+                ? AppSearchField(
+                    controller: controller!,
+                    hintText: hintText,
+                    onChanged: onSearchChanged,
+                    onSubmitted: onSearchSubmitted,
+                    onFilterTap: onFilterTap,
+                    showFilterButton: true,
                   )
                 : GestureDetector(
                     onTap: onSearchTap,
-                    child: Container(
-                      height: 55,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacing16,
-                      ),
+                    behavior: HitTestBehavior.opaque,
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(27.5),  // Pill shape
-                        border: Border.all(
-                          color: AppColors.primaryColor,
-                          width: 1.5,
-                        ),
+                        color: AppColors.neutral50,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_rounded,
-                            color: AppColors.greyColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: AppTheme.spacing12),
-                          Expanded(
-                            child: Text(
-                              hintText,
-                              style: AppTextStyles.hintText,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.search_rounded,
+                              color: AppColors.textSecondary,
+                              size: 26,
                             ),
-                          ),
-                          Icon(
-                            Icons.tune_rounded,
-                            color: AppColors.greyColor,
-                            size: 24,
-                          ),
+                            const SizedBox(width: AppTheme.spacing12),
+                            Expanded(
+                              child: Text(
+                                hintText,
+                                style: AppTextStyles.hintText,
+                              ),
+                            ),
+                            Icon(
+                              Icons.tune_rounded,
+                              color: AppColors.textSecondary,
+                              size: 26,
+                            ),
                         ],
                       ),
                     ),
+                  ),
                   ),
           ),
         ],

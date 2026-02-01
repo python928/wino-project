@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/card_styles.dart';
 import '../../../data/dummy/store_model.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -22,11 +23,7 @@ class StoreCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [AppColors.softShadow],
-        ),
+        decoration: CardStyles.standard(),
         child: Row(
           children: [
             // Arrow Icon

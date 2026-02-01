@@ -8,6 +8,7 @@ import '../../data/models/post_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/store_repository.dart';
 import '../home/widgets/product_card.dart';
+import '../../core/widgets/app_button.dart';
 
 class StoreScreen extends StatefulWidget {
   final int storeId;
@@ -76,7 +77,7 @@ class _StoreScreenState extends State<StoreScreen> {
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: TextDirection.ltr,
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Rate Store', textAlign: TextAlign.center),
@@ -110,11 +111,12 @@ class _StoreScreenState extends State<StoreScreen> {
             ],
           ),
           actions: [
-            TextButton(
+            AppTextButton(
+              text: 'Cancel',
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            AppPrimaryButton(
+              text: 'Confirm',
               onPressed: () {
                 setState(() => _userRating = tempRating);
                 Navigator.pop(context);
@@ -122,10 +124,6 @@ class _StoreScreenState extends State<StoreScreen> {
                   const SnackBar(content: Text('Thank you for your rating!')),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-              ),
-              child: const Text('Confirm', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -527,9 +525,9 @@ class _StoreScreenState extends State<StoreScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
-                      FilledButton(
+                      AppPrimaryButton(
+                        text: 'Retry',
                         onPressed: _loadStore,
-                        child: const Text('Retry'),
                       ),
                     ],
                   ),

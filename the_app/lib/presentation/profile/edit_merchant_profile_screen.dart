@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
@@ -242,21 +244,17 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         ),
         content: const Text('Do you really want to convert your account from seller to regular customer?'),
         actions: [
-          TextButton(
+          AppTextButton(
+            text: 'Cancel',
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
-          ElevatedButton(
+          AppDangerButton(
+            text: 'Yes, Convert',
             onPressed: () {
               Navigator.pop(context);
               _convertToCustomer();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Yes, Convert'),
+            width: 120,
           ),
         ],
       ),
@@ -299,7 +297,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -380,34 +378,41 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             const SizedBox(height: 32),
 
             // Form Fields
-            _buildFormField(
-              label: 'Store Name',
+            AppTextField(
               controller: _nameController,
+              label: 'Store Name',
               hint: 'Enter your store name',
               icon: Icons.store_rounded,
+              style: AppTextFieldStyle.profile,
             ),
-            _buildFormField(
-              label: 'Phone Number',
+            const SizedBox(height: 20),
+            AppTextField(
               controller: _phoneController,
+              label: 'Phone Number',
               hint: '+213 XXX XXX XXX',
               icon: Icons.phone_rounded,
               keyboardType: TextInputType.phone,
               textDirection: TextDirection.ltr,
+              style: AppTextFieldStyle.profile,
             ),
-            _buildFormField(
-              label: 'Email',
+            const SizedBox(height: 20),
+            AppTextField(
               controller: _emailController,
+              label: 'Email',
               hint: 'store@example.com',
               icon: Icons.email_rounded,
               keyboardType: TextInputType.emailAddress,
               textDirection: TextDirection.ltr,
+              style: AppTextFieldStyle.profile,
             ),
-            _buildFormField(
-              label: 'Store Description',
+            const SizedBox(height: 20),
+            AppTextField(
               controller: _descriptionController,
+              label: 'Store Description',
               hint: 'Describe your store and products...',
               icon: Icons.description_rounded,
               maxLines: 3,
+              style: AppTextFieldStyle.profile,
             ),
 
             // Location Section
@@ -417,16 +422,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             const SizedBox(height: 32),
 
             // Save Button
-            _buildPrimaryButton(
-              label: 'Save Changes',
-              onPressed: _isLoading ? null : _saveProfile,
+            AppPrimaryButton(
+              text: 'Save Changes',
+              onPressed: _saveProfile,
               isLoading: _isLoading,
             ),
             const SizedBox(height: 12),
 
             // Convert Account Button
-            _buildDangerButton(
-              label: 'Convert to Regular User',
+            AppSecondaryButton(
+              text: 'Convert to Regular User',
               onPressed: _becomeCustomer,
               icon: Icons.person_outline_rounded,
             ),
@@ -510,107 +515,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildFormField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    TextDirection? textDirection,
-    int maxLines = 1,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowLight,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              textDirection: textDirection,
-              textAlign: textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
-              maxLines: maxLines,
-              style: AppTextStyles.bodyMedium,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-                prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrimaryButton({
-    required String label,
-    required VoidCallback? onPressed,
-    bool isLoading = false,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-              )
-            : Text(label, style: AppTextStyles.buttonText.copyWith(fontWeight: FontWeight.w600)),
-      ),
-    );
-  }
-
-  Widget _buildDangerButton({
-    required String label,
-    required VoidCallback onPressed,
-    required IconData icon,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: AppColors.errorRed),
-        label: Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.errorRed)),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.errorRed.withValues(alpha: 0.5)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
     );
   }
 }

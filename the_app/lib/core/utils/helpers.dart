@@ -12,6 +12,11 @@ class Helpers {
     return number.toString();
   }
 
+  // Alias for formatLargeNumber
+  static String formatNumber(int number) {
+    return formatLargeNumber(number);
+  }
+
   // Format distance
   static String formatDistance(double distance) {
     if (distance < 1) {

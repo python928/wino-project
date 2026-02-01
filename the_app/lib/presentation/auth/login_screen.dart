@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/providers/auth_provider.dart';
 import 'register_screen.dart';
@@ -197,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             const SizedBox(height: 32),
 
             // Email Field
-            _buildTextField(
+            AppTextField(
               controller: _emailController,
               focusNode: _emailFocusNode,
               label: 'Email Address',
@@ -219,13 +221,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             const SizedBox(height: 20),
 
             // Password Field
-            _buildTextField(
+            AppTextField(
               controller: _passwordController,
               focusNode: _passwordFocusNode,
               label: 'Password',
               hint: 'Enter your password',
               icon: Icons.lock_outlined,
-              isPassword: true,
+              obscureText: true,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _loginUser(),
               validator: (value) {
@@ -242,56 +244,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             // Forgot Password
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton(
+              child: AppTextButton(
+                text: 'Forgot Password?',
                 onPressed: () {
                   Helpers.showSnackBar(context, 'Password reset coming soon');
                 },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                ),
-                child: Text(
-                  'Forgot Password?',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
             ),
 
             const SizedBox(height: 24),
 
             // Login Button
-            SizedBox(
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _loginUser,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                  disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        'Sign In',
-                        style: AppTextStyles.buttonText.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-              ),
+            AppPrimaryButton(
+              text: 'Sign In',
+              onPressed: _loginUser,
+              isLoading: _isLoading,
             ),
 
             const SizedBox(height: 24),
@@ -306,19 +273,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     color: AppColors.textSecondary,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
+                AppTextButton(
+                  text: 'Sign Up',
+                  onPressed: () {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (context) => const RegisterScreen()),
                     );
                   },
-                  child: Text(
-                    'Sign Up',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -328,80 +289,4 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    TextInputAction textInputAction = TextInputAction.next,
-    bool isPassword = false,
-    String? Function(String?)? validator,
-    void Function(String)? onFieldSubmitted,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: isPassword && !_isPasswordVisible,
-          textDirection: TextDirection.ltr,
-          textAlign: TextAlign.left,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
-          onFieldSubmitted: onFieldSubmitted,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-            prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 22),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                      color: AppColors.textSecondary,
-                      size: 22,
-                    ),
-                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                  )
-                : null,
-            filled: true,
-            fillColor: AppColors.neutral50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.neutral200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.neutral200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.errorRed),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.errorRed, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-        ),
-      ],
-    );
-  }
 }

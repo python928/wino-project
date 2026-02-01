@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../core/utils/helpers.dart';
 import '../shared_widgets/gradient_button.dart';
 import '../../data/models/post_model.dart';
@@ -19,6 +20,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
   late Map<int, int> _quantities;
   double _totalProductsPrice = 0;
   late TextEditingController _packPriceController;
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
 
   Widget _safeThumb(String? url) {
@@ -53,6 +55,13 @@ class _EditPackScreenState extends State<EditPackScreen> {
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _packPriceController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -104,7 +113,7 @@ class _EditPackScreenState extends State<EditPackScreen> {
     final postProvider = Provider.of<PostProvider>(context);
     final allProducts = postProvider.myPosts;
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Edit Pack'),
@@ -116,14 +125,12 @@ class _EditPackScreenState extends State<EditPackScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search for product to add',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (query) {
+              child: AppSearchField(
+                controller: _searchController,
+                hintText: 'Search for product to add',
+                onChanged: (_) {
                   // TODO: implement search logic
+                  setState(() {});
                 },
               ),
             ),
@@ -198,13 +205,12 @@ class _EditPackScreenState extends State<EditPackScreen> {
                 children: [
                   Text('Total Products Price: ${_totalProductsPrice.toStringAsFixed(2)} DZD'),
                   const SizedBox(height: 8),
-                  TextField(
+                  AppTextField(
                     controller: _packPriceController,
+                    label: 'Pack Sale Price',
+                    hint: '0',
+                    icon: Icons.attach_money,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Pack Sale Price',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
