@@ -20,12 +20,13 @@ import 'widgets/header_location_widget.dart';
 import 'widgets/category_item.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/hot_deal_card.dart';
-import 'widgets/product_card.dart';
+import '../shared_widgets/cards/product_card.dart';
 import 'widgets/featured_store_card.dart';
-import 'widgets/pack_card.dart';
-import 'widgets/promotion_card.dart';
+import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
 import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
+import '../shared_widgets/unified_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -100,64 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location Header
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: _showLocationPicker,
-                          child: Row(
-                            children: [
-                              Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Location',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.greyColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    _selectedLocation,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.blackColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Spacer(),
-                        // Search Icon Button
-                        IconButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, Routes.searchTab);
-                          },
-                          icon: Icon(Icons.search_outlined, size: 24),
-                          color: AppColors.blackColor,
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
+                  // Unified App Bar
+                  UnifiedAppBar(
+                    showLocation: true,
+                    showNotificationIcon: true,
+                    location: _selectedLocation,
+                    onLocationTap: _showLocationPicker,
                   ),
 
                   const SizedBox(height: 16),

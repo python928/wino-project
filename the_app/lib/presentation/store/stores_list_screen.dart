@@ -6,6 +6,7 @@ import '../../data/models/backend_store_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../core/widgets/app_button.dart';
+import '../shared_widgets/unified_app_bar.dart';
 
 /// Stores list screen for bottom navigation
 /// Shows all available stores with search and filter
@@ -13,10 +14,10 @@ class StoresListScreen extends StatefulWidget {
   const StoresListScreen({super.key});
 
   @override
-  State<StoresListScreen> createState() => StoresListScreenState();
+  State<StoresListScreen> createState() => _StoresListScreenState();
 }
 
-class StoresListScreenState extends State<StoresListScreen> {
+class _StoresListScreenState extends State<StoresListScreen> {
   bool _isLoading = true;
   List<BackendStore> _stores = [];
   String? _error;
@@ -27,22 +28,14 @@ class StoresListScreenState extends State<StoresListScreen> {
     _loadStores();
   }
 
-  void refresh() {
-    _loadStores();
-  }
-
   Future<void> _loadStores() async {
-    // Show loading locally only if empty
-    if (_stores.isEmpty) {
-      if (mounted) setState(() => _isLoading = true);
-    }
-    
-    // Clear error
-    if (mounted) setState(() => _error = null);
-
     try {
-      // Use getFollowedStores as per user request ("stores i have make follow to them")
-      final stores = await StoreRepository.getFollowedStores();
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final stores = await StoreRepository.searchStores();  // Use searchStores (returns all when no query)
 
       if (mounted) {
         setState(() {
@@ -64,39 +57,11 @@ class StoresListScreenState extends State<StoresListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(AppConstants.defaultPadding),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'المتاجر',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.search_outlined),
-                    onPressed: () {
-                      // TODO: Implement search
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: _buildContent(),
-            ),
-          ],
-        ),
+      appBar: UnifiedAppBar(
+        showLocation: false,
+        showNotificationIcon: true,
       ),
+      body: _buildContent(),
     );
   }
 

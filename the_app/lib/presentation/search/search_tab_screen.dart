@@ -7,9 +7,9 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/routing/routes.dart';
-import '../home/widgets/product_card.dart';
-import '../home/widgets/promotion_card.dart';
-import '../home/widgets/pack_card.dart';
+import '../shared_widgets/cards/product_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/backend_store_model.dart';
@@ -187,75 +187,87 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Location Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _showLocationPicker,
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Location',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.greyColor,
-                              ),
-                            ),
-                            Text(
-                              _selectedLocation,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.blackColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Location Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Back button
+                    IconButton(
+                      icon: Icon(Icons.arrow_back, color: AppColors.blackColor, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    // Location
+                    GestureDetector(
+                      onTap: _showLocationPicker,
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Location',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppColors.greyColor,
+                                ),
+                              ),
+                              Text(
+                                _selectedLocation,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.blackColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // Modern Header
-            _buildHeader(),
+              // Modern Header
+              _buildHeader(),
 
-            // Type Tabs
-            _buildTypeTabs(),
+              // Type Tabs
+              _buildTypeTabs(),
 
-            // Categories
-            _buildCategoriesSection(),
+              // Categories
+              _buildCategoriesSection(),
 
-            // Active Filters
-            if (_hasActiveFilters) _buildActiveFilters(),
+              // Active Filters
+              if (_hasActiveFilters) _buildActiveFilters(),
 
-            // Content
-            Expanded(child: _buildContent()),
-          ],
+              // Content
+              Expanded(child: _buildContent()),
+            ],
+          ),
         ),
       ),
     );

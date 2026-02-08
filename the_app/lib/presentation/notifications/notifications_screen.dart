@@ -38,31 +38,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final newCount = _notifications.where((n) => n.isNew).length;
 
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          title: const Text(
-            'Notifications',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
-            onPressed: () {
-              // TODO: Settings
-            },
-          ),
-          actions: const [SizedBox(width: 48)],
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: Column(
-          children: [
+        title: Text(
+          'Notifications',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
             // New notifications banner
             if (newCount > 0)
               Container(
@@ -131,7 +126,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

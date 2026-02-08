@@ -8,8 +8,10 @@ import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
-import '../home/widgets/product_card.dart';
+import '../shared_widgets/cards/product_card.dart';
 import '../../core/widgets/app_button.dart';
+import '../shared_widgets/unified_app_bar.dart';
+import '../common/constants/card_constants.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -90,18 +92,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: AppColors.scaffoldBackground,
-        appBar: AppBar(
-          title: const Text('Favorites'),
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-        ),
-        body: _buildBody(),
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBackground,
+      appBar: UnifiedAppBar(
+        showLocation: false,
+        showNotificationIcon: true,
       ),
+      body: _buildBody(),
     );
   }
 

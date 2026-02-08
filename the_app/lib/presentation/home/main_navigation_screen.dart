@@ -39,13 +39,12 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // Build screens dynamically (5 screens for 5-item bottom nav)
+  // Build screens dynamically (4 screens for 4-item bottom nav)
   List<Widget> get _screens => [
     const HomeScreen(),           // 0 - Home
     const FavoritesScreen(),      // 1 - Favorites
     const StoresListScreen(),     // 2 - My Stores (Followed)
-    NotificationsScreen(),        // 3 - Notifications
-    const ProfileScreen(),        // 4 - Profile
+    const ProfileScreen(),        // 3 - Profile (was 4)
   ];
 
   @override

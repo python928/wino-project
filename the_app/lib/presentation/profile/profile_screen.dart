@@ -23,7 +23,7 @@ import '../auth/splash_screen.dart';
 import 'edit_customer_profile_screen.dart';
 import 'edit_merchant_profile_screen.dart';
 import 'add_product_screen.dart';
-import '../home/widgets/product_card.dart';
+import '../shared_widgets/cards/product_card.dart';
 import 'add_promotion_screen.dart';
 import 'edit_product_screen.dart';
 import 'add_pack_screen.dart';
@@ -33,6 +33,7 @@ import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
 import 'widgets/profile_user_header.dart';
 import 'widgets/profile_post_filter.dart';
+import '../shared_widgets/unified_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -632,6 +633,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.white,
+        appBar: UnifiedAppBar(
+          showLocation: false,
+          showNotificationIcon: true,
+        ),
         body: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(

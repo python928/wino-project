@@ -7,7 +7,7 @@ import '../../data/models/backend_store_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/store_repository.dart';
-import '../home/widgets/product_card.dart';
+import '../shared_widgets/cards/product_card.dart';
 import '../../core/widgets/app_button.dart';
 
 class StoreScreen extends StatefulWidget {
