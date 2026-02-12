@@ -7,10 +7,10 @@ import '../../theme/card_dimensions.dart';
 import '../../components/skeleton_loader.dart';
 import '../../utils/helpers.dart';
 
-/// Unified card component for Products, Promotions, and Packs
-/// Provides consistent UI/UX across all item types
-/// Updated with lib design system (purple theme, 12px radius)
-class UnifiedItemCard extends StatelessWidget {
+/// Specialized base class for item cards (products, packs, promotions)
+/// Provides consistent UI/UX and standardized dimensions
+/// All item cards should inherit from this instead of creating custom layouts
+class BaseItemCard extends StatelessWidget {
   // Common properties
   final String title;
   final String? imageUrl;
@@ -28,19 +28,15 @@ class UnifiedItemCard extends StatelessWidget {
 
   // Bottom info properties
   final double? rating;
-  final String? bottomLeftText; // For store name or product count
+  final String? bottomLeftText;
   final IconData? bottomLeftIcon;
-  final VoidCallback? onBottomLeftTap; // Tap handler for store name/bottom left text
+  final VoidCallback? onBottomLeftTap;
 
   // Custom widget properties
   final Widget? customImageWidget;
   final bool isUnavailable;
 
-  // Size properties
-  final double? width;
-  final double? height;
-
-  const UnifiedItemCard({
+  const BaseItemCard({
     super.key,
     required this.title,
     this.imageUrl,
@@ -57,77 +53,100 @@ class UnifiedItemCard extends StatelessWidget {
     this.onBottomLeftTap,
     this.customImageWidget,
     this.isUnavailable = false,
-    this.width,
-    this.height,
   });
+
+  /// Build custom content - override this method for specialized behavior
+  /// By default returns null to use standard layout
+  Widget? buildCustomContent(BuildContext context) => null;
+
+  /// Build custom image widget - override to customize image display
+  Widget? buildCustomImageWidget(BuildContext context) => customImageWidget;
+
+  /// Build custom bottom info - override to add specialized bottom content
+  Widget? buildCustomBottomInfo(BuildContext context) => null;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width ?? CardDimensions.itemCardWidth,
-      height: height ?? CardDimensions.itemCardHeight,
-      child: GestureDetector(
-        onTap: isUnavailable ? null : onTap,
-        child: Container(
-          decoration: CardStyles.standard(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image Section
-              _buildImageSection(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : CardDimensions.itemCardWidth;
+        final height = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : CardDimensions.itemCardHeight;
 
-              // Content Section
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(CardDimensions.cardPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Title
-                      Flexible(
-                        child: _buildTitle(),
-                      ),
+        final contentPadding = width < 100 ? 6.0 : CardDimensions.cardPadding;
 
-                      // Price and Bottom row
-                      Column(
+        return SizedBox(
+          width: width,
+          height: height,
+          child: GestureDetector(
+            onTap: isUnavailable ? null : onTap,
+            child: Container(
+              decoration: CardStyles.standard(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Section
+                  _buildImageSection(context),
+
+                  // Content Section
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(contentPadding),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Price or custom info
-                          if (hidePrice)
-                            _buildCallForPrice()
-                          else if (price != null)
-                            _buildPriceRow(),
+                          // Custom content or title
+                          Flexible(
+                            child: buildCustomContent(context) ?? _buildTitle(),
+                          ),
 
-                          const SizedBox(height: CardDimensions.cardElementSpacingSmall),
+                          // Price and Bottom row
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Price or custom info
+                              if (hidePrice)
+                                _buildCallForPrice()
+                              else if (price != null)
+                                _buildPriceRow(),
 
-                          // Bottom row: Rating + Additional info
-                          _buildBottomRow(),
+                              const SizedBox(
+                                height: CardDimensions.cardElementSpacingSmall,
+                              ),
+
+                              // Custom bottom info or standard bottom row
+                              buildCustomBottomInfo(context) ?? _buildBottomRow(),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildImageSection() {
+  Widget _buildImageSection(BuildContext context) {
     return Stack(
       children: [
         // Image or Custom Widget
         ClipRRect(
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppConstants.cardRadius),  // Match card radius
+            top: Radius.circular(AppConstants.cardRadius),
           ),
           child: AspectRatio(
             aspectRatio: 1.0,
-            child: customImageWidget ?? _buildStandardImage(),
+            child: buildCustomImageWidget(context) ?? _buildStandardImage(),
           ),
         ),
 
@@ -141,7 +160,7 @@ class UnifiedItemCard extends StatelessWidget {
                 horizontal: AppConstants.spacing8,
                 vertical: AppConstants.spacing4,
               ),
-              decoration: AppDecorations.discountBadge(),  // Using lib design
+              decoration: AppDecorations.discountBadge(),
               child: Text(
                 customBadge ?? '-$discountPercentage%',
                 style: const TextStyle(
@@ -226,7 +245,6 @@ class UnifiedItemCard extends StatelessWidget {
       width: double.infinity,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        // Use skeleton loader (lib design system)
         return const Skeleton(
           height: double.infinity,
           width: double.infinity,

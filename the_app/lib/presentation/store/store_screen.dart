@@ -9,6 +9,7 @@ import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../../core/widgets/app_button.dart';
+import '../common/constants/card_constants.dart';
 
 class StoreScreen extends StatefulWidget {
   final int storeId;
@@ -553,7 +554,12 @@ class _StoreScreenState extends State<StoreScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  CardConstants.gridHorizontalPadding,
+                  0,
+                  CardConstants.gridHorizontalPadding,
+                  24,
+                ),
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -572,10 +578,10 @@ class _StoreScreenState extends State<StoreScreen> {
                     childCount: _products.length,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.68,
+                    crossAxisCount: CardConstants.gridCrossAxisCount,
+                    mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                    crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                    childAspectRatio: CardConstants.gridChildAspectRatio,
                   ),
                 ),
               ),

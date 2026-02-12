@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../common/constants/card_constants.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_toggle_button.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
@@ -13,9 +15,11 @@ import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/backend_store_model.dart';
+import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../../core/widgets/app_button.dart';
 import '../common/location_picker_screen.dart';
+import 'category_selection_screen.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
@@ -35,19 +39,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
 
+  bool _hasSearched = false;
+
   // Selected type
   String _selectedType = 'All';
-  final List<Map<String, dynamic>> _typeOptions = [
-    {'label': 'All', 'icon': Icons.grid_view_rounded},
-    {'label': 'Products', 'icon': Icons.shopping_bag_rounded},
-    {'label': 'Discounts', 'icon': Icons.percent_rounded},
-    {'label': 'Packs', 'icon': Icons.inventory_2_rounded},
-    {'label': 'Stores', 'icon': Icons.storefront_rounded},
+  final List<ToggleOption> _typeOptions = const [
+    ToggleOption(label: 'All', icon: Icons.grid_view_rounded, value: 'All'),
+    ToggleOption(label: 'Products', icon: Icons.shopping_bag_rounded, value: 'Products'),
+    ToggleOption(label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
+    ToggleOption(label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
   ];
 
   // Filters
-  String _selectedCategory = 'All';
-  int? _selectedCategoryId;
+  Set<int> _selectedCategoryIds = {};
   String _selectedSort = 'Newest';
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
@@ -75,14 +79,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     super.initState();
     // Initialize selected type from widget parameter
     if (widget.initialType != null && widget.initialType!.isNotEmpty) {
-      _selectedType = widget.initialType!;
+      final type = widget.initialType!;
+      _selectedType = _typeOptions.any((o) => o.value == type) ? type : 'All';
     }
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _performSearch();
-    });
   }
 
   @override
@@ -92,7 +94,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         widget.initialQuery != null &&
         widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
-      _performSearch();
     }
   }
 
@@ -104,14 +105,60 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   void _performSearch() {
+    _searchFocus.unfocus();
+
+    if (!_hasSearched) {
+      setState(() => _hasSearched = true);
+    }
+
     final postProvider = context.read<PostProvider>();
     postProvider.loadPosts(
       search: _searchController.text.isNotEmpty ? _searchController.text : null,
-      categoryId: _selectedCategoryId,
+      categoryId: _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null,
     );
     postProvider.loadOffers();
     context.read<HomeProvider>().loadFeaturedPacks();
     _searchStores();
+  }
+
+  Widget _buildPreSearchState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.search_rounded,
+                size: 48,
+                color: AppColors.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Ready to search',
+              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose type and categories, then tap Search',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _searchStores() async {
@@ -133,12 +180,23 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
   }
 
-  void _selectCategory(int? categoryId, String categoryName) {
-    setState(() {
-      _selectedCategory = categoryName;
-      _selectedCategoryId = categoryId;
-    });
-    _performSearch();
+  Future<void> _openCategoryPicker() async {
+    final categories = context.read<HomeProvider>().categories;
+    if (categories.isEmpty) return;
+
+    final result = await Navigator.push<Set<int>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategorySelectionScreen(
+          categories: categories,
+          initialSelectedCategoryIds: _selectedCategoryIds,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _selectedCategoryIds = result);
+    }
   }
 
   void _showLocationFilter() {
@@ -152,7 +210,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     ).then((result) {
       if (result != null && result is LocationFilterResult) {
         setState(() => _locationFilter = result);
-        _performSearch();
       }
     });
   }
@@ -168,22 +225,42 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   void _clearAllFilters() {
     setState(() {
-      _selectedCategory = 'All';
-      _selectedCategoryId = null;
+      _selectedCategoryIds = {};
       _selectedSort = 'Newest';
       _priceRange = const RangeValues(0, 100000);
       _minRating = 0;
       _locationFilter = null;
     });
-    _performSearch();
   }
 
   bool get _hasActiveFilters =>
-      _selectedCategory != 'All' ||
+      _selectedCategoryIds.isNotEmpty ||
       _minRating > 0 ||
       _priceRange.start > 0 ||
       _priceRange.end < 100000 ||
       _locationFilter?.hasFilters == true;
+
+  Map<int, String> _categoriesById(HomeProvider homeProvider) {
+    return {for (final c in homeProvider.categories) c.id: c.name};
+  }
+
+  bool _postMatchesSelectedCategories(Post post, Map<int, String> categoriesById) {
+    if (_selectedCategoryIds.isEmpty) return true;
+
+    final categoryId = post.categoryId;
+    if (categoryId != null) {
+      return _selectedCategoryIds.contains(categoryId);
+    }
+
+    // Fallback: match by name if API didn't provide categoryId
+    final selectedNames = _selectedCategoryIds
+        .map((id) => categoriesById[id])
+        .whereType<String>()
+        .map((e) => e.toLowerCase())
+        .toSet();
+    if (selectedNames.isEmpty) return true;
+    return selectedNames.contains(post.category.toLowerCase());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +268,27 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: AppPrimaryButton(
+              text: 'Search',
+              icon: Icons.search_rounded,
+              onPressed: _performSearch,
+            ),
+          ),
+        ),
         body: SafeArea(
           child: Column(
             children: [
@@ -255,8 +353,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               // Modern Header
               _buildHeader(),
 
-              // Type Tabs
-              _buildTypeTabs(),
+              // Type Toggle Buttons
+              _buildTypeToggleButtons(),
 
               // Categories
               _buildCategoriesSection(),
@@ -300,8 +398,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     focusNode: _searchFocus,
                     hintText: 'Search products, stores...',
                     onChanged: (_) => setState(() {}),
-                    onSubmitted: _performSearch,
-                    onClear: _performSearch,
+                    onSubmitted: () => _searchFocus.unfocus(),
+                    onClear: () => setState(() {}),
                   ),
                 ),
               ),
@@ -374,71 +472,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  Widget _buildTypeTabs() {
+  Widget _buildTypeToggleButtons() {
+    final selectedIndex = _typeOptions.indexWhere((o) => o.value == _selectedType);
+    final safeSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: SizedBox(
-        height: 44,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: _typeOptions.length,
-          itemBuilder: (context, index) {
-            final option = _typeOptions[index];
-            final isSelected = _selectedType == option['label'];
-
-            return Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedType = option['label']),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? LinearGradient(
-                            colors: [
-                              AppColors.primaryColor,
-                              AppColors.primaryColor.withOpacity(0.85),
-                            ],
-                          )
-                        : null,
-                    color: isSelected ? null : const Color(0xFFF5F6F8),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primaryColor.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        option['icon'] as IconData,
-                        size: 18,
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        option['label'] as String,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: AppToggleButtonGroup(
+        options: _typeOptions,
+        selectedIndex: safeSelectedIndex,
+        onChanged: (i) => setState(() => _selectedType = _typeOptions[i].value),
+        scrollable: true,
+        compact: true,
       ),
     );
   }
@@ -452,45 +498,124 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return const SizedBox.shrink();
         }
 
+        const int previewCount = 10;
+        final previewCategories = categories.take(previewCount).toList();
+
+        final categoriesById = _categoriesById(homeProvider);
+        final selectedNames = _selectedCategoryIds
+          .map((id) => categoriesById[id])
+          .whereType<String>()
+          .toList();
+
         return Container(
           color: Colors.white,
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SizedBox(
-            height: 38,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: categories.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _buildCategoryChip(
-                      name: 'All',
-                      isSelected: _selectedCategory == 'All',
-                      onTap: () => _selectCategory(null, 'All'),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Categories',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
-                  );
-                }
-
-                final category = categories[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _buildCategoryChip(
-                    name: category.name,
-                    isSelected: _selectedCategory == category.name,
-                    onTap: () => _selectCategory(category.id, category.name),
                   ),
-                );
-              },
-            ),
+                  GestureDetector(
+                    onTap: _openCategoryPicker,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'See all',
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryColor),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 38,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: previewCategories.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      final isSelected = _selectedCategoryIds.isEmpty;
+                      return _buildCategoryToggleChip(
+                        name: 'All',
+                        isSelected: isSelected,
+                        onTap: () => setState(() => _selectedCategoryIds = {}),
+                      );
+                    }
+
+                    final category = previewCategories[index - 1];
+                    final isSelected = _selectedCategoryIds.contains(category.id);
+                    return _buildCategoryToggleChip(
+                      name: category.name,
+                      isSelected: isSelected,
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedCategoryIds.remove(category.id);
+                          } else {
+                            _selectedCategoryIds.add(category.id);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              if (selectedNames.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: selectedNames.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final name = selectedNames[index];
+                      final id = _selectedCategoryIds.firstWhere(
+                        (x) => categoriesById[x] == name,
+                        orElse: () => -1,
+                      );
+                      return _buildSelectedCategoryChip(
+                        name: name,
+                        onRemove: id > 0
+                            ? () => setState(() => _selectedCategoryIds.remove(id))
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildCategoryChip({
+  Widget _buildCategoryToggleChip({
     required String name,
     required bool isSelected,
     required VoidCallback onTap,
@@ -498,11 +623,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.1)
-              : Colors.transparent,
+          color: isSelected ? AppColors.primaryColor.withOpacity(0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primaryColor : AppColors.neutral200,
@@ -511,12 +634,65 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         ),
         child: Text(
           name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             color: isSelected ? AppColors.primaryColor : AppColors.textSecondary,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNonRemovableCategoryChip({required String name}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.neutral200, width: 1),
+      ),
+      child: Text(
+        name,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedCategoryChip({
+    required String name,
+    required VoidCallback? onRemove,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryColor, width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(Icons.close_rounded, size: 18, color: AppColors.primaryColor),
+          ),
+        ],
       ),
     );
   }
@@ -555,8 +731,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       _locationFilter!.displayText,
                       Icons.location_on_rounded,
                     ),
-                  if (_selectedCategory != 'All')
-                    _buildFilterTag(_selectedCategory, Icons.category_rounded),
+                  if (_selectedCategoryIds.isNotEmpty)
+                    _buildFilterTag(
+                      'Categories: ${_selectedCategoryIds.length}',
+                      Icons.category_rounded,
+                    ),
                   if (_minRating > 0)
                     _buildFilterTag(
                       '${_minRating.toStringAsFixed(1)}+',
@@ -850,7 +1029,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                       setState(() {});
-                      _performSearch();
                     },
                   ),
                 ),
@@ -863,6 +1041,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildContent() {
+    if (!_hasSearched) {
+      return _buildPreSearchState();
+    }
     switch (_selectedType) {
       case 'All':
         return _buildAllContent();
@@ -872,8 +1053,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         return _buildDiscountsContent();
       case 'Packs':
         return _buildPacksContent();
-      case 'Stores':
-        return _buildStoresContent();
       default:
         return _buildAllContent();
     }
@@ -947,16 +1126,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         final offers = postProvider.offers;
         final packs = homeProvider.packs;
 
+        final categoriesById = _categoriesById(homeProvider);
+
         final isLoading = postProvider.isLoadingPosts ||
             postProvider.isLoadingOffers ||
             homeProvider.isLoadingPacks ||
             _isLoadingStores;
 
-        if (isLoading &&
-            products.isEmpty &&
-            offers.isEmpty &&
-            packs.isEmpty &&
-            _searchedStores.isEmpty) {
+        if (isLoading && products.isEmpty && offers.isEmpty && packs.isEmpty && _searchedStores.isEmpty) {
           return _buildGridShimmer();
         }
 
@@ -971,6 +1148,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         } else if (hasLocationFilter && validStoreIds.isEmpty) {
           filteredProducts = [];
         }
+
+        filteredProducts = filteredProducts
+            .where((p) => _postMatchesSelectedCategories(p, categoriesById))
+            .toList();
 
         if (_minRating > 0) {
           filteredProducts =
@@ -991,6 +1172,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         } else if (hasLocationFilter && validStoreIds.isEmpty) {
           filteredOffers = [];
         }
+
+        filteredOffers = filteredOffers
+            .where((o) => _postMatchesSelectedCategories(o.product, categoriesById))
+            .toList();
 
         var filteredPacks = packs.toList();
         if (hasLocationFilter && validStoreIds.isNotEmpty) {
@@ -1100,12 +1285,34 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               ],
 
               if (hasStores) ...[
-                _buildSectionHeader('Stores', filteredStores.length, () {
-                  setState(() => _selectedType = 'Stores');
-                }),
+                Row(
+                  children: [
+                    Text(
+                      'Stores',
+                      style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${filteredStores.length}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 ...filteredStores.take(3).map((store) => _buildStoreCard(store)),
               ],
+
             ],
           ),
         );
@@ -1358,10 +1565,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildProductsContent() {
     return Consumer<PostProvider>(
       builder: (context, postProvider, child) {
+        if (!_hasSearched) {
+          return _buildPreSearchState();
+        }
         if (postProvider.isLoadingPosts) {
           return _buildGridShimmer();
         }
 
+        final categoriesById = _categoriesById(context.read<HomeProvider>());
         var products = postProvider.posts.toList();
 
         final validStoreIds = _getValidStoreIds();
@@ -1382,6 +1593,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   p.price >= _priceRange.start && p.price <= _priceRange.end)
               .toList();
         }
+
+        products = products
+          .where((p) => _postMatchesSelectedCategories(p, categoriesById))
+          .toList();
 
         switch (_selectedSort) {
           case 'Oldest':
@@ -1406,12 +1621,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: CardConstants.gridHorizontalPadding,
+            vertical: CardConstants.gridVerticalPadding,
+          ),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.65,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
+            crossAxisCount: CardConstants.gridCrossAxisCount,
+            childAspectRatio: CardConstants.gridChildAspectRatio,
+            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
           ),
           itemCount: products.length,
           itemBuilder: (context, index) {
@@ -1435,6 +1653,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildDiscountsContent() {
     return Consumer<PostProvider>(
       builder: (context, postProvider, child) {
+        if (!_hasSearched) {
+          return _buildPreSearchState();
+        }
         var offers = postProvider.offers.toList();
 
         if (postProvider.isLoadingOffers) {
@@ -1451,17 +1672,25 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           offers = [];
         }
 
+        final categoriesById = _categoriesById(context.read<HomeProvider>());
+        offers = offers
+            .where((o) => _postMatchesSelectedCategories(o.product, categoriesById))
+            .toList();
+
         if (offers.isEmpty) {
           return _buildEmptyState();
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: CardConstants.gridHorizontalPadding,
+            vertical: CardConstants.gridVerticalPadding,
+          ),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.68,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
+            crossAxisCount: CardConstants.gridCrossAxisCount,
+            childAspectRatio: CardConstants.gridChildAspectRatio,
+            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
           ),
           itemCount: offers.length,
           itemBuilder: (context, index) {
@@ -1475,6 +1704,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildPacksContent() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
+        if (!_hasSearched) {
+          return _buildPreSearchState();
+        }
         var packs = homeProvider.packs.toList();
 
         if (homeProvider.isLoadingPacks) {
@@ -1495,12 +1727,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: CardConstants.gridHorizontalPadding,
+            vertical: CardConstants.gridVerticalPadding,
+          ),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.68,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
+            crossAxisCount: CardConstants.gridCrossAxisCount,
+            childAspectRatio: CardConstants.gridChildAspectRatio,
+            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
           ),
           itemCount: packs.length,
           itemBuilder: (context, index) {
@@ -1536,12 +1771,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildGridShimmer() {
     return ShimmerLoading(
       child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: CardConstants.gridHorizontalPadding,
+          vertical: CardConstants.gridVerticalPadding,
+        ),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
+          crossAxisCount: CardConstants.gridCrossAxisCount,
+          childAspectRatio: CardConstants.gridChildAspectRatio,
+          mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+          crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
         ),
         itemCount: 6,
         itemBuilder: (context, index) {
@@ -1568,7 +1806,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _selectedBaladiya = result.baladiya;
         _selectedLocation = result.address;
       });
-      _performSearch();
     }
   }
 }

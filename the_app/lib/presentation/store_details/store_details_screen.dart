@@ -8,9 +8,10 @@ import '../../core/routing/routes.dart';
 import '../../data/models/store_model.dart';
 import 'package:provider/provider.dart';
 import '../shared_widgets/gradient_button.dart';
-import '../home/widgets/product_card.dart';
+import '../shared_widgets/cards/product_card.dart';
 import '../../core/providers/store_provider.dart';
 import '../../core/widgets/app_button.dart';
+import '../common/constants/card_constants.dart';
 
 class StoreDetailsScreen extends StatefulWidget {
   final Store store;
@@ -313,12 +314,15 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen>
               return false;
             },
             child: GridView.builder(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: CardConstants.gridHorizontalPadding,
+                vertical: CardConstants.gridVerticalPadding,
+              ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: AppTheme.spacing12,
-                mainAxisSpacing: AppTheme.spacing12,
-                childAspectRatio: 0.75,
+                crossAxisCount: CardConstants.gridCrossAxisCount,
+                crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                childAspectRatio: CardConstants.gridChildAspectRatio,
               ),
               itemCount: products.length + (storeProvider.isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {

@@ -136,55 +136,63 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return RefreshIndicator(
       onRefresh: _loadFavorites,
       child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: CardConstants.gridHorizontalPadding,
+          vertical: CardConstants.gridVerticalPadding,
+        ),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.7,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
+          crossAxisCount: CardConstants.gridCrossAxisCount,
+          childAspectRatio: CardConstants.gridChildAspectRatio,
+          mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+          crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
         ),
         itemCount: _favorites.length,
         itemBuilder: (context, index) {
           final product = _favorites[index];
-          return Stack(
-            children: [
-              ProductCard(
-                product: product,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.productDetails,
-                    arguments: product,
-                  );
-                },
-              ),
-              // Remove from favorites button
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () => _removeFromFavorites(product),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 18,
-                      color: Colors.red,
+          return Align(
+            alignment: Alignment.topCenter,
+            child: Stack(
+              children: [
+                ProductCard(
+                  product: product,
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      Routes.productDetails,
+                      arguments: product,
+                    );
+                  },
+                ),
+
+                // Remove from favorites button (pinned to the card)
+                Positioned(
+                  top: CardConstants.badgePosition.dy,
+                  right: CardConstants.badgePosition.dx,
+                  child: GestureDetector(
+                    onTap: () => _removeFromFavorites(product),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.favorite,
+                        size: 16,
+                        color: Colors.red,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

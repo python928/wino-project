@@ -1,46 +1,55 @@
 import 'package:flutter/material.dart';
 import '../../../core/routing/routes.dart';
 import '../../../data/models/offer_model.dart';
-import '../../../core/widgets/cards/unified_item_card.dart';
+import '../../../core/widgets/cards/base_item_card.dart';
 
-/// Unified Promotion Card using UnifiedItemCard
-/// Displays promotions/offers consistently across home, search, and discovery screens
-class PromotionCard extends StatelessWidget {
+/// Promotion Card inheriting from BaseItemCard
+/// Displays promotions/offers with promotional pricing
+class PromotionCard extends BaseItemCard {
   final Offer offer;
-  final VoidCallback? onTap;
 
-  const PromotionCard({
+  PromotionCard({
     super.key,
     required this.offer,
-    this.onTap,
-  });
+    VoidCallback? onTap,
+    VoidCallback? onEditTap,
+  }) : super(
+          title: offer.product.title,
+          imageUrl: offer.product.image,
+          price: offer.newPrice,
+          oldPrice: offer.product.price,
+          discountPercentage: offer.discountPercentage,
+          rating: offer.product.rating,
+          bottomLeftText: offer.product.storeName,
+          onTap: onTap,
+          onEditTap: onEditTap,
+        );
 
   @override
   Widget build(BuildContext context) {
-    final product = offer.product;
-
-    // Create a modified product with promotion pricing
-    final productWithPromotion = product.copyWith(
-      price: offer.newPrice,
-      oldPrice: product.price,
-      discountPercentage: offer.discountPercentage,
-    );
-
-    return UnifiedItemCard(
-      title: product.title,
-      imageUrl: product.image,
-      price: offer.newPrice,
-      oldPrice: product.price,
-      discountPercentage: offer.discountPercentage,
-      rating: product.rating,
-      bottomLeftText: product.storeName,
+    return BaseItemCard(
+      title: title,
+      imageUrl: imageUrl,
+      price: price,
+      oldPrice: oldPrice,
+      discountPercentage: discountPercentage,
+      rating: rating,
+      bottomLeftText: bottomLeftText,
       onTap: onTap ?? () {
+        // Create a modified product with promotion pricing
+        final productWithPromotion = offer.product.copyWith(
+          price: offer.newPrice,
+          oldPrice: offer.product.price,
+          discountPercentage: offer.discountPercentage,
+        );
+        
         Navigator.pushNamed(
           context,
           Routes.productDetails,
           arguments: productWithPromotion,
         );
       },
+      onEditTap: onEditTap,
     );
   }
 }

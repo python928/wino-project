@@ -16,6 +16,7 @@ import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
+import '../common/constants/card_constants.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../home/main_navigation_screen.dart';
@@ -923,12 +924,15 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: CardConstants.gridHorizontalPadding,
+        vertical: CardConstants.gridVerticalPadding,
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.68,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
+        crossAxisCount: CardConstants.gridCrossAxisCount,
+        childAspectRatio: CardConstants.gridChildAspectRatio,
+        mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+        crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
       ),
       itemCount: _products.length,
       itemBuilder: (context, index) {
@@ -960,12 +964,15 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: CardConstants.gridHorizontalPadding,
+        vertical: CardConstants.gridVerticalPadding,
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.68,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
+        crossAxisCount: CardConstants.gridCrossAxisCount,
+        childAspectRatio: CardConstants.gridChildAspectRatio,
+        mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+        crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
       ),
       itemCount: _offers.length,
       itemBuilder: (context, index) {
@@ -988,12 +995,15 @@ class _EnhancedStoreScreenState extends State<EnhancedStoreScreen>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: CardConstants.gridHorizontalPadding,
+        vertical: CardConstants.gridVerticalPadding,
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.68,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
+        crossAxisCount: CardConstants.gridCrossAxisCount,
+        childAspectRatio: CardConstants.gridChildAspectRatio,
+        mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+        crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
       ),
       itemCount: _packs.length,
       itemBuilder: (context, index) {

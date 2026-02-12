@@ -10,23 +10,16 @@ import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
-import '../profile/edit_product_screen.dart';
 import '../shared_widgets/shimmer_loading.dart';
-import '../shared_widgets/error_state_widget.dart';
-import 'widgets/header_location_widget.dart';
 import 'widgets/category_item.dart';
-import 'widgets/promo_banner.dart';
-import 'widgets/hot_deal_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import 'widgets/featured_store_card.dart';
-import '../shared_widgets/cards/pack_card.dart';
-import '../shared_widgets/cards/promotion_card.dart';
 import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
+import '../common/constants/card_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -84,6 +77,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _selectedLocation = result.address;
       });
     }
+  }
+
+  double _gridCardWidth(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = CardConstants.gridCrossAxisCount;
+    final availableWidth = screenWidth -
+        (CardConstants.gridHorizontalPadding * 2) -
+        (CardConstants.gridCrossAxisSpacing * (crossAxisCount - 1));
+    return availableWidth / crossAxisCount;
   }
 
   @override
@@ -420,13 +422,13 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 280,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+            padding: const EdgeInsets.symmetric(horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
             itemCount: hotDeals.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
               return SizedBox(
-                width: 180,
+                width: _gridCardWidth(context),
                 child: ProductCard(
                   product: hotDeals[index],
                   onTap: () => _navigateToProductDetails(hotDeals[index]),
@@ -488,13 +490,13 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 220,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+            padding: const EdgeInsets.symmetric(horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
             itemCount: packs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
               final pack = packs[index];
-              return _buildPackCard(pack);
+              return _buildPackCard(context, pack);
             },
           ),
         );
@@ -502,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPackCard(Pack pack) {
+  Widget _buildPackCard(BuildContext context, Pack pack) {
     final discountPercent = pack.totalPrice > 0
         ? ((pack.totalPrice - pack.discountPrice) / pack.totalPrice * 100).round()
         : 0;
@@ -513,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushNamed(context, Routes.packDetails, arguments: pack);
       },
       child: Container(
-        width: AppConstants.productCardWidth,
+        width: _gridCardWidth(context),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppConstants.cardRadius),
@@ -699,13 +701,13 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 280,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+            padding: const EdgeInsets.symmetric(horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
               return SizedBox(
-                width: AppConstants.productCardWidth,
+                width: _gridCardWidth(context),
                 child: ProductCard(
                   product: products[index],
                   onTap: () => _navigateToProductDetails(products[index]),
@@ -724,14 +726,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: SizedBox(
         height: 280,
         child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+          padding: const EdgeInsets.symmetric(horizontal: CardConstants.gridHorizontalPadding),
           scrollDirection: Axis.horizontal,
           itemCount: 4,
-          separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+          separatorBuilder: (_, __) => const SizedBox(width: CardConstants.gridCrossAxisSpacing),
           itemBuilder: (context, index) {
-            return const SizedBox(
-              width: 180,
-              child: ProductCardSkeleton(),
+            return SizedBox(
+              width: _gridCardWidth(context),
+              child: const ProductCardSkeleton(),
             );
           },
         ),
@@ -788,15 +790,15 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 280,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+            padding: const EdgeInsets.symmetric(horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
             itemCount: offers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
               final offer = offers[index];
               final product = offer.product;
               return SizedBox(
-                width: AppConstants.productCardWidth,
+                width: _gridCardWidth(context),
                 child: GestureDetector(
                   onTap: () {
                     // Create modified product with promotion pricing

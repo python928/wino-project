@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import '../common/constants/card_constants.dart';
 
 /// Shimmer effect widget for loading states
 class ShimmerLoading extends StatefulWidget {
@@ -105,47 +105,57 @@ class ProductCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.hasBoundedWidth ? constraints.maxWidth : 160.0;
+        final isSmall = w < 100;
+
+        final padding = isSmall ? 6.0 : 12.0;
+        final titleHeight = isSmall ? 10.0 : 16.0;
+        final priceHeight = isSmall ? 9.0 : 14.0;
+        final ratingHeight = isSmall ? 8.0 : 12.0;
+        final gap = isSmall ? 4.0 : 8.0;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image placeholder
-          const ShimmerBox(height: 120, borderRadius: 16),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title placeholder
-                const ShimmerBox(height: 16, width: 100),
-                const SizedBox(height: 8),
-                // Price placeholder
-                const ShimmerBox(height: 14, width: 60),
-                const SizedBox(height: 8),
-                // Rating placeholder
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image placeholder (square)
+              ShimmerBox(height: w, borderRadius: 16),
+              Padding(
+                padding: EdgeInsets.all(padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const ShimmerBox(height: 12, width: 40),
-                    const SizedBox(width: 8),
-                    const ShimmerBox(height: 12, width: 30),
+                    ShimmerBox(height: titleHeight, width: isSmall ? w * 0.7 : 100),
+                    SizedBox(height: gap),
+                    ShimmerBox(height: priceHeight, width: isSmall ? w * 0.45 : 60),
+                    SizedBox(height: gap),
+                    Row(
+                      children: [
+                        ShimmerBox(height: ratingHeight, width: isSmall ? w * 0.35 : 40),
+                        SizedBox(width: isSmall ? 4 : 8),
+                        ShimmerBox(height: ratingHeight, width: isSmall ? w * 0.25 : 30),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -207,14 +217,17 @@ class ProductGridSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShimmerLoading(
       child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: CardConstants.gridHorizontalPadding,
+          vertical: CardConstants.gridVerticalPadding,
+        ),
         physics: const NeverScrollableScrollPhysics(),
         shrinkWrap: true,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          crossAxisCount: CardConstants.gridCrossAxisCount,
+          crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+          mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+          childAspectRatio: CardConstants.gridChildAspectRatio,
         ),
         itemCount: itemCount,
         itemBuilder: (context, index) => const ProductCardSkeleton(),

@@ -1,43 +1,57 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../data/models/post_model.dart';
-import '../../../core/widgets/cards/unified_item_card.dart';
+import '../../../core/widgets/cards/base_item_card.dart';
 
-class ProductCard extends StatelessWidget {
+/// Product Card inheriting from BaseItemCard
+/// Provides standardized product display with store navigation
+class ProductCard extends BaseItemCard {
   final Post product;
-  final VoidCallback? onTap;
   final VoidCallback? onFavoriteTap;
-  final VoidCallback? onEditTap;
 
-  const ProductCard({
+  ProductCard({
     super.key,
     required this.product,
-    this.onTap,
+    VoidCallback? onTap,
     this.onFavoriteTap,
-    this.onEditTap,
-  });
+    VoidCallback? onEditTap,
+  }) : super(
+          title: product.title,
+          imageUrl: product.image,
+          price: product.price,
+          oldPrice: product.oldPrice,
+          hidePrice: product.hidePrice,
+          discountPercentage: _calculateDiscountPercent(product),
+          rating: product.rating,
+          bottomLeftText: product.storeName,
+          isUnavailable: !product.isAvailable,
+          onTap: (product.isAvailable || onEditTap != null) ? onTap : null,
+          onEditTap: onEditTap,
+        );
+
+  static int? _calculateDiscountPercent(Post product) {
+    if (product.oldPrice == null || product.oldPrice! <= product.price) {
+      return null;
+    }
+    return product.discountPercentage ??
+        ((product.oldPrice! - product.price) / product.oldPrice! * 100).round();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount = product.oldPrice != null && product.oldPrice! > product.price;
-    final discountPercent = hasDiscount
-        ? product.discountPercentage ??
-            ((product.oldPrice! - product.price) / product.oldPrice! * 100).round()
-        : null;
-
-    return UnifiedItemCard(
-      title: product.title,
-      imageUrl: product.image,
-      price: product.price,
-      oldPrice: hasDiscount ? product.oldPrice : null,
-      hidePrice: product.hidePrice,
-      discountPercentage: discountPercent,
-      rating: product.rating,
-      bottomLeftText: product.storeName,
-      isUnavailable: !product.isAvailable,
-      onTap: (product.isAvailable || onEditTap != null) ? onTap : null,
+    // Override to provide context-aware navigation
+    return BaseItemCard(
+      title: title,
+      imageUrl: imageUrl,
+      price: price,
+      oldPrice: oldPrice,
+      hidePrice: hidePrice,
+      discountPercentage: discountPercentage,
+      rating: rating,
+      bottomLeftText: bottomLeftText,
+      isUnavailable: isUnavailable,
+      onTap: onTap,
       onEditTap: onEditTap,
       onBottomLeftTap: () => _navigateToStore(context),
     );

@@ -27,8 +27,9 @@ import '../shared_widgets/cards/product_card.dart';
 import 'add_promotion_screen.dart';
 import 'edit_product_screen.dart';
 import 'add_pack_screen.dart';
-import '../../core/widgets/cards/unified_item_card.dart';
-import '../common/widgets/stacked_product_images.dart';
+import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
+
 import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
 import 'widgets/profile_user_header.dart';
@@ -778,12 +779,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             },
                           );
                         } else if (item is Pack) {
-                          return UnifiedItemCard(
-                            title: '${item.name}\n${_buildProductSummary(item.products)}',
-                            price: item.discountPrice,
-                            customImageWidget: StackedProductImages(products: item.products),
-                            bottomLeftText: '${item.products.length} products',
-                            bottomLeftIcon: Icons.inventory_2_outlined,
+                          return PackCard(
+                            pack: item,
                             onTap: () {
                               // Navigate to pack details
                               Navigator.pushNamed(context, Routes.packDetails, arguments: item);
@@ -794,21 +791,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         } else if (item is Offer) {
                           try {
-                            final product = item.product;
-                            // Create modified product with promotion pricing
-                            final productWithPromotion = product.copyWith(
-                              price: item.newPrice,
-                              oldPrice: product.price,
-                              discountPercentage: item.discountPercentage,
-                            );
-                            return UnifiedItemCard(
-                              title: product.title,
-                              imageUrl: product.image,
-                              price: item.newPrice,
-                              oldPrice: product.price,
-                              discountPercentage: item.discountPercentage,
-                              rating: product.rating,
+                            return PromotionCard(
+                              offer: item,
                               onTap: () {
+                                final product = item.product;
+                                // Create modified product with promotion pricing
+                                final productWithPromotion = product.copyWith(
+                                  price: item.newPrice,
+                                  oldPrice: product.price,
+                                  discountPercentage: item.discountPercentage,
+                                );
                                 Navigator.pushNamed(
                                   context,
                                   Routes.productDetails,
@@ -1055,43 +1047,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  String _buildProductSummary(List<dynamic> products) {
-    if (products.isEmpty) return 'Empty pack';
-    
-    final maxItems = 3;
-    final itemsToShow = products.take(maxItems).toList();
-    
-    final validItems = itemsToShow.map((product) {
-      int quantity = 1;
-      String name = '';
-      
-      // Handle PackProduct object
-      if (product is PackProduct) {
-        quantity = product.quantity;
-        name = product.productName;
-      } else if (product is Map<String, dynamic>) {
-        quantity = product['quantity'] ?? 1;
-        name = product['product_name']?.toString().trim() ?? '';
-      }
-      
-      if (name.isNotEmpty && name != 'null') {
-        return '$quantity $name';
-      }
-      return null;
-    }).where((item) => item != null).toList();
-    
-    if (validItems.isEmpty) {
-      return '${products.length} products';
-    }
-    
-    String summary = validItems.join(' + ');
-    
-    if (products.length > maxItems) {
-      summary += ' ...';
-    }
-    
-    return summary;
-  }
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
