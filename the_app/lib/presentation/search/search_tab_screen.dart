@@ -24,11 +24,13 @@ import 'category_selection_screen.dart';
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
   final String? initialType;
+  final bool autoSearchOnOpen;
 
   const SearchTabScreen({
     super.key,
     this.initialQuery,
     this.initialType,
+    this.autoSearchOnOpen = false,
   });
 
   @override
@@ -40,14 +42,18 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   final FocusNode _searchFocus = FocusNode();
 
   bool _hasSearched = false;
+  bool _showAllStoresInAllView = false;
 
   // Selected type
   String _selectedType = 'All';
   final List<ToggleOption> _typeOptions = const [
     ToggleOption(label: 'All', icon: Icons.grid_view_rounded, value: 'All'),
-    ToggleOption(label: 'Products', icon: Icons.shopping_bag_rounded, value: 'Products'),
-    ToggleOption(label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
-    ToggleOption(label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
+    ToggleOption(
+        label: 'Products', icon: Icons.shopping_bag_rounded, value: 'Products'),
+    ToggleOption(
+        label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
+    ToggleOption(
+        label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
   ];
 
   // Filters
@@ -80,10 +86,22 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     // Initialize selected type from widget parameter
     if (widget.initialType != null && widget.initialType!.isNotEmpty) {
       final type = widget.initialType!;
-      _selectedType = _typeOptions.any((o) => o.value == type) ? type : 'All';
+      if (type == 'Stores') {
+        _selectedType = 'All';
+        _showAllStoresInAllView = true;
+      } else {
+        _selectedType = _typeOptions.any((o) => o.value == type) ? type : 'All';
+      }
     }
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
+    }
+
+    if (widget.autoSearchOnOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _performSearch();
+      });
     }
   }
 
@@ -114,7 +132,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     final postProvider = context.read<PostProvider>();
     postProvider.loadPosts(
       search: _searchController.text.isNotEmpty ? _searchController.text : null,
-      categoryId: _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null,
+      categoryId:
+          _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null,
     );
     postProvider.loadOffers();
     context.read<HomeProvider>().loadFeaturedPacks();
@@ -165,7 +184,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     setState(() => _isLoadingStores = true);
     try {
       final stores = await StoreRepository.searchStores(
-        query: _searchController.text.isNotEmpty ? _searchController.text : null,
+        query:
+            _searchController.text.isNotEmpty ? _searchController.text : null,
       );
       if (mounted) {
         setState(() {
@@ -244,7 +264,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return {for (final c in homeProvider.categories) c.id: c.name};
   }
 
-  bool _postMatchesSelectedCategories(Post post, Map<int, String> categoriesById) {
+  bool _postMatchesSelectedCategories(
+      Post post, Map<int, String> categoriesById) {
     if (_selectedCategoryIds.isEmpty) return true;
 
     final categoryId = post.categoryId;
@@ -294,7 +315,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             children: [
               // Location Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
@@ -309,7 +331,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   children: [
                     // Back button
                     IconButton(
-                      icon: Icon(Icons.arrow_back, color: AppColors.blackColor, size: 24),
+                      icon: Icon(Icons.arrow_back,
+                          color: AppColors.blackColor, size: 24),
                       onPressed: () => Navigator.pop(context),
                       padding: EdgeInsets.zero,
                       constraints: BoxConstraints(),
@@ -320,7 +343,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       onTap: _showLocationPicker,
                       child: Row(
                         children: [
-                          Icon(Icons.location_on, color: AppColors.primaryColor, size: 24),
+                          Icon(Icons.location_on,
+                              color: AppColors.primaryColor, size: 24),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,7 +432,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               // Filter Button
               _buildHeaderButton(
                 icon: Icons.tune_rounded,
-                isActive: _minRating > 0 || _priceRange.start > 0 || _priceRange.end < 100000,
+                isActive: _minRating > 0 ||
+                    _priceRange.start > 0 ||
+                    _priceRange.end < 100000,
                 onTap: _showFiltersSheet,
               ),
             ],
@@ -443,7 +469,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           children: [
             Icon(
               icon,
-              color: isActive ? AppColors.primaryColor : AppColors.textSecondary,
+              color:
+                  isActive ? AppColors.primaryColor : AppColors.textSecondary,
               size: 24,
             ),
             if (badge != null)
@@ -473,7 +500,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildTypeToggleButtons() {
-    final selectedIndex = _typeOptions.indexWhere((o) => o.value == _selectedType);
+    final selectedIndex =
+        _typeOptions.indexWhere((o) => o.value == _selectedType);
     final safeSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
     return Container(
@@ -503,9 +531,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
         final categoriesById = _categoriesById(homeProvider);
         final selectedNames = _selectedCategoryIds
-          .map((id) => categoriesById[id])
-          .whereType<String>()
-          .toList();
+            .map((id) => categoriesById[id])
+            .whereType<String>()
+            .toList();
 
         return Container(
           color: Colors.white,
@@ -526,7 +554,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   GestureDetector(
                     onTap: _openCategoryPicker,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.primaryColor.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(10),
@@ -542,7 +571,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryColor),
+                          Icon(Icons.arrow_forward_rounded,
+                              size: 16, color: AppColors.primaryColor),
                         ],
                       ),
                     ),
@@ -567,7 +597,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     }
 
                     final category = previewCategories[index - 1];
-                    final isSelected = _selectedCategoryIds.contains(category.id);
+                    final isSelected =
+                        _selectedCategoryIds.contains(category.id);
                     return _buildCategoryToggleChip(
                       name: category.name,
                       isSelected: isSelected,
@@ -601,7 +632,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       return _buildSelectedCategoryChip(
                         name: name,
                         onRemove: id > 0
-                            ? () => setState(() => _selectedCategoryIds.remove(id))
+                            ? () =>
+                                setState(() => _selectedCategoryIds.remove(id))
                             : null,
                       );
                     },
@@ -625,7 +657,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor.withOpacity(0.12) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primaryColor : AppColors.neutral200,
@@ -639,7 +673,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? AppColors.primaryColor : AppColors.textSecondary,
+            color:
+                isSelected ? AppColors.primaryColor : AppColors.textSecondary,
           ),
         ),
       ),
@@ -690,7 +725,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onRemove,
-            child: Icon(Icons.close_rounded, size: 18, color: AppColors.primaryColor),
+            child: Icon(Icons.close_rounded,
+                size: 18, color: AppColors.primaryColor),
           ),
         ],
       ),
@@ -833,7 +869,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   children: [
                     Text(
                       'Filters',
-                      style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTextStyles.h3
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                     AppTextButton(
                       text: 'Reset',
@@ -870,7 +907,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         children: _sortOptions.map((option) {
                           final isSelected = _selectedSort == option;
                           return GestureDetector(
-                            onTap: () => setSheetState(() => _selectedSort = option),
+                            onTap: () =>
+                                setSheetState(() => _selectedSort = option),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -886,10 +924,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                                 option,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  fontWeight:
-                                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color:
-                                      isSelected ? Colors.white : AppColors.textPrimary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.textPrimary,
                                 ),
                               ),
                             ),
@@ -970,7 +1010,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                Icon(Icons.star_rounded,
+                                    color: Colors.amber, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
                                   _minRating.toStringAsFixed(1),
@@ -1133,7 +1174,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             homeProvider.isLoadingPacks ||
             _isLoadingStores;
 
-        if (isLoading && products.isEmpty && offers.isEmpty && packs.isEmpty && _searchedStores.isEmpty) {
+        if (isLoading &&
+            products.isEmpty &&
+            offers.isEmpty &&
+            packs.isEmpty &&
+            _searchedStores.isEmpty) {
           return _buildGridShimmer();
         }
 
@@ -1174,7 +1219,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         filteredOffers = filteredOffers
-            .where((o) => _postMatchesSelectedCategories(o.product, categoriesById))
+            .where((o) =>
+                _postMatchesSelectedCategories(o.product, categoriesById))
             .toList();
 
         var filteredPacks = packs.toList();
@@ -1192,8 +1238,31 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         final hasOffers = filteredOffers.isNotEmpty;
         final hasPacks = filteredPacks.isNotEmpty;
         final hasStores = filteredStores.isNotEmpty;
+        final hasItems = hasProducts || hasOffers || hasPacks;
 
-        if (!hasProducts && !hasOffers && !hasPacks && !hasStores) {
+        final combinedItemsCount = filteredProducts.length +
+            filteredOffers.length +
+            filteredPacks.length;
+
+        final combinedCards = <Widget>[
+          ...filteredProducts.map(
+            (p) => ProductCard(
+              product: p,
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  Routes.productDetails,
+                  arguments: p,
+                );
+              },
+              onFavoriteTap: () {},
+            ),
+          ),
+          ...filteredOffers.map((o) => PromotionCard(offer: o)),
+          ...filteredPacks.map((p) => PackCard(pack: p)),
+        ];
+
+        if (!hasItems && !hasStores) {
           return _buildEmptyState();
         }
 
@@ -1202,98 +1271,60 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasProducts) ...[
-                _buildSectionHeader('Products', filteredProducts.length, () {
-                  setState(() => _selectedType = 'Products');
-                }),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 230,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: filteredProducts.take(6).length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(right: index < 5 ? 12 : 0),
-                        child: SizedBox(
-                          width: 165,
-                          child: ProductCard(
-                            product: filteredProducts[index],
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                Routes.productDetails,
-                                arguments: filteredProducts[index],
-                              );
-                            },
-                            onFavoriteTap: () {},
-                          ),
+              if (hasItems) ...[
+                Row(
+                  children: [
+                    Text(
+                      'Results',
+                      style: AppTextStyles.h4
+                          .copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$combinedItemsCount',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryColor,
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: combinedCards.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: CardConstants.gridCrossAxisCount,
+                    crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                    mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                    childAspectRatio: CardConstants.gridChildAspectRatio,
                   ),
+                  itemBuilder: (context, index) => combinedCards[index],
                 ),
                 const SizedBox(height: 28),
               ],
-
-              if (hasOffers) ...[
-                _buildSectionHeader('Discounts', filteredOffers.length, () {
-                  setState(() => _selectedType = 'Discounts');
-                }),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 230,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: filteredOffers.take(6).length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(right: index < 5 ? 12 : 0),
-                        child: SizedBox(
-                          width: 165,
-                          child: PromotionCard(offer: filteredOffers[index]),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 28),
-              ],
-
-              if (hasPacks) ...[
-                _buildSectionHeader('Packs', filteredPacks.length, () {
-                  setState(() => _selectedType = 'Packs');
-                }),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 230,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: filteredPacks.take(6).length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(right: index < 5 ? 12 : 0),
-                        child: SizedBox(
-                          width: 165,
-                          child: PackCard(pack: filteredPacks[index]),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 28),
-              ],
-
               if (hasStores) ...[
                 Row(
                   children: [
                     Text(
                       'Stores',
-                      style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTextStyles.h4
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(width: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -1310,9 +1341,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...filteredStores.take(3).map((store) => _buildStoreCard(store)),
+                ...(_showAllStoresInAllView
+                        ? filteredStores
+                        : filteredStores.take(3))
+                    .map((store) => _buildStoreCard(store)),
               ],
-
             ],
           ),
         );
@@ -1595,12 +1628,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         products = products
-          .where((p) => _postMatchesSelectedCategories(p, categoriesById))
-          .toList();
+            .where((p) => _postMatchesSelectedCategories(p, categoriesById))
+            .toList();
 
         switch (_selectedSort) {
           case 'Oldest':
-            products = List.from(products)..sort((a, b) => a.id.compareTo(b.id));
+            products = List.from(products)
+              ..sort((a, b) => a.id.compareTo(b.id));
             break;
           case 'Highest Rated':
             products = List.from(products)
@@ -1674,7 +1708,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
         final categoriesById = _categoriesById(context.read<HomeProvider>());
         offers = offers
-            .where((o) => _postMatchesSelectedCategories(o.product, categoriesById))
+            .where((o) =>
+                _postMatchesSelectedCategories(o.product, categoriesById))
             .toList();
 
         if (offers.isEmpty) {

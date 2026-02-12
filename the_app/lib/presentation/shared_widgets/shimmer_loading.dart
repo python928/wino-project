@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../common/constants/card_constants.dart';
 
@@ -108,6 +110,7 @@ class ProductCardSkeleton extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.hasBoundedWidth ? constraints.maxWidth : 160.0;
+        final h = constraints.hasBoundedHeight ? constraints.maxHeight : 280.0;
         final isSmall = w < 100;
 
         final padding = isSmall ? 6.0 : 12.0;
@@ -115,6 +118,16 @@ class ProductCardSkeleton extends StatelessWidget {
         final priceHeight = isSmall ? 9.0 : 14.0;
         final ratingHeight = isSmall ? 8.0 : 12.0;
         final gap = isSmall ? 4.0 : 8.0;
+
+        // Keep skeleton responsive to the grid tile height.
+        // Previously the image was always square (height == width), which can
+        // overflow when the grid enforces a fixed tile height.
+        final contentHeight = (padding * 2) +
+            titleHeight +
+            priceHeight +
+            ratingHeight +
+            (gap * 2);
+        final imageHeight = math.max(0.0, math.min(w, h - contentHeight));
 
         return Container(
           decoration: BoxDecoration(
@@ -132,21 +145,27 @@ class ProductCardSkeleton extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Image placeholder (square)
-              ShimmerBox(height: w, borderRadius: 16),
+              ShimmerBox(height: imageHeight, borderRadius: 16),
               Padding(
                 padding: EdgeInsets.all(padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ShimmerBox(height: titleHeight, width: isSmall ? w * 0.7 : 100),
+                    ShimmerBox(
+                        height: titleHeight, width: isSmall ? w * 0.7 : 100),
                     SizedBox(height: gap),
-                    ShimmerBox(height: priceHeight, width: isSmall ? w * 0.45 : 60),
+                    ShimmerBox(
+                        height: priceHeight, width: isSmall ? w * 0.45 : 60),
                     SizedBox(height: gap),
                     Row(
                       children: [
-                        ShimmerBox(height: ratingHeight, width: isSmall ? w * 0.35 : 40),
+                        ShimmerBox(
+                            height: ratingHeight,
+                            width: isSmall ? w * 0.35 : 40),
                         SizedBox(width: isSmall ? 4 : 8),
-                        ShimmerBox(height: ratingHeight, width: isSmall ? w * 0.25 : 30),
+                        ShimmerBox(
+                            height: ratingHeight,
+                            width: isSmall ? w * 0.25 : 30),
                       ],
                     ),
                   ],

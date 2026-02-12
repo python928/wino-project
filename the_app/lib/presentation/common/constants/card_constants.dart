@@ -17,7 +17,7 @@ class CardConstants {
   static const double gridCrossAxisSpacing = 14.0;
   static const double gridMainAxisSpacing = 14.0;
   // Smaller value => taller tiles (width/height)
-  static const double gridChildAspectRatio = 0.55;
+  static const double gridChildAspectRatio = 0.72;
 
   // Typography
   static const double titleFontSize = 13.0;
@@ -53,7 +53,7 @@ class CardConstants {
   static const double betweenSections = 4.0;
 
   // Grid Configuration
-  static const int gridCrossAxisCount = 4;
+  static const int gridCrossAxisCount = 2;
 
   // Shadow
   static BoxShadow get cardShadow => BoxShadow(

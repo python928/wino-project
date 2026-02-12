@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_toggle_button.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../core/theme/app_colors.dart';
 
 /// Filter widget for profile posts with toggle buttons
 class ProfilePostFilter extends StatelessWidget {
   final int selectedIndex;
+  final int postsCount;
   final ValueChanged<int> onFilterChanged;
   final TextEditingController? searchController;
   final ValueChanged<String>? onSearchChanged;
@@ -12,6 +14,7 @@ class ProfilePostFilter extends StatelessWidget {
   const ProfilePostFilter({
     super.key,
     required this.selectedIndex,
+    required this.postsCount,
     required this.onFilterChanged,
     this.searchController,
     this.onSearchChanged,
@@ -24,12 +27,33 @@ class ProfilePostFilter extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'My Posts',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              const Text(
+                'Posts',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.blackColor5,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  postsCount.toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           // Search field (if provided)
@@ -47,22 +71,18 @@ class ProfilePostFilter extends StatelessWidget {
             options: const [
               ToggleOption(
                 label: 'All',
-                icon: Icons.grid_view_rounded,
                 value: 'all',
               ),
               ToggleOption(
                 label: 'Products',
-                icon: Icons.shopping_bag_outlined,
                 value: 'product',
               ),
               ToggleOption(
                 label: 'Discounts',
-                icon: Icons.percent,
                 value: 'promotion',
               ),
               ToggleOption(
                 label: 'Packs',
-                icon: Icons.inventory_2_outlined,
                 value: 'pack',
               ),
             ],
@@ -70,6 +90,7 @@ class ProfilePostFilter extends StatelessWidget {
             onChanged: onFilterChanged,
             scrollable: true,
             compact: true,
+            showBorder: false,
           ),
         ],
       ),

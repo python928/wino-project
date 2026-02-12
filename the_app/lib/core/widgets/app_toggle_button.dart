@@ -8,6 +8,7 @@ class AppToggleButton extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final bool compact;
+  final bool showBorder;
 
   const AppToggleButton({
     super.key,
@@ -16,10 +17,14 @@ class AppToggleButton extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.compact = false,
+    this.showBorder = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final unselectedBg = showBorder ? Colors.white : AppColors.blackColor5;
+    final selectedBg = AppColors.primaryColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -27,12 +32,16 @@ class AppToggleButton extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
             : const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor : Colors.white,
+          color: isSelected ? selectedBg : unselectedBg,
           borderRadius: BorderRadius.circular(compact ? 20 : 24),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryColor : const Color(0xFFE0E0E0),
-            width: 1.5,
-          ),
+          border: showBorder
+              ? Border.all(
+                  color: isSelected
+                      ? AppColors.primaryColor
+                      : const Color(0xFFE0E0E0),
+                  width: 1.5,
+                )
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -67,6 +76,7 @@ class AppToggleButtonGroup extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final bool scrollable;
   final bool compact;
+  final bool showBorder;
 
   const AppToggleButtonGroup({
     super.key,
@@ -75,6 +85,7 @@ class AppToggleButtonGroup extends StatelessWidget {
     required this.onChanged,
     this.scrollable = true,
     this.compact = false,
+    this.showBorder = true,
   });
 
   @override
@@ -108,6 +119,7 @@ class AppToggleButtonGroup extends StatelessWidget {
           isSelected: selectedIndex == index,
           onTap: () => onChanged(index),
           compact: compact,
+          showBorder: showBorder,
         ),
       );
     });

@@ -1,48 +1,47 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_button.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
-import '../../core/providers/auth_provider.dart';
 import '../common/location_picker_screen.dart';
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
-  final String initialEmail;
   final String initialPhone;
   final String? initialImage;
+  final String? initialCoverImage;
   final String? initialStoreDescription;
   final String? initialAddress;
 
   const EditMerchantProfileScreen({
     super.key,
     required this.initialName,
-    required this.initialEmail,
     required this.initialPhone,
     this.initialImage,
+    this.initialCoverImage,
     this.initialStoreDescription,
     this.initialAddress,
   });
 
   @override
-  State<EditMerchantProfileScreen> createState() => _EditMerchantProfileScreenState();
+  State<EditMerchantProfileScreen> createState() =>
+      _EditMerchantProfileScreenState();
 }
 
 class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   late TextEditingController _nameController;
-  late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _descriptionController;
   bool _isLoading = false;
   bool _isUploadingImage = false;
+  bool _isUploadingCover = false;
   String? _avatarUrl;
+  String? _coverUrl;
   int? _storeId;
   String? _selectedWilaya;
   String? _selectedBaladiya;
@@ -51,10 +50,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-    _emailController = TextEditingController(text: widget.initialEmail);
     _phoneController = TextEditingController(text: widget.initialPhone);
-    _descriptionController = TextEditingController(text: widget.initialStoreDescription ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.initialStoreDescription ?? '');
     _avatarUrl = widget.initialImage;
+    _coverUrl = widget.initialCoverImage;
     _loadAddress();
     _loadStoreId();
   }
@@ -62,7 +62,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -96,7 +95,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) return;
 
-      final response = await ApiService.get('${ApiConfig.stores}?owner=$userId');
+      final response =
+          await ApiService.get('${ApiConfig.stores}?owner=$userId');
       final storesList = response is Map && response.containsKey('results')
           ? response['results'] as List
           : (response is List ? response : []);
@@ -115,7 +115,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    if (pickedFile != null) {
+    if (pickedFile == null) {
+      if (mounted) Helpers.showSnackBar(context, 'No image selected');
+      return;
+    }
+
+    {
       setState(() => _isUploadingImage = true);
 
       try {
@@ -125,12 +130,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
         final file = File(pickedFile.path);
         await ApiService.updateMultipart(
-          '${ApiConfig.users}$userId/',
-          {},
-          file,
-          'profile_image',
-          method: 'PATCH'
-        );
+            '${ApiConfig.users}$userId/', {}, file, 'profile_image',
+            method: 'PATCH');
 
         final response = await ApiService.get('${ApiConfig.users}$userId/');
         await StorageService.saveUserData(response);
@@ -139,17 +140,54 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           _avatarUrl = response['profile_image'] ?? response['avatar'];
         });
 
-        if (mounted) Helpers.showSnackBar(context, 'Profile picture updated successfully');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Profile picture updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'Failed to update image: $e');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Failed to update image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
     }
   }
 
+  Future<void> _pickCoverImage() async {
+    if (_storeId == null) return;
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) {
+      if (mounted) Helpers.showSnackBar(context, 'No image selected');
+      return;
+    }
+
+    setState(() => _isUploadingCover = true);
+    try {
+      final file = File(pickedFile.path);
+      await ApiService.updateMultipart(
+        ApiConfig.storeDetail(_storeId!),
+        {},
+        file,
+        'cover_image',
+        method: 'PATCH',
+      );
+
+      final store = await ApiService.get(ApiConfig.storeDetail(_storeId!));
+      setState(() {
+        _coverUrl = store is Map ? store['cover_image']?.toString() : _coverUrl;
+      });
+
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Cover image updated successfully');
+      }
+    } catch (e) {
+      if (mounted) Helpers.showSnackBar(context, 'Failed to update cover: $e');
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
   Future<void> _saveProfile() async {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty) {
+    if (_nameController.text.isEmpty) {
       Helpers.showSnackBar(context, 'Please fill in all required fields');
       return;
     }
@@ -160,9 +198,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot identify user ID');
 
-      // Update user data (email, phone)
+      // Update user data (name, phone)
       final userUpdateData = {
-        'email': _emailController.text,
+        'name': _nameController.text,
         'phone': _phoneController.text,
       };
       await ApiService.patch(ApiConfig.userDetail(userId), userUpdateData);
@@ -181,12 +219,13 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           'phone_number': _phoneController.text,
         };
 
-        await ApiService.patch(ApiConfig.storeDetail(_storeId!), storeUpdateData);
+        await ApiService.patch(
+            ApiConfig.storeDetail(_storeId!), storeUpdateData);
       }
 
       // Update local storage
       if (userData != null) {
-        userData['email'] = _emailController.text;
+        userData['name'] = _nameController.text;
         userData['phone'] = _phoneController.text;
         await StorageService.saveUserData(userData);
       }
@@ -224,74 +263,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   }
 
   Future<void> _becomeCustomer() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.warning_rounded, color: Colors.red, size: 24),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('Convert Account')),
-          ],
-        ),
-        content: const Text('Do you really want to convert your account from seller to regular customer?'),
-        actions: [
-          AppTextButton(
-            text: 'Cancel',
-            onPressed: () => Navigator.pop(context),
-          ),
-          AppDangerButton(
-            text: 'Yes, Convert',
-            onPressed: () {
-              Navigator.pop(context);
-              _convertToCustomer();
-            },
-            width: 120,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _convertToCustomer() async {
-    setState(() => _isLoading = true);
-    try {
-      final userData = StorageService.getUserData();
-      final userId = userData?['id'];
-      if (userId == null) throw Exception('Cannot identify user ID');
-
-      await ApiService.patch(ApiConfig.userDetail(userId), {'role': 'USER'});
-
-      if (userData != null) {
-        userData['user_type'] = 'user';
-        userData['role'] = 'USER';
-        userData['is_merchant'] = false;
-        await StorageService.saveUserData(userData);
-      }
-
-      if (mounted) {
-        context.read<AuthProvider>().reloadFromStorage();
-      }
-
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Account converted successfully');
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Error converting account: $e');
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    // Intentionally removed from this screen per requested scope.
   }
 
   @override
@@ -311,134 +283,222 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                 color: AppColors.neutral100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textPrimary),
+              child: const Icon(Icons.arrow_forward_ios,
+                  size: 16, color: AppColors.textPrimary),
             ),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Edit Profile', style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
+          title: Text('Edit Profile',
+              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
           centerTitle: true,
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            // Avatar Section
-            Center(
-              child: GestureDetector(
-                onTap: _isUploadingImage ? null : _pickImage,
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryColor.withValues(alpha: 0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        child: _isUploadingImage
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                                ? ClipOval(
-                                    child: Image.network(
-                                      _avatarUrl!,
-                                      width: 96,
-                                      height: 96,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Icon(Icons.store, size: 40, color: AppColors.textSecondary),
-                                    ),
-                                  )
-                                : Icon(Icons.store, size: 40, color: AppColors.textSecondary),
-                      ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: SizedBox(
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _saveProfile,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    minimumSize: const Size(0, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.primaryColor, AppColors.primaryColor.withValues(alpha: 0.8)],
-                          ),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-                      ),
-                    ),
-                  ],
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Form Fields
-            AppTextField(
-              controller: _nameController,
-              label: 'Store Name',
-              hint: 'Enter your store name',
-              icon: Icons.store_rounded,
-              style: AppTextFieldStyle.profile,
-            ),
+          ],
+        ),
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _buildHeader(),
             const SizedBox(height: 20),
-            AppTextField(
-              controller: _phoneController,
-              label: 'Phone Number',
-              hint: '+213 XXX XXX XXX',
-              icon: Icons.phone_rounded,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              style: AppTextFieldStyle.profile,
-            ),
-            const SizedBox(height: 20),
-            AppTextField(
-              controller: _emailController,
-              label: 'Email',
-              hint: 'store@example.com',
-              icon: Icons.email_rounded,
-              keyboardType: TextInputType.emailAddress,
-              textDirection: TextDirection.ltr,
-              style: AppTextFieldStyle.profile,
-            ),
-            const SizedBox(height: 20),
-            AppTextField(
-              controller: _descriptionController,
-              label: 'Store Description',
-              hint: 'Describe your store and products...',
-              icon: Icons.description_rounded,
-              maxLines: 3,
-              style: AppTextFieldStyle.profile,
-            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  // Form Fields
+                  AppTextField(
+                    controller: _nameController,
+                    label: 'Store Name',
+                    hint: 'Enter your store name',
+                    icon: Icons.store_rounded,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 20),
+                  AppTextField(
+                    controller: _descriptionController,
+                    label: 'Description',
+                    hint: 'Describe your store...',
+                    icon: Icons.description_rounded,
+                    maxLines: 3,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 20),
+                  AppTextField(
+                    controller: _phoneController,
+                    label: 'Phone Number',
+                    hint: '+213 XXX XXX XXX',
+                    icon: Icons.phone_rounded,
+                    keyboardType: TextInputType.phone,
+                    textDirection: TextDirection.ltr,
+                    style: AppTextFieldStyle.profile,
+                  ),
 
-            // Location Section
-            const SizedBox(height: 8),
-            _buildLocationSection(),
-
-            const SizedBox(height: 32),
-
-            // Save Button
-            AppPrimaryButton(
-              text: 'Save Changes',
-              onPressed: _saveProfile,
-              isLoading: _isLoading,
+                  const SizedBox(height: 8),
+                  _buildLocationSection(),
+                  const SizedBox(height: 28),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-
-            // Convert Account Button
-            AppSecondaryButton(
-              text: 'Convert to Regular User',
-              onPressed: _becomeCustomer,
-              icon: Icons.person_outline_rounded,
-            ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: 190,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.primaryDeep.withValues(alpha: 0.08),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+          child: (_coverUrl != null && _coverUrl!.isNotEmpty)
+              ? ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  child: Image.network(
+                    _coverUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                    ),
+                  ),
+                )
+              : Container(
+                  color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: GestureDetector(
+              onTap: _isUploadingCover ? null : _pickCoverImage,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: _isUploadingCover
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.camera_alt_outlined,
+                        size: 24, color: AppColors.textPrimary),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -34,
+          left: 20,
+          child: GestureDetector(
+            onTap: _isUploadingImage ? null : _pickImage,
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 34,
+                    backgroundColor: Colors.grey.shade100,
+                    child: _isUploadingImage
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                            ? ClipOval(
+                                child: Image.network(
+                                  _avatarUrl!,
+                                  width: 68,
+                                  height: 68,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.store,
+                                      size: 30,
+                                      color: Colors.grey),
+                                ),
+                              )
+                            : const Icon(Icons.store,
+                                size: 30, color: Colors.grey),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Icon(Icons.camera_alt,
+                        size: 14, color: AppColors.primaryColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 46),
+      ],
     );
   }
 
@@ -448,7 +508,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Store Location', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+        Text('Store Location',
+            style:
+                AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: _openLocationPicker,
@@ -465,7 +527,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                 ),
               ],
               border: hasLocation
-                  ? Border.all(color: AppColors.successGreen.withValues(alpha: 0.5), width: 1.5)
+                  ? Border.all(
+                      color: AppColors.successGreen.withValues(alpha: 0.5),
+                      width: 1.5)
                   : null,
             ),
             child: Row(
@@ -479,8 +543,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    hasLocation ? Icons.location_on : Icons.add_location_alt_outlined,
-                    color: hasLocation ? AppColors.successGreen : AppColors.textSecondary,
+                    hasLocation
+                        ? Icons.location_on
+                        : Icons.add_location_alt_outlined,
+                    color: hasLocation
+                        ? AppColors.successGreen
+                        : AppColors.textSecondary,
                     size: 22,
                   ),
                 ),
@@ -492,23 +560,28 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                           children: [
                             Text(
                               _selectedBaladiya!,
-                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               _selectedWilaya!,
-                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.textSecondary),
                             ),
                           ],
                         )
                       : Text(
                           'Tap to select location',
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.textTertiary),
                         ),
                 ),
                 Icon(
                   Icons.chevron_left,
-                  color: hasLocation ? AppColors.successGreen : AppColors.textSecondary,
+                  color: hasLocation
+                      ? AppColors.successGreen
+                      : AppColors.textSecondary,
                 ),
               ],
             ),

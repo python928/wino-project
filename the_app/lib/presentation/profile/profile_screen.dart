@@ -10,7 +10,6 @@ import '../../core/theme/app_constants.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/helpers.dart';
@@ -49,13 +48,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _location = 'Loading...';
   String _storeDescription = '';
   String? _avatarUrl;
+  String _phoneNumber = '';
   int? _userId;
   bool _isUploadingImage = false;
-  
+
   // Real data from backend
   int _followersCount = 0;
   double _averageRating = 0.0;
-  
+
   // Store specific
   String? _storeCoverUrl;
   int? _storeId;
@@ -68,6 +68,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedFilterIndex = 0; // 0=all, 1=product, 2=promotion, 3=pack
 
   String? _lastProfileType;
+
+  void _showPublishMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.inventory_2_outlined,
+                        color: AppColors.primaryColor, size: 20),
+                  ),
+                  title: const Text('Add Product',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _handlePostMenuSelection('product');
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.local_offer_outlined,
+                        color: AppColors.primaryColor, size: 20),
+                  ),
+                  title: const Text('Add Discount',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _handlePostMenuSelection('discount');
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.all_inbox_outlined,
+                        color: AppColors.primaryColor, size: 20),
+                  ),
+                  title: const Text('Add Pack',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _handlePostMenuSelection('pack');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -88,7 +178,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchStoreData() async {
     if (_userId == null) return;
     try {
-      final response = await ApiService.get('${ApiConfig.stores}?owner=$_userId');
+      final response =
+          await ApiService.get('${ApiConfig.stores}?owner=$_userId');
       List stores = [];
       if (response is Map && response.containsKey('results')) {
         stores = response['results'];
@@ -110,8 +201,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _storeId = store['id'];
             _storeDescription = store['description'] ?? _storeDescription;
             _storeCoverUrl = store['cover_image'];
+            _phoneNumber = (store['phone_number'] ?? _phoneNumber).toString();
             _followersCount = store['followers_count'] ?? 0;
-            _averageRating = (store['average_rating'] as num?)?.toDouble() ?? 0.0;
+            _averageRating =
+                (store['average_rating'] as num?)?.toDouble() ?? 0.0;
             _location = storeLocation;
           });
         }
@@ -123,30 +216,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickCoverImage() async {
     if (_storeId == null) return;
-    
+
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() => _isUploadingCover = true);
-      
+
       try {
         final file = File(pickedFile.path);
         // Update store cover image
         // Assuming endpoint is /api/stores/stores/{id}/
         await ApiService.updateMultipart(
-          '${ApiConfig.stores}$_storeId/', 
-          {}, 
-          file, 
-          'cover_image', 
-          method: 'PATCH'
-        );
-        
+            '${ApiConfig.stores}$_storeId/', {}, file, 'cover_image',
+            method: 'PATCH');
+
         await _fetchStoreData();
-        
-        if (mounted) Helpers.showSnackBar(context, 'Cover image updated successfully');
+
+        if (mounted)
+          Helpers.showSnackBar(context, 'Cover image updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'Failed to update cover image: $e');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Failed to update cover image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingCover = false);
       }
@@ -169,7 +260,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
-                leading: Icon(Icons.photo_library, color: AppColors.primaryColor),
+                leading:
+                    Icon(Icons.photo_library, color: AppColors.primaryColor),
                 title: Text('Gallery'),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
@@ -186,38 +278,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (pickedFile != null && _userId != null) {
       setState(() => _isUploadingImage = true);
-      
+
       try {
         final file = File(pickedFile.path);
         await ApiService.updateMultipart(
-          '${ApiConfig.users}$_userId/', 
-          {}, 
-          file, 
-          'profile_image', 
-          method: 'PATCH'
-        );
-        
+            '${ApiConfig.users}$_userId/', {}, file, 'profile_image',
+            method: 'PATCH');
+
         // Fetch updated profile and save to storage
         // We need to import AuthRepository for this
         // But wait, AuthRepository is not imported in this file yet?
         // Let's check imports.
         // It is not. I need to add it or use ApiService directly.
         // I'll use ApiService to get profile then save.
-        
+
         final response = await ApiService.get('${ApiConfig.users}$_userId/');
         await StorageService.saveUserData(response);
-        
+
         _loadUserData();
-        
-        if (mounted) Helpers.showSnackBar(context, 'Profile image updated successfully');
+
+        if (mounted)
+          Helpers.showSnackBar(context, 'Profile image updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'Failed to update image: $e');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Failed to update image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
     }
   }
-
 
   @override
   void dispose() {
@@ -240,7 +329,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Parse address to show wilaya/baladiya
       String locationDisplay = 'Select Location';
-      final address = userData['address']?.toString() ?? userData['location']?.toString() ?? '';
+      final address = userData['address']?.toString() ??
+          userData['location']?.toString() ??
+          '';
       if (address.isNotEmpty && address != 'Algeria') {
         locationDisplay = address;
       }
@@ -249,6 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _userId = userData['id'];
         _userName = userData['name'] ?? userData['username'] ?? 'User';
         _location = locationDisplay;
+        _phoneNumber = (userData['phone'] ?? '').toString();
         // Use AuthProvider's activeProfileType for consistency
         _userType = isMerchantFromAuth ? 'merchant' : 'user';
         _storeDescription = userData['store_description'] ?? '';
@@ -376,7 +468,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.edit_outlined, color: AppColors.primaryColor),
+                      child: Icon(Icons.edit_outlined,
+                          color: AppColors.primaryColor),
                     ),
                     title: const Text('Edit Profile'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -393,7 +486,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.red.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.favorite_outline, color: Colors.red),
+                      child:
+                          const Icon(Icons.favorite_outline, color: Colors.red),
                     ),
                     title: const Text('Favorites'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -436,6 +530,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ProfileMerchantHeader(
       userName: _userName,
       location: _location,
+      phoneNumber: _phoneNumber,
       storeDescription: _storeDescription,
       avatarUrl: _avatarUrl,
       storeCoverUrl: _storeCoverUrl,
@@ -445,8 +540,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       averageRating: _averageRating,
       onPickImage: _pickImage,
       onPickCoverImage: _pickCoverImage,
-      onSettingsTap: _showSettingsMenu,
-      onPostMenuSelection: _handlePostMenuSelection,
+      onSettingsTap: _navigateToEditProfile,
       primaryGradient: primaryGradient,
     );
   }
@@ -470,9 +564,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         MaterialPageRoute(
           builder: (context) => EditMerchantProfileScreen(
             initialName: userData?['name'] ?? '',
-            initialEmail: userData?['email'] ?? '',
             initialPhone: userData?['phone'] ?? '',
-            initialImage: userData?['profile_image'] ?? userData?['store_image'] ?? userData?['avatar'],
+            initialImage: userData?['profile_image'] ??
+                userData?['store_image'] ??
+                userData?['avatar'],
+            initialCoverImage: _storeCoverUrl,
             initialStoreDescription: userData?['store_description'],
             initialAddress: userData?['location'] ?? userData?['address'],
           ),
@@ -487,9 +583,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         MaterialPageRoute(
           builder: (context) => EditCustomerProfileScreen(
             initialName: userData?['name'] ?? '',
-            initialEmail: userData?['email'] ?? '',
             initialPhone: userData?['phone'] ?? '',
-            initialImage: userData?['avatar'],
+            initialImage: userData?['profile_image'] ?? userData?['avatar'],
+            initialAddress: userData?['address'] ?? userData?['location'],
           ),
         ),
       ).then((result) {
@@ -501,17 +597,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _handlePostMenuSelection(String value) {
     switch (value) {
       case 'product':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const AddProductScreen())).then((result) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const AddProductScreen())).then((result) {
           if (result == true && mounted) {
             if (_userId != null) {
-              Provider.of<PostProvider>(context, listen: false).loadMyPosts(_userId.toString());
-              Provider.of<PostProvider>(context, listen: false).loadMyOffers(_userId.toString());
+              Provider.of<PostProvider>(context, listen: false)
+                  .loadMyPosts(_userId.toString());
+              Provider.of<PostProvider>(context, listen: false)
+                  .loadMyOffers(_userId.toString());
             }
           }
         });
         break;
       case 'discount':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const AddPromotionScreen())).then((result) {
+        Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const AddPromotionScreen()))
+            .then((result) {
           if (result == true && mounted) {
             final provider = Provider.of<PostProvider>(context, listen: false);
             if (_userId != null) {
@@ -527,18 +632,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
         break;
       case 'pack':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => AddPackScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => AddPackScreen()));
         break;
     }
   }
 
   void _showEditOfferSheet(Offer offer) {
-    final discountController = TextEditingController(text: offer.discountPercentage.toString());
+    final discountController =
+        TextEditingController(text: offer.discountPercentage.toString());
     bool isAvailable = offer.isAvailable;
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateSheet) {
@@ -562,7 +670,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Show Offer'),
-                      Switch(value: isAvailable, onChanged: (val) => setStateSheet(() => isAvailable = val)),
+                      Switch(
+                          value: isAvailable,
+                          onChanged: (val) =>
+                              setStateSheet(() => isAvailable = val)),
                     ],
                   ),
                   const SizedBox(height: AppConstants.spacing16),
@@ -573,13 +684,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           text: 'Save',
                           onPressed: () async {
                             final provider = context.read<PostProvider>();
-                            final discount = int.tryParse(discountController.text);
+                            final discount =
+                                int.tryParse(discountController.text);
                             try {
-                              await provider.updateOffer(offerId: offer.id, discountPercentage: discount, isAvailable: isAvailable);
+                              await provider.updateOffer(
+                                  offerId: offer.id,
+                                  discountPercentage: discount,
+                                  isAvailable: isAvailable);
                               if (mounted) Navigator.pop(context);
                               Helpers.showSnackBar(context, 'Offer updated');
                             } catch (e) {
-                              Helpers.showSnackBar(context, 'Failed to update offer: $e');
+                              Helpers.showSnackBar(
+                                  context, 'Failed to update offer: $e');
                             }
                           },
                         ),
@@ -595,7 +711,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               if (mounted) Navigator.pop(context);
                               Helpers.showSnackBar(context, 'Offer deleted');
                             } catch (e) {
-                              Helpers.showSnackBar(context, 'Failed to delete offer: $e');
+                              Helpers.showSnackBar(
+                                  context, 'Failed to delete offer: $e');
                             }
                           },
                         ),
@@ -616,11 +733,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final bool isMerchant = authProvider.activeProfileType == 'STORE';
-    final Color primaryColor = isMerchant ? AppColors.primaryColor : AppColors.primaryColor;
-    final Gradient primaryGradient = isMerchant ? AppColors.deepGradient : AppColors.purpleGradient;
+    final Color primaryColor =
+        isMerchant ? AppColors.primaryColor : AppColors.primaryColor;
+    final Gradient primaryGradient =
+        isMerchant ? AppColors.deepGradient : AppColors.purpleGradient;
 
     // Detect profile type change and reload data
-    if (_lastProfileType != null && _lastProfileType != authProvider.activeProfileType) {
+    if (_lastProfileType != null &&
+        _lastProfileType != authProvider.activeProfileType) {
       // Profile type changed - reload data after current frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -638,6 +758,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           showLocation: false,
           showNotificationIcon: true,
         ),
+        floatingActionButton: isMerchant
+            ? FloatingActionButton(
+                onPressed: _showPublishMenu,
+                backgroundColor: AppColors.primaryColor,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+            : null,
         body: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
@@ -647,20 +774,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             if (isMerchant)
               SliverToBoxAdapter(
-                child: ProfilePostFilter(
-                  selectedIndex: _selectedFilterIndex,
-                  onFilterChanged: (index) {
-                    setState(() => _selectedFilterIndex = index);
-                  },
-                  searchController: _searchController,
-                  onSearchChanged: (value) {
-                    setState(() => _searchQuery = value);
+                child: Consumer2<PostProvider, PackProvider>(
+                  builder: (context, postProvider, packProvider, _) {
+                    final postsCount = postProvider.myPosts.length +
+                        postProvider.myOffers.length +
+                        packProvider.myPacks.length;
+
+                    return ProfilePostFilter(
+                      selectedIndex: _selectedFilterIndex,
+                      postsCount: postsCount,
+                      onFilterChanged: (index) {
+                        setState(() => _selectedFilterIndex = index);
+                      },
+                      searchController: _searchController,
+                      onSearchChanged: (value) {
+                        setState(() => _searchQuery = value);
+                      },
+                    );
                   },
                 ),
               ),
             if (isMerchant)
               SliverToBoxAdapter(
-                child: _buildMerchantPosts(type: _getFilterType(_selectedFilterIndex)),
+                child: _buildMerchantPosts(
+                    type: _getFilterType(_selectedFilterIndex)),
               )
             else
               SliverToBoxAdapter(
@@ -681,7 +818,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } else if (type == 'pack') {
           items = packProvider.myPacks;
         } else if (type == 'all') {
-          items = [...postProvider.myPosts, ...postProvider.myOffers, ...packProvider.myPacks];
+          items = [
+            ...postProvider.myPosts,
+            ...postProvider.myOffers,
+            ...packProvider.myPacks
+          ];
         } else {
           items = postProvider.myPosts;
         }
@@ -718,108 +859,112 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return false;
           }
 
-          final matchesSearch = _searchQuery.isEmpty || title.toLowerCase().contains(_searchQuery.toLowerCase());
+          final matchesSearch = _searchQuery.isEmpty ||
+              title.toLowerCase().contains(_searchQuery.toLowerCase());
           return matchesType && matchesSearch;
         }).toList();
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppTheme.spacing20),
-              child: AppSearchField(
-                controller: _searchController,
-                hintText: 'Search in ${type == 'all' ? 'All' : type == 'product' ? 'Products' : type == 'pack' ? 'Packs' : 'Discounts'}...',
-                onChanged: (_) => setState(() {}),
+        if (filteredItems.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.inventory_2_outlined,
+                      size: 60, color: AppColors.textHint),
+                  SizedBox(height: 12),
+                  Text('No content here yet',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ],
               ),
             ),
-            SizedBox(
-              height: MediaQuery.of(context).size.height - 500, // Adjust based on header height
-              child: filteredItems.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.inventory_2_outlined, size: 60, color: AppColors.textHint),
-                          SizedBox(height: 12),
-                          Text('No content here yet', style: TextStyle(color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: CardConstants.gridHorizontalPadding,
-                        vertical: CardConstants.gridVerticalPadding,
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: CardConstants.gridCrossAxisCount,
-                        crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
-                        mainAxisSpacing: CardConstants.gridMainAxisSpacing,
-                        childAspectRatio: CardConstants.gridChildAspectRatio,
-                      ),
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        if (item is Post) {
-                          return ProductCard(
-                            product: item,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                Routes.productDetails,
-                                arguments: item,
-                              );
-                            },
-                            onEditTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => EditProductScreen(product: item))).then((result) {
-                                if (result == true && _userId != null) {
-                                  context.read<PostProvider>().loadMyPosts(_userId.toString());
-                                }
-                              });
-                            },
-                          );
-                        } else if (item is Pack) {
-                          return PackCard(
-                            pack: item,
-                            onTap: () {
-                              // Navigate to pack details
-                              Navigator.pushNamed(context, Routes.packDetails, arguments: item);
-                            },
-                            onEditTap: () {
-                              Navigator.pushNamed(context, Routes.addPack, arguments: item);
-                            },
-                          );
-                        } else if (item is Offer) {
-                          try {
-                            return PromotionCard(
-                              offer: item,
-                              onTap: () {
-                                final product = item.product;
-                                // Create modified product with promotion pricing
-                                final productWithPromotion = product.copyWith(
-                                  price: item.newPrice,
-                                  oldPrice: product.price,
-                                  discountPercentage: item.discountPercentage,
-                                );
-                                Navigator.pushNamed(
-                                  context,
-                                  Routes.productDetails,
-                                  arguments: productWithPromotion,
-                                );
-                              },
-                              onEditTap: () => _showEditOfferSheet(item),
-                            );
-                          } catch (e) {
-                            debugPrint('Profile: Error displaying offer: $e');
-                            return const SizedBox.shrink();
-                          }
-                        } else {
-                          return const SizedBox.shrink();
-                        }
-                      },
-                    ),
-            ),
-          ],
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(
+            horizontal: CardConstants.gridHorizontalPadding,
+            vertical: CardConstants.gridVerticalPadding,
+          ),
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: CardConstants.gridCrossAxisCount,
+            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+            childAspectRatio: CardConstants.gridChildAspectRatio,
+          ),
+          itemCount: filteredItems.length,
+          itemBuilder: (context, index) {
+            final item = filteredItems[index];
+            if (item is Post) {
+              return ProductCard(
+                product: item,
+                showUnavailableOverlay: true,
+                showStoreName: false,
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    Routes.productDetails,
+                    arguments: item,
+                  );
+                },
+                onEditTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              EditProductScreen(product: item))).then((result) {
+                    if (result == true && _userId != null) {
+                      context
+                          .read<PostProvider>()
+                          .loadMyPosts(_userId.toString());
+                    }
+                  });
+                },
+              );
+            } else if (item is Pack) {
+              return PackCard(
+                pack: item,
+                isUnavailable: !item.isAvailable,
+                showUnavailableOverlay: true,
+                onTap: () {
+                  Navigator.pushNamed(context, Routes.packDetails,
+                      arguments: item);
+                },
+                onEditTap: () {
+                  Navigator.pushNamed(context, Routes.addPack, arguments: item);
+                },
+              );
+            } else if (item is Offer) {
+              try {
+                return PromotionCard(
+                  offer: item,
+                  showUnavailableOverlay: true,
+                  showStoreName: false,
+                  onTap: () {
+                    final product = item.product;
+                    final productWithPromotion = product.copyWith(
+                      price: item.newPrice,
+                      oldPrice: product.price,
+                      discountPercentage: item.discountPercentage,
+                    );
+                    Navigator.pushNamed(
+                      context,
+                      Routes.productDetails,
+                      arguments: productWithPromotion,
+                    );
+                  },
+                  onEditTap: () => _showEditOfferSheet(item),
+                );
+              } catch (e) {
+                debugPrint('Profile: Error displaying offer: $e');
+                return const SizedBox.shrink();
+              }
+            }
+            return const SizedBox.shrink();
+          },
         );
       },
     );
@@ -873,11 +1018,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(AppConstants.spacing8),
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.logout_rounded, color: Colors.red, size: AppConstants.spacing20),
+                decoration: const BoxDecoration(
+                    color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.logout_rounded,
+                    color: Colors.red, size: AppConstants.spacing20),
               ),
-              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: AppConstants.fontSizeSubtitle)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: AppConstants.iconSmall, color: Colors.red),
+              title: const Text('Logout',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppConstants.fontSizeSubtitle)),
+              trailing: const Icon(Icons.arrow_forward_ios,
+                  size: AppConstants.iconSmall, color: Colors.red),
               onTap: _handleLogout,
             ),
           ),
@@ -887,13 +1039,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAnalysisItem({required String value, required String label, required IconData icon, required Color color}) {
+  Widget _buildAnalysisItem(
+      {required String value,
+      required String label,
+      required IconData icon,
+      required Color color}) {
     return Column(
       children: [
-        Container(padding: const EdgeInsets.all(AppConstants.spacing10), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: AppConstants.iconMedium)),
+        Container(
+            padding: const EdgeInsets.all(AppConstants.spacing10),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: AppConstants.iconMedium)),
         const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Text(value,
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary)),
+        Text(label,
+            style:
+                const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
       ],
     );
   }
@@ -904,30 +1070,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuContainer(List<_MenuItem> items) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.cardRadius), boxShadow: [AppColors.softShadow]),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.cardRadius),
+          boxShadow: [AppColors.softShadow]),
       child: Column(
         children: items.map((item) {
           final isLast = items.last == item;
           return Column(
             children: [
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing16, vertical: AppConstants.spacing4),
-                leading: Container(padding: const EdgeInsets.all(AppConstants.spacing8), decoration: const BoxDecoration(color: AppColors.scaffoldBackground, shape: BoxShape.circle), child: Icon(item.icon, color: AppColors.textPrimary, size: AppConstants.spacing20)),
-                title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: item.subtitle != null ? Text(item.subtitle!, style: const TextStyle(fontSize: AppConstants.fontSizeCaption, color: AppColors.textSecondary)) : null,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing16,
+                    vertical: AppConstants.spacing4),
+                leading: Container(
+                    padding: const EdgeInsets.all(AppConstants.spacing8),
+                    decoration: const BoxDecoration(
+                        color: AppColors.scaffoldBackground,
+                        shape: BoxShape.circle),
+                    child: Icon(item.icon,
+                        color: AppColors.textPrimary,
+                        size: AppConstants.spacing20)),
+                title: Text(item.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: item.subtitle != null
+                    ? Text(item.subtitle!,
+                        style: const TextStyle(
+                            fontSize: AppConstants.fontSizeCaption,
+                            color: AppColors.textSecondary))
+                    : null,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (item.badge != null)
-                      Container(padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing8, vertical: AppConstants.spacing2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(AppConstants.spacing10)), child: Text(item.badge!, style: const TextStyle(color: Colors.white, fontSize: AppConstants.fontSizeSmall, fontWeight: FontWeight.bold))),
-                    const SizedBox(width: AppConstants.spacing8),
-                    const Icon(Icons.arrow_forward_ios, size: AppConstants.spacing14, color: AppColors.textHint),
+                    const Icon(Icons.arrow_forward_ios,
+                        size: AppConstants.spacing14,
+                        color: AppColors.textHint),
                   ],
                 ),
                 onTap: item.onTap,
               ),
               if (!isLast)
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Divider(height: 1, color: AppColors.borderLight)),
+                const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Divider(height: 1, color: AppColors.borderLight)),
             ],
           );
         }).toList(),
@@ -1014,9 +1199,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // Handle relative URLs from backend
-    final fullImageUrl = imageUrl.startsWith('/')
-        ? 'http://127.0.0.1:8000$imageUrl'
-        : imageUrl;
+    final fullImageUrl =
+        imageUrl.startsWith('/') ? 'http://127.0.0.1:8000$imageUrl' : imageUrl;
 
     return Image.network(
       fullImageUrl,
@@ -1046,7 +1230,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
@@ -1059,7 +1242,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 48;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return _child;
   }
 
@@ -1071,8 +1255,11 @@ class _MenuItem {
   final IconData icon;
   final String title;
   final String? subtitle;
-  final String? badge;
   final VoidCallback onTap;
 
-  _MenuItem({required this.icon, required this.title, this.subtitle, this.badge, required this.onTap});
+  _MenuItem(
+      {required this.icon,
+      required this.title,
+      this.subtitle,
+      required this.onTap});
 }

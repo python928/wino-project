@@ -112,7 +112,7 @@ class RouteGenerator {
         final pack = settings.arguments as Pack?;
         return _slideTransition(
           settings: settings,
-          child: pack != null 
+          child: pack != null
               ? EditPackScreen(packData: pack.toJson())
               : AddPackScreen(),
         );
@@ -133,8 +133,6 @@ class RouteGenerator {
           child: const AddPromotionScreen(),
         );
 
-
-
       // ===== SEARCH TAB =====
       case Routes.searchTab:
         final args = settings.arguments as Map<String, dynamic>?;
@@ -143,6 +141,7 @@ class RouteGenerator {
           child: SearchTabScreen(
             initialQuery: args?['query'],
             initialType: args?['type'],
+            autoSearchOnOpen: args?['autoSearch'] == true,
           ),
         );
 
@@ -153,6 +152,7 @@ class RouteGenerator {
           child: SearchTabScreen(
             initialQuery: args?['query'],
             initialType: args?['type'],
+            autoSearchOnOpen: args?['autoSearch'] == true,
           ),
         );
 
@@ -225,7 +225,8 @@ class RouteGenerator {
     return MaterialPageRoute(
       builder: (_) => _SimpleRouteErrorScreen(
         title: 'Invalid Data',
-        message: 'This page cannot be opened because the provided data is invalid.',
+        message:
+            'This page cannot be opened because the provided data is invalid.',
         routeName: settings.name,
       ),
       settings: settings,

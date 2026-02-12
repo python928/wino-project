@@ -26,54 +26,25 @@ class ProfileUserHeader extends StatelessWidget {
     return Column(
       children: [
         const SizedBox(height: 40),
-        // Avatar centered
-        GestureDetector(
-          onTap: isUploadingImage ? null : onPickImage,
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey.shade200,
-                child: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                    ? ClipOval(
-                        child: Image.network(
-                          avatarUrl!,
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      )
-                    : const Icon(Icons.person, size: 50, color: Colors.grey),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+        // Avatar centered (no camera controls on profile screen)
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Colors.grey.shade200,
+          child: (avatarUrl != null && avatarUrl!.isNotEmpty)
+              ? ClipOval(
+                  child: Image.network(
+                    avatarUrl!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.grey,
+                    ),
                   ),
-                  child: isUploadingImage
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
-                ),
-              ),
-            ],
-          ),
+                )
+              : const Icon(Icons.person, size: 50, color: Colors.grey),
         ),
         const SizedBox(height: 16),
         // User name

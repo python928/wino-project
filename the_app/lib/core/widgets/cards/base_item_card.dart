@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_constants.dart';
@@ -28,6 +30,7 @@ class BaseItemCard extends StatelessWidget {
 
   // Bottom info properties
   final double? rating;
+  final int? reviewCount;
   final String? bottomLeftText;
   final IconData? bottomLeftIcon;
   final VoidCallback? onBottomLeftTap;
@@ -35,6 +38,7 @@ class BaseItemCard extends StatelessWidget {
   // Custom widget properties
   final Widget? customImageWidget;
   final bool isUnavailable;
+  final bool showUnavailableOverlay;
 
   const BaseItemCard({
     super.key,
@@ -48,11 +52,13 @@ class BaseItemCard extends StatelessWidget {
     this.discountPercentage,
     this.customBadge,
     this.rating,
+    this.reviewCount,
     this.bottomLeftText,
     this.bottomLeftIcon,
     this.onBottomLeftTap,
     this.customImageWidget,
     this.isUnavailable = false,
+    this.showUnavailableOverlay = false,
   });
 
   /// Build custom content - override this method for specialized behavior
@@ -78,6 +84,32 @@ class BaseItemCard extends StatelessWidget {
 
         final contentPadding = width < 100 ? 6.0 : CardDimensions.cardPadding;
 
+        // Make the card responsive to very short tiles.
+        // Some grids use a larger childAspectRatio (shorter height), which can
+        // leave too little space for title/meta/price and cause RenderFlex
+        // overflows inside the content Column.
+        final estimatedTitleHeight = width < 120 ? 18.0 : 34.0; // 1–2 lines
+        final estimatedMetaHeight = (rating != null ? 16.0 : 0.0) +
+            (bottomLeftText != null ? 16.0 : 0.0);
+        final estimatedMetaGap =
+            (rating != null && bottomLeftText != null) ? 6.0 : 0.0;
+        final estimatedPriceHeight =
+            hidePrice ? 18.0 : (price != null ? 22.0 : 0.0);
+        final estimatedContentMinHeight = (contentPadding * 2) +
+            estimatedTitleHeight +
+            AppConstants.spacing8 +
+            estimatedMetaHeight +
+            estimatedMetaGap +
+            (estimatedPriceHeight > 0 ? AppConstants.spacing6 : 0.0) +
+            estimatedPriceHeight;
+
+        // Keep the image square when there's enough height; otherwise shrink
+        // it to guarantee content fits.
+        final imageHeight = math.min(
+          width,
+          math.max(0.0, height - estimatedContentMinHeight),
+        );
+
         return SizedBox(
           width: width,
           height: height,
@@ -89,7 +121,11 @@ class BaseItemCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Image Section
-                  _buildImageSection(context),
+                  SizedBox(
+                    height: imageHeight,
+                    width: double.infinity,
+                    child: _buildImageSection(context),
+                  ),
 
                   // Content Section
                   Expanded(
@@ -97,32 +133,15 @@ class BaseItemCard extends StatelessWidget {
                       padding: EdgeInsets.all(contentPadding),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Custom content or title
-                          Flexible(
-                            child: buildCustomContent(context) ?? _buildTitle(),
-                          ),
-
-                          // Price and Bottom row
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Price or custom info
-                              if (hidePrice)
-                                _buildCallForPrice()
-                              else if (price != null)
-                                _buildPriceRow(),
-
-                              const SizedBox(
-                                height: CardDimensions.cardElementSpacingSmall,
-                              ),
-
-                              // Custom bottom info or standard bottom row
-                              buildCustomBottomInfo(context) ?? _buildBottomRow(),
-                            ],
-                          ),
+                          buildCustomContent(context) ?? _buildTitle(),
+                          const SizedBox(height: AppConstants.spacing8),
+                          buildCustomBottomInfo(context) ?? _buildMetaSection(),
+                          const Spacer(),
+                          if (hidePrice)
+                            _buildCallForPrice()
+                          else if (price != null)
+                            _buildPriceRow(),
                         ],
                       ),
                     ),
@@ -137,6 +156,8 @@ class BaseItemCard extends StatelessWidget {
   }
 
   Widget _buildImageSection(BuildContext context) {
+    final showUnavailable = isUnavailable && showUnavailableOverlay;
+
     return Stack(
       children: [
         // Image or Custom Widget
@@ -144,13 +165,15 @@ class BaseItemCard extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppConstants.cardRadius),
           ),
-          child: AspectRatio(
-            aspectRatio: 1.0,
-            child: buildCustomImageWidget(context) ?? _buildStandardImage(),
+          child: Opacity(
+            opacity: showUnavailable ? 0.45 : 1.0,
+            child: SizedBox.expand(
+              child: buildCustomImageWidget(context) ?? _buildStandardImage(),
+            ),
           ),
         ),
 
-        // Discount Badge
+        // Badge (discount / pack)
         if (discountPercentage != null || customBadge != null)
           Positioned(
             top: AppConstants.spacing8,
@@ -160,7 +183,7 @@ class BaseItemCard extends StatelessWidget {
                 horizontal: AppConstants.spacing8,
                 vertical: AppConstants.spacing4,
               ),
-              decoration: AppDecorations.discountBadge(),
+              decoration: _buildBadgeDecoration(),
               child: Text(
                 customBadge ?? '-$discountPercentage%',
                 style: const TextStyle(
@@ -200,27 +223,31 @@ class BaseItemCard extends StatelessWidget {
             ),
           ),
 
-        // Unavailable Overlay
-        if (isUnavailable)
+        // Unavailable Overlay (opt-in per screen)
+        if (showUnavailable)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppConstants.cardRadius)),
+                color: Colors.black.withOpacity(0.18),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppConstants.cardRadius)),
               ),
               alignment: Alignment.center,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing12, vertical: AppConstants.spacing6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacing16,
+                  vertical: AppConstants.spacing8,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
+                  color: AppColors.errorRed,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusRound),
                 ),
                 child: const Text(
-                  'Unavailable',
+                  'Not Available',
                   style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: AppConstants.fontSizeCaption,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: AppConstants.fontSizeBody,
                   ),
                 ),
               ),
@@ -230,12 +257,27 @@ class BaseItemCard extends StatelessWidget {
     );
   }
 
+  BoxDecoration _buildBadgeDecoration() {
+    final badgeText = (customBadge ?? '').trim().toLowerCase();
+    final isPackBadge = badgeText.startsWith('pack');
+
+    if (isPackBadge) {
+      return BoxDecoration(
+        color: AppColors.primaryColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+      );
+    }
+
+    return AppDecorations.discountBadge();
+  }
+
   Widget _buildStandardImage() {
     if (imageUrl == null || imageUrl!.isEmpty) {
       return Container(
         color: Colors.grey[100],
         alignment: Alignment.center,
-        child: const Icon(Icons.image, size: AppConstants.iconXL, color: Colors.grey),
+        child: const Icon(Icons.image,
+            size: AppConstants.iconXL, color: Colors.grey),
       );
     }
 
@@ -255,7 +297,8 @@ class BaseItemCard extends StatelessWidget {
         return Container(
           color: Colors.grey[100],
           alignment: Alignment.center,
-          child: const Icon(Icons.broken_image, size: AppConstants.iconXL, color: Colors.grey),
+          child: const Icon(Icons.broken_image,
+              size: AppConstants.iconXL, color: Colors.grey),
         );
       },
     );
@@ -267,9 +310,9 @@ class BaseItemCard extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: AppConstants.fontSizeCaption,
-        height: 1.2,
+        fontWeight: FontWeight.w700,
+        fontSize: AppConstants.fontSizeSubtitle,
+        height: 1.25,
         color: AppColors.textPrimary,
       ),
     );
@@ -278,7 +321,8 @@ class BaseItemCard extends StatelessWidget {
   Widget _buildCallForPrice() {
     return Row(
       children: [
-        Icon(Icons.phone_outlined, size: AppConstants.fontSizeCaption, color: AppColors.primary),
+        Icon(Icons.phone_outlined,
+            size: AppConstants.fontSizeCaption, color: AppColors.primary),
         const SizedBox(width: AppConstants.spacing4),
         Text(
           'Call for price',
@@ -300,8 +344,8 @@ class BaseItemCard extends StatelessWidget {
             Helpers.formatPrice(price!),
             style: const TextStyle(
               color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: AppConstants.fontSizeBody,
+              fontWeight: FontWeight.w700,
+              fontSize: AppConstants.fontSizeSubtitle,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -324,56 +368,82 @@ class BaseItemCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomRow() {
+  Widget _buildMetaSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (rating != null) _buildRatingRow(),
+        if (rating != null && bottomLeftText != null)
+          const SizedBox(height: AppConstants.spacing6),
+        if (bottomLeftText != null)
+          GestureDetector(
+            onTap: onBottomLeftTap,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (bottomLeftIcon != null) ...[
+                  Icon(bottomLeftIcon,
+                      size: AppConstants.fontSizeCaption,
+                      color: AppColors.textSecondary),
+                  const SizedBox(width: AppConstants.spacing4),
+                ],
+                Flexible(
+                  child: Text(
+                    bottomLeftText!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: AppConstants.fontSizeBody,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRatingRow() {
+    final value = (rating ?? 0).clamp(0.0, 5.0);
+    final fullStars = value.floor();
+    final hasHalfStar = (value - fullStars) >= 0.5;
+
     return Row(
       children: [
-        // Rating
-        if (rating != null) ...[
-          const Icon(Icons.star, size: AppConstants.fontSizeCaption, color: Colors.amber),
-          const SizedBox(width: AppConstants.spacing4),
+        for (int i = 0; i < 5; i++)
+          Icon(
+            i < fullStars
+                ? Icons.star
+                : (i == fullStars && hasHalfStar)
+                    ? Icons.star_half
+                    : Icons.star_border,
+            size: AppConstants.fontSizeSubtitle,
+            color: Colors.amber,
+          ),
+        const SizedBox(width: AppConstants.spacing8),
+        Text(
+          value.toStringAsFixed(1),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: AppConstants.fontSizeBody,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (reviewCount != null) ...[
+          const SizedBox(width: AppConstants.spacing6),
           Text(
-            rating!.toStringAsFixed(1),
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: AppConstants.fontSizeSmall,
+            '(${reviewCount!})',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: AppConstants.fontSizeBody,
               fontWeight: FontWeight.w500,
             ),
           ),
         ],
-
-        // Separator
-        if (rating != null && bottomLeftText != null)
-          const SizedBox(width: AppConstants.spacing6),
-
-        // Additional info (store name, product count, etc.)
-        if (bottomLeftText != null)
-          Expanded(
-            child: GestureDetector(
-              onTap: onBottomLeftTap,
-              child: Row(
-                children: [
-                  if (bottomLeftIcon != null) ...[
-                    Icon(bottomLeftIcon, size: AppConstants.fontSizeSmall, color: Colors.grey[600]),
-                    const SizedBox(width: AppConstants.spacing4),
-                  ],
-                  Expanded(
-                    child: Text(
-                      bottomLeftText!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: bottomLeftIcon != null
-                            ? AppColors.textSecondary
-                            : AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: AppConstants.fontSizeSmall,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
       ],
     );
   }

@@ -9,6 +9,8 @@ import '../../../core/widgets/cards/base_item_card.dart';
 class ProductCard extends BaseItemCard {
   final Post product;
   final VoidCallback? onFavoriteTap;
+  final bool showUnavailableOverlay;
+  final bool showStoreName;
 
   ProductCard({
     super.key,
@@ -16,6 +18,8 @@ class ProductCard extends BaseItemCard {
     VoidCallback? onTap,
     this.onFavoriteTap,
     VoidCallback? onEditTap,
+    this.showUnavailableOverlay = false,
+    this.showStoreName = true,
   }) : super(
           title: product.title,
           imageUrl: product.image,
@@ -24,8 +28,10 @@ class ProductCard extends BaseItemCard {
           hidePrice: product.hidePrice,
           discountPercentage: _calculateDiscountPercent(product),
           rating: product.rating,
-          bottomLeftText: product.storeName,
+          reviewCount: product.reviewCount,
+          bottomLeftText: showStoreName ? product.storeName : null,
           isUnavailable: !product.isAvailable,
+          showUnavailableOverlay: showUnavailableOverlay,
           onTap: (product.isAvailable || onEditTap != null) ? onTap : null,
           onEditTap: onEditTap,
         );
@@ -49,8 +55,10 @@ class ProductCard extends BaseItemCard {
       hidePrice: hidePrice,
       discountPercentage: discountPercentage,
       rating: rating,
+      reviewCount: reviewCount,
       bottomLeftText: bottomLeftText,
       isUnavailable: isUnavailable,
+      showUnavailableOverlay: showUnavailableOverlay,
       onTap: onTap,
       onEditTap: onEditTap,
       onBottomLeftTap: () => _navigateToStore(context),

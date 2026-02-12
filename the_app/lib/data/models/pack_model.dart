@@ -7,6 +7,7 @@ class Pack extends Equatable {
   final List<PackProduct> products;
   final double totalPrice;
   final double discountPrice;
+  final bool isAvailable;
   final String createdAt;
   final String updatedAt;
   final int merchantId;
@@ -19,26 +20,30 @@ class Pack extends Equatable {
     required this.products,
     required this.totalPrice,
     required this.discountPrice,
+    this.isAvailable = true,
     required this.createdAt,
     required this.updatedAt,
     required this.merchantId,
     required this.merchantName,
   });
 
-  factory Pack.fromJson(Map<String, dynamic> json, {Map<int, String>? storesById}) {
+  factory Pack.fromJson(Map<String, dynamic> json,
+      {Map<int, String>? storesById}) {
     // Extract merchant/store ID
     int merchantId = 0;
     if (json['merchant_id'] != null) {
       merchantId = json['merchant_id'] as int;
     } else if (json['store'] != null) {
-      merchantId = json['store'] is int ? json['store'] : (json['store']['id'] ?? 0);
+      merchantId =
+          json['store'] is int ? json['store'] : (json['store']['id'] ?? 0);
     }
 
     // Extract merchant name from various possible sources
     String merchantName = '';
 
     // 1. Try merchant_name field
-    if (json['merchant_name'] != null && json['merchant_name'].toString().trim().isNotEmpty) {
+    if (json['merchant_name'] != null &&
+        json['merchant_name'].toString().trim().isNotEmpty) {
       merchantName = json['merchant_name'].toString().trim();
     }
     // 2. Try store object
@@ -59,6 +64,11 @@ class Pack extends Equatable {
           .toList(),
       totalPrice: _parseDouble(json['total_price']),
       discountPrice: _parseDouble(json['discount_price']),
+      isAvailable: (json['available_status'] ??
+              json['status'] ??
+              json['is_available'] ??
+              'available') ==
+          'available',
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String? ?? '',
       merchantId: merchantId,
@@ -81,6 +91,7 @@ class Pack extends Equatable {
       'products': products.map((e) => e.toJson()).toList(),
       'total_price': totalPrice,
       'discount_price': discountPrice,
+      'available_status': isAvailable ? 'available' : 'unavailable',
       'created_at': createdAt,
       'updated_at': updatedAt,
       'merchant_id': merchantId,
@@ -96,6 +107,7 @@ class Pack extends Equatable {
         products,
         totalPrice,
         discountPrice,
+        isAvailable,
         createdAt,
         updatedAt,
         merchantId,
