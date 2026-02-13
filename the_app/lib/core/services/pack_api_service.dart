@@ -1,5 +1,6 @@
 import './api_service.dart';
 import '../../data/models/pack_model.dart';
+import '../../core/config/api_config.dart';
 
 class PackApiService {
   PackApiService();
@@ -9,31 +10,38 @@ class PackApiService {
       // Load stores for name enrichment
       Map<int, String> storesById = {};
       try {
-        final storesResp = await ApiService.get('/api/stores/stores/');
-        final storesList = storesResp is Map && storesResp.containsKey('results')
-            ? storesResp['results'] as List
-            : (storesResp is List ? storesResp : []);
+        final storesResp = await ApiService.get(ApiConfig.users);
+        final storesList =
+            storesResp is Map && storesResp.containsKey('results')
+                ? storesResp['results'] as List
+                : (storesResp is List ? storesResp : []);
         for (final item in storesList) {
           if (item is Map<String, dynamic>) {
-            storesById[item['id']] = item['name'] ?? 'Store';
+            storesById[item['id']] = item['name'] ?? item['username'] ?? 'Store';
           }
         }
       } catch (e) {
         // If stores loading fails, continue without enrichment
       }
 
-      final data = await ApiService.get('/api/catalog/packs/?store=$merchantId');
+      final data =
+          await ApiService.get('/api/catalog/packs/?store=$merchantId');
 
       if (data is Map<String, dynamic> && data['results'] != null) {
         // API returns {count: X, results: [...]}
         return (data['results'] as List)
-            .map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById))
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>,
+                storesById: storesById))
             .toList();
       } else if (data is List) {
         // Fallback: API returns a direct list
-        return data.map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById)).toList();
+        return data
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>,
+                storesById: storesById))
+            .toList();
       }
-      throw Exception('Unexpected response format when fetching merchant packs');
+      throw Exception(
+          'Unexpected response format when fetching merchant packs');
     } catch (e) {
       throw Exception('Error fetching packs: $e');
     }
@@ -45,6 +53,7 @@ class PackApiService {
     required List<PackProduct> products,
     required double discountPrice,
     required int merchantId,
+    bool isAvailable = true,
   }) async {
     try {
       final body = {
@@ -53,6 +62,7 @@ class PackApiService {
         'products': products.map((p) => p.toJson()).toList(),
         'discount_price': discountPrice,
         'merchant_id': merchantId,
+        'available_status': isAvailable ? 'available' : 'unavailable',
       };
 
       final data = await ApiService.post('/api/catalog/packs/', body);
@@ -67,7 +77,7 @@ class PackApiService {
 
   Future<Pack> updatePack(int packId, Map<String, dynamic> updates) async {
     try {
-      final data = await ApiService.put('/api/catalog/packs/$packId/', updates);
+      final data = await ApiService.patch('/api/catalog/packs/$packId/', updates);
       if (data is Map<String, dynamic>) {
         return Pack.fromJson(data);
       }

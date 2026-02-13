@@ -25,9 +25,9 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-	list_display = ('name', 'store', 'price', 'available_status', 'created_at')
-	search_fields = ('name', 'store__name')
-	list_filter = ('available_status', 'store')
+	list_display = ('name', 'store', 'category', 'price', 'created_at')
+	list_filter = ('category', 'available_status', 'store')
+	search_fields = ('name', 'store__name', 'store__username')
 	inlines = [ProductImageInline]
 
 
@@ -43,7 +43,7 @@ class PackImageInline(admin.TabularInline):
 
 @admin.register(Pack)
 class PackAdmin(admin.ModelAdmin):
-	list_display = ('name', 'store', 'discount', 'created_at')
+	list_display = ('name', 'merchant', 'discount', 'created_at')
 	inlines = [PackProductInline, PackImageInline]
 
 

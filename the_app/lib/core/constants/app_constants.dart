@@ -46,8 +46,7 @@ class AppConstants {
   static const int navExplore = 0;
   static const int navOffers = 1;
   static const int navHome = 2;
-  static const int navMessages = 3;
-  static const int navProfile = 4;
+  static const int navProfile = 3;
   
   // Validation
   static const int minPasswordLength = 6;

@@ -80,6 +80,7 @@ class PackProvider extends ChangeNotifier {
     required String description,
     required double discountPrice,
     required int merchantId,
+    bool isAvailable = true,
   }) async {
     if (_selectedProducts.isEmpty) {
       throw Exception('Empty pack');
@@ -111,6 +112,76 @@ class PackProvider extends ChangeNotifier {
       // Refresh packs list
       await loadMyPacks(merchantId);
       return pack;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Pack> updatePack({
+    required int id,
+    required String name,
+    required String description,
+    required double discountPrice,
+    required bool isAvailable,
+    required int merchantId,
+  }) async {
+    _isSubmitting = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final updates = {
+        'name': name,
+        'description': description,
+        'discount_price': discountPrice,
+        'available_status': isAvailable ? 'available' : 'unavailable',
+      };
+
+      // Only send products if user actually selected/edited them.
+      // If omitted, backend keeps existing pack products (useful for discount-only edits).
+      if (_selectedProducts.isNotEmpty) {
+        final products = _selectedProducts.map((p) {
+          final qty = _quantities[p.id] ?? 1;
+          return PackProduct(
+            productId: p.id,
+            productName: p.title,
+            productImage: p.image ?? '',
+            productPrice: p.price,
+            quantity: qty,
+          );
+        }).toList();
+        updates['products'] = products.map((p) => p.toJson()).toList();
+      }
+
+      final pack = await apiService.updatePack(id, updates);
+      final index = _myPacks.indexWhere((p) => p.id == id);
+      if (index != -1) {
+        _myPacks[index] = pack;
+      }
+      notifyListeners();
+      return pack;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePack(int id, {required int merchantId}) async {
+    _isSubmitting = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await apiService.deletePack(id);
+      _myPacks.removeWhere((p) => p.id == id);
+      await loadMyPacks(merchantId);
     } catch (e) {
       _error = e.toString();
       rethrow;

@@ -227,6 +227,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       if (userData != null) {
         userData['name'] = _nameController.text;
         userData['phone'] = _phoneController.text;
+        if (_descriptionController.text.trim().isNotEmpty) {
+          userData['store_description'] = _descriptionController.text.trim();
+        } else {
+          userData['store_description'] = '';
+        }
+        if (address.trim().isNotEmpty) {
+          // Keep both keys in sync (some screens read 'location', others 'address')
+          userData['location'] = address.trim();
+          userData['address'] = address.trim();
+        }
         await StorageService.saveUserData(userData);
       }
 
@@ -328,9 +338,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                   // Form Fields
                   AppTextField(
                     controller: _nameController,
-                    label: 'Store Name',
-                    hint: 'Enter your store name',
-                    icon: Icons.store_rounded,
+                    label: 'Name',
+                    hint: 'Enter your name',
+                    icon: Icons.person_rounded,
                     style: AppTextFieldStyle.profile,
                   ),
                   const SizedBox(height: 20),
@@ -366,139 +376,147 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   }
 
   Widget _buildHeader() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: 190,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.primaryDeep.withValues(alpha: 0.08),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-          child: (_coverUrl != null && _coverUrl!.isNotEmpty)
-              ? ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                  child: Image.network(
-                    _coverUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.primaryDeep.withValues(alpha: 0.08),
-                    ),
-                  ),
-                )
-              : Container(
-                  color: AppColors.primaryDeep.withValues(alpha: 0.08),
-                ),
-        ),
-        Positioned.fill(
-          child: Center(
-            child: GestureDetector(
-              onTap: _isUploadingCover ? null : _pickCoverImage,
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: _isUploadingCover
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.camera_alt_outlined,
-                        size: 24, color: AppColors.textPrimary),
+    return SizedBox(
+      height: 224,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 190,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.primaryDeep.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
+            child: (_coverUrl != null && _coverUrl!.isNotEmpty)
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      _coverUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                      ),
+                    ),
+                  )
+                : Container(
+                    color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                  ),
           ),
-        ),
-        Positioned(
-          bottom: -34,
-          left: 20,
-          child: GestureDetector(
-            onTap: _isUploadingImage ? null : _pickImage,
-            child: Stack(
-              children: [
-                Container(
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 190,
+            child: Center(
+              child: GestureDetector(
+                onTap: _isUploadingCover ? null : _pickCoverImage,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
-                    radius: 34,
-                    backgroundColor: Colors.grey.shade100,
-                    child: _isUploadingImage
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                            ? ClipOval(
-                                child: Image.network(
-                                  _avatarUrl!,
-                                  width: 68,
-                                  height: 68,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.store,
-                                      size: 30,
-                                      color: Colors.grey),
-                                ),
-                              )
-                            : const Icon(Icons.store,
-                                size: 30, color: Colors.grey),
-                  ),
+                  alignment: Alignment.center,
+                  child: _isUploadingCover
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.camera_alt_outlined,
+                          size: 24, color: AppColors.textPrimary),
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(7),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 20,
+            child: GestureDetector(
+              onTap: _isUploadingImage ? null : _pickImage,
+              behavior: HitTestBehavior.opaque,
+              child: Stack(
+                children: [
+                  Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                      border: Border.all(color: Colors.white, width: 4),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 6,
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Icon(Icons.camera_alt,
-                        size: 14, color: AppColors.primaryColor),
+                    child: CircleAvatar(
+                      radius: 34,
+                      backgroundColor: Colors.grey.shade100,
+                      child: _isUploadingImage
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                              ? ClipOval(
+                                  child: Image.network(
+                                    _avatarUrl!,
+                                    width: 68,
+                                    height: 68,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.store,
+                                        size: 30,
+                                        color: Colors.grey),
+                                  ),
+                                )
+                              : const Icon(Icons.store,
+                                  size: 30, color: Colors.grey),
+                    ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey[300]!, width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.camera_alt,
+                          size: 14, color: AppColors.primaryColor),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 46),
-      ],
+        ],
+      ),
     );
   }
 

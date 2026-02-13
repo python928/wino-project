@@ -1,21 +1,8 @@
-- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+# Backend subfolder note
 
-- [x] Clarify Project Requirements
+This repo is a monorepo (Django backend + Flutter app). The canonical agent guidance lives at:
 
-- [x] Scaffold the Project
+- `/.github/copilot-instructions.md`
 
-- [x] Customize the Project
+When working specifically in `app-backend/`, follow the backend sections in the root instructions (entrypoints, URL routing, JWT auth, DB switching via `POSTGRES_*`, and the messaging/notifications route mismatch).
 
-- [x] Install Required Extensions
-
-- [x] Compile the Project
-
-- [ ] Create and Run Task
-
-- [ ] Launch the Project
-
-- [x] Ensure Documentation is Complete
-
-- Work through each checklist item systematically.
-- Keep communication concise and focused.
-- Follow development best practices.

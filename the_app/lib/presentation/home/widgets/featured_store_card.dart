@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/card_styles.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../data/models/store_model.dart';

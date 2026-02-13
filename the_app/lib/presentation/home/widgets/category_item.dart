@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
-import '../../../core/theme/app_decorations.dart';
+
 
 /// Modern category item with clean design (lib style)
 class CategoryItem extends StatelessWidget {

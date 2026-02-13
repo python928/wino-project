@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 
-/// Merchant profile header with cover, avatar, store info, and actions
+/// Profile header with cover, avatar, store info, and actions
 class ProfileMerchantHeader extends StatelessWidget {
   final String userName;
   final String location;
@@ -17,6 +17,7 @@ class ProfileMerchantHeader extends StatelessWidget {
   final VoidCallback onPickImage;
   final VoidCallback onPickCoverImage;
   final VoidCallback? onSettingsTap;
+  final Function(String)? onSettingsMenuSelected;
   final Gradient primaryGradient;
 
   const ProfileMerchantHeader({
@@ -34,6 +35,7 @@ class ProfileMerchantHeader extends StatelessWidget {
     required this.onPickImage,
     required this.onPickCoverImage,
     this.onSettingsTap,
+    this.onSettingsMenuSelected,
     required this.primaryGradient,
   });
 
@@ -80,18 +82,51 @@ class ProfileMerchantHeader extends StatelessWidget {
             Positioned(
               top: 16,
               right: 16,
-              child: GestureDetector(
-                onTap: onSettingsTap,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.settings_outlined,
-                      color: Colors.white, size: 18),
-                ),
-              ),
+              child: onSettingsMenuSelected == null
+                  ? const SizedBox.shrink()
+                  : PopupMenuButton<String>(
+                      onSelected: onSettingsMenuSelected!,
+                      offset: const Offset(-10, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      color: Colors.white,
+                      elevation: 8,
+                      itemBuilder: (context) => [
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, 
+                                   color: AppColors.primaryColor, size: 20),
+                              const SizedBox(width: 12),
+                              const Text('Edit Information'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.logout, 
+                                         color: Colors.red, size: 20),
+                              const SizedBox(width: 12),
+                              const Text('Logout', 
+                                        style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.settings_outlined,
+                            color: Colors.white, size: 18),
+                      ),
+                    ),
             ),
             Positioned(
               bottom: -34,

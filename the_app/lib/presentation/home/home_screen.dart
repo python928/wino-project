@@ -12,6 +12,8 @@ import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/models/user_model.dart';
+import '../../data/models/store_model.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import 'widgets/category_item.dart';
 import '../shared_widgets/cards/product_card.dart';
@@ -280,6 +282,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ==================== Featured Stores Section ====================
 
+  Store _userAsStore(User u) {
+    // Adapter: keep FeaturedStoreCard working while backend uses unified User profile
+    return Store.fromJson({
+      'id': u.id,
+      'name': u.name,
+      'description': u.storeDescription,
+      'logo': u.profileImage ?? '',
+      'cover_image': u.coverImage ?? '',
+      'average_rating': u.averageRating,
+      'followers_count': u.followersCount,
+      'products_count': 0,
+      'is_open': true,
+      'distance': 0,
+      'email': u.email,
+      'phone': u.phone ?? '',
+      'website': '',
+      'address': u.address,
+      'latitude': u.latitude,
+      'longitude': u.longitude,
+      'store_type': u.storeType,
+      'category': '',
+      'created_at': u.dateJoined.toIso8601String(),
+      'updated_at': u.dateJoined.toIso8601String(),
+    });
+  }
+
   Widget _buildFeaturedStoresSection() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
@@ -312,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        final stores = homeProvider.featuredStores;
+        final stores = homeProvider.featuredStores; // List<User>
         if (stores.isEmpty) {
           return SizedBox(
             height: 160,
@@ -331,15 +359,15 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
             scrollDirection: Axis.horizontal,
             itemCount: stores.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
             itemBuilder: (context, index) {
+              final storeForCard = _userAsStore(stores[index]);
               return FeaturedStoreCard(
-                store: stores[index],
+                store: storeForCard, // <-- now matches expected type
                 onTap: () => Navigator.pushNamed(
                   context,
                   Routes.store,
-                  arguments: stores[index].id,
+                  arguments: stores[index].id, // userId == storeId
                 ),
               );
             },

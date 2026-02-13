@@ -73,6 +73,7 @@ class PostProvider with ChangeNotifier {
   Future<void> createOffer({
     required int productId,
     required int discountPercentage,
+    bool isAvailable = true,
   }) async {
     _isLoading = true;
     _error = null;
@@ -82,6 +83,7 @@ class PostProvider with ChangeNotifier {
       final newOffer = await PostRepository.createOffer(
         productId: productId,
         discountPercentage: discountPercentage,
+        isAvailable: isAvailable,
       );
       _myOffers.insert(0, newOffer);
     } catch (e) {
@@ -181,6 +183,21 @@ class PostProvider with ChangeNotifier {
     }
   }
 
+  Future<void> loadStorePosts(int storeId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _myPosts = await PostRepository.getPosts(storeId: storeId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadHotDeals() async {
     _isLoading = true;
     _error = null;
@@ -264,6 +281,7 @@ class PostProvider with ChangeNotifier {
     required double price,
     required String category,
     required bool isAvailable,
+    bool hidePrice = false,
     List<File> newImages = const [],
   }) async {
     _isLoading = true;
@@ -279,6 +297,7 @@ class PostProvider with ChangeNotifier {
         price: price,
         category: category,
         isAvailable: isAvailable,
+        hidePrice: hidePrice,
         newImages: newImages,
       );
       

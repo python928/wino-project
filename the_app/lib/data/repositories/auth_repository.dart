@@ -56,32 +56,26 @@ class AuthRepository {
 
   static Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
     try {
-      final response = await ApiService.register(data);
+      final registrationData = Map<String, dynamic>.from(data)..remove('role');
 
-      final access = response['access'] ?? response['tokens']?['access'];
-      final refresh = response['refresh'] ?? response['tokens']?['refresh'];
-      final userPayload = response['user'] as Map<String, dynamic>?;
+      final response = await ApiService.post(ApiConfig.register, registrationData);
 
-      if (access == null || refresh == null) {
-        throw Exception('Tokens not received after registration');
+      final access = response['access'];
+      final refresh = response['refresh'];
+      if (access != null && refresh != null) {
+        await StorageService.saveTokens(accessToken: access, refreshToken: refresh);
       }
 
-      // IMPORTANT: Save tokens BEFORE any potential authenticated requests
-      await StorageService.saveTokens(
-        accessToken: access,
-        refreshToken: refresh,
-      );
+      // Prefer embedded user; otherwise fetch /me/
+      final userData = (response['user'] is Map<String, dynamic>)
+          ? response['user'] as Map<String, dynamic>
+          : (await ApiService.get(ApiConfig.profile) as Map<String, dynamic>);
 
-      final user = userPayload != null
-          ? User.fromJson(userPayload)
-          : await _fetchUserFromToken(access);
+      final user = User.fromJson(userData);
 
       return {
         'user': user,
-        'tokens': {
-          'access': access,
-          'refresh': refresh,
-        },
+        'tokens': {'access': access, 'refresh': refresh},
       };
     } catch (e) {
       throw Exception('Registration failed: $e');

@@ -6,9 +6,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../data/models/post_model.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  final Post? product;
+
+  const AddProductScreen({super.key, this.product});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -19,12 +23,108 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _titleController = TextEditingController();
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final List<File> _images = [];
+  final List<dynamic> _images = [];
   final _picker = ImagePicker();
   bool _isLoading = false;
   bool _isAvailable = true;
   bool _showPrice = true;
   final _categoryController = TextEditingController();
+
+  bool get _isEditMode => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final product = widget.product;
+    if (product != null) {
+      _titleController.text = product.title;
+      _priceController.text = product.price.toString();
+      _descriptionController.text = product.description;
+      _categoryController.text = product.category;
+      _isAvailable = product.isAvailable;
+      _showPrice = !product.hidePrice;
+      _images.addAll(product.gallery);
+    }
+  }
+
+  Widget _buildImage(dynamic image) {
+    if (image is File) {
+      return Image.file(image, fit: BoxFit.cover);
+    }
+    if (image is String) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey[200],
+            alignment: Alignment.center,
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image, color: Colors.grey),
+          );
+        },
+      );
+    }
+    return Container(
+      color: Colors.grey[200],
+      alignment: Alignment.center,
+      child: const Icon(Icons.image, color: Colors.grey),
+    );
+  }
+
+  Future<void> _confirmDeleteProduct() async {
+    final product = widget.product;
+    if (product == null) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: AlertDialog(
+          title: const Text('Delete Product?'),
+          content: const Text('This action cannot be undone.'),
+          actions: [
+            AppTextButton(
+              onPressed: () => Navigator.pop(context, false),
+              text: 'Cancel',
+            ),
+            AppPrimaryButton(
+              onPressed: () => Navigator.pop(context, true),
+              text: 'Delete',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await context.read<PostProvider>().deletePost(product.id);
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Product deleted successfully');
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Failed to delete product: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _pickImages() async {
     try {
@@ -54,24 +154,57 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await Provider.of<PostProvider>(context, listen: false).addProduct(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        price: !_showPrice ? 0 : double.parse(_priceController.text.isEmpty ? '0' : _priceController.text),
-        category: _categoryController.text.isEmpty ? 'General' : _categoryController.text,
-        images: List<File>.from(_images),
-        isAvailable: _isAvailable,
-        isNegotiable: false,
-        hidePrice: !_showPrice,
-      );
+      final provider = Provider.of<PostProvider>(context, listen: false);
+      final double price = !_showPrice
+          ? 0.0
+          : double.parse(
+                  _priceController.text.isEmpty ? '0' : _priceController.text)
+              .toDouble();
 
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Product published successfully');
-        Navigator.pop(context, true);
+      if (_isEditMode) {
+        final newFiles = _images.whereType<File>().toList();
+        await provider.updateProduct(
+          id: widget.product!.id,
+          title: _titleController.text,
+          description: _descriptionController.text,
+          price: price,
+          category: _categoryController.text.isEmpty
+              ? 'General'
+              : _categoryController.text,
+          isAvailable: _isAvailable,
+          hidePrice: !_showPrice,
+          newImages: newFiles,
+        );
+
+        if (mounted) {
+          Helpers.showSnackBar(context, 'Product updated successfully');
+          Navigator.pop(context, true);
+        }
+      } else {
+        await provider.addProduct(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          price: price,
+          category: _categoryController.text.isEmpty
+              ? 'General'
+              : _categoryController.text,
+          images: _images.whereType<File>().toList(),
+          isAvailable: _isAvailable,
+          isNegotiable: false,
+          hidePrice: !_showPrice,
+        );
+
+        if (mounted) {
+          Helpers.showSnackBar(context, 'Product published successfully');
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to publish product: $e');
+        Helpers.showSnackBar(
+          context,
+          'Failed to ${_isEditMode ? 'update' : 'publish'} product: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -96,7 +229,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text('Publish New Product'),
+          title: Text(_isEditMode ? 'Edit Product' : 'Publish New Product'),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -104,6 +237,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
             icon: const Icon(Icons.arrow_forward),
             onPressed: () => Navigator.pop(context),
           ),
+          actions: [
+            if (_isEditMode)
+              IconButton(
+                onPressed: _isLoading ? null : _confirmDeleteProduct,
+                icon: const Icon(Icons.delete_outline),
+              ),
+          ],
         ),
         body: Column(
           children: [
@@ -116,7 +256,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Image Section
-                      _buildLabel('Product Images'),
+                      const Text(
+                        'Product Images',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       _buildImagePicker(),
                       const SizedBox(height: 8),
@@ -132,85 +279,80 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       const SizedBox(height: 24),
 
                       // Product Name
-                      _buildLabel('Product Name', required: true),
-                      const SizedBox(height: 8),
-                      TextFormField(
+                      AppTextField(
                         controller: _titleController,
-                        decoration: _inputDecoration('Enter product name'),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Please enter product name' : null,
+                        label: 'Product Name',
+                        hint: 'Enter product name',
+                        icon: Icons.inventory_2_outlined,
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Please enter product name'
+                            : null,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Price
-                      _buildLabel('Price', required: true),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _priceController,
-                        enabled: _showPrice,
-                        decoration: InputDecoration(
-                          hintText: '0',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          filled: true,
-                          fillColor: _showPrice ? Colors.grey[100] : Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          suffixText: 'DZD',
-                          suffixStyle: TextStyle(
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                      Opacity(
+                        opacity: _showPrice ? 1.0 : 0.6,
+                        child: IgnorePointer(
+                          ignoring: !_showPrice,
+                          child: AppTextField(
+                            controller: _priceController,
+                            label: 'Price',
+                            hint: '0',
+                            icon: Icons.payments_outlined,
+                            keyboardType: TextInputType.number,
+                            suffixText: 'DZD',
+                            validator: (value) {
+                              if (!_showPrice) return null;
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter price';
+                              }
+                              return null;
+                            },
                           ),
                         ),
-                        keyboardType: TextInputType.number,
-                        textDirection: TextDirection.ltr,
-                        textAlign: TextAlign.left,
-                        validator: (value) {
-                          if (!_showPrice) return null;
-                          if (value == null || value.isEmpty) return 'Please enter price';
-                          return null;
-                        },
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Category
-                      _buildLabel('Category', required: true),
-                      const SizedBox(height: 8),
-                      TextFormField(
+                      AppTextField(
                         controller: _categoryController,
-                        decoration: _inputDecoration('Enter product category'),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Please enter product category' : null,
+                        label: 'Category',
+                        hint: 'Enter product category',
+                        icon: Icons.category_outlined,
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Please enter product category'
+                            : null,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Description
-                      _buildLabel('Description'),
-                      const SizedBox(height: 8),
-                      TextFormField(
+                      AppTextField(
                         controller: _descriptionController,
-                        decoration: _inputDecoration('Add product description..'),
+                        label: 'Description',
+                        hint: 'Add product description..',
+                        icon: Icons.description_outlined,
                         maxLines: 3,
+                        textInputAction: TextInputAction.newline,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                      // Show Price Toggle
-                      _buildToggleOption(
-                        title: 'Show Price',
-                        subtitle: 'Show price to customers',
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show Price'),
+                        subtitle:
+                            const Text('Show price to customers in listings'),
                         value: _showPrice,
                         onChanged: (value) {
                           setState(() => _showPrice = value);
                         },
                       ),
-                      const SizedBox(height: 12),
 
-                      // Availability Toggle
-                      _buildToggleOption(
-                        title: 'Product Available',
-                        subtitle: 'Is the product available for sale?',
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Available'),
+                        subtitle:
+                            const Text('Is the product available for sale?'),
                         value: _isAvailable,
                         onChanged: (value) {
                           setState(() => _isAvailable = value);
@@ -240,7 +382,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: AppPrimaryButton(
-                    text: _isLoading ? 'Publishing...' : 'Publish Product',
+                    text: _isLoading
+                        ? (_isEditMode ? 'Saving...' : 'Publishing...')
+                        : (_isEditMode ? 'Save Changes' : 'Publish Product'),
                     icon: Icons.add,
                     isLoading: _isLoading,
                     onPressed: _isLoading ? null : _submit,
@@ -254,65 +398,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildLabel(String text, {bool required = false}) {
-    return Row(
-      children: [
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        if (required)
-          const Text(
-            ' *',
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-      ],
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[400]),
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
-
   Widget _buildImagePicker() {
     if (_images.isEmpty) {
       return GestureDetector(
         onTap: _pickImages,
         child: Container(
-          height: 120,
+          height: 220,
           width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+            border:
+                Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.camera_alt_outlined, size: 32, color: Colors.grey[500]),
+              Icon(Icons.camera_alt_outlined,
+                  size: 32, color: Colors.grey[500]),
               const SizedBox(height: 8),
               Text(
-                'Add Image',
+                'Add Images',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to upload',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -321,125 +438,121 @@ class _AddProductScreenState extends State<AddProductScreen> {
       );
     }
 
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _images.length + (_images.length < 5 ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _images.length) {
-            return GestureDetector(
-              onTap: _pickImages,
-              child: Container(
-                width: 100,
-                margin: const EdgeInsets.only(left: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, size: 28, color: Colors.grey[500]),
-                    Text('Add', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return Stack(
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _pickImages,
+          child: Stack(
             children: [
-              Container(
-                width: 100,
-                margin: const EdgeInsets.only(left: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    _images[index],
-                    fit: BoxFit.cover,
-                    width: 100,
-                    height: 100,
-                  ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  height: 220,
+                  width: double.infinity,
+                  child: _buildImage(_images.first),
                 ),
               ),
               Positioned(
-                top: 4,
-                right: 4,
-                child: GestureDetector(
-                  onTap: () => setState(() => _images.removeAt(index)),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_images.length}/5',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
                   ),
                 ),
               ),
             ],
-          );
-        },
-      ),
-    );
-  }
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 86,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _images.length + (_images.length < 5 ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == _images.length) {
+                return GestureDetector(
+                  onTap: _pickImages,
+                  child: Container(
+                    width: 86,
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add, size: 24, color: Colors.grey[500]),
+                        Text(
+                          'Add',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
-  Widget _buildToggleOption({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Transform.scale(
-            scale: 0.9,
-            child: Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: AppColors.primaryColor,
-              activeTrackColor: AppColors.primaryLightShade,
-              inactiveThumbColor: Colors.grey[400],
-              inactiveTrackColor: Colors.grey[300],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+              return Stack(
+                children: [
+                  Container(
+                    width: 86,
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: index == 0
+                            ? AppColors.primaryColor.withOpacity(0.5)
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        width: 86,
+                        height: 86,
+                        child: _buildImage(_images[index]),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _images.removeAt(index)),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close,
+                            size: 14, color: Colors.white),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

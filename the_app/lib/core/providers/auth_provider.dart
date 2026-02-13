@@ -9,7 +9,6 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
-  String _activeProfileType = 'USER'; // 'USER' or 'STORE'
 
   AuthProvider() {
     _loadUserFromStorage();
@@ -20,18 +19,6 @@ class AuthProvider with ChangeNotifier {
     if (userData != null) {
       try {
         _user = User.fromJson(userData);
-        // If user is merchant, default to STORE view? Or keep last state?
-        // For now, let's default to USER unless we save the active profile type too.
-        // But the user wants to switch.
-        // Let's just load the user.
-        // _activeProfileType = _user?.role == 'STORE' ? 'STORE' : 'USER'; 
-        // Actually, if I am a store owner, I probably want to see my store dashboard first?
-        // The previous logic in login was:
-        // _activeProfileType = _user?.role == 'STORE' ? 'STORE' : 'USER';
-        // Let's replicate that.
-        if (_user?.role == 'STORE') {
-           _activeProfileType = 'STORE';
-        }
       } catch (e) {
         print('AuthProvider: Error parsing user from storage: $e');
       }
@@ -42,36 +29,18 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
-  String get activeProfileType => _activeProfileType;
 
-  bool get isStoreProfileActive => _activeProfileType == 'STORE';
-
-  void switchProfileType() {
-    if (_user?.isMerchant == true) {
-      _activeProfileType = _activeProfileType == 'USER' ? 'STORE' : 'USER';
-      notifyListeners();
-    }
-  }
-
-  /// Reload user data from storage and update profile type
-  /// Call this after role changes (user <-> merchant conversion)
+  /// Reload user data from storage
   void reloadFromStorage() {
     final userData = StorageService.getUserData();
     if (userData != null) {
       try {
         _user = User.fromJson(userData);
-        _activeProfileType = _user?.role == 'STORE' ? 'STORE' : 'USER';
         notifyListeners();
       } catch (e) {
         print('AuthProvider: Error reloading user from storage: $e');
       }
     }
-  }
-
-  /// Set profile type directly (for role conversion)
-  void setProfileType(String type) {
-    _activeProfileType = type;
-    notifyListeners();
   }
 
   Future<bool> login(String email, String password) async {
@@ -85,35 +54,17 @@ class AuthProvider with ChangeNotifier {
       print('AuthProvider: AuthRepository.login returned successfully.');
       
       final userObj = response['user'];
-      // final tokens = response['tokens']; // Tokens are already saved by AuthRepository
 
       if (userObj is User) {
          _user = userObj;
       } else {
-         // Fallback if it somehow returns a Map (should not happen with current repo code)
          print('AuthProvider: Warning - user object is not of type User, trying fromJson...');
          _user = User.fromJson(userObj);
       }
 
-      // Set initial profile type
-      _activeProfileType = _user?.role == 'STORE' ? 'STORE' : 'USER';
-
       print('AuthProvider: User parsed successfully: ${_user?.username}');
 
       await StorageService.saveUserData(_user!.toJson());
-
-      // Tokens are already saved in AuthRepository, so we don't strictly need to save them again here,
-      // but if AuthService.saveTokens does something extra, we can keep it. 
-      // However, to avoid race conditions or double-writes, it's safer to rely on the Repo.
-      // If AuthService is just a wrapper around StorageService, we can skip it or keep it.
-      // Let's keep it commented out or remove it if we trust the Repo.
-      // For now, I will comment it out to avoid redundancy, as the Repo explicitly saves them.
-      /*
-      await AuthService.saveTokens(
-        accessToken: tokens['access'],
-        refreshToken: tokens['refresh'],
-      );
-      */
 
       _isLoading = false;
       notifyListeners();
@@ -139,7 +90,6 @@ class AuthProvider with ChangeNotifier {
       print('AuthProvider: AuthRepository.register returned successfully.');
 
       final userObj = response['user'];
-      // final tokens = response['tokens'];
 
       if (userObj is User) {
          _user = userObj;
@@ -148,14 +98,6 @@ class AuthProvider with ChangeNotifier {
       }
 
       await StorageService.saveUserData(_user!.toJson());
-
-      // Tokens are already saved in AuthRepository
-      /*
-      await AuthService.saveTokens(
-        accessToken: tokens['access'],
-        refreshToken: tokens['refresh'],
-      );
-      */
 
       _isLoading = false;
       notifyListeners();
@@ -196,7 +138,6 @@ class AuthProvider with ChangeNotifier {
       debugPrint('Logout error: $e');
     } finally {
       _user = null;
-      _activeProfileType = 'USER';
       _isLoading = false;
       notifyListeners();
     }

@@ -15,17 +15,14 @@
    ```
 
 ## Apps
-- `users`: Custom `User` with roles, registration, JWT endpoints.
-- `stores`: Store CRUD, followers with signals to notify owners.
-- `catalog`: Categories, products, images, packs, reviews.
-- `promotions`: Promotions with images; signals notify followers.
-- `messaging`: Direct messages; signals push chat + notifications via FCM.
+- `users`: Unified user/store profile + registration + JWT endpoints.
+- `catalog`: Categories, products, images, packs, reviews, promotions.
 - `notifications`: Persistent notifications + FCM device endpoints.
-- `subscriptions`: Subscription plans and merchant subscriptions.
+- `subscriptions`: Subscription plans and subscriptions.
 
 ## API entrypoints
 - Auth: `/api/auth/token/`, `/api/auth/token/refresh/`, `/api/users/register/`
-- Routers: `/api/users/`, `/api/stores/`, `/api/catalog/`, `/api/promotions/`, `/api/messaging/`, `/api/notifications/`, `/api/subscriptions/`
+- Routers: `/api/users/`, `/api/catalog/`, `/api/notifications/`, `/api/subscriptions/`
 
 ## Notifications
  Notifications use FCM (fcm-django). Register devices via `/api/notifications/devices/` and ensure `FCM_SERVER_KEY` is set.

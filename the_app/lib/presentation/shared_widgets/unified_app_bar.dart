@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/routing/routes.dart';
 import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
 

@@ -10,6 +10,8 @@ from .views import (
     ProductViewSet,
     ReviewViewSet,
     FavoriteViewSet,
+    PromotionViewSet,
+    PromotionImageViewSet,
 )
 
 router = DefaultRouter()
@@ -21,5 +23,7 @@ router.register('pack-products', PackProductViewSet, basename='pack-product')
 router.register('pack-images', PackImageViewSet, basename='pack-image')
 router.register('reviews', ReviewViewSet, basename='review')
 router.register('favorites', FavoriteViewSet, basename='favorite')
+router.register('promotions', PromotionViewSet, basename='promotion')
+router.register('promotion-images', PromotionImageViewSet, basename='promotion-image')
 
 urlpatterns = [path('', include(router.urls))]

@@ -9,6 +9,7 @@ import 'storage_service.dart';
 class ApiService {
   static DateTime? _lastRefreshAttempt;
   static bool _refreshTokenInvalid = false;
+  static int _consecutiveRefreshServerErrors = 0;
 
   // ==================== PUBLIC METHODS WITH AUTO-RETRY ====================
   
@@ -45,14 +46,14 @@ class ApiService {
   
   static Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authRegister}');
-      
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.register}');
+
       final response = await http.post(
         uri,
         headers: ApiConfig.getHeaders(), // No token
         body: jsonEncode(data),
       ).timeout(ApiConfig.connectionTimeout);
-      
+
       return _handleResponse(response, treat401AsSessionExpired: false);
     } catch (e) {
       throw _handleError(e);
@@ -180,10 +181,21 @@ class ApiService {
         
         debugPrint('✅ Token refreshed successfully');
         _refreshTokenInvalid = false;
+			_consecutiveRefreshServerErrors = 0;
         return true;
       }
       
       debugPrint('❌ Token refresh failed: ${response.statusCode}');
+
+      // If backend is erroring (e.g. migrations not applied yet), don't spam refresh.
+      if (response.statusCode >= 500) {
+        _consecutiveRefreshServerErrors += 1;
+        if (_consecutiveRefreshServerErrors >= 3) {
+          // Back off for a bit after repeated server failures.
+          _lastRefreshAttempt = DateTime.now();
+        }
+        return false;
+      }
 
       // If refresh token is invalid/expired, clear tokens to prevent infinite retries
       if (response.statusCode == 401 || response.statusCode == 400) {

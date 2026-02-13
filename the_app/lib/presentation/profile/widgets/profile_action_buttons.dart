@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
-import '../../../core/routing/routes.dart';
+
 
 /// Action buttons for merchant profile (Publish Post + Analytics)
 class ProfileActionButtons extends StatelessWidget {
@@ -77,30 +77,6 @@ class ProfileActionButtons extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppConstants.spacing12),
-          // Analytics Button (Outlined)
-          Expanded(
-            flex: 1,
-            child: OutlinedButton.icon(
-              onPressed: () => Navigator.pushNamed(context, Routes.statistics),
-              icon: Icon(
-                Icons.bar_chart,
-                size: AppConstants.spacing18,
-                color: AppColors.primaryColor,
-              ),
-              label: Text(
-                'Analytics',
-                style: TextStyle(color: AppColors.primaryColor),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.primaryColor),
-                padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
                 ),
               ),
             ),

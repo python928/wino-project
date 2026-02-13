@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import '../services/store_api_service.dart';
-import '../../data/models/store_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
 
 class StoreProvider extends ChangeNotifier {
   final StoreApiService apiService;
   StoreProvider({required this.apiService});
 
-  Store? _store;
+  User? _store;
   bool _isLoading = false;
   bool _isLoadingProducts = false;
   String? _error;
@@ -17,7 +17,7 @@ class StoreProvider extends ChangeNotifier {
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
-  Store? get store => _store;
+  User? get store => _store;
   bool get isLoading => _isLoading;
   bool get isLoadingProducts => _isLoadingProducts;
   String? get error => _error;
@@ -26,7 +26,7 @@ class StoreProvider extends ChangeNotifier {
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
-  Future<Store?> getMyStore(int userId) async {
+  Future<User?> getMyStore(int userId) async {
     return await apiService.getMyStore(userId);
   }
 
@@ -43,7 +43,7 @@ class StoreProvider extends ChangeNotifier {
         apiService.isFollowing(storeId),
       ]);
 
-      _store = results[0] as Store;
+      _store = results[0] as User;
       _isFollowing = results[1] as bool;
       _currentPage = 1;
       _hasMore = true;

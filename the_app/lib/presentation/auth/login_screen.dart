@@ -91,23 +91,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 48),
-                    _buildLoginForm(),
-                  ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 40),
+                      _buildLoginForm(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -162,131 +165,107 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Widget _buildLoginForm() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome Back',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.h3.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Welcome Back',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h3.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sign in to continue',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+              const SizedBox(height: 8),
+              Text(
+                'Sign in to continue',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-            // Email Field
-            AppTextField(
-              controller: _emailController,
-              focusNode: _emailFocusNode,
-              label: 'Email Address',
-              hint: 'Enter your email',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => _passwordFocusNode.requestFocus(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!value.contains('@') || !value.contains('.')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Password Field
-            AppTextField(
-              controller: _passwordController,
-              focusNode: _passwordFocusNode,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outlined,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _loginUser(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 4) {
-                  return 'Password must be at least 4 characters';
-                }
-                return null;
-              },
-            ),
-
-            // Forgot Password
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppTextButton(
-                text: 'Forgot Password?',
-                onPressed: () {
-                  Helpers.showSnackBar(context, 'Password reset coming soon');
+              // Email Field
+              AppTextField(
+                controller: _emailController,
+                focusNode: _emailFocusNode,
+                label: 'Email Address',
+                hint: 'Enter your email',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _passwordFocusNode.requestFocus(),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!value.contains('@') || !value.contains('.')) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
                 },
               ),
-            ),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 24),
+              // Password Field
+              AppTextField(
+                controller: _passwordController,
+                focusNode: _passwordFocusNode,
+                label: 'Password',
+                hint: 'Enter your password',
+                icon: Icons.lock_outlined,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _loginUser(),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
 
-            // Login Button
-            AppPrimaryButton(
-              text: 'Sign In',
-              onPressed: _loginUser,
-              isLoading: _isLoading,
-            ),
+              // Login Button
+              AppPrimaryButton(
+                text: 'Sign In',
+                onPressed: _loginUser,
+                isLoading: _isLoading,
+                height: 52,
+              ),
+              const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
-
-            // Register Link
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Don't have an account? ",
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+              // Register Link
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account? ",
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                AppTextButton(
-                  text: 'Sign Up',
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
+                  AppTextButton(
+                    text: 'Sign Up',
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
 }

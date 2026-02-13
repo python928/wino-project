@@ -4,39 +4,34 @@ import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/theme/app_text_styles.dart';
 import '../../core/routing/routes.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/helpers.dart';
-import '../../core/providers/post_provider.dart'; // Import PostProvider
-import '../../core/providers/pack_provider.dart'; // Import PackProvider
+import '../../core/providers/post_provider.dart';
+import '../../core/providers/pack_provider.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
+import '../../data/models/user_model.dart';
 import '../auth/splash_screen.dart';
-import 'edit_customer_profile_screen.dart';
 import 'edit_merchant_profile_screen.dart';
 import 'add_product_screen.dart';
 import '../shared_widgets/cards/product_card.dart';
 import 'add_promotion_screen.dart';
-import 'edit_product_screen.dart';
 import 'add_pack_screen.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 
 import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
-import 'widgets/profile_user_header.dart';
 import 'widgets/profile_post_filter.dart';
 import '../shared_widgets/unified_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int? storeId;
+  const ProfileScreen({super.key, this.storeId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -44,21 +39,18 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = 'Loading...';
-  String _userType = 'user';
   String _location = 'Loading...';
   String _storeDescription = '';
   String? _avatarUrl;
   String _phoneNumber = '';
   int? _userId;
+  int? _currentUserId;
   bool _isUploadingImage = false;
 
-  // Real data from backend
   int _followersCount = 0;
   double _averageRating = 0.0;
 
-  // Store specific
   String? _storeCoverUrl;
-  int? _storeId;
   bool _isUploadingCover = false;
 
   String _searchQuery = '';
@@ -67,7 +59,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Filter state for toggle buttons (replaces dropdown)
   int _selectedFilterIndex = 0; // 0=all, 1=product, 2=promotion, 3=pack
 
-  String? _lastProfileType;
+  int? _storeId; // keep, but storeId == userId now
+  String? _lastProfileType; // remove usage (kept field is harmless but unused)
 
   void _showPublishMenu() {
     showModalBottomSheet<void>(
@@ -171,51 +164,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // This is called when dependencies change, but we handle profile type
-    // changes in the build method where we watch AuthProvider
+    // no profile-type switching anymore
   }
 
   Future<void> _fetchStoreData() async {
     if (_userId == null) return;
     try {
-      final response =
-          await ApiService.get('${ApiConfig.stores}?owner=$_userId');
-      List stores = [];
-      if (response is Map && response.containsKey('results')) {
-        stores = response['results'];
-      } else if (response is List) {
-        stores = response;
-      }
+      final resp = await ApiService.get('${ApiConfig.users}$_userId/');
+      if (resp is! Map) return;
 
-      if (stores.isNotEmpty) {
-        final store = stores.first;
-        if (mounted) {
-          // Parse store address
-          String storeLocation = 'Select Location';
-          final storeAddress = store['address']?.toString() ?? '';
-          if (storeAddress.isNotEmpty && storeAddress != 'Algeria') {
-            storeLocation = storeAddress;
-          }
+      final u = User.fromJson(Map<String, dynamic>.from(resp));
 
-          setState(() {
-            _storeId = store['id'];
-            _storeDescription = store['description'] ?? _storeDescription;
-            _storeCoverUrl = store['cover_image'];
-            _phoneNumber = (store['phone_number'] ?? _phoneNumber).toString();
-            _followersCount = store['followers_count'] ?? 0;
-            _averageRating =
-                (store['average_rating'] as num?)?.toDouble() ?? 0.0;
-            _location = storeLocation;
-          });
-        }
-      }
+      if (!mounted) return;
+      setState(() {
+        _storeId = u.id; // userId == storeId
+        _userName = u.fullName;
+        _avatarUrl = u.profileImage;
+        _storeDescription = u.storeDescription;
+        _storeCoverUrl = u.coverImage;
+        _phoneNumber = (u.phone ?? '').toString();
+        _followersCount = u.followersCount;
+        _averageRating = u.averageRating;
+        _location = u.address.isNotEmpty ? u.address : 'Select Location';
+      });
     } catch (e) {
-      print('Error fetching store data: $e');
+      debugPrint('Error fetching unified profile: $e');
     }
   }
 
+  bool get _isOwnerView {
+    if (_currentUserId == null || _userId == null) return false;
+    return _currentUserId == _userId;
+  }
+
   Future<void> _pickCoverImage() async {
-    if (_storeId == null) return;
+    if (_userId == null) return;
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -225,19 +208,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       try {
         final file = File(pickedFile.path);
-        // Update store cover image
-        // Assuming endpoint is /api/stores/stores/{id}/
         await ApiService.updateMultipart(
-            '${ApiConfig.stores}$_storeId/', {}, file, 'cover_image',
-            method: 'PATCH');
+          '${ApiConfig.users}$_userId/',
+          {},
+          file,
+          'cover_image',
+          method: 'PATCH',
+        );
 
         await _fetchStoreData();
 
-        if (mounted)
-          Helpers.showSnackBar(context, 'Cover image updated successfully');
+        if (mounted) Helpers.showSnackBar(context, 'Cover image updated successfully');
       } catch (e) {
-        if (mounted)
-          Helpers.showSnackBar(context, 'Failed to update cover image: $e');
+        if (mounted) Helpers.showSnackBar(context, 'Failed to update cover image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingCover = false);
       }
@@ -322,69 +305,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     final userData = StorageService.getUserData();
-    if (userData != null) {
-      // Get user type from AuthProvider to stay in sync
-      final authProvider = context.read<AuthProvider>();
-      final isMerchantFromAuth = authProvider.activeProfileType == 'STORE';
+    if (userData == null) {
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const SplashScreen()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
 
-      // Parse address to show wilaya/baladiya
-      String locationDisplay = 'Select Location';
-      final address = userData['address']?.toString() ??
-          userData['location']?.toString() ??
-          '';
-      if (address.isNotEmpty && address != 'Algeria') {
-        locationDisplay = address;
-      }
+    _currentUserId = userData['id'];
+    final targetUserId = widget.storeId ?? _currentUserId;
+    if (targetUserId == null) return;
 
+    String locationDisplay = 'Select Location';
+    final address = (userData['address'] ?? userData['location'] ?? '').toString();
+    if (address.isNotEmpty && address != 'Algeria') locationDisplay = address;
+
+    if (targetUserId == _currentUserId) {
       setState(() {
-        _userId = userData['id'];
+        _userId = targetUserId;
+        _storeId = targetUserId; // unified
         _userName = userData['name'] ?? userData['username'] ?? 'User';
         _location = locationDisplay;
         _phoneNumber = (userData['phone'] ?? '').toString();
-        // Use AuthProvider's activeProfileType for consistency
-        _userType = isMerchantFromAuth ? 'merchant' : 'user';
-        _storeDescription = userData['store_description'] ?? '';
+        _storeDescription = (userData['store_description'] ?? '').toString();
         _avatarUrl = userData['profile_image'] ?? userData['avatar'];
+        _storeCoverUrl = userData['cover_image'];
       });
-
-      if (_userType == 'merchant' && _userId != null) {
-        // Clear existing data and load merchant data
-        _fetchStoreData().then((_) {
-          // Load offers after we have the store ID
-          if (mounted && _storeId != null) {
-            context.read<PostProvider>().loadMyOffers(_storeId.toString());
-            context.read<PackProvider>().loadMyPacks(_storeId!);
-          }
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            final provider = context.read<PostProvider>();
-            provider.loadMyPosts(_userId.toString());
-          }
-        });
-      } else {
-        // For regular users, fetch user stats (followers)
-        _fetchUserStats();
-        // Switching to user mode - clear merchant data
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            // Clear the store-specific data
-            setState(() {
-              _storeId = null;
-              _storeCoverUrl = null;
-              _storeDescription = '';
-            });
-          }
-        });
-      }
     } else {
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const SplashScreen()),
-          (Route<dynamic> route) => false,
-        );
-      }
+      setState(() {
+        _userId = targetUserId;
+        _storeId = targetUserId;
+        _userName = 'Loading...';
+        _location = 'Loading...';
+        _phoneNumber = '';
+        _storeDescription = '';
+        _avatarUrl = null;
+        _storeCoverUrl = null;
+        _followersCount = 0;
+        _averageRating = 0.0;
+      });
     }
+
+    await _fetchStoreData();
+
+    if (!mounted || _userId == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_isOwnerView) {
+        context.read<PostProvider>().loadMyPosts(_userId.toString());
+      } else {
+        context.read<PostProvider>().loadStorePosts(_userId!);
+      }
+      context.read<PostProvider>().loadMyOffers(_userId.toString());
+      context.read<PackProvider>().loadMyPacks(_userId!);
+    });
   }
 
   void _handleLogout() async {
@@ -424,106 +400,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSettingsMenu() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.ltr,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle bar
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  // Title
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Settings',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.spacing16),
-                  // Edit Profile
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.edit_outlined,
-                          color: AppColors.primaryColor),
-                    ),
-                    title: const Text('Edit Profile'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToEditProfile();
-                    },
-                  ),
-                  // Favorites
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child:
-                          const Icon(Icons.favorite_outline, color: Colors.red),
-                    ),
-                    title: const Text('Favorites'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, Routes.favorites);
-                    },
-                  ),
-                  const Divider(height: 32),
-                  // Logout
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.logout, color: Colors.red),
-                    ),
-                    title: const Text(
-                      'Logout',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _handleLogout();
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    // This method is no longer used since we switched to PopupMenuButton
+  }
+
+  void _onSettingsMenuSelected(String value) {
+    switch (value) {
+      case 'edit':
+        _navigateToEditProfile();
+        break;
+      case 'logout':
+        _handleLogout();
+        break;
+    }
   }
 
   Widget _buildMerchantHeader(Color primaryColor, Gradient primaryGradient) {
@@ -540,58 +428,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       averageRating: _averageRating,
       onPickImage: _pickImage,
       onPickCoverImage: _pickCoverImage,
-      onSettingsTap: _navigateToEditProfile,
+      onSettingsTap: null,
+      onSettingsMenuSelected: _isOwnerView ? _onSettingsMenuSelected : null,
       primaryGradient: primaryGradient,
     );
   }
 
-  Widget _buildUserHeader(Color primaryColor, Gradient primaryGradient) {
-    return ProfileUserHeader(
-      userName: _userName,
-      location: _location,
-      avatarUrl: _avatarUrl,
-      isUploadingImage: _isUploadingImage,
-      onPickImage: _pickImage,
-      primaryColor: primaryColor,
-    );
-  }
-
   void _navigateToEditProfile() {
-    if (_userType == 'merchant') {
-      final userData = StorageService.getUserData();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EditMerchantProfileScreen(
-            initialName: userData?['name'] ?? '',
-            initialPhone: userData?['phone'] ?? '',
-            initialImage: userData?['profile_image'] ??
-                userData?['store_image'] ??
-                userData?['avatar'],
-            initialCoverImage: _storeCoverUrl,
-            initialStoreDescription: userData?['store_description'],
-            initialAddress: userData?['location'] ?? userData?['address'],
-          ),
+    final userData = StorageService.getUserData();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditMerchantProfileScreen(
+          initialName: _userName,
+          initialPhone: _phoneNumber,
+          initialImage: _avatarUrl ??
+              userData?['profile_image'] ??
+              userData?['store_image'] ??
+              userData?['avatar'],
+          initialCoverImage: _storeCoverUrl,
+          initialStoreDescription: _storeDescription,
+          initialAddress: _location,
         ),
-      ).then((result) {
-        if (result == true) _loadUserData();
-      });
-    } else {
-      final userData = StorageService.getUserData();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EditCustomerProfileScreen(
-            initialName: userData?['name'] ?? '',
-            initialPhone: userData?['phone'] ?? '',
-            initialImage: userData?['profile_image'] ?? userData?['avatar'],
-            initialAddress: userData?['address'] ?? userData?['location'],
-          ),
-        ),
-      ).then((result) {
-        if (result == true) _loadUserData();
-      });
-    }
+      ),
+    ).then((result) {
+      if (result == true) _loadUserData();
+    });
   }
 
   void _handlePostMenuSelection(String value) {
@@ -638,127 +500,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showEditOfferSheet(Offer offer) {
-    final discountController =
-        TextEditingController(text: offer.discountPercentage.toString());
-    bool isAvailable = offer.isAvailable;
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Edit Offer', style: AppTextStyles.h4),
-                  const SizedBox(height: 12),
-                  AppTextField(
-                    controller: discountController,
-                    label: 'Discount Percentage (%)',
-                    hint: '0',
-                    icon: Icons.percent,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Show Offer'),
-                      Switch(
-                          value: isAvailable,
-                          onChanged: (val) =>
-                              setStateSheet(() => isAvailable = val)),
-                    ],
-                  ),
-                  const SizedBox(height: AppConstants.spacing16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppPrimaryButton(
-                          text: 'Save',
-                          onPressed: () async {
-                            final provider = context.read<PostProvider>();
-                            final discount =
-                                int.tryParse(discountController.text);
-                            try {
-                              await provider.updateOffer(
-                                  offerId: offer.id,
-                                  discountPercentage: discount,
-                                  isAvailable: isAvailable);
-                              if (mounted) Navigator.pop(context);
-                              Helpers.showSnackBar(context, 'Offer updated');
-                            } catch (e) {
-                              Helpers.showSnackBar(
-                                  context, 'Failed to update offer: $e');
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppDangerButton(
-                          text: 'Delete',
-                          onPressed: () async {
-                            final provider = context.read<PostProvider>();
-                            try {
-                              await provider.deleteOffer(offer.id);
-                              if (mounted) Navigator.pop(context);
-                              Helpers.showSnackBar(context, 'Offer deleted');
-                            } catch (e) {
-                              Helpers.showSnackBar(
-                                  context, 'Failed to delete offer: $e');
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+  // Offer editing now uses AddPromotionScreen in edit mode.
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final bool isMerchant = authProvider.activeProfileType == 'STORE';
-    final Color primaryColor =
-        isMerchant ? AppColors.primaryColor : AppColors.primaryColor;
-    final Gradient primaryGradient =
-        isMerchant ? AppColors.deepGradient : AppColors.purpleGradient;
-
-    // Detect profile type change and reload data
-    if (_lastProfileType != null &&
-        _lastProfileType != authProvider.activeProfileType) {
-      // Profile type changed - reload data after current frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _loadUserData();
-        }
-      });
-    }
-    _lastProfileType = authProvider.activeProfileType;
+    final Color primaryColor = AppColors.primaryColor;
+    final Gradient primaryGradient = AppColors.deepGradient;
 
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: UnifiedAppBar(
-          showLocation: false,
-          showNotificationIcon: true,
-        ),
-        floatingActionButton: isMerchant
+        appBar: _isOwnerView
+            ? UnifiedAppBar(
+                showLocation: false,
+                showNotificationIcon: true,
+              )
+            : AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                leading: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      size: 20,
+                      color: Colors.black,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: Text(
+                  _userName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                centerTitle: true,
+              ),
+        floatingActionButton: _isOwnerView
             ? FloatingActionButton(
                 onPressed: _showPublishMenu,
                 backgroundColor: AppColors.primaryColor,
@@ -768,41 +555,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: isMerchant
-                  ? _buildMerchantHeader(primaryColor, primaryGradient)
-                  : _buildUserHeader(primaryColor, primaryGradient),
+              child: _buildMerchantHeader(primaryColor, primaryGradient),
             ),
-            if (isMerchant)
-              SliverToBoxAdapter(
-                child: Consumer2<PostProvider, PackProvider>(
-                  builder: (context, postProvider, packProvider, _) {
-                    final postsCount = postProvider.myPosts.length +
-                        postProvider.myOffers.length +
-                        packProvider.myPacks.length;
+            SliverToBoxAdapter(
+              child: Consumer2<PostProvider, PackProvider>(
+                builder: (context, postProvider, packProvider, _) {
+                  final postsCount = postProvider.myPosts.length +
+                      postProvider.myOffers.length +
+                      packProvider.myPacks.length;
 
-                    return ProfilePostFilter(
-                      selectedIndex: _selectedFilterIndex,
-                      postsCount: postsCount,
-                      onFilterChanged: (index) {
-                        setState(() => _selectedFilterIndex = index);
-                      },
-                      searchController: _searchController,
-                      onSearchChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                    );
-                  },
-                ),
+                  return ProfilePostFilter(
+                    selectedIndex: _selectedFilterIndex,
+                    postsCount: postsCount,
+                    onFilterChanged: (index) {
+                      setState(() => _selectedFilterIndex = index);
+                    },
+                    searchController: _searchController,
+                    onSearchChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  );
+                },
               ),
-            if (isMerchant)
-              SliverToBoxAdapter(
-                child: _buildMerchantPosts(
-                    type: _getFilterType(_selectedFilterIndex)),
-              )
-            else
-              SliverToBoxAdapter(
-                child: _buildUserMenu(),
-              ),
+            ),
+            SliverToBoxAdapter(
+              child: _buildMerchantPosts(
+                  type: _getFilterType(_selectedFilterIndex)),
+            ),
           ],
         ),
       ),
@@ -910,19 +689,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     arguments: item,
                   );
                 },
-                onEditTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              EditProductScreen(product: item))).then((result) {
-                    if (result == true && _userId != null) {
-                      context
-                          .read<PostProvider>()
-                          .loadMyPosts(_userId.toString());
-                    }
-                  });
-                },
+                onEditTap: _isOwnerView
+                    ? () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    AddProductScreen(product: item))).then(
+                            (result) {
+                          if (result == true && _userId != null) {
+                            context
+                                .read<PostProvider>()
+                                .loadMyPosts(_userId.toString());
+                          }
+                        });
+                      }
+                    : null,
               );
             } else if (item is Pack) {
               return PackCard(
@@ -933,9 +715,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pushNamed(context, Routes.packDetails,
                       arguments: item);
                 },
-                onEditTap: () {
-                  Navigator.pushNamed(context, Routes.addPack, arguments: item);
-                },
+                onEditTap: _isOwnerView
+                    ? () {
+                        Navigator.pushNamed(context, Routes.addPack,
+                                arguments: item)
+                            .then((result) {
+                          if (result == true && mounted) {
+                            // Refresh packs so updated discount/products are reflected.
+                            final storeId = _storeId;
+                            if (storeId != null) {
+                              context.read<PackProvider>().loadMyPacks(storeId);
+                            }
+                          }
+                        });
+                      }
+                    : null,
               );
             } else if (item is Offer) {
               try {
@@ -956,7 +750,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       arguments: productWithPromotion,
                     );
                   },
-                  onEditTap: () => _showEditOfferSheet(item),
+                  onEditTap: _isOwnerView
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  AddPromotionScreen(offer: item),
+                            ),
+                          ).then((result) {
+                            if (result == true && mounted) {
+                              final provider = Provider.of<PostProvider>(context,
+                                  listen: false);
+                              if (_userId != null) {
+                                provider.loadMyPosts(_userId.toString());
+                              }
+                              if (_storeId != null) {
+                                provider.loadMyOffers(_storeId.toString());
+                                context
+                                    .read<PackProvider>()
+                                    .loadMyPacks(_storeId!);
+                              }
+                              provider.loadOffers();
+                            }
+                          });
+                        }
+                      : null,
                 );
               } catch (e) {
                 debugPrint('Profile: Error displaying offer: $e');
@@ -967,156 +786,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildUserMenu() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Account Section
-          _buildMenuContainer([
-            _MenuItem(
-              icon: Icons.person_outline,
-              title: 'Information',
-              subtitle: 'Edit your profile',
-              onTap: _navigateToEditProfile,
-            ),
-            _MenuItem(
-              icon: Icons.favorite_outline,
-              title: 'Favorites',
-              onTap: () => Navigator.pushNamed(context, Routes.favorites),
-            ),
-          ]),
-          const SizedBox(height: 16),
-
-          // General Section
-          _buildMenuContainer([
-            _MenuItem(
-              icon: Icons.language,
-              title: 'Language',
-              subtitle: 'Arabic',
-              onTap: () {},
-            ),
-            _MenuItem(
-              icon: Icons.help_outline_rounded,
-              title: 'Help & Support',
-              onTap: () {},
-            ),
-          ]),
-          const SizedBox(height: 16),
-
-          // Logout
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
-            ),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(AppConstants.spacing8),
-                decoration: const BoxDecoration(
-                    color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.logout_rounded,
-                    color: Colors.red, size: AppConstants.spacing20),
-              ),
-              title: const Text('Logout',
-                  style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppConstants.fontSizeSubtitle)),
-              trailing: const Icon(Icons.arrow_forward_ios,
-                  size: AppConstants.iconSmall, color: Colors.red),
-              onTap: _handleLogout,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacing40),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisItem(
-      {required String value,
-      required String label,
-      required IconData icon,
-      required Color color}) {
-    return Column(
-      children: [
-        Container(
-            padding: const EdgeInsets.all(AppConstants.spacing10),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: AppConstants.iconMedium)),
-        const SizedBox(height: 8),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary)),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(height: 40, width: 1, color: AppColors.borderLight);
-  }
-
-  Widget _buildMenuContainer(List<_MenuItem> items) {
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-          boxShadow: [AppColors.softShadow]),
-      child: Column(
-        children: items.map((item) {
-          final isLast = items.last == item;
-          return Column(
-            children: [
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing16,
-                    vertical: AppConstants.spacing4),
-                leading: Container(
-                    padding: const EdgeInsets.all(AppConstants.spacing8),
-                    decoration: const BoxDecoration(
-                        color: AppColors.scaffoldBackground,
-                        shape: BoxShape.circle),
-                    child: Icon(item.icon,
-                        color: AppColors.textPrimary,
-                        size: AppConstants.spacing20)),
-                title: Text(item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: item.subtitle != null
-                    ? Text(item.subtitle!,
-                        style: const TextStyle(
-                            fontSize: AppConstants.fontSizeCaption,
-                            color: AppColors.textSecondary))
-                    : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.arrow_forward_ios,
-                        size: AppConstants.spacing14,
-                        color: AppColors.textHint),
-                  ],
-                ),
-                onTap: item.onTap,
-              ),
-              if (!isLast)
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Divider(height: 1, color: AppColors.borderLight)),
-            ],
-          );
-        }).toList(),
-      ),
     );
   }
 
@@ -1251,15 +920,3 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
 
-class _MenuItem {
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  _MenuItem(
-      {required this.icon,
-      required this.title,
-      this.subtitle,
-      required this.onTap});
-}

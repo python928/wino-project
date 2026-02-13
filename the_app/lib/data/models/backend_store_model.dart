@@ -37,16 +37,14 @@ class BackendStore {
 
     return BackendStore(
       id: json['id'] as int,
-      ownerId: (json['owner'] as int?) ?? 0,
-        name: (json['name']?.toString().trim().isNotEmpty ?? false)
-          ? json['name'].toString()
-          : 'Store',
-      description: json['description']?.toString() ?? '',
+      ownerId: (json['owner'] as int?) ?? (json['id'] as int? ?? 0), // unified fallback
+      name: (json['name']?.toString().trim().isNotEmpty ?? false) ? json['name'].toString() : 'Store',
+      description: json['store_description']?.toString() ?? json['description']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       phoneNumber: json['phone']?.toString() ?? json['phone_number']?.toString() ?? '',
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
-      type: json['type']?.toString() ?? 'physical',
+      type: json['store_type']?.toString() ?? json['type']?.toString() ?? 'physical',
       profileImageUrl: ApiConfig.getImageUrl(profileRaw),
       coverImageUrl: ApiConfig.getImageUrl(coverRaw),
       followersCount: json['followers_count'] as int? ?? 0,

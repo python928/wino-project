@@ -11,41 +11,35 @@ class StoreRepository {
     return [];
   }
 
-  static String storeDetail(int id) => '${ApiConfig.stores}$id/';
+  static String userDetail(int id) => '${ApiConfig.users}$id/';
 
-  static Future<BackendStore?> getStore(int id) async {
-    // Prefer detail endpoint (DRF router supports it). If that fails,
-    // fall back to listing stores and picking by id.
+  static Future<BackendStore?> getStore(int userId) async {
     try {
-      final resp = await ApiService.get(storeDetail(id));
+      final resp = await ApiService.get('${ApiConfig.users}$userId/');
       if (resp is Map<String, dynamic>) {
         return BackendStore.fromJson(resp);
       }
-    } catch (_) {
-      // ignore and fall back
-    }
+    } catch (_) {}
 
     try {
-      final resp = await ApiService.get(ApiConfig.stores);
+      final resp = await ApiService.get(ApiConfig.users);
       final list = _extractList(resp);
       for (final item in list) {
-        if (item is Map<String, dynamic> && item['id'] == id) {
+        if (item is Map<String, dynamic> && item['id'] == userId) {
           return BackendStore.fromJson(item);
         }
       }
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
 
     return null;
   }
 
-  /// Search stores by query
+  /// Search users/stores by query
   static Future<List<BackendStore>> searchStores({String? query}) async {
     try {
       final url = query != null && query.isNotEmpty
-          ? '${ApiConfig.stores}?search=$query'
-          : ApiConfig.stores;
+          ? '${ApiConfig.users}?search=$query'
+          : ApiConfig.users;
 
       final resp = await ApiService.get(url);
       final list = _extractList(resp);
@@ -54,43 +48,28 @@ class StoreRepository {
           .where((item) => item is Map<String, dynamic>)
           .map((item) => BackendStore.fromJson(item as Map<String, dynamic>))
           .toList();
-    } catch (e) {
-      print('Error searching stores: $e');
+    } catch (_) {
       return [];
     }
   }
 
-  /// Get followed stores
+  /// Get followed stores (users that current user follows)
   static Future<List<BackendStore>> getFollowedStores() async {
     try {
       final resp = await ApiService.get(ApiConfig.followers);
       final list = _extractList(resp);
-      
-      // The response is likely a list of Follow objects which contain the store details
-      // Structure assumption: [{ "ok": true, "store": { ...store_data... } }, ...] OR just store objects 
-      // But typically a "Followers" endpoint returns relationships.
-      // If the backend assumes "My Followed Stores", it might return a list of Stores directly or list of relationships.
-      // Based on isFollowing implementation: ApiConfig.followers?store=id returns results.
-      // So ApiConfig.followers (GET) likely returns all relationships for current user.
-      
+
       final stores = <BackendStore>[];
       for (final item in list) {
         if (item is Map<String, dynamic>) {
-          // Check if item has 'store' key which is the store object
-          if (item['store'] is Map<String, dynamic>) {
-            stores.add(BackendStore.fromJson(item['store']));
-          } else if (item['store_detail'] is Map<String, dynamic>) {
-             stores.add(BackendStore.fromJson(item['store_detail']));
-          } 
-          // If the item itself is a store (unlikely for "followers" endpoint but possible)
-          else if (item.containsKey('name') && item.containsKey('id')) {
-             stores.add(BackendStore.fromJson(item));
+          final followed = item['followed_user'];
+          if (followed is Map<String, dynamic>) {
+            stores.add(BackendStore.fromJson(followed));
           }
         }
       }
       return stores;
-    } catch (e) {
-      print('Error getting followed stores: $e');
+    } catch (_) {
       return [];
     }
   }

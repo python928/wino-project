@@ -199,7 +199,7 @@ class AppDecorations {
     List<BoxShadow>? boxShadow,
   }) {
     return BoxDecoration(
-      gradient: AppColors.goldGradient,
+      gradient: AppColors.purpleGradient,
       borderRadius: borderRadius ?? BorderRadius.circular(16),
       boxShadow: boxShadow,
     );

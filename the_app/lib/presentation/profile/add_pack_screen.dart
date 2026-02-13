@@ -5,15 +5,20 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/pack_provider.dart';
 import '../../core/providers/store_provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/premium_ui_components.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/user_model.dart';
 import 'package:flutter/services.dart';
+import 'widgets/product_picker_sheet.dart';
 
 class AddPackScreen extends StatefulWidget {
-  const AddPackScreen({super.key});
+  final Pack? pack;
+
+  const AddPackScreen({super.key, this.pack});
 
   @override
   State<AddPackScreen> createState() => _AddPackScreenState();
@@ -26,6 +31,89 @@ class _AddPackScreenState extends State<AddPackScreen> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   double _enteredPackPrice = 0.0;
   String? _formError;
+  bool _isAvailable = true;
+
+  bool get _isEditMode => widget.pack != null;
+
+  Future<void> _initAfterFirstFrame() async {
+    // Clear on next frame to avoid notifyListeners during build.
+    final packProvider = context.read<PackProvider>();
+    packProvider.clear();
+
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id.toString();
+    if (userId != null) {
+      await context.read<PostProvider>().loadMyPosts(userId);
+    }
+
+    final existingPack = widget.pack;
+    if (existingPack == null) return;
+
+    _packNameController.text = existingPack.name;
+    _packPriceController.text = existingPack.discountPrice.toStringAsFixed(2);
+    _enteredPackPrice = existingPack.discountPrice;
+    _isAvailable = existingPack.isAvailable;
+
+    final postProvider = context.read<PostProvider>();
+
+    for (final pp in existingPack.products) {
+      final match = postProvider.myPosts.where((p) => p.id == pp.productId);
+      final Post post;
+      if (match.isNotEmpty) {
+        post = match.first;
+      } else {
+        // Fallback: create a lightweight Post so the table can still render.
+        var imageUrl = pp.productImage;
+        if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+          if (imageUrl.startsWith('/media/')) {
+            imageUrl = '${ApiConfig.baseUrl}$imageUrl';
+          } else {
+            imageUrl = ApiConfig.getImageUrl(imageUrl);
+          }
+        }
+
+        post = Post(
+          id: pp.productId,
+          title: pp.productName,
+          description: '',
+          category: 'Uncategorized',
+          categoryId: null,
+          storeId: existingPack.merchantId,
+          storeName: existingPack.merchantName,
+          author: User(
+            id: existingPack.merchantId,
+            username: existingPack.merchantName,
+            email: '',
+            name: existingPack.merchantName,
+            dateJoined: DateTime.now(),
+          ),
+          price: pp.productPrice,
+          oldPrice: null,
+          discountPercentage: null,
+          isAvailable: true,
+          isNegotiable: false,
+          hidePrice: false,
+          rating: 0.0,
+          reviewCount: 0,
+          isFavorited: false,
+          isHotDeal: false,
+          isFeatured: false,
+          createdAt: DateTime.now(),
+          images: imageUrl.isNotEmpty
+              ? [ProductImageData(id: 0, url: imageUrl, isMain: true)]
+              : const [],
+        );
+      }
+
+      if (packProvider.selectedProducts.any((p) => p.id == post.id)) continue;
+      final index = packProvider.selectedProducts.length;
+      packProvider.addProduct(post);
+      packProvider.setQuantity(post, pp.quantity);
+      _listKey.currentState?.insertItem(index);
+    }
+
+    if (mounted) setState(() {});
+  }
 
   Widget _safeThumb(String? url) {
     if (url == null || url.trim().isEmpty) {
@@ -64,18 +152,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthProvider>();
-      final userId = auth.user?.id.toString();
-      if (userId != null) {
-        context.read<PostProvider>().loadMyPosts(userId);
-      }
+      _initAfterFirstFrame();
     });
-    _searchController.addListener(() {
-      setState(() {});
-      final query = _searchController.text;
-      context.read<PostProvider>().onSearchQueryChanged(query);
-    });
+
     _packPriceController.addListener(() {
       setState(() {
         _enteredPackPrice = double.tryParse(_packPriceController.text) ?? 0.0;
@@ -89,6 +170,54 @@ class _AddPackScreenState extends State<AddPackScreen> {
     _searchController.dispose();
     _packPriceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _confirmDeletePack() async {
+    final pack = widget.pack;
+    if (pack == null) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: AlertDialog(
+          title: const Text('Delete Pack?'),
+          content: const Text('This action cannot be undone.'),
+          actions: [
+            AppTextButton(
+              onPressed: () => Navigator.pop(context, false),
+              text: 'Cancel',
+            ),
+            AppPrimaryButton(
+              onPressed: () => Navigator.pop(context, true),
+              text: 'Delete',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id;
+
+    if (userId == null) return;
+
+    try {
+      setState(() => _formError = null);
+      await context
+          .read<PackProvider>()
+          .deletePack(pack.id, merchantId: userId);
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Pack deleted successfully');
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _formError = 'Failed to delete pack: ${e.toString()}');
+      }
+    }
   }
 
   void _addProductToPack(Post product) {
@@ -105,15 +234,26 @@ class _AddPackScreenState extends State<AddPackScreen> {
     FocusScope.of(context).unfocus();
   }
 
+  Future<void> _openProductPicker() async {
+    final provider = context.read<PostProvider>();
+    final picked = await showProductPickerBottomSheet(
+      context,
+      products: provider.myPosts,
+      title: 'Select Product',
+    );
+    if (picked != null) _addProductToPack(picked);
+  }
+
   void _removeProductFromPack(Post product, int index) {
     final provider = context.read<PackProvider>();
     HapticFeedback.mediumImpact();
     final qty = provider.quantities[product.id] ?? 1;
-    
+
     provider.removeProduct(product);
     _listKey.currentState?.removeItem(
       index,
-      (context, animation) => _buildTableRow(product, animation, quantityOverride: qty),
+      (context, animation) =>
+          _buildTableRow(product, animation, quantityOverride: qty),
       duration: const Duration(milliseconds: 300),
     );
   }
@@ -134,123 +274,137 @@ class _AddPackScreenState extends State<AddPackScreen> {
       setState(() => _formError = 'Enter pack name');
       return;
     }
-    if (_packPriceController.text.isEmpty || double.tryParse(_packPriceController.text) == null) {
+    if (_packPriceController.text.isEmpty ||
+        double.tryParse(_packPriceController.text) == null) {
       setState(() => _formError = 'Enter pack sale price');
       return;
     }
     final enteredPrice = double.tryParse(_packPriceController.text) ?? 0.0;
     if (enteredPrice >= provider.totalPrice) {
-      setState(() => _formError = 'Pack price must be less than the total price of products');
+      setState(() => _formError =
+          'Pack price must be less than the total price of products');
       return;
     }
     final auth = context.read<AuthProvider>();
     final userId = auth.user?.id;
-    
+
     if (userId == null) {
-       setState(() => _formError = 'Must login first');
-       return;
+      setState(() => _formError = 'Must login first');
+      return;
     }
 
     try {
       // Get Store ID
       final storeProvider = context.read<StoreProvider>();
       final store = await storeProvider.getMyStore(userId);
-      
+
       if (store == null) {
-         setState(() => _formError = 'No store found for this user');
-         return;
+        setState(() => _formError = 'No store found for this user');
+        return;
       }
 
-      await provider.submitPack(
-        name: _packNameController.text.trim(),
-        description: 'Pack published from app',
-        discountPrice: enteredPrice,
-        merchantId: store.id,
-      );
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Pack published successfully');
-        Navigator.pop(context, true);
+      if (_isEditMode) {
+        await provider.updatePack(
+          id: widget.pack!.id,
+          name: _packNameController.text.trim(),
+          description: widget.pack!.description,
+          discountPrice: enteredPrice,
+          isAvailable: _isAvailable,
+          merchantId: store.id,
+        );
+
+        if (mounted) {
+          Helpers.showSnackBar(context, 'Pack updated successfully');
+          Navigator.pop(context, true);
+        }
+      } else {
+        await provider.submitPack(
+          name: _packNameController.text.trim(),
+          description: 'Pack published from app',
+          discountPrice: enteredPrice,
+          merchantId: store.id,
+          isAvailable: _isAvailable,
+        );
+        if (mounted) {
+          Helpers.showSnackBar(context, 'Pack published successfully');
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
-      setState(() => _formError = 'Error during publishing: ${provider.error ?? e.toString()}');
+      setState(() => _formError =
+          'Error during publishing: ${provider.error ?? e.toString()}');
     }
-  }
-
-  Widget _buildSearchResults() {
-    return Consumer<PostProvider>(
-      builder: (context, postProvider, child) {
-        final products = postProvider.myPosts;
-        if (products.isEmpty) {
-           return const Center(child: Text('No results found'));
-        }
-        return SizedBox(
-          height: 300,
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return ListTile(
-                leading: SizedBox(width: 50, height: 50, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: _safeThumb(product.image))),
-                title: Text(product.title),
-                subtitle: Text('${product.price} DZD'),
-                trailing: const Icon(Icons.add_circle, color: AppColors.primary),
-                onTap: () => _addProductToPack(product),
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildSelectedProductsTable() {
     return Consumer<PackProvider>(
       builder: (context, provider, child) {
         final selected = provider.selectedProducts;
-        if (selected.isEmpty) {
-          return const Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_basket_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('You haven\'t added any products to the pack yet', style: TextStyle(color: Colors.grey)),
-                  Text('Use the search above to add products', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          );
-        }
-
         return Expanded(
           child: Column(
             children: [
               // Table Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: Colors.grey[200],
                 child: const Row(
                   children: [
-                    Expanded(flex: 3, child: Text('Product', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                    Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.end)),
+                    Expanded(
+                        flex: 3,
+                        child: Text('Product',
+                            style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(
+                        flex: 2,
+                        child: Text('Quantity',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center)),
+                    Expanded(
+                        flex: 2,
+                        child: Text('Total',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.end)),
                   ],
                 ),
               ),
               // Table Body
               Expanded(
-                child: AnimatedList(
-                  shrinkWrap: true,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  key: _listKey,
-                  initialItemCount: selected.length,
-                  itemBuilder: (context, index, animation) {
-                    if (index >= selected.length) return const SizedBox.shrink();
-                    return _buildTableRow(selected[index], animation);
-                  },
+                child: Stack(
+                  children: [
+                    AnimatedList(
+                      shrinkWrap: true,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      key: _listKey,
+                      initialItemCount: selected.length,
+                      itemBuilder: (context, index, animation) {
+                        if (index >= selected.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return _buildTableRow(selected[index], animation);
+                      },
+                    ),
+                    if (selected.isEmpty)
+                      const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.shopping_basket_outlined,
+                                size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'You haven\'t added any products to the pack yet',
+                              style: TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              'Use the search above to add products',
+                              style: TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -260,102 +414,114 @@ class _AddPackScreenState extends State<AddPackScreen> {
     );
   }
 
-  Widget _buildTableRow(Post product, Animation<double> animation, {int? quantityOverride}) {
+  Widget _buildTableRow(Post product, Animation<double> animation,
+      {int? quantityOverride}) {
     return SizeTransition(
       sizeFactor: animation,
-      child: Consumer<PackProvider>(
-        builder: (context, provider, _) {
-          final qty = quantityOverride ?? provider.quantities[product.id] ?? 1;
-          final total = product.price * qty;
-          
-          return Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.black12)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              children: [
-                // Product Info
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                        onPressed: () {
-                           final index = provider.selectedProducts.indexOf(product);
-                           if (index != -1) _removeProductFromPack(product, index);
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 40, 
-                        height: 40, 
+      child: Consumer<PackProvider>(builder: (context, provider, _) {
+        final qty = quantityOverride ?? provider.quantities[product.id] ?? 1;
+        final total = product.price * qty;
+
+        return Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.black12)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              // Product Info
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.red, size: 20),
+                      onPressed: () {
+                        final index =
+                            provider.selectedProducts.indexOf(product);
+                        if (index != -1) _removeProductFromPack(product, index);
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                        width: 40,
+                        height: 40,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: _safeThumb(product.image),
-                        )
+                        )),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(product.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('${product.price} DZD',
+                              style: const TextStyle(
+                                  fontSize: 10, color: Colors.grey)),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(product.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            Text('${product.price} DZD', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                // Quantity
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      InkWell(
-                        onTap: () {
-                           if (qty > 1) _onQuantityChange(product, qty - 1);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-                          child: const Icon(Icons.remove, size: 16),
-                        ),
+              ),
+              // Quantity
+              Expanded(
+                flex: 2,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        if (qty > 1) _onQuantityChange(product, qty - 1);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.remove, size: 16),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('$qty',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    InkWell(
+                      onTap: () => _onQuantityChange(product, qty + 1),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.add, size: 16),
                       ),
-                      InkWell(
-                        onTap: () => _onQuantityChange(product, qty + 1),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-                          child: const Icon(Icons.add, size: 16),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                // Total
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '${total.toStringAsFixed(0)} DZD',
-                    textAlign: TextAlign.end,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
+              ),
+              // Total
+              Expanded(
+                flex: 2,
+                child: Text(
+                  '${total.toStringAsFixed(0)} DZD',
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 12),
                 ),
-              ],
-            ),
-          );
-        }
-      ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -364,13 +530,16 @@ class _AddPackScreenState extends State<AddPackScreen> {
       builder: (context, provider, _) {
         final totalPrice = provider.totalPrice;
         final diff = totalPrice - _enteredPackPrice;
-        
+
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5)),
             ],
           ),
           child: SafeArea(
@@ -387,8 +556,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total Product Prices:', style: TextStyle(color: Colors.grey)),
-                    Text('${totalPrice.toStringAsFixed(2)} DZD', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text('Total Product Prices:',
+                        style: TextStyle(color: Colors.grey)),
+                    Text('${totalPrice.toStringAsFixed(2)} DZD',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -407,14 +579,27 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text('Savings', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        const Text('Savings',
+                            style: TextStyle(fontSize: 10, color: Colors.grey)),
                         Text(
                           '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} DZD',
-                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.green, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Available'),
+                  subtitle:
+                      const Text('Show this pack to customers in your store'),
+                  value: _isAvailable,
+                  onChanged: (value) {
+                    setState(() => _isAvailable = value);
+                  },
                 ),
                 if (_formError != null)
                   Padding(
@@ -428,7 +613,9 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   ),
                 const SizedBox(height: 16),
                 AppPrimaryButton(
-                  text: 'Publish Pack',
+                  text: provider.isSubmitting
+                      ? (_isEditMode ? 'Saving...' : 'Publishing...')
+                      : (_isEditMode ? 'Save Changes' : 'Publish Pack'),
                   onPressed: _submit,
                   isLoading: provider.isSubmitting,
                 ),
@@ -442,8 +629,6 @@ class _AddPackScreenState extends State<AddPackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isSearching = _searchController.text.isNotEmpty;
-
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
@@ -455,19 +640,25 @@ class _AddPackScreenState extends State<AddPackScreen> {
         ),
         body: Column(
           children: [
-            // Search Bar
+            // Product picker field
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: AppSearchField(
-                controller: _searchController,
-                hintText: 'Search for product to add...',
-                onChanged: (_) => setState(() {}),
-                onClear: () => FocusScope.of(context).unfocus(),
+              child: InkWell(
+                onTap: _openProductPicker,
+                borderRadius: BorderRadius.circular(12),
+                child: IgnorePointer(
+                  child: AppSearchField(
+                    controller: _searchController,
+                    hintText: 'Select product to add...',
+                    compact: false,
+                    showClearButton: false,
+                  ),
+                ),
               ),
             ),
 
             // Content Area
-            isSearching ? _buildSearchResults() : _buildSelectedProductsTable(),
+            _buildSelectedProductsTable(),
 
             // Bottom Summary Section
             _buildSummarySection(),

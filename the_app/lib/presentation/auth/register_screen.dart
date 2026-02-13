@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/app_text_field.dart';
+import '../../core/routing/routes.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/utils/helpers.dart';
-import '../home/main_navigation_screen.dart';
-import 'login_screen.dart';
+import '../../core/widgets/app_text_field.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,294 +15,442 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen>
-    with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _phoneController = TextEditingController();
-
-  bool _isLoading = false;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
-    _animationController.forward();
-  }
+  final _birthdayController = TextEditingController();
+  String _selectedGender = 'male';
+  DateTime? _selectedBirthday;
+  int _currentStep = 0;
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
+    _confirmPasswordController.dispose();
     _phoneController.dispose();
-    _animationController.dispose();
+    _birthdayController.dispose();
     super.dispose();
   }
 
-  Future<void> _registerUser() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    final emailPart = _emailController.text.trim().split('@').first;
-    final username = emailPart.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-
-    final registrationData = {
-      'username': username,
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'password': _passwordController.text,
-      'phone': _phoneController.text.trim(),
-      'role': 'USER',
-    };
-
-    try {
-      final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.register(registrationData);
-
-      if (success && mounted) {
-        Helpers.showSnackBar(context, 'Registration successful! Welcome');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-          (route) => false,
-        );
-      } else if (!success && mounted) {
-        final errorMsg =
-            authProvider.error ?? 'Unable to complete registration, try again';
-        Helpers.showSnackBar(context, errorMsg);
-      }
-    } catch (e) {
-      if (mounted) {
-        Helpers.showSnackBar(
-            context, 'Failed to connect to server. Please try again.');
-      }
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
+  bool _validateStep(int step) {
+    switch (step) {
+      case 0:
+        return _firstNameController.text.isNotEmpty &&
+            _lastNameController.text.isNotEmpty &&
+            _selectedBirthday != null;
+      case 1:
+        return _phoneController.text.isNotEmpty &&
+            _emailController.text.isNotEmpty &&
+            _passwordController.text.isNotEmpty &&
+            _confirmPasswordController.text.isNotEmpty &&
+            _passwordController.text == _confirmPasswordController.text;
+      default:
+        return false;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 32),
-                    _buildRegisterForm(),
-                  ],
+  void _nextStep() {
+    if (_validateStep(_currentStep)) {
+      setState(() {
+        _currentStep++;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+      });
+    }
+  }
+
+  Future<void> _selectBirthday() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedBirthday ?? DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 13)), // Must be at least 13 years old
+    );
+    if (picked != null && picked != _selectedBirthday) {
+      setState(() {
+        _selectedBirthday = picked;
+        _birthdayController.text = '${picked.day}/${picked.month}/${picked.year}';
+      });
+    }
+  }
+
+  Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate() || !_validateStep(1)) {
+      return;
+    }
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.register({
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+        'name': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+        'phone': _phoneController.text.trim(),
+        'gender': _selectedGender,
+        'birthday': _selectedBirthday?.toIso8601String().split('T').first,
+      });
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(Routes.home);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildStepIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Row(
+        children: [
+          for (int i = 0; i < 2; i++) ...[
+            Expanded(
+              child: Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: i <= _currentStep 
+                      ? AppColors.primaryColor 
+                      : AppColors.textHint,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-          ),
-        ),
+            if (i < 1) const SizedBox(width: 8),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildPersonalInfoStep() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primaryColor,
-                AppColors.primaryColor.withOpacity(0.7)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryColor.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child:
-              const Icon(Icons.person_add_rounded, color: Colors.white, size: 40),
-        ),
-        const SizedBox(height: 24),
         Text(
-          'Join Us',
-          style: AppTextStyles.h1.copyWith(
-            color: AppColors.primaryColor,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+          'Personal Information',
+          style: AppTextStyles.h2.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Create your account',
+          'Let\'s start with your basic information',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),
+        ),
+        const SizedBox(height: 32),
+        Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: _firstNameController,
+                label: 'First Name',
+                hint: 'Enter your first name',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'First name is required';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: AppTextField(
+                controller: _lastNameController,
+                label: 'Last Name',
+                hint: 'Enter your last name',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Last name is required';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: _selectBirthday,
+          child: AbsorbPointer(
+            child: AppTextField(
+              controller: _birthdayController,
+              label: 'Birthday',
+              hint: 'Select your birthday',
+              icon: Icons.calendar_today,
+              validator: (value) {
+                if (_selectedBirthday == null) {
+                  return 'Birthday is required';
+                }
+                return null;
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Gender',
+          style: AppTextStyles.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('Male'),
+                value: 'male',
+                groupValue: _selectedGender,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGender = value!;
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('Female'),
+                value: 'female',
+                groupValue: _selectedGender,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGender = value!;
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildRegisterForm() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+  Widget _buildContactInfoStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Account Information',
+          style: AppTextStyles.h2.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Name Field
-            AppTextField(
-              controller: _nameController,
-              label: 'Full Name',
-              hint: 'Enter your name',
-              icon: Icons.person_outlined,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Enter your contact details and create a secure password',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 32),
+        AppTextField(
+          controller: _phoneController,
+          label: 'Phone Number',
+          hint: 'Enter your phone number',
+          keyboardType: TextInputType.phone,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Phone number is required';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        AppTextField(
+          controller: _emailController,
+          label: 'Email',
+          hint: 'Enter your email address',
+          keyboardType: TextInputType.emailAddress,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Email is required';
+            }
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              return 'Please enter a valid email';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        AppTextField(
+          controller: _passwordController,
+          label: 'Password',
+          hint: 'Enter your password',
+          obscureText: true,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Password is required';
+            }
+            if (value.length < 6) {
+              return 'Password must be at least 6 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        AppTextField(
+          controller: _confirmPasswordController,
+          label: 'Confirm Password',
+          hint: 'Confirm your password',
+          obscureText: true,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please confirm your password';
+            }
+            if (value != _passwordController.text) {
+              return 'Passwords do not match';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
 
-            // Email Field
-            AppTextField(
-              controller: _emailController,
-              label: 'Email Address',
-              hint: 'Enter your email',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!value.contains('@') || !value.contains('.')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+  Widget _buildStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildPersonalInfoStep();
+      case 1:
+        return _buildContactInfoStep();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 
-            // Phone Field
-            AppTextField(
-              controller: _phoneController,
-              label: 'Phone Number',
-              hint: '+213 XXX XXX XXX',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your phone number';
-                }
-                return null;
-              },
+  Widget _buildNavigationButtons() {
+    return Column(
+      children: [
+        if (_currentStep < 1)
+          SizedBox(
+            width: double.infinity,
+            child: AppPrimaryButton(
+              text: 'Next',
+              onPressed: _nextStep,
             ),
-            const SizedBox(height: 16),
-
-            // Password Field
-            AppTextField(
-              controller: _passwordController,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outlined,
-              obscureText: true,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Register Button
-            AppPrimaryButton(
-              text: 'Create Account',
-              onPressed: _registerUser,
-              isLoading: _isLoading,
-            ),
-            const SizedBox(height: 24),
-
-            // Login Link
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Already have an account? ',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+          ),
+        if (_currentStep == 1)
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, _) {
+              return SizedBox(
+                width: double.infinity,
+                child: AppPrimaryButton(
+                  text: 'Create Account',
+                  onPressed: authProvider.isLoading ? null : _handleRegister,
+                  isLoading: authProvider.isLoading,
                 ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  child: Text(
-                    'Sign In',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+              );
+            },
+          ),
+        const SizedBox(height: 16),
+        if (_currentStep > 0)
+          SizedBox(
+            width: double.infinity,
+            child: AppSecondaryButton(
+              text: 'Previous',
+              onPressed: _previousStep,
             ),
-          ],
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStepIndicator(),
+                  const SizedBox(height: 24),
+                  _buildStepContent(),
+                  const SizedBox(height: 48),
+                  _buildNavigationButtons(),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account? ',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacementNamed(Routes.login);
+                        },
+                        child: Text(
+                          'Sign In',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.primaryColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
-
 }

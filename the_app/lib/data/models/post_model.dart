@@ -140,7 +140,6 @@ class Post {
         username: storeName,
         email: '',
         name: storeName,
-        role: 'STORE',
         profileImage: null,
         dateJoined: DateTime.now(),
       );
@@ -221,7 +220,6 @@ class Post {
             username: storeName,
             email: json['store_owner_email'] ?? '',
             name: storeName,
-            role: 'STORE',
             profileImage: null,
             dateJoined: DateTime.now(),
           ),

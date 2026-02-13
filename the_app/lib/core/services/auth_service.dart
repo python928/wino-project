@@ -3,6 +3,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
+import '../config/api_config.dart';
+import '../services/api_service.dart';
+
 class AuthService {
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -129,5 +132,38 @@ class AuthService {
   static Future<void> logout() async {
     await clearTokens();
     debugPrint('✅ User logged out');
+  }
+  
+  /// Register a new user
+  static Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+  }) async {
+    try {
+      final response = await ApiService.post(ApiConfig.register, {
+        'name': name,
+        'email': email,
+        'password': password,
+        'phone': phone ?? '',
+      });
+
+      final accessToken = response['access'];
+      final refreshToken = response['refresh'];
+      if (accessToken == null || refreshToken == null) {
+        throw Exception('Tokens not returned by server');
+      }
+
+      await saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      debugPrint('✅ Registration successful');
+      return true;
+    } catch (e) {
+      throw Exception('Registration failed: $e');
+    }
   }
 }

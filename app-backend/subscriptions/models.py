@@ -1,5 +1,5 @@
+from django.conf import settings
 from django.db import models
-from stores.models import Store
 
 
 class SubscriptionPlan(models.Model):
@@ -15,7 +15,8 @@ class SubscriptionPlan(models.Model):
 class MerchantSubscription(models.Model):
 	STATUS_CHOICES = (('active', 'Active'), ('expired', 'Expired'))
 
-	store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='subscriptions')
+	# Unified: store == users.User
+	store = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscriptions')
 	plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
 	start_date = models.DateTimeField()
 	end_date = models.DateTimeField()

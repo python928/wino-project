@@ -27,9 +27,9 @@ class PremiumUIComponents {
         width: width ?? double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          gradient: AppColors.goldGradient,
+          gradient: AppColors.purpleGradient,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.goldShadow,
+          boxShadow: AppColors.purpleShadow,
         ),
         child: Center(
           child: isLoading

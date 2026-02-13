@@ -7,6 +7,7 @@ import '../theme/app_text_styles.dart';
 enum AppTextFieldStyle {
   /// Standard form (filled, neutral background, outlined)
   form,
+
   /// Profile/edit screen style (white fill, for use inside shadow container)
   profile,
 }
@@ -59,21 +60,30 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedKeyboardType = (widget.maxLines > 1 &&
+            widget.textInputAction == TextInputAction.newline)
+        ? TextInputType.multiline
+        : (widget.keyboardType ?? TextInputType.text);
+
     final field = TextFormField(
       controller: widget.controller,
       focusNode: widget.focusNode,
-      keyboardType: widget.keyboardType ?? TextInputType.text,
+      keyboardType: resolvedKeyboardType,
       textInputAction: widget.textInputAction ?? TextInputAction.next,
       obscureText: widget.obscureText && !_isPasswordVisible,
       textDirection: widget.textDirection ?? TextDirection.ltr,
-      textAlign: widget.textDirection == TextDirection.ltr ? TextAlign.left : TextAlign.start,
+      textAlign: widget.textDirection == TextDirection.ltr
+          ? TextAlign.left
+          : TextAlign.start,
       maxLines: widget.maxLines,
-      style: AppTextStyles.bodyLarge.copyWith(fontSize: 18, color: AppColors.textPrimary),
+      style: AppTextStyles.bodyLarge
+          .copyWith(fontSize: 18, color: AppColors.textPrimary),
       onFieldSubmitted: widget.onFieldSubmitted,
       onChanged: widget.onChanged,
       validator: widget.validator,
       decoration: widget.style == AppTextFieldStyle.profile
-          ? AppInputDecorations.profileForm(hintText: widget.hint, prefixIcon: widget.icon)
+          ? AppInputDecorations.profileForm(
+              hintText: widget.hint, prefixIcon: widget.icon)
           : AppInputDecorations.form(
               hintText: widget.hint,
               prefixIcon: widget.icon,
@@ -81,11 +91,14 @@ class _AppTextFieldState extends State<AppTextField> {
               suffixIcon: widget.obscureText
                   ? IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _isPasswordVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         color: AppColors.textSecondary,
                         size: 26,
                       ),
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      onPressed: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible),
                     )
                   : null,
             ),
@@ -158,7 +171,8 @@ class AppSearchField extends StatelessWidget {
       );
     } else if (showFilterButton && onFilterTap != null) {
       suffixWidget = IconButton(
-        icon: Icon(Icons.tune_rounded, color: AppColors.textSecondary.withOpacity(0.3), size: 26),
+        icon: Icon(Icons.tune_rounded,
+            color: AppColors.textSecondary.withOpacity(0.3), size: 26),
         onPressed: onFilterTap,
       );
     }

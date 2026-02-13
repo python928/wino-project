@@ -19,7 +19,7 @@ services:
 
   web:
     build: .
-    command: /usr/bin/python3 manage.py runserver 0.0.0.0:8000
+    command: sh -c "/usr/bin/python3 manage.py migrate --noinput && /usr/bin/python3 manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/code
     ports:

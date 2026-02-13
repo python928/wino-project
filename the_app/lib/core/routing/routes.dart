@@ -11,12 +11,12 @@ class Routes {
   static const String home = '/home';
   static const String discovery = '/discovery';
   static const String offers = '/offers';
-  static const String messages = '/messages';
   static const String profile = '/profile';
   
   // Product Routes
   static const String productDetails = '/product-details';
   static const String packDetails = '/pack-details';
+  static const String promotionDetails = '/promotion-details';
   static const String productSearch = '/product-search';
   static const String searchTab = '/search-tab';
   static const String searchResults = '/search-results';
@@ -52,7 +52,6 @@ class Routes {
   static const String favorites = '/favorites';
 
   // Merchant
-  static const String statistics = '/statistics';
   static const String priceComparison = '/price-comparison';
   static const String addPack = '/add-pack';
   

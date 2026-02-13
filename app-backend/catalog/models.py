@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-from stores.models import Store
 
 
 class Category(models.Model):
@@ -16,7 +15,7 @@ class Product(models.Model):
 	OUT_OF_STOCK = 'out_of_stock'
 	STATUS_CHOICES = ((AVAILABLE, 'Available'), (OUT_OF_STOCK, 'Out of Stock'))
 
-	store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='products')
+	store = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='products')
 	category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
@@ -38,8 +37,32 @@ class ProductImage(models.Model):
 		ordering = ['-is_main']
 
 
+class Promotion(models.Model):
+	# Unified: store == users.User
+	store = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='promotions')
+	product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True, related_name='promotions')
+	name = models.CharField(max_length=255)
+	description = models.TextField(blank=True)
+	percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+	start_date = models.DateTimeField()
+	end_date = models.DateTimeField()
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return self.name
+
+
+class PromotionImage(models.Model):
+	promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name='images')
+	image = models.ImageField(upload_to='promotions/')
+	is_main = models.BooleanField(default=False)
+
+	class Meta:
+		ordering = ['-is_main']
+
+
 class Pack(models.Model):
-	store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='packs')
+	merchant = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='packs')
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	discount = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
@@ -68,8 +91,8 @@ class PackImage(models.Model):
 
 
 class Review(models.Model):
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
-	store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
+	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_reviews')
+	store = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='store_reviews', null=True, blank=True)
 	product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True, related_name='reviews')
 	rating = models.IntegerField()
 	comment = models.TextField(blank=True)

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/routing/routes.dart';
-import '../../../core/services/storage_service.dart';
 import '../../../data/models/post_model.dart';
 import '../../../core/widgets/cards/base_item_card.dart';
 
@@ -66,16 +65,6 @@ class ProductCard extends BaseItemCard {
   }
 
   void _navigateToStore(BuildContext context) {
-    // Check if this is the user's own store
-    final userData = StorageService.getUserData();
-    final userStoreId = userData?['store_id'];
-
-    if (userStoreId != null && product.storeId == userStoreId) {
-      // Navigate to own profile
-      Navigator.pushNamed(context, Routes.profile);
-    } else {
-      // Navigate to the product publisher's store
-      Navigator.pushNamed(context, Routes.store, arguments: product.storeId);
-    }
+    Navigator.pushNamed(context, Routes.store, arguments: product.storeId);
   }
 }

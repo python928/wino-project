@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -22,6 +22,7 @@ class ProductSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    store_name = serializers.CharField(source='store.name', read_only=True)
 
     class Meta:
         model = Product
@@ -39,6 +40,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'average_rating',
             'review_count',
             'is_favorited',
+            'store_name',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -83,8 +85,8 @@ class PackSerializer(serializers.ModelSerializer):
     
     # Input fields matching frontend
     products = serializers.ListField(write_only=True, required=False)
-    merchant_id = serializers.IntegerField(source='store_id')
-    merchant_name = serializers.CharField(source='store.name', read_only=True)
+    merchant_id = serializers.IntegerField()
+    merchant_name = serializers.CharField(source='merchant.name', read_only=True)
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
 
@@ -108,15 +110,35 @@ class PackSerializer(serializers.ModelSerializer):
         
         return pack
 
+    def update(self, instance, validated_data):
+        products_data = validated_data.pop('products', None)
+        instance = super().update(instance, validated_data)
+
+        # If products are provided, replace pack contents.
+        if products_data is not None:
+            instance.pack_products.all().delete()
+            for item in products_data:
+                product_id = item.get('product_id') or item.get('product')
+                quantity = item.get('quantity', 1)
+                if product_id:
+                    PackProduct.objects.create(
+                        pack=instance,
+                        product_id=product_id,
+                        quantity=quantity,
+                    )
+
+        return instance
+
 
 class ReviewSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.id')
     user_name = serializers.SerializerMethodField()
     username = serializers.ReadOnlyField(source='user.username')
+    store_name = serializers.CharField(source='store.name', read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'user', 'user_name', 'username', 'store', 'product', 'rating', 'comment', 'created_at']
+        fields = ['id', 'user', 'user_name', 'username', 'store', 'product', 'rating', 'comment', 'created_at', 'store_name']
         read_only_fields = ['id', 'user', 'user_name', 'username', 'store', 'created_at']
 
     def get_user_name(self, obj):
@@ -130,3 +152,30 @@ class FavoriteSerializer(serializers.ModelSerializer):
         model = Favorite
         fields = ['id', 'user', 'product', 'product_detail', 'created_at']
         read_only_fields = ['id', 'user', 'created_at']
+
+
+class PromotionImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromotionImage
+        fields = ['id', 'promotion', 'image', 'is_main']
+        read_only_fields = ['id']
+
+
+class PromotionSerializer(serializers.ModelSerializer):
+    images = PromotionImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Promotion
+        fields = [
+            'id',
+            'store',
+            'product',
+            'name',
+            'description',
+            'percentage',
+            'start_date',
+            'end_date',
+            'created_at',
+            'images',
+        ]
+        read_only_fields = ['id', 'created_at']

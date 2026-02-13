@@ -37,12 +37,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Unified profile system - all users are store owners by default
     path('api/users/', include('users.urls')),
-    path('api/stores/', include('stores.urls')),
     path('api/catalog/', include('catalog.urls')),
-    path('api/promotions/', include('promotions.urls')),
-    path('api/messaging/', include('messaging.urls')),
-    path('api/notifications/', include('notifications.urls')),
+    # Remove unused messaging and notifications if not needed
+    # path('api/messaging/', include('messaging.urls')),
+    # path('api/notifications/', include('notifications.urls')),
     path('api/subscriptions/', include('subscriptions.urls')),
 ]
 

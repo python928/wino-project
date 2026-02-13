@@ -124,17 +124,4 @@ class ProductApiService {
       throw Exception('Error fetching featured products: $e');
     }
   }
-
-  /// Start conversation with seller
-  Future<Map<String, dynamic>> contactSeller(int productId, String message) async {
-    try {
-      final response = await ApiService.post(ApiConfig.messages, {
-        'product': productId,
-        'content': message,
-      });
-      return response;
-    } catch (e) {
-      throw Exception('Error contacting seller: $e');
-    }
-  }
 }

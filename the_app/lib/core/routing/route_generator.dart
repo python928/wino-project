@@ -6,17 +6,16 @@ import '../../presentation/auth/register_screen.dart';
 import '../../presentation/home/main_navigation_screen.dart';
 import '../../presentation/product/product_detail_screen.dart';
 import '../../presentation/pack/pack_detail_screen.dart';
-import '../../presentation/store/enhanced_store_screen.dart';
+import '../../presentation/profile/profile_screen.dart';
 import '../../presentation/profile/add_product_screen.dart';
-import '../../presentation/profile/edit_product_screen.dart';
 import '../../presentation/profile/add_pack_screen.dart';
-import '../../presentation/profile/edit_pack_screen.dart';
 import '../../presentation/profile/add_promotion_screen.dart';
-import '../../presentation/statistics/statistics_screen.dart';
+import '../../presentation/promotion/promotion_detail_screen.dart';
 import '../../presentation/favorites/favorites_screen.dart';
 import '../../presentation/search/search_tab_screen.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/models/offer_model.dart';
 import 'routes.dart';
 
 class RouteGenerator {
@@ -61,7 +60,7 @@ class RouteGenerator {
         }
         return _fadeTransition(
           settings: settings,
-          child: EnhancedStoreScreen(storeId: id),
+          child: ProfileScreen(storeId: id),
         );
 
       // ===== PRODUCT ROUTES =====
@@ -73,6 +72,13 @@ class RouteGenerator {
         return _slideTransition(
           settings: settings,
           child: ProductDetailScreen(product: product),
+        );
+
+      case Routes.promotionDetails:
+        final promotion = settings.arguments as Offer;
+        return _slideTransition(
+          settings: settings,
+          child: PromotionDetailScreen(promotion: promotion),
         );
 
       case Routes.packDetails:
@@ -99,22 +105,20 @@ class RouteGenerator {
         }
         return _slideTransition(
           settings: settings,
-          child: EditProductScreen(product: product),
+          child: AddProductScreen(product: product),
         );
 
       case '/merchant/packs/add':
         return _slideTransition(
           settings: settings,
-          child: AddPackScreen(),
+          child: const AddPackScreen(),
         );
 
       case Routes.addPack:
         final pack = settings.arguments as Pack?;
         return _slideTransition(
           settings: settings,
-          child: pack != null
-              ? EditPackScreen(packData: pack.toJson())
-              : AddPackScreen(),
+          child: AddPackScreen(pack: pack),
         );
 
       case '/merchant/packs/edit':
@@ -124,7 +128,7 @@ class RouteGenerator {
         }
         return _slideTransition(
           settings: settings,
-          child: EditPackScreen(packData: pack.toJson()),
+          child: AddPackScreen(pack: pack),
         );
 
       case '/merchant/promotions/add':
@@ -156,12 +160,6 @@ class RouteGenerator {
           ),
         );
 
-      // ===== STATISTICS =====
-      case Routes.statistics:
-        return _slideTransition(
-          settings: settings,
-          child: const StatisticsScreen(),
-        );
 
       // ===== FAVORITES =====
       case Routes.favorites:

@@ -1,15 +1,32 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 import uuid
+from .models import Follower
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    followers_count = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'name', 'email', 'phone', 'role', 'profile_image', 'date_joined']
-        read_only_fields = ['id', 'date_joined']
+        fields = [
+            'id', 'username', 'name', 'email', 'phone', 'profile_image', 
+            'gender', 'birthday',
+            'store_description', 'address', 'latitude', 'longitude', 
+            'store_type', 'cover_image', 'followers_count', 'average_rating', 
+            'date_joined'
+        ]
+        read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating']
+    
+    def get_followers_count(self, obj):
+        return obj.followers.count()
+    
+    def get_average_rating(self, obj):
+        # TODO: Calculate from reviews when review system is implemented
+        return 0.0
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -17,9 +34,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, allow_blank=True)
     name = serializers.CharField(required=True, max_length=255)
 
+    gender = serializers.ChoiceField(choices=['male', 'female', 'other'], required=True)
+    birthday = serializers.DateField(required=True)
+
     class Meta:
         model = User
-        fields = ['username', 'name', 'email', 'password', 'phone', 'role']
+        fields = ['username', 'name', 'email', 'phone', 'gender', 'birthday', 'password']
 
     def validate_name(self, value):
         if not value or len(value.strip()) < 2:
@@ -27,8 +47,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate_email(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('البريد الإلكتروني مطلوب')
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError('هذا البريد الإلكتروني مسجل مسبقاً')
+        return value
+
+    def validate_phone(self, value):
+        if not value or not str(value).strip():
+            raise serializers.ValidationError('رقم الهاتف مطلوب')
+        return str(value).strip()
+
+    def validate_birthday(self, value):
+        # Keep it minimal: require a date in the past.
+        from datetime import date
+        if value >= date.today():
+            raise serializers.ValidationError('تاريخ الميلاد غير صالح')
         return value
 
     def validate(self, attrs):
@@ -76,3 +110,10 @@ class ChangePasswordSerializer(serializers.Serializer):
                 'new_password': 'كلمة المرور الجديدة يجب أن تكون مختلفة عن الحالية'
             })
         return attrs
+
+
+class FollowerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follower
+        fields = ['id', 'user', 'followed_user', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']

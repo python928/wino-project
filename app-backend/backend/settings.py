@@ -55,10 +55,7 @@ INSTALLED_APPS = [
 
     # Local
     'users',
-    'stores',
     'catalog',
-    'promotions',
-    'messaging',
     'notifications',
     'subscriptions',
 ]
@@ -200,15 +197,16 @@ JAZZMIN_SETTINGS = {
     'show_ui_builder': False,
     'icons': {
         'users.User': 'fas fa-user',
-        'stores.Store': 'fas fa-store',
         'catalog.Product': 'fas fa-box',
-        'promotions.Promotion': 'fas fa-bullhorn',
-        'messaging.Message': 'fas fa-envelope',
+        'catalog.Promotion': 'fas fa-bullhorn',
         'notifications.Notification': 'fas fa-bell',
         'subscriptions.SubscriptionPlan': 'fas fa-tags',
     },
     'order_with_respect_to': [
-        'users', 'stores', 'catalog', 'promotions', 'messaging', 'notifications', 'subscriptions'
+        'users',
+        'catalog',
+        'notifications',
+        'subscriptions',
     ],
 }
 

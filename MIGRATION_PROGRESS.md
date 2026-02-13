@@ -317,6 +317,13 @@ Container(decoration: AppDecorations.card())
 
 ---
 
+## Backend note (unified profile)
+- The backend no longer uses a separate `stores` app/model.
+- “Store” = `users.User` (unified profile).
+- Any remaining references to `stores` in migrations/models must be removed.
+
+---
+
 ## ✅ VERIFICATION CHECKLIST
 
 ### Phase 1 & 2 Verification

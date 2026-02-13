@@ -15,8 +15,12 @@ class ApiConfig {
   // Auth
   static const String authToken = '$api/auth/token/';
   static const String authRefresh = '$api/auth/token/refresh/';
-  static const String authRegister = '$api/users/register/';
-  static const String authMe = '$api/users/me/';
+
+  // Users API (backend: path('api/users/', include('users.urls')))
+  static const String register = '$api/users/register/';
+  static const String profile = '$api/users/me/';
+
+  static const String authMe = profile;
   static const String authChangePassword = '$api/users/change-password/';
   static const String authLogout = '$api/users/logout/';
 
@@ -24,12 +28,14 @@ class ApiConfig {
   static const String users = '$api/users/users/';
   static String userDetail(int id) => '$users$id/';
 
-  // Stores
-  static const String stores = '$api/stores/stores/';
-  static String storeDetail(int id) => '$stores$id/';
-  static const String followers = '$api/stores/followers/';
-  static const String followersToggle = '$api/stores/followers/toggle/';
-  static String followersCheck(int storeId) => '$api/stores/followers/check/$storeId/';
+  // Stores (alias: store == user)
+  static const String stores = users;
+  static String storeDetail(int id) => userDetail(id);
+
+  // Followers (backend: /api/users/followers/ and /api/users/followers/toggle/)
+  static const String followers = '$api/users/followers/';
+  static String followersToggle = '$api/users/followers/toggle/';
+  static String followersCheck(int userId) => '$api/users/followers/?user=$userId';
 
   // Catalog
   static const String catalog = '$api/catalog';
@@ -46,12 +52,11 @@ class ApiConfig {
   static const String favorites = '$catalog/favorites/';
   static const String favoritesToggle = '$catalog/favorites/toggle/';
 
-  // Promotions
-  static const String promotions = '$api/promotions/promotions/';
-  static const String promotionImages = '$api/promotions/promotion-images/';
+  // Promotions (now in catalog)
+  static const String promotions = '$catalog/promotions/';
+  static const String promotionImages = '$catalog/promotion-images/';
 
-  // Messaging & Notifications
-  static const String messages = '$api/messaging/messages/';
+  // Notifications
   static const String notifications = '$api/notifications/notifications/';
   static const String devices = '$api/notifications/devices/';
 

@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,8 +10,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from rest_framework import generics
 
-from .serializers import RegisterSerializer, UserSerializer, ChangePasswordSerializer
+from .models import Follower
+from .serializers import RegisterSerializer, UserSerializer, ChangePasswordSerializer, FollowerSerializer
 
 User = get_user_model()
 
@@ -142,3 +145,41 @@ class LogoutView(APIView):
 			return Response({'message': 'تم تسجيل الخروج بنجاح'}, status=status.HTTP_200_OK)
 		except Exception as e:
 			return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'username', 'store_description']
+
+
+class UserDetailView(generics.RetrieveUpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class FollowerListView(generics.ListAPIView):
+    serializer_class = FollowerSerializer
+    
+    def get_queryset(self):
+        return Follower.objects.filter(user=self.request.user)
+
+
+class FollowerToggleView(generics.CreateAPIView):
+    serializer_class = FollowerSerializer
+    
+    def post(self, request):
+        followed_user_id = request.data.get('store')  # Keep 'store' for API compatibility
+        followed_user = get_object_or_404(User, id=followed_user_id)
+        
+        follower, created = Follower.objects.get_or_create(
+            user=request.user,
+            followed_user=followed_user
+        )
+        
+        if not created:
+            follower.delete()
+            return Response({'is_following': False})
+        
+        return Response({'is_following': True})

@@ -17,12 +17,12 @@ class PostRepository {
   }
 
   static Future<Map<int, String>> _loadStoresById() async {
-    final resp = await ApiService.get(ApiConfig.stores);
+    final resp = await ApiService.get(ApiConfig.users);
     final list = _extractList(resp);
     final map = <int, String>{};
     for (final item in list) {
-      final store = item as Map<String, dynamic>;
-      map[store['id']] = store['name'] ?? 'Store';
+      final u = item as Map<String, dynamic>;
+      map[u['id']] = u['name'] ?? u['username'] ?? 'Store';
     }
     return map;
   }
@@ -135,33 +135,9 @@ class PostRepository {
     final userId = decoded['user_id'];
     if (userId == null) throw Exception('Cannot extract user_id from token');
 
-    final storesResp = await ApiService.get(ApiConfig.stores);
-    final list = _extractList(storesResp);
-    for (final item in list) {
-      final store = item as Map<String, dynamic>;
-      if (store['owner'] == userId) return store['id'];
-    }
-
-    // Get user's name for the store
-    String storeName = 'Store';
-    try {
-      final userResp = await ApiService.get('${ApiConfig.users}$userId/');
-      final userName = userResp['name']?.toString().trim();
-
-      if (userName != null && userName.isNotEmpty) {
-        storeName = userName; // Use user's name directly as store name
-      }
-    } catch (e) {
-      debugPrint('Failed to get user name for store: $e');
-      // Fall back to generic name
-    }
-
-    final created = await ApiService.post(ApiConfig.stores, {
-      'name': storeName,
-      'description': 'New store',
-      'type': 'physical',
-    });
-    return created['id'];
+    // Since User now contains store info, we just return the user ID
+    // No need to create separate store - user IS the store
+    return userId;
   }
 
   /// Public helper so providers can fetch the current user's store id
@@ -179,10 +155,10 @@ class PostRepository {
   }) async {
     try {
       final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
-      final storeId = await _ensureStoreForCurrentUser();
+      final userId = await _ensureStoreForCurrentUser(); // Now returns user ID directly
 
       final productPayload = {
-        'store': storeId,
+        'store': userId, // User ID is now the store ID
         'category': categoryId,
         'name': title,
         'description': description,
@@ -234,6 +210,7 @@ class PostRepository {
     required double price,
     required String category,
     required bool isAvailable,
+    bool hidePrice = false,
     List<File> newImages = const [],
   }) async {
     try {
@@ -244,6 +221,7 @@ class PostRepository {
         'price': price.toString(),
         'category': categoryId,
         'available_status': isAvailable ? 'available' : 'out_of_stock',
+        'hide_price': hidePrice,
       };
 
       await ApiService.patch(ApiConfig.productDetail(id), fields);
@@ -393,6 +371,7 @@ class PostRepository {
   static Future<Offer> createOffer({
     required int productId,
     required int discountPercentage,
+    bool isAvailable = true,
   }) async {
     try {
       final storeId = await _ensureStoreForCurrentUser();
@@ -404,6 +383,7 @@ class PostRepository {
         'product': productId,
         'name': 'Promotion for Product $productId', // Required by backend
         'percentage': discountPercentage,
+        'is_active': isAvailable,
         'start_date': now.toIso8601String().split('T')[0], // YYYY-MM-DD
         'end_date': endDate.toIso8601String().split('T')[0],
       };
@@ -418,7 +398,7 @@ class PostRepository {
         product: product,
         discountPercentage: discountPercentage,
         newPrice: newPrice,
-        isAvailable: true,
+        isAvailable: isAvailable,
         createdAt: DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
       );
     } catch (e) {

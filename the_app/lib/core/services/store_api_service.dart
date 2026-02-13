@@ -1,46 +1,37 @@
 import '../config/api_config.dart';
 import './api_service.dart';
-import '../../data/models/store_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
 
 class StoreApiService {
   StoreApiService();
 
-  // Simple in-memory cache for store details
-  final Map<int, Store> _storeCache = {};
+  final Map<int, User> _storeCache = {};
 
-  Future<Store?> getMyStore(int userId) async {
+  Future<User?> getMyStore(int userId) async {
     try {
-      final data = await ApiService.get('${ApiConfig.stores}?owner=$userId');
-      if (data is List && data.isNotEmpty) {
-        final store = Store.fromJson(data.first as Map<String, dynamic>);
+      final data = await ApiService.get('${ApiConfig.users}$userId/');
+      if (data is Map<String, dynamic>) {
+        final store = User.fromJson(data);
         _storeCache[store.id] = store;
         return store;
-      } else if (data is Map<String, dynamic> && data['results'] != null) {
-         final results = data['results'] as List;
-         if (results.isNotEmpty) {
-           final store = Store.fromJson(results.first as Map<String, dynamic>);
-           _storeCache[store.id] = store;
-           return store;
-         }
       }
       return null;
-    } catch (e) {
-      print('Error fetching my store: $e');
+    } catch (_) {
       return null;
     }
   }
 
-  Future<Store> getStoreDetails(int storeId, {int retries = 2, bool forceRefresh = false}) async {
+  Future<User> getStoreDetails(int storeId, {int retries = 2, bool forceRefresh = false}) async {
     if (!forceRefresh && _storeCache.containsKey(storeId)) {
       return _storeCache[storeId]!;
     }
     int attempt = 0;
     while (true) {
       try {
-        final data = await ApiService.get('${ApiConfig.stores}$storeId/');
+        final data = await ApiService.get('${ApiConfig.users}$storeId/');
         if (data is Map<String, dynamic>) {
-          final store = Store.fromJson(data);
+          final store = User.fromJson(data);
           _storeCache[storeId] = store;
           return store;
         }
@@ -56,14 +47,12 @@ class StoreApiService {
     }
   }
 
-  /// Get products for a specific store
   Future<List<Post>> getStoreProducts(int storeId, {int page = 1, int retries = 2}) async {
     int attempt = 0;
     while (true) {
       try {
         final data = await ApiService.get('${ApiConfig.products}?store=$storeId&page=$page');
         if (data is Map<String, dynamic> && data['results'] != null) {
-          // Paginated response
           return (data['results'] as List)
               .map((json) => Post.fromJson(json as Map<String, dynamic>))
               .toList();
@@ -82,7 +71,7 @@ class StoreApiService {
     }
   }
 
-  Future<List<Store>> getStores({
+  Future<List<User>> getStores({
     int? categoryId,
     String? searchQuery,
     String? wilaya,
@@ -94,13 +83,10 @@ class StoreApiService {
     while (true) {
       try {
         final params = <String, String>{};
-        if (categoryId != null) params['category'] = categoryId.toString();
         if (searchQuery != null && searchQuery.isNotEmpty) params['search'] = searchQuery;
-        if (wilaya != null && wilaya.isNotEmpty) params['wilaya'] = wilaya;
-        if (city != null && city.isNotEmpty) params['city'] = city;
         params['page'] = page.toString();
 
-        String url = ApiConfig.stores;
+        String url = ApiConfig.users;
         if (params.isNotEmpty) {
           url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
         }
@@ -109,10 +95,10 @@ class StoreApiService {
 
         if (data is Map<String, dynamic> && data['results'] != null) {
           return (data['results'] as List)
-              .map((json) => Store.fromJson(json as Map<String, dynamic>))
+              .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
         } else if (data is List) {
-          return data.map((json) => Store.fromJson(json as Map<String, dynamic>)).toList();
+          return data.map((json) => User.fromJson(json as Map<String, dynamic>)).toList();
         }
         return [];
       } catch (e) {
@@ -130,7 +116,11 @@ class StoreApiService {
     int attempt = 0;
     while (true) {
       try {
-        await ApiService.post('${ApiConfig.followers}', {'store': storeId});
+        final resp = await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        final isFollowing = (resp is Map && resp['is_following'] == true);
+        if (!isFollowing) {
+          await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        }
         return;
       } catch (e) {
         if (attempt < retries) {
@@ -147,8 +137,11 @@ class StoreApiService {
     int attempt = 0;
     while (true) {
       try {
-        // Need to find the follower ID first or use a dedicated endpoint
-        await ApiService.delete('${ApiConfig.followers}?store=$storeId');
+        final resp = await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        final isFollowing = (resp is Map && resp['is_following'] == true);
+        if (isFollowing) {
+          await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        }
         return;
       } catch (e) {
         if (attempt < retries) {
@@ -161,17 +154,21 @@ class StoreApiService {
     }
   }
 
-  /// Check if user is following a store
   Future<bool> isFollowing(int storeId) async {
     try {
-      final data = await ApiService.get('${ApiConfig.followers}?store=$storeId');
-      if (data is Map<String, dynamic> && data['results'] != null) {
-        return (data['results'] as List).isNotEmpty;
-      } else if (data is List) {
-        return data.isNotEmpty;
+      final data = await ApiService.get(ApiConfig.followers);
+      final list = (data is Map && data['results'] is List)
+          ? (data['results'] as List)
+          : (data is List ? data : const []);
+      for (final item in list) {
+        if (item is Map<String, dynamic>) {
+          final followed = item['followed_user'];
+          if (followed is int && followed == storeId) return true;
+          if (followed is Map && followed['id'] == storeId) return true;
+        }
       }
       return false;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }

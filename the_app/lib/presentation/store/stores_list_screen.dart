@@ -95,6 +95,9 @@ class _StoresListScreenState extends State<StoresListScreen> {
   }
 
   Widget _buildStoreCard(BackendStore store) {
+    final avatarUrl = store.profileImageUrl;
+    final rating = store.averageRating;
+
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(
@@ -131,11 +134,12 @@ class _StoresListScreenState extends State<StoresListScreen> {
                   color: AppColors.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
                 ),
-                child: store.profileImageUrl.isNotEmpty
+                child: avatarUrl.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusSmall),
                         child: Image.network(
-                          store.profileImageUrl,
+                          avatarUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Icon(
@@ -204,7 +208,7 @@ class _StoresListScreenState extends State<StoresListScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          store.averageRating.toStringAsFixed(1),
+                          rating.toStringAsFixed(1),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

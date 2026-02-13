@@ -11,7 +11,6 @@ import 'core/providers/post_provider.dart';
 import 'core/providers/home_provider.dart';
 import 'core/providers/store_provider.dart';
 import 'core/providers/pack_provider.dart';
-import 'core/providers/message_provider.dart';
 import 'core/navigation/route_generator.dart';
 import 'presentation/auth/splash_screen.dart';
 
@@ -36,7 +35,6 @@ class DzLocalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => StoreProvider(apiService: StoreApiService())),
         ChangeNotifierProvider(create: (_) => PackProvider(apiService: PackApiService())),
-        ChangeNotifierProvider(create: (_) => MessageProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

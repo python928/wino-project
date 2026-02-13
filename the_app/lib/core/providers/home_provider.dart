@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/post_model.dart';
-import '../../data/models/store_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/pack_model.dart';
 import '../services/api_service.dart';
+import '../../core/config/api_config.dart';
 import '../services/product_api_service.dart';
 import '../services/store_api_service.dart';
 
@@ -63,7 +64,7 @@ class HomeProvider with ChangeNotifier {
   String? _categoriesError;
 
   // Featured Stores
-  List<Store> _featuredStores = [];
+  List<User> _featuredStores = [];
   bool _isLoadingStores = false;
   String? _storesError;
 
@@ -87,7 +88,7 @@ class HomeProvider with ChangeNotifier {
   bool get isLoadingCategories => _isLoadingCategories;
   String? get categoriesError => _categoriesError;
 
-  List<Store> get featuredStores => _featuredStores;
+  List<User> get featuredStores => _featuredStores;
   bool get isLoadingStores => _isLoadingStores;
   String? get storesError => _storesError;
 
@@ -207,10 +208,9 @@ class HomeProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load stores for name enrichment
       Map<int, String> storesById = {};
       try {
-        final storesResp = await ApiService.get('/api/stores/stores/');
+        final storesResp = await ApiService.get(ApiConfig.users);
         final storesList = storesResp is Map && storesResp.containsKey('results')
             ? storesResp['results'] as List
             : (storesResp is List ? storesResp : []);
@@ -219,8 +219,8 @@ class HomeProvider with ChangeNotifier {
             storesById[item['id']] = item['name'] ?? 'Store';
           }
         }
-      } catch (e) {
-        // If stores loading fails, continue without enrichment
+      } catch (_) {
+        // continue without enrichment
       }
 
       final data = await ApiService.get('/api/catalog/packs/');
