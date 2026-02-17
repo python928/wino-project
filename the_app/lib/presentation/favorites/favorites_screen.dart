@@ -7,6 +7,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/favorites_change_notifier.dart';
 import '../../data/models/post_model.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../../core/widgets/app_button.dart';
@@ -25,10 +26,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   bool _isLoading = true;
   String? _error;
 
+  late final VoidCallback _favoritesListener;
+
   @override
   void initState() {
     super.initState();
+    _favoritesListener = () {
+      if (!mounted) return;
+      _loadFavorites();
+    };
+    FavoritesChangeNotifier.version.addListener(_favoritesListener);
     _loadFavorites();
+  }
+
+  @override
+  void dispose() {
+    FavoritesChangeNotifier.version.removeListener(_favoritesListener);
+    super.dispose();
   }
 
   Future<void> _loadFavorites() async {

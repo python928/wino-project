@@ -223,7 +223,7 @@ class HomeProvider with ChangeNotifier {
         // continue without enrichment
       }
 
-      final data = await ApiService.get('/api/catalog/packs/');
+      final data = await ApiService.get('/api/catalog/packs/?available_status=available');
 
       if (data is Map<String, dynamic> && data['results'] != null) {
         // API returns {count: X, results: [...]}

@@ -1,6 +1,7 @@
 from django.db import models
-from rest_framework import filters, permissions, viewsets, status
+from rest_framework import filters, permissions, viewsets, status, serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -17,14 +18,29 @@ from .serializers import (
 	PromotionSerializer,
 	PromotionImageSerializer,
 )
+from users.models import User
 
 # NOTE: Store == users.User now (unified profile)
 
 
 class IsStoreOwner(permissions.BasePermission):
 	def has_object_permission(self, request, view, obj):
+		# Resolve "owner" across the unified domain model (store == users.User)
+		# Supported objects: Product(store), Pack(merchant), Promotion(store),
+		# ProductImage(product.store), PackImage(pack.merchant), PackProduct(pack.merchant),
+		# PromotionImage(promotion.store)
 		owner = getattr(obj, 'store', None) or getattr(obj, 'merchant', None)
-		return request.user.is_superuser or (owner and owner == request.user)
+		if owner is None:
+			product = getattr(obj, 'product', None)
+			if product is not None:
+				owner = getattr(product, 'store', None)
+			pack = getattr(obj, 'pack', None)
+			if owner is None and pack is not None:
+				owner = getattr(pack, 'merchant', None)
+			promotion = getattr(obj, 'promotion', None)
+			if owner is None and promotion is not None:
+				owner = getattr(promotion, 'store', None)
+		return request.user.is_superuser or (owner is not None and owner == request.user)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -59,6 +75,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 		# No role-based filtering anymore
 		return queryset
 
+	def perform_create(self, serializer):
+		# Prevent store spoofing: the authenticated user IS the store
+		serializer.save(store=self.request.user)
+
 
 class ProductImageViewSet(viewsets.ModelViewSet):
 	queryset = ProductImage.objects.select_related('product', 'product__store')
@@ -72,6 +92,12 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return super().get_permissions()
 
+	def perform_create(self, serializer):
+		product = serializer.validated_data.get('product')
+		if product is None or product.store != self.request.user:
+			raise PermissionDenied('You can only add images to your own products')
+		serializer.save()
+
 
 class PackViewSet(viewsets.ModelViewSet):
 	# IMPORTANT: your Pack model should now select_related('store') only
@@ -79,7 +105,7 @@ class PackViewSet(viewsets.ModelViewSet):
 	serializer_class = PackSerializer
 	filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
 	ordering_fields = ['created_at', 'discount']
-	filterset_fields = ['merchant']
+	filterset_fields = ['merchant', 'available_status']
 
 	def update(self, request, *args, **kwargs):
 		# Treat PUT as partial update too (mobile clients often send only changed fields).
@@ -100,9 +126,13 @@ class PackViewSet(viewsets.ModelViewSet):
 			queryset = queryset.filter(merchant_id=store_id)
 		return queryset
 
+	def perform_create(self, serializer):
+		# Prevent merchant_id spoofing
+		serializer.save(merchant=self.request.user)
+
 
 class PackProductViewSet(viewsets.ModelViewSet):
-	queryset = PackProduct.objects.select_related('pack', 'pack__store', 'product')
+	queryset = PackProduct.objects.select_related('pack', 'pack__merchant', 'product')
 	serializer_class = PackProductSerializer
 	permission_classes = [permissions.IsAuthenticated]
 
@@ -111,9 +141,20 @@ class PackProductViewSet(viewsets.ModelViewSet):
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return super().get_permissions()
 
+	def perform_create(self, serializer):
+		pack = serializer.validated_data.get('pack')
+		product = serializer.validated_data.get('product')
+		if pack is None or product is None:
+			raise PermissionDenied('Invalid pack/product')
+		if pack.merchant != self.request.user:
+			raise PermissionDenied('You can only modify your own packs')
+		if product.store != self.request.user:
+			raise PermissionDenied('Pack products must belong to the merchant')
+		serializer.save()
+
 
 class PackImageViewSet(viewsets.ModelViewSet):
-	queryset = PackImage.objects.select_related('pack', 'pack__store')
+	queryset = PackImage.objects.select_related('pack', 'pack__merchant')
 	serializer_class = PackImageSerializer
 	permission_classes = [permissions.IsAuthenticated]
 
@@ -121,6 +162,12 @@ class PackImageViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsStoreOwner()]
 		return super().get_permissions()
+
+	def perform_create(self, serializer):
+		pack = serializer.validated_data.get('pack')
+		if pack is None or pack.merchant != self.request.user:
+			raise PermissionDenied('You can only add images to your own packs')
+		serializer.save()
 
 
 class IsReviewOwner(permissions.BasePermission):
@@ -137,6 +184,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 	filter_backends = [filters.OrderingFilter]
 	ordering_fields = ['created_at']
 
+	# KEEP ONLY ONE get_permissions (delete the duplicate one further down)
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve']:
 			return [permissions.AllowAny()]
@@ -148,32 +196,61 @@ class ReviewViewSet(viewsets.ModelViewSet):
 		queryset = super().get_queryset()
 		product_id = self.request.query_params.get('product')
 		store_id = self.request.query_params.get('store')
-		if product_id:
-			queryset = queryset.filter(product_id=product_id)
+
 		if store_id:
 			queryset = queryset.filter(store_id=store_id)
+
+		if product_id:
+			# If your app is "store review" (UNIQUE user+store), still show them on product pages.
+			try:
+				p = Product.objects.select_related('store').get(id=product_id)
+				queryset = queryset.filter(
+					models.Q(product_id=product_id) |
+					models.Q(product__isnull=True, store_id=p.store_id)
+				).distinct()
+			except Product.DoesNotExist:
+				# If product doesn't exist, return empty set instead of 500.
+				return queryset.none()
+
 		return queryset
 
 	def perform_create(self, serializer):
-		product_id = self.request.data.get('product')
 		store_id = self.request.data.get('store')
+		product_id = self.request.data.get('product')
+
 		store = None
 
-		if product_id:
+		# Allow creating/updating a store review from product page by passing product only.
+		if (store_id is None or store_id == '') and product_id not in (None, ''):
 			try:
-				product = Product.objects.get(id=product_id)
-				store = product.store
+				p = Product.objects.select_related('store').get(id=product_id)
 			except Product.DoesNotExist:
-				pass
-		elif store_id:
-			# Store-only review (rating a store/user directly)
+				raise serializers.ValidationError({'product': 'Product not found'})
+			store = p.store
+
+		# Normal path: store is explicitly provided.
+		if store is None:
+			if store_id in (None, ''):
+				raise serializers.ValidationError({'store': 'store is required'})
 			try:
-				from users.models import User
 				store = User.objects.get(id=store_id)
 			except User.DoesNotExist:
-				pass
+				raise serializers.ValidationError({'store': 'Store not found'})
 
-		serializer.save(user=self.request.user, store=store)
+		# UNIQUE(user, store) => create-or-update (no IntegrityError).
+		defaults = dict(serializer.validated_data)
+		defaults.pop('user', None)
+		defaults.pop('store', None)
+
+		# Keep reviews store-level (product nullable) to match the UNIQUE(user, store) constraint.
+		defaults['product'] = None
+
+		review, _created = Review.objects.update_or_create(
+			user=self.request.user,
+			store=store,
+			defaults=defaults,
+		)
+		serializer.instance = review
 
 	@action(detail=False, methods=['post'], url_path='rate-store')
 	def rate_store(self, request):
@@ -302,7 +379,10 @@ class PromotionViewSet(viewsets.ModelViewSet):
 class PromotionImageViewSet(viewsets.ModelViewSet):
 	queryset = PromotionImage.objects.select_related('promotion')
 	serializer_class = PromotionImageSerializer
-	permission_classes = [permissions.IsAuthenticated, IsStoreOwnerOrReadOnly]
+	permission_classes = [permissions.IsAuthenticated, IsStoreOwner]
 
 	def perform_create(self, serializer):
+		promotion = serializer.validated_data.get('promotion')
+		if promotion is None or promotion.store != self.request.user:
+			raise PermissionDenied('You can only add images to your own promotions')
 		serializer.save()

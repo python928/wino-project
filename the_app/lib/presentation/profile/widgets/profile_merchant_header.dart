@@ -18,6 +18,10 @@ class ProfileMerchantHeader extends StatelessWidget {
   final VoidCallback onPickCoverImage;
   final VoidCallback? onSettingsTap;
   final Function(String)? onSettingsMenuSelected;
+  final bool isOwnerView;
+  final bool isFollowing;
+  final VoidCallback? onFollowTap;
+  final VoidCallback? onFavoriteTap;
   final Gradient primaryGradient;
 
   const ProfileMerchantHeader({
@@ -36,6 +40,10 @@ class ProfileMerchantHeader extends StatelessWidget {
     required this.onPickCoverImage,
     this.onSettingsTap,
     this.onSettingsMenuSelected,
+    required this.isOwnerView,
+    this.isFollowing = false,
+    this.onFollowTap,
+    this.onFavoriteTap,
     required this.primaryGradient,
   });
 
@@ -220,6 +228,48 @@ class ProfileMerchantHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               const SizedBox(height: 10),
+              
+              // Follow and Favorite buttons for non-owner view
+              if (!isOwnerView) ...[
+                Row(
+                  children: [
+                    // Follow button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: onFollowTap,
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isFollowing ? Icons.done : Icons.add,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                isFollowing ? 'Following' : 'Follow',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+              
               Row(
                 children: [
                   Icon(Icons.location_on_outlined,

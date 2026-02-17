@@ -18,11 +18,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    store = serializers.PrimaryKeyRelatedField(read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
-    store_name = serializers.CharField(source='store.name', read_only=True)
+    store_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -33,6 +34,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'price',
+            'hide_price',
             'negotiable',
             'available_status',
             'created_at',
@@ -56,6 +58,10 @@ class ProductSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return Favorite.objects.filter(user=request.user, product=obj).exists()
         return False
+
+    def get_store_name(self, obj):
+        # store == users.User
+        return getattr(obj.store, 'name', None) or getattr(obj.store, 'username', '')
 
 
 class PackProductSerializer(serializers.ModelSerializer):
@@ -85,18 +91,34 @@ class PackSerializer(serializers.ModelSerializer):
     
     # Input fields matching frontend
     products = serializers.ListField(write_only=True, required=False)
-    merchant_id = serializers.IntegerField()
+    merchant_id = serializers.IntegerField(source='merchant_id', read_only=True)
     merchant_name = serializers.CharField(source='merchant.name', read_only=True)
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Pack
-        fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description', 'discount_price', 'total_price', 'created_at', 'pack_products', 'images', 'products']
+        fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description', 'discount_price', 'total_price', 'available_status', 'created_at', 'pack_products', 'images', 'products']
         read_only_fields = ['id', 'created_at', 'pack_products', 'images']
 
     def get_total_price(self, obj):
         return sum(pp.product.price * pp.quantity for pp in obj.pack_products.all())
+
+    def validate_products(self, value):
+        """Ensure packs can only contain the current merchant's own products."""
+        request = self.context.get('request')
+        if request is None or not getattr(request, 'user', None) or not request.user.is_authenticated:
+            raise serializers.ValidationError('Authentication required')
+
+        for item in value or []:
+            if not isinstance(item, dict):
+                raise serializers.ValidationError('Invalid products payload')
+            product_id = item.get('product_id') or item.get('product')
+            if not product_id:
+                raise serializers.ValidationError('product_id is required')
+            if not Product.objects.filter(id=product_id, store=request.user).exists():
+                raise serializers.ValidationError('Pack products must belong to the merchant')
+        return value
 
     def create(self, validated_data):
         products_data = validated_data.pop('products', [])
@@ -139,7 +161,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'user', 'user_name', 'username', 'store', 'product', 'rating', 'comment', 'created_at', 'store_name']
-        read_only_fields = ['id', 'user', 'user_name', 'username', 'store', 'created_at']
+        read_only_fields = ['id', 'user', 'user_name', 'username', 'store', 'product', 'created_at']
 
     def get_user_name(self, obj):
         return obj.user.name if hasattr(obj.user, 'name') and obj.user.name else obj.user.username
@@ -163,6 +185,7 @@ class PromotionImageSerializer(serializers.ModelSerializer):
 
 class PromotionSerializer(serializers.ModelSerializer):
     images = PromotionImageSerializer(many=True, read_only=True)
+    store = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Promotion
@@ -173,6 +196,7 @@ class PromotionSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'percentage',
+            'is_active',
             'start_date',
             'end_date',
             'created_at',

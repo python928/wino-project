@@ -3,7 +3,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 
-from stores.models import Store
 from .models import Category
 
 User = get_user_model()
@@ -11,14 +10,13 @@ User = get_user_model()
 
 class ProductTests(APITestCase):
 	def setUp(self):
-		self.owner = User.objects.create_user(username='owner', password='pass1234')
-		self.store = Store.objects.create(owner=self.owner, name='Store')
+		self.owner = User.objects.create_user(username='owner', password='pass1234', name='Owner')
 		self.category = Category.objects.create(name='Cat')
 
 	def test_create_product(self):
 		url = reverse('product-list')
 		payload = {
-			'store': self.store.id,
+			# store is read-only; viewset sets store=request.user
 			'category': self.category.id,
 			'name': 'Prod',
 			'price': '10.00',

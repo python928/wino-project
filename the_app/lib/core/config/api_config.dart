@@ -51,6 +51,7 @@ class ApiConfig {
   static String reviewsMyStoreRating(int storeId) => '$catalog/reviews/my-store-rating/$storeId/';
   static const String favorites = '$catalog/favorites/';
   static const String favoritesToggle = '$catalog/favorites/toggle/';
+  static String favoritesCheck(int productId) => '$catalog/favorites/check/$productId/';
 
   // Promotions (now in catalog)
   static const String promotions = '$catalog/promotions/';

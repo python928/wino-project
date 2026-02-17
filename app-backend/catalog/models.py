@@ -20,6 +20,7 @@ class Product(models.Model):
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	price = models.DecimalField(max_digits=10, decimal_places=2)
+	hide_price = models.BooleanField(default=False)
 	negotiable = models.BooleanField(default=False)
 	available_status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=AVAILABLE)
 	created_at = models.DateTimeField(auto_now_add=True)
@@ -44,6 +45,7 @@ class Promotion(models.Model):
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+	is_active = models.BooleanField(default=True)
 	start_date = models.DateTimeField()
 	end_date = models.DateTimeField()
 	created_at = models.DateTimeField(auto_now_add=True)
@@ -62,10 +64,15 @@ class PromotionImage(models.Model):
 
 
 class Pack(models.Model):
+	AVAILABLE = 'available'
+	OUT_OF_STOCK = 'out_of_stock'
+	STATUS_CHOICES = ((AVAILABLE, 'Available'), (OUT_OF_STOCK, 'Out of Stock'))
+
 	merchant = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='packs')
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
-	discount = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+	discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+	available_status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=AVAILABLE)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr

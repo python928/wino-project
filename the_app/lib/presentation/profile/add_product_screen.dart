@@ -155,11 +155,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     try {
       final provider = Provider.of<PostProvider>(context, listen: false);
-      final double price = !_showPrice
-          ? 0.0
-          : double.parse(
-                  _priceController.text.isEmpty ? '0' : _priceController.text)
-              .toDouble();
+      final double price = double.parse(
+        _priceController.text.isEmpty ? '0' : _priceController.text,
+      ).toDouble();
 
       if (_isEditMode) {
         final newFiles = _images.whereType<File>().toList();

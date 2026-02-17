@@ -7,6 +7,7 @@ import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../core/widgets/app_button.dart';
 import '../shared_widgets/unified_app_bar.dart';
+import '../../core/services/follow_change_notifier.dart';
 
 /// Stores list screen for bottom navigation
 /// Shows all available stores with search and filter
@@ -22,10 +23,23 @@ class _StoresListScreenState extends State<StoresListScreen> {
   List<BackendStore> _stores = [];
   String? _error;
 
+  late final VoidCallback _followListener;
+
   @override
   void initState() {
     super.initState();
+    _followListener = () {
+      if (!mounted) return;
+      _loadStores();
+    };
+    FollowChangeNotifier.version.addListener(_followListener);
     _loadStores();
+  }
+
+  @override
+  void dispose() {
+    FollowChangeNotifier.version.removeListener(_followListener);
+    super.dispose();
   }
 
   Future<void> _loadStores() async {
@@ -35,7 +49,7 @@ class _StoresListScreenState extends State<StoresListScreen> {
         _error = null;
       });
 
-      final stores = await StoreRepository.searchStores();  // Use searchStores (returns all when no query)
+      final stores = await StoreRepository.getFollowedStores();
 
       if (mounted) {
         setState(() {
@@ -267,18 +281,18 @@ class _StoresListScreenState extends State<StoresListScreen> {
           ),
           const SizedBox(height: AppConstants.spacing16),
           Text(
-            'حدث خطأ في تحميل المتاجر',
+            'Failed to load stores',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppConstants.spacing8),
           Text(
-            _error ?? 'خطأ غير معروف',
+            _error ?? 'Unknown error',
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppConstants.spacing24),
           AppPrimaryButton(
-            text: 'إعادة المحاولة',
+            text: 'Retry',
             onPressed: _loadStores,
           ),
         ],
@@ -298,12 +312,12 @@ class _StoresListScreenState extends State<StoresListScreen> {
           ),
           const SizedBox(height: AppConstants.spacing16),
           Text(
-            'لا توجد متاجر',
+            'No followed stores',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppConstants.spacing8),
           Text(
-            'لم يتم العثور على أي متاجر',
+            'Follow a store to see it here',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

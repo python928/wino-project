@@ -226,28 +226,31 @@ class BaseItemCard extends StatelessWidget {
         // Unavailable Overlay (opt-in per screen)
         if (showUnavailable)
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.18),
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppConstants.cardRadius)),
-              ),
-              alignment: Alignment.center,
+            child: IgnorePointer(
+              ignoring: true,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacing16,
-                  vertical: AppConstants.spacing8,
-                ),
                 decoration: BoxDecoration(
-                  color: AppColors.errorRed,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                  color: Colors.black.withOpacity(0.18),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppConstants.cardRadius)),
                 ),
-                child: const Text(
-                  'Not Available',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: AppConstants.fontSizeBody,
+                alignment: Alignment.center,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing16,
+                    vertical: AppConstants.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorRed,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                  ),
+                  child: const Text(
+                    'Not Available',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: AppConstants.fontSizeBody,
+                    ),
                   ),
                 ),
               ),

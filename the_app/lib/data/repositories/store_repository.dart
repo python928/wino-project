@@ -59,16 +59,50 @@ class StoreRepository {
       final resp = await ApiService.get(ApiConfig.followers);
       final list = _extractList(resp);
 
-      final stores = <BackendStore>[];
+      final storesById = <int, BackendStore>{};
+      final idsToFetch = <int>{};
+
       for (final item in list) {
-        if (item is Map<String, dynamic>) {
-          final followed = item['followed_user'];
-          if (followed is Map<String, dynamic>) {
-            stores.add(BackendStore.fromJson(followed));
+        if (item is int) {
+          idsToFetch.add(item);
+          continue;
+        }
+
+        if (item is! Map<String, dynamic>) continue;
+
+        // Some backends return a full object, others return an id.
+        final dynamic followed =
+            item['followed_user_detail'] ?? item['followed_user'] ?? item['store'];
+
+        if (followed is Map<String, dynamic>) {
+          final store = BackendStore.fromJson(followed);
+          storesById[store.id] = store;
+          continue;
+        }
+
+        if (followed is int) {
+          idsToFetch.add(followed);
+          continue;
+        }
+
+        // Fallback: sometimes the item itself is the store object.
+        if (item.containsKey('id') && item.containsKey('name')) {
+          final store = BackendStore.fromJson(item);
+          storesById[store.id] = store;
+        }
+      }
+
+      if (idsToFetch.isNotEmpty) {
+        for (final id in idsToFetch) {
+          if (storesById.containsKey(id)) continue;
+          final store = await getStore(id);
+          if (store != null) {
+            storesById[store.id] = store;
           }
         }
       }
-      return stores;
+
+      return storesById.values.toList();
     } catch (_) {
       return [];
     }

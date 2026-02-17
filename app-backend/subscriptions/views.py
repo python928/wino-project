@@ -23,9 +23,10 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 		user = self.request.user
 		if user.is_superuser:
 			return self.queryset
-		return self.queryset.filter(store__owner=user)
+		return self.queryset.filter(store=user)
 
 	def perform_create(self, serializer):
-		serializer.save()
+		# Prevent spoofing store via payload (Store == User).
+		serializer.save(store=self.request.user)
 
 # Create your views here.

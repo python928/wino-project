@@ -45,6 +45,13 @@ class PostRepository {
       final map = <int, int>{};
       for (final item in list) {
         final promo = item as Map<String, dynamic>;
+
+		// Only apply active promotions to product pricing.
+		final isActiveRaw =
+			promo['is_active'] ?? promo['isActive'] ?? promo['is_available'] ?? promo['active'] ?? true;
+		final bool isActive = isActiveRaw != false;
+		if (!isActive) continue;
+
         final productId = promo['product'];
         final percentage = int.tryParse(promo['percentage'].toString()) ?? 0;
         if (productId != null) map[productId] = percentage;
@@ -60,6 +67,7 @@ class PostRepository {
     int? page,
     int? storeId,
     int? categoryId,
+	bool availableOnly = true,
   }) async {
     try {
       final queryParams = <String, String>{};
@@ -67,6 +75,7 @@ class PostRepository {
       if (page != null) queryParams['page'] = page.toString();
       if (storeId != null) queryParams['store'] = storeId.toString();
       if (categoryId != null) queryParams['category'] = categoryId.toString();
+		if (availableOnly) queryParams['available_status'] = 'available';
 
       final queryString = queryParams.isNotEmpty
           ? '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}'
@@ -252,7 +261,7 @@ class PostRepository {
     }
   }
 
-  static Future<List<Offer>> getOffers({String? authorId}) async {
+  static Future<List<Offer>> getOffers({String? authorId, int? storeId, bool includeInactive = false}) async {
     try {
       final promotionsResp = await ApiService.get(ApiConfig.promotions);
       debugPrint('Repository: Promotions response: $promotionsResp');
@@ -275,23 +284,29 @@ class PostRepository {
 
       final offers = <Offer>[];
 
-      // Best-effort filtering for "my offers": backend promotions are usually tied to a store,
-      // while UI currently passes a user id string. If the value looks numeric, we try to match
-      // against promo.store when present. If it doesn't match, we won't filter.
-      final int? filterStoreId = int.tryParse(authorId ?? '');
+      // Backwards compat: if authorId looks numeric and storeId wasn't provided, treat it as storeId.
+      final int? authorStoreId = int.tryParse(authorId ?? '');
+      final int? filterStoreId = storeId ?? authorStoreId;
 
       final Map<int, Post> productCache = {};
+
+      final bool shouldIncludeInactive = includeInactive || (authorId != null && authorId.isNotEmpty);
 
       for (final promo in promos) {
         if (promo is! Map<String, dynamic>) continue;
         debugPrint('Repository: Processing promo: $promo');
 
         // Check if promo is active - be more lenient
-        final isActive = promo['is_active'] ?? promo['isActive'] ?? promo['is_available'] ?? promo['active'] ?? true;
+        final isActiveRaw = promo['is_active'] ??
+            promo['isActive'] ??
+            promo['is_available'] ??
+            promo['active'] ??
+            true;
+        final bool isActive = isActiveRaw != false;
         debugPrint('Repository: Promo ${promo['id']} isActive=$isActive');
 
-        // Only skip if explicitly set to false
-        if (isActive == false) {
+        // Public offers feed: hide inactive promos
+        if (!shouldIncludeInactive && !isActive) {
           debugPrint('Repository: Skipping promo ${promo['id']} - not active');
           continue;
         }
@@ -352,7 +367,7 @@ class PostRepository {
             product: product,
             discountPercentage: percentage,
             newPrice: newPrice,
-            isAvailable: true,
+            isAvailable: isActive,
             createdAt: DateTime.tryParse((promo['start_date'] ?? promo['created_at'] ?? '').toString()) ?? DateTime.now(),
           ),
         );

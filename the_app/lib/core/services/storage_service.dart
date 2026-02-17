@@ -73,6 +73,16 @@ class StorageService {
     return null;
   }
   
+  static int? getUserId() {
+    final userData = getUserData();
+    if (userData != null) {
+      final id = userData['id'];
+      if (id is int) return id;
+      if (id is String) return int.tryParse(id);
+    }
+    return null;
+  }
+  
   static Future<void> clearUserData() async {
     await prefs.remove(keyUserData);
     await prefs.setBool(keyIsLoggedIn, false);

@@ -298,7 +298,7 @@ class Post {
       'price': price,
       'old_price': oldPrice,
       'discount_percentage': discountPercentage,
-      'available_status': isAvailable ? 'available' : 'unavailable',
+      'available_status': isAvailable ? 'available' : 'out_of_stock',
       'negotiable': isNegotiable,
       'hide_price': hidePrice,
       'rating': rating,

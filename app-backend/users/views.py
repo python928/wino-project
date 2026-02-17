@@ -80,6 +80,13 @@ class IsSelfOrAdmin(permissions.BasePermission):
 		return request.user.is_superuser or obj == request.user
 
 
+class IsSelfOrAdminOrReadOnly(permissions.BasePermission):
+	def has_object_permission(self, request, view, obj):
+		if request.method in permissions.SAFE_METHODS:
+			return True
+		return request.user.is_superuser or obj == request.user
+
+
 class MeView(APIView):
 	"""Get or update current authenticated user's profile"""
 	permission_classes = [permissions.IsAuthenticated]
@@ -148,38 +155,42 @@ class LogoutView(APIView):
 
 
 class UserListView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['name', 'username', 'store_description']
+	queryset = User.objects.all()
+	serializer_class = UserSerializer
+	filter_backends = [filters.SearchFilter]
+	search_fields = ['name', 'username', 'store_description']
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+	queryset = User.objects.all()
+	serializer_class = UserSerializer
+	permission_classes = [IsSelfOrAdminOrReadOnly]
 
 
 class FollowerListView(generics.ListAPIView):
-    serializer_class = FollowerSerializer
-    
-    def get_queryset(self):
-        return Follower.objects.filter(user=self.request.user)
+	serializer_class = FollowerSerializer
+
+	def get_queryset(self):
+		return Follower.objects.filter(user=self.request.user)
 
 
 class FollowerToggleView(generics.CreateAPIView):
-    serializer_class = FollowerSerializer
-    
-    def post(self, request):
-        followed_user_id = request.data.get('store')  # Keep 'store' for API compatibility
-        followed_user = get_object_or_404(User, id=followed_user_id)
-        
-        follower, created = Follower.objects.get_or_create(
-            user=request.user,
-            followed_user=followed_user
-        )
-        
-        if not created:
-            follower.delete()
-            return Response({'is_following': False})
-        
-        return Response({'is_following': True})
+	serializer_class = FollowerSerializer
+
+	def post(self, request):
+		followed_user_id = request.data.get('store')  # Keep 'store' for API compatibility
+		followed_user = get_object_or_404(User, id=followed_user_id)
+
+		if followed_user == request.user:
+			return Response({'error': 'Cannot follow yourself'}, status=status.HTTP_400_BAD_REQUEST)
+
+		follower, created = Follower.objects.get_or_create(
+			user=request.user,
+			followed_user=followed_user,
+		)
+
+		if not created:
+			follower.delete()
+			return Response({'is_following': False})
+
+		return Response({'is_following': True})

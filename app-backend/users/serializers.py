@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 import uuid
+from django.db.models import Avg
 from .models import Follower
 
 User = get_user_model()
@@ -25,8 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.followers.count()
     
     def get_average_rating(self, obj):
-        # TODO: Calculate from reviews when review system is implemented
-        return 0.0
+        # Store == User: compute avg rating for this store/user from reviews.
+        from catalog.models import Review  # local import to avoid circulars
+        avg = Review.objects.filter(store=obj).aggregate(Avg('rating'))['rating__avg']
+        return round(avg, 1) if avg else 0.0
 
 
 class RegisterSerializer(serializers.ModelSerializer):

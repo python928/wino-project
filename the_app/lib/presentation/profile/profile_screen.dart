@@ -5,10 +5,10 @@ import '../../core/config/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_constants.dart';
 import '../../core/routing/routes.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/follow_change_notifier.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/pack_provider.dart';
 import '../../data/models/post_model.dart';
@@ -50,6 +50,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _followersCount = 0;
   double _averageRating = 0.0;
 
+  bool _isFollowingStore = false;
+  bool _isLoadingFollowState = false;
+
   String? _storeCoverUrl;
   bool _isUploadingCover = false;
 
@@ -61,6 +64,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   int? _storeId; // keep, but storeId == userId now
   String? _lastProfileType; // remove usage (kept field is harmless but unused)
+
+  bool _isSubmittingReview = false;
+  final TextEditingController _reviewController = TextEditingController();
+  double _rating = 0.0;
+  bool _showReviewForm = false;
 
   void _showPublishMenu() {
     showModalBottomSheet<void>(
@@ -294,6 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _reviewController.dispose();
     super.dispose();
   }
 
@@ -350,16 +359,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     await _fetchStoreData();
 
+    if (!_isOwnerView) {
+      await _loadFollowState();
+    }
+
     if (!mounted || _userId == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_isOwnerView) {
         context.read<PostProvider>().loadMyPosts(_userId.toString());
+        context.read<PostProvider>().loadMyOffers(_userId.toString());
+        context.read<PackProvider>().loadMyPacks(_userId!);
       } else {
         context.read<PostProvider>().loadStorePosts(_userId!);
+        context.read<PostProvider>().loadStoreOffers(_userId!);
+        context.read<PackProvider>().loadStorePacks(_userId!);
       }
-      context.read<PostProvider>().loadMyOffers(_userId.toString());
-      context.read<PackProvider>().loadMyPacks(_userId!);
     });
   }
 
@@ -414,6 +429,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _handleFollow() {
+    if (_storeId == null) return;
+    if (!StorageService.isLoggedIn()) {
+      Helpers.showSnackBar(context, 'Log in to follow stores', isError: true);
+      return;
+    }
+
+    ApiService.post(ApiConfig.followersToggle, {'store': _storeId}).then((resp) {
+      final isFollowing = (resp is Map && resp['is_following'] == true);
+      if (!mounted) return;
+      setState(() {
+        _isFollowingStore = isFollowing;
+        if (isFollowing) {
+          _followersCount = (_followersCount + 1);
+        } else {
+          _followersCount = (_followersCount - 1);
+          if (_followersCount < 0) _followersCount = 0;
+        }
+      });
+      FollowChangeNotifier.bump();
+      Helpers.showSnackBar(
+        context,
+        isFollowing ? 'Followed store' : 'Unfollowed store',
+      );
+    }).catchError((_) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to update follow', isError: true);
+    });
+  }
+
+  Future<void> _loadFollowState() async {
+    if (_storeId == null || _isOwnerView) return;
+    if (!StorageService.isLoggedIn()) return;
+    if (_isLoadingFollowState) return;
+
+    setState(() => _isLoadingFollowState = true);
+    try {
+      final data = await ApiService.get(ApiConfig.followers);
+      final list = (data is Map && data['results'] is List)
+          ? (data['results'] as List)
+          : (data is List ? data : const []);
+
+      bool isFollowing = false;
+      for (final item in list) {
+        if (item is Map<String, dynamic>) {
+          final followed = item['followed_user'];
+          if (followed is int && followed == _storeId) {
+            isFollowing = true;
+            break;
+          }
+          if (followed is Map && followed['id'] == _storeId) {
+            isFollowing = true;
+            break;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _isFollowingStore = isFollowing);
+    } catch (_) {
+      // ignore
+    } finally {
+      if (mounted) setState(() => _isLoadingFollowState = false);
+    }
+  }
+
+  void _handleFavorite() {
+    // TODO: Implement favorite functionality
+    print('Favorite store: $_storeId');
+  }
+
   Widget _buildMerchantHeader(Color primaryColor, Gradient primaryGradient) {
     return ProfileMerchantHeader(
       userName: _userName,
@@ -430,6 +516,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onPickCoverImage: _pickCoverImage,
       onSettingsTap: null,
       onSettingsMenuSelected: _isOwnerView ? _onSettingsMenuSelected : null,
+      isOwnerView: _isOwnerView,
+      isFollowing: _isFollowingStore,
+      onFollowTap: !_isOwnerView ? _handleFollow : null,
+      onFavoriteTap: !_isOwnerView ? _handleFavorite : null,
       primaryGradient: primaryGradient,
     );
   }
@@ -502,6 +592,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Offer editing now uses AddPromotionScreen in edit mode.
 
+  Future<void> _submitReview() async {
+    if (_userId == null || _rating == 0) return;
+
+    setState(() => _isSubmittingReview = true);
+
+    try {
+      final resp = await ApiService.post(ApiConfig.reviews, {
+        'store': _userId,
+        'rating': _rating,
+        'comment': _reviewController.text.trim(),
+      });
+
+      // If ApiService doesn't throw on non-2xx, guard here.
+      if (resp is Map && (resp['error'] != null || resp['detail'] != null)) {
+        throw Exception(resp['error'] ?? resp['detail']);
+      }
+
+      if (!mounted) return;
+
+      _reviewController.clear();
+      setState(() {
+        _rating = 0.0;
+        _showReviewForm = false;
+      });
+
+      await _fetchStoreData();
+      if (mounted) Helpers.showSnackBar(context, 'Review submitted successfully');
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Failed to submit review: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmittingReview = false);
+    }
+  }
+
+  Widget _buildReviewSection() {
+    if (_isOwnerView) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Rate this store',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _showReviewForm = !_showReviewForm;
+                    if (!_showReviewForm) {
+                      _reviewController.clear();
+                      _rating = 0.0;
+                    }
+                  });
+                },
+                child: Text(_showReviewForm ? 'Cancel' : 'Write Review'),
+              ),
+            ],
+          ),
+          if (_showReviewForm) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text('Rating: '),
+                ...List.generate(5, (index) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _rating = (index + 1).toDouble());
+                    },
+                    child: Icon(
+                      index < _rating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 28,
+                    ),
+                  );
+                }),
+                const SizedBox(width: 8),
+                Text('${_rating.toInt()}/5'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _reviewController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Write your review...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmittingReview || _rating == 0 ? null : _submitReview,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: _isSubmittingReview
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Submit Review'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = AppColors.primaryColor;
@@ -558,11 +778,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: _buildMerchantHeader(primaryColor, primaryGradient),
             ),
             SliverToBoxAdapter(
+              child: _buildReviewSection(),
+            ),
+            SliverToBoxAdapter(
               child: Consumer2<PostProvider, PackProvider>(
                 builder: (context, postProvider, packProvider, _) {
-                  final postsCount = postProvider.myPosts.length +
-                      postProvider.myOffers.length +
-                      packProvider.myPacks.length;
+                final productsCount = _isOwnerView
+                  ? postProvider.myPosts.length
+                  : postProvider.storePosts.length;
+                final offersCount = _isOwnerView
+                  ? postProvider.myOffers.length
+                  : postProvider.storeOffers.length;
+                final packsCount = _isOwnerView
+                  ? packProvider.myPacks.length
+                  : packProvider.storePacks.length;
+
+                final postsCount = productsCount + offersCount + packsCount;
 
                   return ProfilePostFilter(
                     selectedIndex: _selectedFilterIndex,
@@ -591,19 +822,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMerchantPosts({required String type}) {
     return Consumer2<PostProvider, PackProvider>(
       builder: (context, postProvider, packProvider, child) {
+        final products = _isOwnerView ? postProvider.myPosts : postProvider.storePosts;
+        final offers = _isOwnerView ? postProvider.myOffers : postProvider.storeOffers;
+        final packs = _isOwnerView ? packProvider.myPacks : packProvider.storePacks;
+
         List<dynamic> items = [];
         if (type == 'promotion') {
-          items = postProvider.myOffers;
+          items = offers;
         } else if (type == 'pack') {
-          items = packProvider.myPacks;
+          items = packs;
         } else if (type == 'all') {
           items = [
-            ...postProvider.myPosts,
-            ...postProvider.myOffers,
-            ...packProvider.myPacks
+            ...products,
+            ...offers,
+            ...packs
           ];
         } else {
-          items = postProvider.myPosts;
+          items = products;
         }
 
         final filteredItems = items.where((item) {

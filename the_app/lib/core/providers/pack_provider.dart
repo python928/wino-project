@@ -11,6 +11,7 @@ class PackProvider extends ChangeNotifier {
   final List<Post> _selectedProducts = [];
   final Map<int, int> _quantities = {};
   final List<Pack> _myPacks = [];
+  final List<Pack> _storePacks = [];
   bool _isSubmitting = false;
   bool _isLoadingPacks = false;
   String? _error;
@@ -18,6 +19,7 @@ class PackProvider extends ChangeNotifier {
   List<Post> get selectedProducts => List.unmodifiable(_selectedProducts);
   Map<int, int> get quantities => Map.unmodifiable(_quantities);
   List<Pack> get myPacks => List.unmodifiable(_myPacks);
+  List<Pack> get storePacks => List.unmodifiable(_storePacks);
   bool get isSubmitting => _isSubmitting;
   bool get isLoadingPacks => _isLoadingPacks;
   String? get error => _error;
@@ -29,8 +31,25 @@ class PackProvider extends ChangeNotifier {
 
     try {
       _myPacks.clear();
-      final packs = await apiService.getMerchantPacks(merchantId);
+      final packs = await apiService.getMerchantPacks(merchantId, availableOnly: false);
       _myPacks.addAll(packs);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoadingPacks = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadStorePacks(int merchantId) async {
+    _isLoadingPacks = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _storePacks.clear();
+      final packs = await apiService.getMerchantPacks(merchantId, availableOnly: true);
+      _storePacks.addAll(packs);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -107,6 +126,7 @@ class PackProvider extends ChangeNotifier {
         products: products,
         discountPrice: discountPrice,
         merchantId: merchantId,
+        isAvailable: isAvailable,
       );
       clear();
       // Refresh packs list
@@ -134,11 +154,11 @@ class PackProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updates = {
+      final Map<String, dynamic> updates = {
         'name': name,
         'description': description,
-        'discount_price': discountPrice,
-        'available_status': isAvailable ? 'available' : 'unavailable',
+        'discount_price': discountPrice.toStringAsFixed(2),
+        'available_status': isAvailable ? 'available' : 'out_of_stock',
       };
 
       // Only send products if user actually selected/edited them.

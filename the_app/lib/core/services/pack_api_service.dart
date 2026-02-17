@@ -5,7 +5,7 @@ import '../../core/config/api_config.dart';
 class PackApiService {
   PackApiService();
 
-  Future<List<Pack>> getMerchantPacks(int merchantId) async {
+  Future<List<Pack>> getMerchantPacks(int merchantId, {bool availableOnly = false}) async {
     try {
       // Load stores for name enrichment
       Map<int, String> storesById = {};
@@ -24,8 +24,8 @@ class PackApiService {
         // If stores loading fails, continue without enrichment
       }
 
-      final data =
-          await ApiService.get('/api/catalog/packs/?store=$merchantId');
+        final qs = availableOnly ? '&available_status=available' : '';
+        final data = await ApiService.get('/api/catalog/packs/?store=$merchantId$qs');
 
       if (data is Map<String, dynamic> && data['results'] != null) {
         // API returns {count: X, results: [...]}
@@ -60,9 +60,9 @@ class PackApiService {
         'name': name,
         'description': description,
         'products': products.map((p) => p.toJson()).toList(),
-        'discount_price': discountPrice,
+        'discount_price': discountPrice.toStringAsFixed(2),
         'merchant_id': merchantId,
-        'available_status': isAvailable ? 'available' : 'unavailable',
+        'available_status': isAvailable ? 'available' : 'out_of_stock',
       };
 
       final data = await ApiService.post('/api/catalog/packs/', body);

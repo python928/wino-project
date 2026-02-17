@@ -9,8 +9,10 @@ import '../../data/models/offer_model.dart';
 class PostProvider with ChangeNotifier {
   List<Post> _posts = [];
   List<Post> _myPosts = [];
+  List<Post> _storePosts = [];
   List<Offer> _offers = [];
   List<Offer> _myOffers = [];
+  List<Offer> _storeOffers = [];
   bool _isLoading = false;
   String? _error;
 
@@ -21,8 +23,10 @@ class PostProvider with ChangeNotifier {
 
   List<Post> get posts => _posts;
   List<Post> get myPosts => _myPosts;
+  List<Post> get storePosts => _storePosts;
   List<Offer> get offers => _offers;
   List<Offer> get myOffers => _myOffers;
+  List<Offer> get storeOffers => _storeOffers;
   bool get isLoading => _isLoading || _isLoadingPosts || _isLoadingOffers;
   String? get error => _error ?? _postsError ?? _offersError;
 
@@ -55,7 +59,29 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _myOffers = await PostRepository.getOffers(authorId: authorId);
+      final storeId = int.tryParse(authorId);
+      _myOffers = await PostRepository.getOffers(
+        storeId: storeId,
+        includeInactive: true,
+      );
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadStoreOffers(int storeId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _storeOffers = await PostRepository.getOffers(
+        storeId: storeId,
+        includeInactive: false,
+      );
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -67,6 +93,8 @@ class PostProvider with ChangeNotifier {
   void clearMyData() {
     _myPosts = [];
     _myOffers = [];
+    _storePosts = [];
+    _storeOffers = [];
     notifyListeners();
   }
 
@@ -173,7 +201,7 @@ class PostProvider with ChangeNotifier {
     try {
       // Fetch posts for the current user's store to ensure visibility even if author id in response differs
       final storeId = await PostRepository.getOrCreateMyStoreId();
-      final posts = await PostRepository.getPosts(storeId: storeId);
+	  final posts = await PostRepository.getPosts(storeId: storeId, availableOnly: false);
       _myPosts = posts;
     } catch (e) {
       _error = e.toString();
@@ -189,7 +217,8 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _myPosts = await PostRepository.getPosts(storeId: storeId);
+	  // Public store view: show only available items.
+	  _storePosts = await PostRepository.getPosts(storeId: storeId, availableOnly: true);
     } catch (e) {
       _error = e.toString();
     } finally {
