@@ -9,18 +9,18 @@ class AppInputDecorations {
   AppInputDecorations._();
 
   // ==================== CONSTANTS ====================
-  
-  /// Border radius for all input fields
-  static const double _radius = 12;
 
-  /// Icon size for form fields (larger, prominent)
-  static const double _iconSize = 28;
+  /// Border radius for form fields (Travo style — moderately rounded)
+  static const double _radius = 14;
 
-  /// Icon opacity for subtle appearance
-  static const double _iconOpacity = 0.3;
+  /// Icon size for form fields
+  static const double _iconSize = 22;
 
-  /// Border opacity for subtle appearance
-  static const double _borderOpacity = 0.3;
+  /// Icon opacity
+  static const double _iconOpacity = 0.45;
+
+  /// Border opacity
+  static const double _borderOpacity = 0.18;
 
   // ==================== BORDERS ====================
 
@@ -30,12 +30,21 @@ class AppInputDecorations {
     borderSide: BorderSide.none,
   );
 
-  /// Outline with subtle border (0.3 opacity)
+  /// Subtle border (very light)
   static final InputBorder _subtleBorder = OutlineInputBorder(
     borderRadius: BorderRadius.circular(_radius),
     borderSide: BorderSide(
-      color: AppColors.textPrimary.withOpacity(_borderOpacity),
+      color: AppColors.borderPrimary,
       width: 1,
+    ),
+  );
+
+  /// Focused border (purple)
+  static final InputBorder _focusedBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(_radius),
+    borderSide: const BorderSide(
+      color: AppColors.primaryColor,
+      width: 1.5,
     ),
   );
 
@@ -62,13 +71,19 @@ class AppInputDecorations {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: fillColor ?? AppColors.neutral50,
+      fillColor: fillColor ?? Colors.white,
       border: _subtleBorder,
       enabledBorder: _subtleBorder,
-      focusedBorder: _subtleBorder,
-      errorBorder: _subtleBorder,
-      focusedErrorBorder: _subtleBorder,
-      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      focusedBorder: _focusedBorder,
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_radius),
+        borderSide: const BorderSide(color: AppColors.errorRed, width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_radius),
+        borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5),
+      ),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
@@ -119,37 +134,59 @@ class AppInputDecorations {
     );
   }
 
-  /// Search field decoration (with subtle border and icon opacity)
-  ///
-  /// Used for: Search bars, filter pickers, category search
+  /// Search field decoration — pill shape (Travo style)
   static InputDecoration search({
     required String hintText,
     Widget? suffixIcon,
     bool showBorder = false,
     Color? fillColor,
   }) {
-    return _base(
+    const double searchRadius = 28;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(searchRadius),
+      borderSide: BorderSide.none,
+    );
+    return InputDecoration(
       hintText: hintText,
       hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
       prefixIcon: _icon(Icons.search_rounded, color: AppColors.textSecondary),
       suffixIcon: suffixIcon,
-      fillColor: fillColor ?? const Color(0xFFF5F6F8),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      filled: true,
+      fillColor: fillColor ?? Colors.white,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(searchRadius),
+        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
     );
   }
 
-  /// Compact search (for modals)
+  /// Compact search (for modals) — pill shape
   static InputDecoration searchCompact({
     required String hintText,
     Widget? suffixIcon,
   }) {
-    return _base(
+    const double searchRadius = 24;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(searchRadius),
+      borderSide: BorderSide.none,
+    );
+    return InputDecoration(
       hintText: hintText,
       hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
-      prefixIcon: _icon(Icons.search, size: 22, color: AppColors.textSecondary),
+      prefixIcon: _icon(Icons.search, size: 20, color: AppColors.textSecondary),
       suffixIcon: suffixIcon,
-      fillColor: const Color(0xFFF5F6F8),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      filled: true,
+      fillColor: const Color(0xFFF0EEFF),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(searchRadius),
+        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );
   }
 

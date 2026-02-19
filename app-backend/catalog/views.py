@@ -79,6 +79,43 @@ class ProductViewSet(viewsets.ModelViewSet):
 		# Prevent store spoofing: the authenticated user IS the store
 		serializer.save(store=self.request.user)
 
+	def retrieve(self, request, *args, **kwargs):
+		instance = self.get_object()
+		if request.user.is_authenticated:
+			try:
+				from analytics.utils import log_user_event
+				log_user_event(request.user, 'view', product=instance)
+			except Exception:
+				pass
+		serializer = self.get_serializer(instance)
+		return Response(serializer.data)
+
+	def list(self, request, *args, **kwargs):
+		response = super().list(request, *args, **kwargs)
+		if request.user.is_authenticated:
+			try:
+				from analytics.utils import log_user_event
+				params = request.query_params
+				keyword = params.get('search', '').strip()
+				if keyword:
+					log_user_event(request.user, 'search', metadata={'keyword': keyword.lower()})
+				min_price = params.get('min_price')
+				max_price = params.get('max_price')
+				if min_price or max_price:
+					meta = {}
+					try:
+						if min_price:
+							meta['min'] = float(min_price)
+						if max_price:
+							meta['max'] = float(max_price)
+					except (ValueError, TypeError):
+						pass
+					if meta:
+						log_user_event(request.user, 'filter_price', metadata=meta)
+			except Exception:
+				pass
+		return response
+
 
 class ProductImageViewSet(viewsets.ModelViewSet):
 	queryset = ProductImage.objects.select_related('product', 'product__store')

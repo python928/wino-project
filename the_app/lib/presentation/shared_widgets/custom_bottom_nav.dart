@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_constants.dart';
 
-/// Custom bottom navigation bar with 5 items (lib design system)
-/// Modern outline icons with purple theme
+/// Travo-style bottom navigation bar
+/// - Rounded top corners (24px)
+/// - Active tab: purple pill background + filled icon
+/// - Inactive: grey outline icon
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -16,54 +17,93 @@ class CustomBottomNavBar extends StatelessWidget {
     this.notificationsBadgeCount,
   });
 
+  static const _items = [
+    _NavItem(Icons.home_rounded, Icons.home_outlined, 'Home'),
+    _NavItem(Icons.favorite_rounded, Icons.favorite_outline, 'Saved'),
+    _NavItem(Icons.store_rounded, Icons.store_outlined, 'Stores'),
+    _NavItem(Icons.person_rounded, Icons.person_outline_rounded, 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: AppConstants.spacing8),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
-      child: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        onTap: onItemTapped,
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
-        selectedFontSize: 12,
-        selectedItemColor: AppColors.primaryColor,  // Purple
-        unselectedItemColor: AppColors.greyColor,  // Grey (not transparent - so icons show)
-        elevation: 0,
-        showUnselectedLabels: true,
-        items: [
-          // Home - Index 0
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24, color: selectedIndex == 0 ? AppColors.primaryColor : AppColors.greyColor),
-            label: 'Home',
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(
+              _items.length,
+              (i) => _buildNavItem(i),
+            ),
           ),
-          // Favorites - Index 1
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline, size: 24, color: selectedIndex == 1 ? AppColors.primaryColor : AppColors.greyColor),
-            label: 'Saved',
-          ),
-          // My Stores (Followed) - Index 2
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store_outlined, size: 24, color: selectedIndex == 2 ? AppColors.primaryColor : AppColors.greyColor),
-            label: 'My Stores',
-          ),
-          // Profile - Index 3 (was 4)
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24, color: selectedIndex == 3 ? AppColors.primaryColor : AppColors.greyColor),
-            label: 'Profile',
-          ),
-        ],
+        ),
       ),
     );
   }
 
+  Widget _buildNavItem(int index) {
+    final isSelected = selectedIndex == index;
+    final item = _items[index];
+
+    return GestureDetector(
+      onTap: () => onItemTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 14,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? item.activeIcon : item.inactiveIcon,
+              color: isSelected ? AppColors.primaryColor : AppColors.greyColor,
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              Text(
+                item.label,
+                style: const TextStyle(
+                  color: AppColors.primaryColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData activeIcon;
+  final IconData inactiveIcon;
+  final String label;
+  const _NavItem(this.activeIcon, this.inactiveIcon, this.label);
 }

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'catalog',
     'notifications',
     'subscriptions',
+    'analytics',
 ]
 
 MIDDLEWARE = [

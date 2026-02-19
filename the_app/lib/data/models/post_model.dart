@@ -54,6 +54,7 @@ class Post {
   final bool isFeatured;
   final DateTime createdAt;
   final List<ProductImageData> images;
+  final String storeAddress;
 
   const Post({
     required this.id,
@@ -77,6 +78,7 @@ class Post {
     required this.isFeatured,
     required this.createdAt,
     required this.images,
+    this.storeAddress = '',
   });
 
   String? get image {
@@ -95,11 +97,14 @@ class Post {
     // Handle store - can be an int ID or an object
     int storeId = 0;
     String storeName = 'Local Store';
+    String storeAddress = '';
     if (json['store'] is int) {
       storeId = json['store'];
+      storeAddress = json['store_address']?.toString() ?? '';
     } else if (json['store'] is Map) {
       storeId = json['store']['id'] ?? 0;
       storeName = json['store']['name'] ?? 'Local Store';
+      storeAddress = json['store']['address']?.toString() ?? '';
     }
 
     // Handle category - can be an int ID, string, or object
@@ -153,6 +158,7 @@ class Post {
       categoryId: categoryId,
       storeId: storeId,
       storeName: storeName,
+      storeAddress: storeAddress,
       author: author,
       price: price,
       oldPrice: oldPrice,
@@ -248,6 +254,7 @@ class Post {
     int? categoryId,
     int? storeId,
     String? storeName,
+    String? storeAddress,
     User? author,
     double? price,
     double? oldPrice,
@@ -271,6 +278,7 @@ class Post {
       categoryId: categoryId ?? this.categoryId,
       storeId: storeId ?? this.storeId,
       storeName: storeName ?? this.storeName,
+      storeAddress: storeAddress ?? this.storeAddress,
       author: author ?? this.author,
       price: price ?? this.price,
       oldPrice: oldPrice ?? this.oldPrice,

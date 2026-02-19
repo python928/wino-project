@@ -4,10 +4,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/providers/post_provider.dart';
+import '../../core/providers/home_provider.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../../core/services/api_service.dart';
+import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
+import '../search/category_selection_screen.dart';
+import '../common/location_filter_picker.dart';
 
 class AddProductScreen extends StatefulWidget {
   final Post? product;
@@ -28,22 +33,76 @@ class _AddProductScreenState extends State<AddProductScreen> {
   bool _isLoading = false;
   bool _isAvailable = true;
   bool _showPrice = true;
-  final _categoryController = TextEditingController();
+
+  // Category selection state — supports multiple
+  Set<int> _selectedCategoryIds = {};
+  List<Category> _categories = [];
+  bool _loadingCategories = true;
+
+  // Delivery state
+  bool _deliveryAvailable = false;
+  LocationFilterResult? _deliveryAreas;
 
   bool get _isEditMode => widget.product != null;
 
   @override
   void initState() {
     super.initState();
+    _fetchCategories();
     final product = widget.product;
     if (product != null) {
       _titleController.text = product.title;
       _priceController.text = product.price.toString();
       _descriptionController.text = product.description;
-      _categoryController.text = product.category;
+      if (product.categoryId != null) {
+        _selectedCategoryIds = {product.categoryId!};
+      }
       _isAvailable = product.isAvailable;
       _showPrice = !product.hidePrice;
       _images.addAll(product.gallery);
+    }
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await ApiService.get(ApiConfig.categories);
+      final list = response is List ? response : (response['results'] ?? []);
+      final cats = (list as List)
+          .map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _loadingCategories = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _openCategoryPicker() async {
+    if (_loadingCategories) {
+      Helpers.showSnackBar(context, 'Loading categories, please wait...');
+      return;
+    }
+    if (_categories.isEmpty) {
+      Helpers.showSnackBar(context, 'No categories available');
+      return;
+    }
+
+    final result = await Navigator.push<Set<int>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategorySelectionScreen(
+          categories: _categories,
+          initialSelectedCategoryIds: _selectedCategoryIds,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _selectedCategoryIds = result);
     }
   }
 
@@ -150,8 +209,26 @@ class _AddProductScreenState extends State<AddProductScreen> {
       Helpers.showSnackBar(context, 'Please add at least one image');
       return;
     }
+    if (_selectedCategoryIds.isEmpty) {
+      Helpers.showSnackBar(context, 'Please select a category');
+      return;
+    }
 
     setState(() => _isLoading = true);
+
+    // Resolve names for selected category IDs (API takes first/primary one)
+    final selectedNames = _selectedCategoryIds
+        .map((id) {
+          try {
+            return _categories.firstWhere((c) => c.id == id).name;
+          } catch (_) {
+            return '';
+          }
+        })
+        .where((n) => n.isNotEmpty)
+        .toList();
+    final primaryCategoryName =
+        selectedNames.isNotEmpty ? selectedNames.first : '';
 
     try {
       final provider = Provider.of<PostProvider>(context, listen: false);
@@ -166,9 +243,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           title: _titleController.text,
           description: _descriptionController.text,
           price: price,
-          category: _categoryController.text.isEmpty
-              ? 'General'
-              : _categoryController.text,
+          category: primaryCategoryName,
           isAvailable: _isAvailable,
           hidePrice: !_showPrice,
           newImages: newFiles,
@@ -183,9 +258,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           title: _titleController.text,
           description: _descriptionController.text,
           price: price,
-          category: _categoryController.text.isEmpty
-              ? 'General'
-              : _categoryController.text,
+          category: primaryCategoryName,
           images: _images.whereType<File>().toList(),
           isAvailable: _isAvailable,
           isNegotiable: false,
@@ -216,7 +289,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _titleController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
-    _categoryController.dispose();
     super.dispose();
   }
 
@@ -312,16 +384,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Category
-                      AppTextField(
-                        controller: _categoryController,
-                        label: 'Category',
-                        hint: 'Enter product category',
-                        icon: Icons.category_outlined,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter product category'
-                            : null,
-                      ),
+                      // Category — tappable field
+                      _buildCategoryField(),
                       const SizedBox(height: 16),
 
                       // Description
@@ -356,6 +420,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           setState(() => _isAvailable = value);
                         },
                       ),
+
+                      const SizedBox(height: 8),
+                      _buildDeliverySection(),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -389,6 +456,277 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delivery section
+  // ---------------------------------------------------------------------------
+  void _openDeliveryAreaPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => LocationFilterPicker(initialFilter: _deliveryAreas),
+    ).then((result) {
+      if (result != null && result is LocationFilterResult) {
+        setState(() => _deliveryAreas = result);
+      }
+    });
+  }
+
+  Widget _buildDeliverySection() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: _deliveryAvailable
+            ? const Color(0xFFF0EEFF)
+            : const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _deliveryAvailable
+              ? AppColors.primaryColor.withOpacity(0.3)
+              : Colors.grey.shade200,
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Toggle row
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: _deliveryAvailable
+                        ? AppColors.primaryColor.withOpacity(0.12)
+                        : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.local_shipping_outlined,
+                    size: 18,
+                    color: _deliveryAvailable
+                        ? AppColors.primaryColor
+                        : Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Delivery Available',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _deliveryAvailable
+                            ? 'Select areas you deliver to'
+                            : 'Customers can come pick up',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _deliveryAvailable,
+                  onChanged: (v) =>
+                      setState(() => _deliveryAvailable = v),
+                  activeColor: AppColors.primaryColor,
+                ),
+              ],
+            ),
+          ),
+
+          // Delivery areas (only when enabled)
+          if (_deliveryAvailable) ...[
+            Divider(
+                height: 1,
+                color: AppColors.primaryColor.withOpacity(0.15)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _deliveryAreas == null ||
+                                !_deliveryAreas!.hasFilters
+                            ? 'No areas selected'
+                            : _deliveryAreas!.displayText,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _deliveryAreas?.hasFilters == true
+                              ? AppColors.textPrimary
+                              : Colors.grey.shade500,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _openDeliveryAreaPicker,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _deliveryAreas?.hasFilters == true
+                                    ? Icons.edit_rounded
+                                    : Icons.add_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _deliveryAreas?.hasFilters == true
+                                    ? 'Edit'
+                                    : 'Add Areas',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Chips display
+                  if (_deliveryAreas?.hasFilters == true) ...[
+                    const SizedBox(height: 10),
+                    LocationChipsWidget(
+                      filter: _deliveryAreas!,
+                      onEdit: _openDeliveryAreaPicker,
+                      maxVisible: 5,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryField() {
+    final bool hasCategories = _selectedCategoryIds.isNotEmpty;
+
+    // Resolve names for display
+    final selectedNames = _selectedCategoryIds
+        .map((id) {
+          try {
+            return _categories.firstWhere((c) => c.id == id).name;
+          } catch (_) {
+            return '';
+          }
+        })
+        .where((n) => n.isNotEmpty)
+        .toList();
+
+    return GestureDetector(
+      onTap: _openCategoryPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: hasCategories ? AppColors.primaryColor : Colors.grey[300]!,
+            width: hasCategories ? 1.5 : 1.0,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.category_outlined,
+              size: 20,
+              color: hasCategories ? AppColors.primaryColor : Colors.grey[500],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _loadingCategories
+                  ? Row(
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Loading categories...',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    )
+                  : hasCategories
+                      ? Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: selectedNames.map((name) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.primaryColor.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: AppColors.primaryColor
+                                        .withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        )
+                      : Text(
+                          'Select category',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                        ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: 20,
             ),
           ],
         ),

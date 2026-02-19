@@ -730,7 +730,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.scaffoldBackground,
         appBar: _isOwnerView
             ? UnifiedAppBar(
                 showLocation: false,

@@ -36,13 +36,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField(required=False, allow_blank=True)
     name = serializers.CharField(required=True, max_length=255)
+    preferred_categories = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
 
     gender = serializers.ChoiceField(choices=['male', 'female', 'other'], required=True)
     birthday = serializers.DateField(required=True)
 
     class Meta:
         model = User
-        fields = ['username', 'name', 'email', 'phone', 'gender', 'birthday', 'password']
+        fields = ['username', 'name', 'email', 'phone', 'gender', 'birthday', 'password', 'preferred_categories']
 
     def validate_name(self, value):
         if not value or len(value.strip()) < 2:
@@ -90,10 +93,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        from analytics.models import UserInterestProfile
         password = validated_data.pop('password')
+        preferred_categories = validated_data.pop('preferred_categories', [])
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        if preferred_categories:
+            UserInterestProfile.objects.create(
+                user=user,
+                category_scores={str(cat_id): 50 for cat_id in preferred_categories},
+            )
         return user
 
 

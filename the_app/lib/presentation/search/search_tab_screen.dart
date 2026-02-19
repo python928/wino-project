@@ -18,7 +18,6 @@ import '../../data/models/backend_store_model.dart';
 import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../../core/widgets/app_button.dart';
-import '../common/location_picker_screen.dart';
 import 'category_selection_screen.dart';
 import 'widgets/store_result_card.dart';
 
@@ -63,11 +62,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
 
-  // Location filter
+  // Location filter (single source of truth — uses LocationFilterPicker)
   LocationFilterResult? _locationFilter;
-  String _selectedLocation = 'All Algeria';
-  String? _selectedWilaya;
-  String? _selectedBaladiya;
 
   // Stores search
   List<BackendStore> _searchedStores = [];
@@ -314,68 +310,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Location Header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    // Back button
-                    IconButton(
-                      icon: Icon(Icons.arrow_back,
-                          color: AppColors.blackColor, size: 24),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                    ),
-                    const SizedBox(width: 8),
-                    // Location
-                    GestureDetector(
-                      onTap: _showLocationPicker,
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              color: AppColors.primaryColor, size: 24),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Location',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.greyColor,
-                                ),
-                              ),
-                              Text(
-                                _selectedLocation,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.blackColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Modern Header
+              // Search header (back + search field + filter button)
               _buildHeader(),
 
               // Type Toggle Buttons
@@ -398,47 +333,56 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Search Row
-          Row(
-            children: [
-              // Search Field
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: AppSearchField(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    hintText: 'Search products, stores...',
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: () => _searchFocus.unfocus(),
-                    onClear: () => setState(() {}),
-                  ),
-                ),
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EEFF),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 8),
-
-              // Filter Button
-              _buildHeaderButton(
-                icon: Icons.tune_rounded,
-                isActive: _minRating > 0 ||
-                    _priceRange.start > 0 ||
-                    _priceRange.end < 100000,
-                onTap: _showFiltersSheet,
+              child: const Icon(Icons.arrow_back_rounded,
+                  color: AppColors.primaryColor, size: 20),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Search field
+          Expanded(
+            child: SizedBox(
+              height: 46,
+              child: AppSearchField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                hintText: 'Search products, stores...',
+                onChanged: (_) => setState(() {}),
+                onSubmitted: () => _searchFocus.unfocus(),
+                onClear: () => setState(() {}),
               ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Filter button
+          _buildHeaderButton(
+            icon: Icons.tune_rounded,
+            isActive: _minRating > 0 ||
+                _priceRange.start > 0 ||
+                _priceRange.end < 100000,
+            onTap: _showFiltersSheet,
           ),
         ],
       ),
@@ -522,125 +466,158 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
         final categories = homeProvider.categories;
+        if (categories.isEmpty) return const SizedBox.shrink();
 
-        if (categories.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        const int previewCount = 10;
+        const int previewCount = 8;
         final previewCategories = categories.take(previewCount).toList();
 
-        final categoriesById = _categoriesById(homeProvider);
-        final selectedNames = _selectedCategoryIds
-            .map((id) => categoriesById[id])
-            .whereType<String>()
-            .toList();
+        final locationActive = _locationFilter?.hasFilters == true;
+        final locationLabel =
+            _locationFilter?.displayText ?? 'All Algeria';
 
         return Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Row: categories + location chip
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Categories',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                  // Scrollable category chips (flex takes all remaining space)
+                  Expanded(
+                    child: SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        // +1 for "All", +1 for "See All" button
+                        itemCount: previewCategories.length + 2,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _buildCategoryToggleChip(
+                              name: 'All',
+                              isSelected: _selectedCategoryIds.isEmpty,
+                              onTap: () =>
+                                  setState(() => _selectedCategoryIds = {}),
+                            );
+                          }
+                          if (index == previewCategories.length + 1) {
+                            // "See All" chip
+                            return GestureDetector(
+                              onTap: _openCategoryPicker,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _selectedCategoryIds.isNotEmpty
+                                      ? AppColors.primaryColor
+                                          .withOpacity(0.12)
+                                      : const Color(0xFFF0F0F5),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'See All',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: _selectedCategoryIds.isNotEmpty
+                                            ? AppColors.primaryColor
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Icon(
+                                      Icons.keyboard_arrow_right_rounded,
+                                      size: 16,
+                                      color: _selectedCategoryIds.isNotEmpty
+                                          ? AppColors.primaryColor
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          final cat = previewCategories[index - 1];
+                          final isSelected =
+                              _selectedCategoryIds.contains(cat.id);
+                          return _buildCategoryToggleChip(
+                            name: cat.name,
+                            isSelected: isSelected,
+                            onTap: () => setState(() {
+                              if (isSelected) {
+                                _selectedCategoryIds.remove(cat.id);
+                              } else {
+                                _selectedCategoryIds.add(cat.id);
+                              }
+                            }),
+                          );
+                        },
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Location chip — always visible, opens LocationFilterPicker
                   GestureDetector(
-                    onTap: _openCategoryPicker,
-                    child: Container(
+                    onTap: _showLocationFilter,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryColor.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(10),
+                        color: locationActive
+                            ? AppColors.primaryColor.withOpacity(0.12)
+                            : const Color(0xFFF0EEFF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: locationActive
+                            ? Border.all(
+                                color: AppColors.primaryColor, width: 1.2)
+                            : null,
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'See all',
-                            style: TextStyle(
-                              color: AppColors.primaryColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 13,
+                            color: locationActive
+                                ? AppColors.primaryColor
+                                : AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded,
-                              size: 16, color: AppColors.primaryColor),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 80),
+                            child: Text(
+                              locationLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: locationActive
+                                    ? AppColors.primaryColor
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 14,
+                            color: locationActive
+                                ? AppColors.primaryColor
+                                : AppColors.textSecondary,
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 38,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: previewCategories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      final isSelected = _selectedCategoryIds.isEmpty;
-                      return _buildCategoryToggleChip(
-                        name: 'All',
-                        isSelected: isSelected,
-                        onTap: () => setState(() => _selectedCategoryIds = {}),
-                      );
-                    }
-
-                    final category = previewCategories[index - 1];
-                    final isSelected =
-                        _selectedCategoryIds.contains(category.id);
-                    return _buildCategoryToggleChip(
-                      name: category.name,
-                      isSelected: isSelected,
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedCategoryIds.remove(category.id);
-                          } else {
-                            _selectedCategoryIds.add(category.id);
-                          }
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-              if (selectedNames.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: selectedNames.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final name = selectedNames[index];
-                      final id = _selectedCategoryIds.firstWhere(
-                        (x) => categoriesById[x] == name,
-                        orElse: () => -1,
-                      );
-                      return _buildSelectedCategoryChip(
-                        name: name,
-                        onRemove: id > 0
-                            ? () =>
-                                setState(() => _selectedCategoryIds.remove(id))
-                            : null,
-                      );
-                    },
-                  ),
-                ),
-              ],
             ],
           ),
         );
@@ -655,17 +632,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.12)
-              : Colors.transparent,
+              ? AppColors.primaryColor
+              : const Color(0xFFF0F0F5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryColor : AppColors.neutral200,
-            width: isSelected ? 1.5 : 1,
-          ),
         ),
         child: Text(
           name,
@@ -673,9 +647,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color:
-                isSelected ? AppColors.primaryColor : AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : AppColors.textSecondary,
           ),
         ),
       ),
@@ -1693,23 +1666,5 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  void _showLocationPicker() async {
-    final result = await Navigator.push<LocationResult>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LocationPickerScreen(
-          initialWilaya: _selectedWilaya,
-          initialBaladiya: _selectedBaladiya,
-        ),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _selectedWilaya = result.wilaya;
-        _selectedBaladiya = result.baladiya;
-        _selectedLocation = result.address;
-      });
-    }
-  }
 }
+

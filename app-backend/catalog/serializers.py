@@ -24,6 +24,7 @@ class ProductSerializer(serializers.ModelSerializer):
     review_count = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     store_name = serializers.SerializerMethodField()
+    store_address = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -43,6 +44,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'review_count',
             'is_favorited',
             'store_name',
+            'store_address',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -62,6 +64,9 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_store_name(self, obj):
         # store == users.User
         return getattr(obj.store, 'name', None) or getattr(obj.store, 'username', '')
+
+    def get_store_address(self, obj):
+        return getattr(obj.store, 'address', '') or ''
 
 
 class PackProductSerializer(serializers.ModelSerializer):

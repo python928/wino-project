@@ -1,47 +1,38 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Standardized card styling for consistent UI across the app
+/// Travo-style card styling — white, 16px corners, soft shadow, no border
 class CardStyles {
   CardStyles._();
 
-  /// Standard border radius for all cards
-  static const double radius = 12.0;
-
-  /// Standard border width
-  static const double borderWidth = 1.0;
-
-  /// Standard border opacity
-  static const double borderOpacity = 0.3;
+  /// Standard border radius for cards
+  static const double radius = 16.0;
 
   /// Standard shadow opacity
-  static const double shadowOpacity = 0.06;
+  static const double shadowOpacity = 0.07;
 
-  /// Standard shadow blur radius
-  static const double shadowBlur = 8.0;
+  /// Standard shadow blur
+  static const double shadowBlur = 16.0;
 
   /// Standard shadow offset
-  static const Offset shadowOffset = Offset(0, 2);
+  static const Offset shadowOffset = Offset(0, 4);
 
-  /// Standard border radius
   static BorderRadius get standardRadius => BorderRadius.circular(radius);
 
-  /// Standard box shadow
   static List<BoxShadow> get standardShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(shadowOpacity),
+          color: const Color(0xFF7B61FF).withOpacity(0.08),
           blurRadius: shadowBlur,
           offset: shadowOffset,
         ),
+        BoxShadow(
+          color: Colors.black.withOpacity(shadowOpacity),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
       ];
 
-  /// Standard border
-  static Border get standardBorder => Border.all(
-        color: AppColors.textPrimary.withOpacity(borderOpacity),
-        width: borderWidth,
-      );
-
-  /// Standard card decoration
+  /// Standard card — white, rounded, shadow, NO border
   static BoxDecoration standard({
     Color? color,
     List<BoxShadow>? boxShadow,
@@ -50,12 +41,11 @@ class CardStyles {
     return BoxDecoration(
       color: color ?? Colors.white,
       borderRadius: standardRadius,
-      border: border ?? standardBorder,
       boxShadow: boxShadow ?? standardShadow,
     );
   }
 
-  /// Card decoration without border
+  /// No-border variant (same as standard now)
   static BoxDecoration noBorder({
     Color? color,
     List<BoxShadow>? boxShadow,
@@ -67,7 +57,7 @@ class CardStyles {
     );
   }
 
-  /// Card decoration without shadow
+  /// No-shadow variant (for nested cards)
   static BoxDecoration noShadow({
     Color? color,
     Border? border,
@@ -75,7 +65,7 @@ class CardStyles {
     return BoxDecoration(
       color: color ?? Colors.white,
       borderRadius: standardRadius,
-      border: border ?? standardBorder,
+      border: border,
     );
   }
 }

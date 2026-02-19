@@ -13,6 +13,7 @@ import 'core/providers/store_provider.dart';
 import 'core/providers/pack_provider.dart';
 import 'core/navigation/route_generator.dart';
 import 'presentation/auth/splash_screen.dart';
+import 'features/analytics/analytics_export.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ class DzLocalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => StoreProvider(apiService: StoreApiService())),
         ChangeNotifierProvider(create: (_) => PackProvider(apiService: PackApiService())),
+        ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

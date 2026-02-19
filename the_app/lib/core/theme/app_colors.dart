@@ -219,7 +219,7 @@ class AppColors {
   static const Color textHint = Color(0xFF9CA3AF);
   static const Color cardBackground = productCardBg;
   static const Color cardWhite = surfacePrimary;
-  static const Color scaffoldBackground = Colors.white;  // Pure white background
+  static const Color scaffoldBackground = Color(0xFFF5F3FF); // Light lavender (Travo-style)
   static const Color searchBarBackground = surfaceSecondary;
   static const Color ratingYellow = Color(0xFFF59E0B);
   static const Color borderLight = borderPrimary;

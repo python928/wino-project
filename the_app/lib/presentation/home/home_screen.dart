@@ -24,6 +24,7 @@ import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
+import '../../features/analytics/analytics_export.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -141,6 +142,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: AppTheme.spacing24),
 
+                // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
+                const RecommendationsList(),
+
+                const SizedBox(height: AppTheme.spacing24),
+
                 // Featured Packs
                 _buildSectionHeader('Featured Packs', 'View All', () {
                   Navigator.pushNamed(
@@ -183,22 +189,29 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: AppTextStyles.h2),
+          Text(
+            title,
+            style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
           GestureDetector(
             onTap: onActionTap,
-            child: Row(
-              children: [
-                Text(
-                  action,
-                  style: AppTextStyles.linkText,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                action,
+                style: const TextStyle(
+                  color: AppColors.primaryColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: AppColors.primaryPurple,
-                ),
-              ],
+              ),
             ),
           ),
         ],

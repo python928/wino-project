@@ -668,3 +668,150 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
     );
   }
 }
+
+// =============================================================================
+// LocationChipsWidget — smart display: first 5 chips + "+N more" expand
+// =============================================================================
+class LocationChipsWidget extends StatefulWidget {
+  final LocationFilterResult filter;
+  /// Optional edit callback — shows an "Edit" chip at the end.
+  final VoidCallback? onEdit;
+  /// Max chips before collapse. Default 5.
+  final int maxVisible;
+
+  const LocationChipsWidget({
+    super.key,
+    required this.filter,
+    this.onEdit,
+    this.maxVisible = 5,
+  });
+
+  @override
+  State<LocationChipsWidget> createState() => _LocationChipsWidgetState();
+}
+
+class _LocationChipsWidgetState extends State<LocationChipsWidget> {
+  bool _expanded = false;
+
+  /// Build the flat list of labels to display.
+  List<String> get _allLabels {
+    if (widget.filter.allAlgeria) return ['All Algeria'];
+    if (widget.filter.selectedWilayas.isEmpty) return ['All Algeria'];
+
+    final labels = <String>[];
+    for (final wilaya in widget.filter.selectedWilayas) {
+      final bals = widget.filter.selectedBaladiyat[wilaya];
+      if (bals != null && bals.isNotEmpty) {
+        for (final b in bals) {
+          labels.add('$b, $wilaya');
+        }
+      } else {
+        labels.add(wilaya);
+      }
+    }
+    return labels;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final all = _allLabels;
+    final visible = _expanded ? all : all.take(widget.maxVisible).toList();
+    final remaining = all.length - widget.maxVisible;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        ...visible.map(_buildLocationChip),
+
+        // "+N more" expand button
+        if (!_expanded && remaining > 0)
+          _buildActionChip(
+            label: '+$remaining more',
+            icon: Icons.expand_more_rounded,
+            color: AppColors.primaryColor,
+            bg: AppColors.primaryColor.withOpacity(0.10),
+            onTap: () => setState(() => _expanded = true),
+          ),
+
+        // "Show less" collapse button
+        if (_expanded && all.length > widget.maxVisible)
+          _buildActionChip(
+            label: 'Show less',
+            icon: Icons.expand_less_rounded,
+            color: AppColors.textSecondary,
+            bg: const Color(0xFFF3F4F6),
+            onTap: () => setState(() => _expanded = false),
+          ),
+
+        // Edit chip
+        if (widget.onEdit != null)
+          _buildActionChip(
+            label: 'Edit',
+            icon: Icons.edit_rounded,
+            color: Colors.white,
+            bg: AppColors.primaryColor,
+            onTap: widget.onEdit!,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLocationChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on_rounded,
+              size: 12, color: AppColors.primaryColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.primaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionChip({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color bg,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 12, color: color, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

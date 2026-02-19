@@ -22,34 +22,34 @@ class AppTheme {
         brightness: Brightness.light,
       ),
 
-      // Clean AppBar (matching lib design system)
+      // Clean AppBar — Travo style (white, flat, bold title)
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
-        elevation: 0,  // Flat design
+        elevation: 0,
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
         ),
-        iconTheme: const IconThemeData(color: AppColors.blackColor),
+        iconTheme: const IconThemeData(color: AppColors.blackColor, size: 22),
         titleTextStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 16,  // 16px title font
-          fontWeight: FontWeight.w500,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
           color: AppColors.blackColor,
         ),
         toolbarHeight: 56,
         centerTitle: true,
       ),
 
-      // Card Theme
+      // Card Theme — white, 20px corners, soft shadow, no border
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.borderPrimary, width: 1),
+          borderRadius: BorderRadius.circular(20),
         ),
-        shadowColor: AppColors.shadowColor,
+        shadowColor: const Color(0x14000000),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
 

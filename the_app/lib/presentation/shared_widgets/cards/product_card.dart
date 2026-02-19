@@ -28,7 +28,12 @@ class ProductCard extends BaseItemCard {
           discountPercentage: _calculateDiscountPercent(product),
           rating: product.rating,
           reviewCount: product.reviewCount,
-          bottomLeftText: showStoreName ? product.storeName : null,
+          bottomLeftText: product.storeAddress.isNotEmpty
+              ? product.storeAddress
+              : (showStoreName ? product.storeName : null),
+          bottomLeftIcon: product.storeAddress.isNotEmpty
+              ? Icons.location_on_outlined
+              : null,
           isUnavailable: !product.isAvailable,
           showUnavailableOverlay: showUnavailableOverlay,
           onTap: (product.isAvailable || onEditTap != null) ? onTap : null,
@@ -56,6 +61,7 @@ class ProductCard extends BaseItemCard {
       rating: rating,
       reviewCount: reviewCount,
       bottomLeftText: bottomLeftText,
+      bottomLeftIcon: bottomLeftIcon,
       isUnavailable: isUnavailable,
       showUnavailableOverlay: showUnavailableOverlay,
       onTap: onTap,
