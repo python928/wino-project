@@ -1,57 +1,103 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../models/recommendation_item.dart';
-import '../providers/analytics_provider.dart';
+import '../../../core/providers/post_provider.dart';
+import '../../../core/providers/home_provider.dart';
+import '../../../presentation/common/constants/card_constants.dart';
+import '../../../presentation/shared_widgets/cards/product_card.dart';
+import '../../../presentation/shared_widgets/cards/promotion_card.dart';
+import '../../../presentation/shared_widgets/cards/pack_card.dart';
+import '../../../presentation/shared_widgets/cards/store_chip.dart';
 
-/// Displays the "Recommended for you" horizontal section.
-///
-/// Add to home screen:
-///   const RecommendationsList()
-///
-/// - Fetches recommendations on first build (post-frame).
-/// - Hides completely when empty or loading fails.
-/// - Tapping a card navigates to the store page.
-class RecommendationsList extends StatefulWidget {
+/// Recommended for you — top section on home page.
+/// Sub-section 1: horizontal mix of ProductCards, PromotionCards, PackCards.
+/// Sub-section 2: horizontal compact store chips (category style).
+class RecommendationsList extends StatelessWidget {
   const RecommendationsList({super.key});
 
-  @override
-  State<RecommendationsList> createState() => _RecommendationsListState();
-}
+  double _cardWidth(BuildContext context) {
+    final sw = MediaQuery.sizeOf(context).width;
+    return (sw -
+            CardConstants.gridHorizontalPadding * 2 -
+            CardConstants.gridCrossAxisSpacing *
+                (CardConstants.gridCrossAxisCount - 1)) /
+        CardConstants.gridCrossAxisCount;
+  }
 
-class _RecommendationsListState extends State<RecommendationsList> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<AnalyticsProvider>().fetchRecommendations();
-      }
-    });
+  Widget _sectionLabel(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AnalyticsProvider>(
-      builder: (context, analytics, _) {
-        if (analytics.isLoading) {
-          return const SizedBox(
-            height: 160,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          );
+    return Consumer2<PostProvider, HomeProvider>(
+      builder: (context, postProvider, homeProvider, _) {
+        final products = postProvider.posts;
+        final offers = postProvider.offers;
+        final packs = homeProvider.packs;
+        final stores = homeProvider.featuredStores; // List<User>
+
+        final hasCards =
+            products.isNotEmpty || offers.isNotEmpty || packs.isNotEmpty;
+        final hasStores = stores.isNotEmpty;
+
+        // Nothing loaded yet → hide (spinners shown in sections below)
+        if (!hasCards && !hasStores) return const SizedBox.shrink();
+
+        // Build interleaved card list: cycle through products → discounts → packs
+        final List<Widget> mixedCards = [];
+        final maxEach = 6;
+        final ps = products.take(maxEach).toList();
+        final os = offers.take(maxEach).toList();
+        final ks = packs.take(maxEach).toList();
+        final loopCount = math.max(ps.length, math.max(os.length, ks.length));
+
+        for (int i = 0; i < loopCount; i++) {
+          if (i < ps.length) {
+            final p = ps[i];
+            mixedCards.add(ProductCard(
+              product: p,
+              onTap: () => Navigator.pushNamed(
+                context,
+                Routes.productDetails,
+                arguments: p,
+              ),
+              onFavoriteTap: () {},
+            ));
+          }
+          if (i < os.length) {
+            mixedCards.add(PromotionCard(offer: os[i]));
+          }
+          if (i < ks.length) {
+            mixedCards.add(PackCard(pack: ks[i]));
+          }
         }
 
-        if (analytics.recommendations.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        final cardWidth = _cardWidth(context);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Header ──────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: Row(
                 children: [
                   Container(
@@ -69,157 +115,61 @@ class _RecommendationsListState extends State<RecommendationsList> {
                   const SizedBox(width: 8),
                   Text(
                     'Recommended for you',
-                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTextStyles.h2.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
             ),
-            SizedBox(
-              height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: analytics.recommendations.length,
-                itemBuilder: (context, index) {
-                  final raw = analytics.recommendations[index];
-                  if (raw is! Map<String, dynamic>) return const SizedBox.shrink();
-                  return _RecommendationCard(
-                      item: RecommendationItem.fromJson(raw));
-                },
+
+            // ── Sub-section 1: Products · Discounts · Packs ─────────────────
+            if (hasCards) ...[
+              SizedBox(
+                height: 280,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: CardConstants.gridHorizontalPadding),
+                  itemCount: mixedCards.length,
+                  separatorBuilder: (_, __) => const SizedBox(
+                      width: CardConstants.gridCrossAxisSpacing),
+                  itemBuilder: (_, i) =>
+                      SizedBox(width: cardWidth, child: mixedCards[i]),
+                ),
               ),
-            ),
+            ],
+
+            // ── Sub-section 2: Stores (category-chip style) ─────────────────
+            if (hasStores) ...[
+              const SizedBox(height: 24),
+              _sectionLabel('Stores'),
+              SizedBox(
+                height: 130,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: CardConstants.gridHorizontalPadding),
+                  itemCount: stores.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, i) => StoreChip(
+                    imageUrl: stores[i].profileImage,
+                    name: stores[i].name,
+                    rating: stores[i].averageRating,
+                    followersCount: stores[i].followersCount,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      Routes.store,
+                      arguments: stores[i].id,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Card widget — horizontal layout: image left, content right
-// ---------------------------------------------------------------------------
-class _RecommendationCard extends StatelessWidget {
-  final RecommendationItem item;
-  const _RecommendationCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (item.storeId != null) {
-          Navigator.pushNamed(context, Routes.store, arguments: item.storeId);
-        }
-      },
-      child: Container(
-        width: 260,
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x12000000),
-                blurRadius: 8,
-                offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Image on left
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(16)),
-              child: SizedBox(
-                width: 90,
-                height: 120,
-                child: item.imageUrl != null
-                    ? Image.network(
-                        item.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imagePlaceholder(),
-                      )
-                    : _imagePlaceholder(),
-              ),
-            ),
-            // Content on right
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Match reason chip (purple)
-                    if (item.matchReasons.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          item.matchReasons.first,
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: AppColors.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    const SizedBox(height: 5),
-                    // Product name
-                    Text(
-                      item.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    // Store name
-                    if (item.storeName.isNotEmpty)
-                      Text(
-                        item.storeName,
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    const Spacer(),
-                    // Price
-                    if (!item.hidePrice && item.price != null)
-                      Text(
-                        '${item.price!.toStringAsFixed(0)} DZD',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: AppColors.primaryColor,
-                        ),
-                      )
-                    else if (item.hidePrice)
-                      Text(
-                        'Price on request',
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _imagePlaceholder() {
-    return Container(
-      color: const Color(0xFFF3F4F6),
-      alignment: Alignment.center,
-      child: Icon(Icons.image_outlined,
-          color: Colors.grey.shade400, size: 28),
     );
   }
 }

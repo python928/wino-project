@@ -7,6 +7,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
@@ -17,9 +18,9 @@ import '../../data/models/store_model.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import 'widgets/category_item.dart';
 import '../shared_widgets/cards/product_card.dart';
+import '../shared_widgets/cards/store_chip.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
-import 'widgets/featured_store_card.dart';
 import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
@@ -39,12 +40,16 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedLocation = 'Algiers, Algeria';
   String? _selectedWilaya;
   String? _selectedBaladiya;
+  double? _radiusKm; // null = address mode active; non-null = distance mode active
+  double? _userLat;
+  double? _userLng;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _loadUserLocation();
     });
   }
 
@@ -64,6 +69,20 @@ class _HomeScreenState extends State<HomeScreen> {
     postProvider.loadOffers();
   }
 
+  void _loadUserLocation() {
+    final userData = StorageService.getUserData();
+    if (userData != null) {
+      setState(() {
+        _userLat = userData['latitude'] != null
+            ? double.tryParse(userData['latitude'].toString())
+            : null;
+        _userLng = userData['longitude'] != null
+            ? double.tryParse(userData['longitude'].toString())
+            : null;
+      });
+    }
+  }
+
   void _showLocationPicker() async {
     final result = await Navigator.push<LocationResult>(
       context,
@@ -80,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _selectedWilaya = result.wilaya;
         _selectedBaladiya = result.baladiya;
         _selectedLocation = result.address;
+        _radiusKm = null; // address mode active → clear distance
       });
     }
   }
@@ -112,9 +132,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   showNotificationIcon: true,
                   location: _selectedLocation,
                   onLocationTap: _showLocationPicker,
+                  radiusKm: _radiusKm,
+                  onRadiusChanged: (km) => setState(() {
+                    _radiusKm = km; // distance mode active → clear address
+                    _selectedLocation = '/';
+                  }),
                 ),
 
                 const SizedBox(height: 16),
+
+                // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
+                const RecommendationsList(),
+                const SizedBox(height: AppTheme.spacing24),
 
                 // Discounts
                 _buildSectionHeader('Discounts', 'See All', () {
@@ -139,11 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }),
                 const SizedBox(height: AppTheme.spacing16),
                 _buildRecentProductsSection(),
-
-                const SizedBox(height: AppTheme.spacing24),
-
-                // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
-                const RecommendationsList(),
 
                 const SizedBox(height: AppTheme.spacing24),
 
@@ -367,20 +391,23 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return SizedBox(
-          height: 170,
+          height: 130,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
             scrollDirection: Axis.horizontal,
             itemCount: stores.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing12),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final storeForCard = _userAsStore(stores[index]);
-              return FeaturedStoreCard(
-                store: storeForCard, // <-- now matches expected type
+              final u = stores[index];
+              return StoreChip(
+                imageUrl: u.profileImage,
+                name: u.name,
+                rating: u.averageRating,
+                followersCount: u.followersCount,
                 onTap: () => Navigator.pushNamed(
                   context,
                   Routes.store,
-                  arguments: stores[index].id, // userId == storeId
+                  arguments: u.id,
                 ),
               );
             },
@@ -497,6 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: _gridCardWidth(context),
                 child: ProductCard(
                   product: hotDeals[index],
+                  userLat: _userLat,
+                  userLng: _userLng,
                   onTap: () => _navigateToProductDetails(hotDeals[index]),
                   onFavoriteTap: () => _toggleFavorite(hotDeals[index]),
                 ),
@@ -794,6 +823,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: _gridCardWidth(context),
                 child: ProductCard(
                   product: products[index],
+                  userLat: _userLat,
+                  userLng: _userLng,
                   onTap: () => _navigateToProductDetails(products[index]),
                   onFavoriteTap: () => _toggleFavorite(products[index]),
                 ),

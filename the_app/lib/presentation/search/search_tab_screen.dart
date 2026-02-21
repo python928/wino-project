@@ -8,7 +8,9 @@ import '../../core/widgets/app_toggle_button.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/routing/routes.dart';
+import '../../core/utils/helpers.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
@@ -19,7 +21,7 @@ import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../../core/widgets/app_button.dart';
 import 'category_selection_screen.dart';
-import 'widgets/store_result_card.dart';
+import '../shared_widgets/cards/store_chip.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
@@ -54,6 +56,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
     ToggleOption(
         label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
+    ToggleOption(
+        label: 'Stores', icon: Icons.store_rounded, value: 'Stores'),
   ];
 
   // Filters
@@ -65,9 +69,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   // Location filter (single source of truth — uses LocationFilterPicker)
   LocationFilterResult? _locationFilter;
 
+  // Distance filter — mutually exclusive with _locationFilter
+  double? _distanceKm;
+
   // Stores search
   List<BackendStore> _searchedStores = [];
   bool _isLoadingStores = false;
+
+  // User location for distance calculation
+  double? _userLat;
+  double? _userLng;
 
   final List<String> _sortOptions = [
     'Newest',
@@ -80,6 +91,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   @override
   void initState() {
     super.initState();
+    // Load user coordinates for distance display
+    final userData = StorageService.getUserData();
+    if (userData != null) {
+      _userLat = userData['latitude'] != null
+          ? double.tryParse(userData['latitude'].toString())
+          : null;
+      _userLng = userData['longitude'] != null
+          ? double.tryParse(userData['longitude'].toString())
+          : null;
+    }
     // Initialize selected type from widget parameter
     if (widget.initialType != null && widget.initialType!.isNotEmpty) {
       final type = widget.initialType!;
@@ -226,9 +247,82 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       ),
     ).then((result) {
       if (result != null && result is LocationFilterResult) {
-        setState(() => _locationFilter = result);
+        setState(() {
+          _locationFilter = result;
+          _distanceKm = null; // location mode active → clear distance
+        });
       }
     });
+  }
+
+  void _showDistancePicker() {
+    final options = [5.0, 10.0, 25.0, 50.0, 100.0];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Search Radius',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Show results within distance from your location',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 8),
+              ...options.map((km) => ListTile(
+                leading: Icon(
+                  _distanceKm == km
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: AppColors.primaryColor,
+                ),
+                title: Text('${km.toInt()} km'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _distanceKm = km;
+                    _locationFilter = null; // distance mode active → clear location
+                  });
+                },
+              )),
+              if (_distanceKm != null)
+                ListTile(
+                  leading: Icon(Icons.close_rounded, color: Colors.red.shade400),
+                  title: Text(
+                    'Clear distance filter',
+                    style: TextStyle(color: Colors.red.shade400),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _distanceKm = null);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFiltersSheet() {
@@ -247,6 +341,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _priceRange = const RangeValues(0, 100000);
       _minRating = 0;
       _locationFilter = null;
+      _distanceKm = null;
     });
   }
 
@@ -255,7 +350,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _minRating > 0 ||
       _priceRange.start > 0 ||
       _priceRange.end < 100000 ||
-      _locationFilter?.hasFilters == true;
+      _locationFilter?.hasFilters == true ||
+      _distanceKm != null;
+
+  bool get _hasAnyLocationFilter =>
+      _locationFilter?.hasFilters == true || _distanceKm != null;
 
   Map<int, String> _categoriesById(HomeProvider homeProvider) {
     return {for (final c in homeProvider.categories) c.id: c.name};
@@ -462,161 +561,235 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
+  /// Palette used to colour category cards (cycles if more categories than colours)
+  static const List<Color> _categoryPalette = [
+    Color(0xFFFF9800), // orange  — Food
+    Color(0xFF2196F3), // blue    — Electronics
+    Color(0xFF9C27B0), // purple  — Fashion
+    Color(0xFFE91E63), // pink    — Beauty
+    Color(0xFF4CAF50), // green   — Vegetables
+    Color(0xFFFF5722), // deep-orange — Sports
+    Color(0xFF009688), // teal    — Home
+    Color(0xFF3F51B5), // indigo  — Books
+  ];
+
   Widget _buildCategoriesSection() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
         final categories = homeProvider.categories;
         if (categories.isEmpty) return const SizedBox.shrink();
 
-        const int previewCount = 8;
-        final previewCategories = categories.take(previewCount).toList();
-
         final locationActive = _locationFilter?.hasFilters == true;
-        final locationLabel =
-            _locationFilter?.displayText ?? 'All Algeria';
+        final distanceActive = _distanceKm != null;
+
+        // Location chip label: show "/" when distance mode is active
+        final locationLabel = distanceActive
+            ? '/'
+            : (_locationFilter?.displayText ?? 'All Algeria');
+
+        // Distance chip label: show "/" when location mode is active
+        final distanceLabel = locationActive
+            ? '/'
+            : (distanceActive ? '${_distanceKm!.toInt()} km' : 'Distance');
 
         return Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row: categories + location chip
-              Row(
-                children: [
-                  // Scrollable category chips (flex takes all remaining space)
-                  Expanded(
-                    child: SizedBox(
-                      height: 36,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        // +1 for "All", +1 for "See All" button
-                        itemCount: previewCategories.length + 2,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return _buildCategoryToggleChip(
-                              name: 'All',
-                              isSelected: _selectedCategoryIds.isEmpty,
-                              onTap: () =>
-                                  setState(() => _selectedCategoryIds = {}),
-                            );
-                          }
-                          if (index == previewCategories.length + 1) {
-                            // "See All" chip
-                            return GestureDetector(
-                              onTap: _openCategoryPicker,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: _selectedCategoryIds.isNotEmpty
-                                      ? AppColors.primaryColor
-                                          .withOpacity(0.12)
-                                      : const Color(0xFFF0F0F5),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'See All',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: _selectedCategoryIds.isNotEmpty
-                                            ? AppColors.primaryColor
-                                            : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Icon(
-                                      Icons.keyboard_arrow_right_rounded,
-                                      size: 16,
-                                      color: _selectedCategoryIds.isNotEmpty
-                                          ? AppColors.primaryColor
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-                          final cat = previewCategories[index - 1];
-                          final isSelected =
-                              _selectedCategoryIds.contains(cat.id);
-                          return _buildCategoryToggleChip(
-                            name: cat.name,
-                            isSelected: isSelected,
-                            onTap: () => setState(() {
-                              if (isSelected) {
-                                _selectedCategoryIds.remove(cat.id);
-                              } else {
-                                _selectedCategoryIds.add(cat.id);
-                              }
-                            }),
-                          );
-                        },
+              // ─── Row 1: "Categories" title + "See all →" ───
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Categories',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Location chip — always visible, opens LocationFilterPicker
-                  GestureDetector(
-                    onTap: _showLocationFilter,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: locationActive
-                            ? AppColors.primaryColor.withOpacity(0.12)
-                            : const Color(0xFFF0EEFF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: locationActive
-                            ? Border.all(
-                                color: AppColors.primaryColor, width: 1.2)
-                            : null,
-                      ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _openCategoryPicker,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 13,
-                            color: locationActive
-                                ? AppColors.primaryColor
-                                : AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 80),
-                            child: Text(
-                              locationLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: locationActive
-                                    ? AppColors.primaryColor
-                                    : AppColors.textSecondary,
-                              ),
+                          Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 2),
                           Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 14,
-                            color: locationActive
-                                ? AppColors.primaryColor
-                                : AppColors.textSecondary,
+                            Icons.keyboard_arrow_right_rounded,
+                            size: 16,
+                            color: AppColors.primaryColor,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+
+              // ─── Row 2: Location chip + Distance chip ───
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    // Location chip
+                    GestureDetector(
+                      onTap: _showLocationFilter,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: locationActive
+                              ? AppColors.primaryColor.withOpacity(0.12)
+                              : const Color(0xFFF0EEFF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: locationActive
+                              ? Border.all(
+                                  color: AppColors.primaryColor, width: 1.2)
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 12,
+                              color: locationActive
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 80),
+                              child: Text(
+                                locationLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: locationActive
+                                      ? AppColors.primaryColor
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: locationActive
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Distance chip
+                    GestureDetector(
+                      onTap: _showDistancePicker,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: distanceActive
+                              ? AppColors.primaryColor.withOpacity(0.12)
+                              : const Color(0xFFF0EEFF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: distanceActive
+                              ? Border.all(
+                                  color: AppColors.primaryColor, width: 1.2)
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.radar,
+                              size: 12,
+                              color: distanceActive
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              distanceLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: distanceActive
+                                    ? AppColors.primaryColor
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: distanceActive
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ─── Row 3: Horizontal category cards (5 items only) ───
+              SizedBox(
+                height: 90,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: (categories.length > 5 ? 5 : categories.length) + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return _buildCategoryCard(
+                        icon: Icons.grid_view_rounded,
+                        label: 'All',
+                        color: AppColors.primaryColor,
+                        isSelected: _selectedCategoryIds.isEmpty,
+                        onTap: () =>
+                            setState(() => _selectedCategoryIds = {}),
+                      );
+                    }
+                    final cat = categories[index - 1];
+                    final color = _categoryPalette[
+                        (index - 1) % _categoryPalette.length];
+                    final isSelected = _selectedCategoryIds.contains(cat.id);
+                    return _buildCategoryCard(
+                      icon: cat.iconData,
+                      label: cat.name,
+                      color: color,
+                      isSelected: isSelected,
+                      onTap: () => setState(() {
+                        if (isSelected) {
+                          _selectedCategoryIds.remove(cat.id);
+                        } else {
+                          _selectedCategoryIds.add(cat.id);
+                        }
+                      }),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -625,35 +798,54 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  Widget _buildCategoryToggleChip({
-    required String name,
+  Widget _buildCategoryCard({
+    required IconData icon,
+    required String label,
+    required Color color,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryColor
-              : const Color(0xFFF0F0F5),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : AppColors.textSecondary,
-          ),
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? color.withOpacity(0.22)
+                    : color.withOpacity(0.10),
+                shape: BoxShape.circle,
+                border: isSelected
+                    ? Border.all(color: color, width: 2)
+                    : null,
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight:
+                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? color : AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
 
   Widget _buildNonRemovableCategoryChip({required String name}) {
     return Container(
@@ -740,6 +932,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     _buildFilterTag(
                       _locationFilter!.displayText,
                       Icons.location_on_rounded,
+                    ),
+                  if (_distanceKm != null)
+                    _buildFilterTag(
+                      '${_distanceKm!.toInt()} km radius',
+                      Icons.radar,
                     ),
                   if (_selectedCategoryIds.isNotEmpty)
                     _buildFilterTag(
@@ -1068,6 +1265,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         return _buildDiscountsContent();
       case 'Packs':
         return _buildPacksContent();
+      case 'Stores':
+        return _buildStoresContent();
       default:
         return _buildAllContent();
     }
@@ -1127,11 +1326,26 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         .toList();
   }
 
-  Set<int> _getValidStoreIds() {
-    if (_locationFilter == null || !_locationFilter!.hasFilters) {
-      return {};
+  List<BackendStore> _getDistanceFilteredStores() {
+    if (_distanceKm == null || _userLat == null || _userLng == null) {
+      return _searchedStores;
     }
-    return _getLocationFilteredStores().map((s) => s.id).toSet();
+    return _searchedStores.where((store) {
+      final dist = Helpers.haversineDistance(
+          _userLat, _userLng, store.latitude, store.longitude);
+      return dist != null && dist <= _distanceKm!;
+    }).toList();
+  }
+
+  List<BackendStore> _getActiveFilteredStores() {
+    if (_distanceKm != null) return _getDistanceFilteredStores();
+    if (_locationFilter?.hasFilters == true) return _getLocationFilteredStores();
+    return _searchedStores;
+  }
+
+  Set<int> _getValidStoreIds() {
+    if (!_hasAnyLocationFilter) return {};
+    return _getActiveFilteredStores().map((s) => s.id).toSet();
   }
 
   Widget _buildAllContent() {
@@ -1157,14 +1371,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         final validStoreIds = _getValidStoreIds();
-        final hasLocationFilter = _locationFilter?.hasFilters == true;
 
         var filteredProducts = products.toList();
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           filteredProducts = filteredProducts
               .where((p) => validStoreIds.contains(p.storeId))
               .toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredProducts = [];
         }
 
@@ -1184,11 +1397,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         var filteredOffers = offers.toList();
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           filteredOffers = filteredOffers
               .where((o) => validStoreIds.contains(o.product.storeId))
               .toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredOffers = [];
         }
 
@@ -1198,15 +1411,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .toList();
 
         var filteredPacks = packs.toList();
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           filteredPacks = filteredPacks
               .where((p) => validStoreIds.contains(p.merchantId))
               .toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredPacks = [];
         }
 
-        final filteredStores = _getLocationFilteredStores();
+        final filteredStores = _getActiveFilteredStores();
 
         final hasProducts = filteredProducts.isNotEmpty;
         final hasOffers = filteredOffers.isNotEmpty;
@@ -1222,6 +1435,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ...filteredProducts.map(
             (p) => ProductCard(
               product: p,
+              userLat: _userLat,
+              userLng: _userLng,
               onTap: () {
                 Navigator.pushNamed(
                   context,
@@ -1315,10 +1530,25 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...(_showAllStoresInAllView
-                        ? filteredStores
-                        : filteredStores.take(3))
-                    .map((store) => StoreResultCard(store: store)),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 16,
+                  children: (_showAllStoresInAllView
+                          ? filteredStores
+                          : filteredStores.take(6))
+                      .map((store) => StoreChip(
+                            imageUrl: store.profileImageUrl,
+                            name: store.name,
+                            rating: store.averageRating,
+                            followersCount: store.followersCount,
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              Routes.store,
+                              arguments: store.id,
+                            ),
+                          ))
+                      .toList(),
+                ),
               ],
             ],
           ),
@@ -1451,11 +1681,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         var products = postProvider.posts.toList();
 
         final validStoreIds = _getValidStoreIds();
-        final hasLocationFilter = _locationFilter?.hasFilters == true;
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           products =
               products.where((p) => validStoreIds.contains(p.storeId)).toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           products = [];
         }
 
@@ -1511,6 +1740,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           itemBuilder: (context, index) {
             return ProductCard(
               product: products[index],
+              userLat: _userLat,
+              userLng: _userLng,
               onTap: () {
                 Navigator.pushNamed(
                   context,
@@ -1539,12 +1770,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         final validStoreIds = _getValidStoreIds();
-        final hasLocationFilter = _locationFilter?.hasFilters == true;
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           offers = offers
               .where((o) => validStoreIds.contains(o.product.storeId))
               .toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           offers = [];
         }
 
@@ -1591,11 +1821,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         final validStoreIds = _getValidStoreIds();
-        final hasLocationFilter = _locationFilter?.hasFilters == true;
-        if (hasLocationFilter && validStoreIds.isNotEmpty) {
+        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
           packs =
               packs.where((p) => validStoreIds.contains(p.merchantId)).toList();
-        } else if (hasLocationFilter && validStoreIds.isEmpty) {
+        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           packs = [];
         }
 
@@ -1630,18 +1859,31 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       );
     }
 
-    final filteredStores = _getLocationFilteredStores();
+    final filteredStores = _getActiveFilteredStores();
 
     if (filteredStores.isEmpty) {
       return _buildEmptyState();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredStores.length,
-      itemBuilder: (context, index) {
-        return StoreResultCard(store: filteredStores[index]);
-      },
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 16,
+        children: filteredStores
+            .map((store) => StoreChip(
+                  imageUrl: store.profileImageUrl,
+                  name: store.name,
+                  rating: store.averageRating,
+                  followersCount: store.followersCount,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    Routes.store,
+                    arguments: store.id,
+                  ),
+                ))
+            .toList(),
+      ),
     );
   }
 
