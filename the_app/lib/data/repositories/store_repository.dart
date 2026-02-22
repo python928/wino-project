@@ -1,6 +1,6 @@
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
-import '../models/backend_store_model.dart';
+import '../models/user_model.dart';
 
 class StoreRepository {
   static List<dynamic> _extractList(dynamic response) {
@@ -13,11 +13,11 @@ class StoreRepository {
 
   static String userDetail(int id) => '${ApiConfig.users}$id/';
 
-  static Future<BackendStore?> getStore(int userId) async {
+  static Future<User?> getStore(int userId) async {
     try {
       final resp = await ApiService.get('${ApiConfig.users}$userId/');
       if (resp is Map<String, dynamic>) {
-        return BackendStore.fromJson(resp);
+        return User.fromJson(resp);
       }
     } catch (_) {}
 
@@ -26,7 +26,7 @@ class StoreRepository {
       final list = _extractList(resp);
       for (final item in list) {
         if (item is Map<String, dynamic> && item['id'] == userId) {
-          return BackendStore.fromJson(item);
+          return User.fromJson(item);
         }
       }
     } catch (_) {}
@@ -35,7 +35,7 @@ class StoreRepository {
   }
 
   /// Search users/stores by query
-  static Future<List<BackendStore>> searchStores({String? query}) async {
+  static Future<List<User>> searchStores({String? query}) async {
     try {
       final url = query != null && query.isNotEmpty
           ? '${ApiConfig.users}?search=$query'
@@ -46,7 +46,7 @@ class StoreRepository {
 
       return list
           .where((item) => item is Map<String, dynamic>)
-          .map((item) => BackendStore.fromJson(item as Map<String, dynamic>))
+          .map((item) => User.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (_) {
       return [];
@@ -54,12 +54,12 @@ class StoreRepository {
   }
 
   /// Get followed stores (users that current user follows)
-  static Future<List<BackendStore>> getFollowedStores() async {
+  static Future<List<User>> getFollowedStores() async {
     try {
       final resp = await ApiService.get(ApiConfig.followers);
       final list = _extractList(resp);
 
-      final storesById = <int, BackendStore>{};
+      final storesById = <int, User>{};
       final idsToFetch = <int>{};
 
       for (final item in list) {
@@ -75,7 +75,7 @@ class StoreRepository {
             item['followed_user_detail'] ?? item['followed_user'] ?? item['store'];
 
         if (followed is Map<String, dynamic>) {
-          final store = BackendStore.fromJson(followed);
+          final store = User.fromJson(followed);
           storesById[store.id] = store;
           continue;
         }
@@ -87,7 +87,7 @@ class StoreRepository {
 
         // Fallback: sometimes the item itself is the store object.
         if (item.containsKey('id') && item.containsKey('name')) {
-          final store = BackendStore.fromJson(item);
+          final store = User.fromJson(item);
           storesById[store.id] = store;
         }
       }

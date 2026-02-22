@@ -100,6 +100,8 @@ class PackProvider extends ChangeNotifier {
     required double discountPrice,
     required int merchantId,
     bool isAvailable = true,
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     if (_selectedProducts.isEmpty) {
       throw Exception('Empty pack');
@@ -127,9 +129,10 @@ class PackProvider extends ChangeNotifier {
         discountPrice: discountPrice,
         merchantId: merchantId,
         isAvailable: isAvailable,
+        deliveryAvailable: deliveryAvailable,
+        deliveryWilayas: deliveryWilayas,
       );
       clear();
-      // Refresh packs list
       await loadMyPacks(merchantId);
       return pack;
     } catch (e) {
@@ -148,6 +151,8 @@ class PackProvider extends ChangeNotifier {
     required double discountPrice,
     required bool isAvailable,
     required int merchantId,
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     _isSubmitting = true;
     _error = null;
@@ -159,10 +164,10 @@ class PackProvider extends ChangeNotifier {
         'description': description,
         'discount_price': discountPrice.toStringAsFixed(2),
         'available_status': isAvailable ? 'available' : 'out_of_stock',
+        'delivery_available': deliveryAvailable,
+        'delivery_wilayas': deliveryWilayas.join(','),
       };
 
-      // Only send products if user actually selected/edited them.
-      // If omitted, backend keeps existing pack products (useful for discount-only edits).
       if (_selectedProducts.isNotEmpty) {
         final products = _selectedProducts.map((p) {
           final qty = _quantities[p.id] ?? 1;
@@ -179,9 +184,7 @@ class PackProvider extends ChangeNotifier {
 
       final pack = await apiService.updatePack(id, updates);
       final index = _myPacks.indexWhere((p) => p.id == id);
-      if (index != -1) {
-        _myPacks[index] = pack;
-      }
+      if (index != -1) _myPacks[index] = pack;
       notifyListeners();
       return pack;
     } catch (e) {

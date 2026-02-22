@@ -1,18 +1,14 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
 import '../config/api_config.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 
 class AuthService {
-  static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-  
-  static const String _keyAccessToken = 'secure_access_token';
-  static const String _keyRefreshToken = 'secure_refresh_token';
+  // No longer needed: _secureStorage local instance
+  // No longer needed: _keyAccessToken, _keyRefreshToken local keys
   static const String _keyTokenExpiry = 'token_expiry_timestamp';
   
   /// Save tokens securely
@@ -28,13 +24,15 @@ class AuthService {
       final expiryDate = JwtDecoder.getExpirationDate(accessToken);
       final expiryTimestamp = expiryDate.millisecondsSinceEpoch;
       
-      await _secureStorage.write(key: _keyAccessToken, value: accessToken);
-      await _secureStorage.write(key: _keyRefreshToken, value: refreshToken);
+      await StorageService.saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_keyTokenExpiry, expiryTimestamp);
       
-      debugPrint('✅ Tokens saved securely');
+      debugPrint('✅ Tokens saved via StorageService');
     } catch (e) {
       debugPrint('❌ Error saving tokens: $e');
       rethrow;
@@ -43,18 +41,17 @@ class AuthService {
   
   /// Get access token
   static Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: _keyAccessToken);
+    return await StorageService.getAccessToken();
   }
   
   /// Get refresh token
   static Future<String?> getRefreshToken() async {
-    return await _secureStorage.read(key: _keyRefreshToken);
+    return await StorageService.getRefreshToken();
   }
   
   /// Clear all tokens
   static Future<void> clearTokens() async {
-    await _secureStorage.delete(key: _keyAccessToken);
-    await _secureStorage.delete(key: _keyRefreshToken);
+    await StorageService.clearTokens();
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyTokenExpiry);

@@ -5,9 +5,28 @@ from .models import Category, Pack, PackImage, PackProduct, Product, ProductImag
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    icon = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent']
+        fields = ['id', 'name', 'parent', 'icon']
+
+    def get_icon(self, obj):
+        if not obj.icon_code_point:
+            return None
+        try:
+            import re
+            # Clean string: keep only 0-9, a-f, A-F
+            clean_hex = re.sub(r'[^0-9a-fA-F]', '', str(obj.icon_code_point))
+            if not clean_hex:
+                return None
+            return {
+                'codePoint': int(clean_hex, 16),
+                'fontFamily': obj.icon_font_family or 'MaterialIcons',
+                'fontPackage': obj.icon_font_package or None,
+            }
+        except (ValueError, TypeError):
+            return None
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -25,6 +44,10 @@ class ProductSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     store_name = serializers.SerializerMethodField()
     store_address = serializers.SerializerMethodField()
+    store_latitude = serializers.SerializerMethodField()
+    store_longitude = serializers.SerializerMethodField()
+    # Effective delivery areas: returns stored wilayas if set, else store.address (dynamic fallback)
+    delivery_areas = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -38,6 +61,9 @@ class ProductSerializer(serializers.ModelSerializer):
             'hide_price',
             'negotiable',
             'available_status',
+            'delivery_available',
+            'delivery_wilayas',
+            'delivery_areas',
             'created_at',
             'images',
             'average_rating',
@@ -45,8 +71,10 @@ class ProductSerializer(serializers.ModelSerializer):
             'is_favorited',
             'store_name',
             'store_address',
+            'store_latitude',
+            'store_longitude',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'delivery_areas']
 
     def get_average_rating(self, obj):
         avg = obj.reviews.aggregate(Avg('rating'))['rating__avg']
@@ -62,10 +90,24 @@ class ProductSerializer(serializers.ModelSerializer):
         return False
 
     def get_store_name(self, obj):
-        # store == users.User
         return getattr(obj.store, 'name', None) or getattr(obj.store, 'username', '')
 
     def get_store_address(self, obj):
+        return getattr(obj.store, 'address', '') or ''
+
+    def get_store_latitude(self, obj):
+        lat = getattr(obj.store, 'latitude', None)
+        return str(lat) if lat is not None else None
+
+    def get_store_longitude(self, obj):
+        lng = getattr(obj.store, 'longitude', None)
+        return str(lng) if lng is not None else None
+
+    def get_delivery_areas(self, obj):
+        """Return stored wilayas if set; fall back to store.address dynamically."""
+        if obj.delivery_wilayas and obj.delivery_wilayas.strip():
+            return obj.delivery_wilayas
+        # Dynamic fallback: use the seller's current address
         return getattr(obj.store, 'address', '') or ''
 
 
@@ -100,14 +142,25 @@ class PackSerializer(serializers.ModelSerializer):
     merchant_name = serializers.CharField(source='merchant.name', read_only=True)
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
+    # Effective delivery areas (same dynamic fallback as Product)
+    delivery_areas = serializers.SerializerMethodField()
 
     class Meta:
         model = Pack
-        fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description', 'discount_price', 'total_price', 'available_status', 'created_at', 'pack_products', 'images', 'products']
-        read_only_fields = ['id', 'created_at', 'pack_products', 'images']
+        fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description',
+                  'discount_price', 'total_price', 'available_status',
+                  'delivery_available', 'delivery_wilayas', 'delivery_areas',
+                  'created_at', 'pack_products', 'images', 'products']
+        read_only_fields = ['id', 'created_at', 'pack_products', 'images', 'delivery_areas']
 
     def get_total_price(self, obj):
         return sum(pp.product.price * pp.quantity for pp in obj.pack_products.all())
+
+    def get_delivery_areas(self, obj):
+        """Return stored wilayas if set; fall back to merchant.address dynamically."""
+        if obj.delivery_wilayas and obj.delivery_wilayas.strip():
+            return obj.delivery_wilayas
+        return getattr(obj.merchant, 'address', '') or ''
 
     def validate_products(self, value):
         """Ensure packs can only contain the current merchant's own products."""

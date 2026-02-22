@@ -11,6 +11,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/providers/home_provider.dart';
+import '../../data/models/category_model.dart';
 import '../search/category_selection_screen.dart';
 
 class RegisterScreen extends StatefulWidget {

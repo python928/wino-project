@@ -176,7 +176,12 @@ class AuthProvider with ChangeNotifier {
         await loadProfile();
         return true;
       } catch (e) {
-        // Token invalid, logout
+        debugPrint('--- FAILED TO PARSE USER FROM JSON (loadProfile) ---');
+        debugPrint('Error: $e');
+        // Note: profileJson is not available in this scope.
+        // If you need to log the raw JSON, you would need to capture it in loadProfile()
+        // and pass it or store it temporarily.
+        debugPrint('------------------------------------');
         await logout();
         return false;
       }

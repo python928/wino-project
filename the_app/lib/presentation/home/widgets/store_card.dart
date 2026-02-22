@@ -4,11 +4,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/card_styles.dart';
-import '../../../data/dummy/store_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../core/utils/helpers.dart';
 
 class StoreCard extends StatelessWidget {
-  final Store store;
+  final User store;
   final VoidCallback? onTap;
 
   const StoreCard({
@@ -43,7 +43,7 @@ class StoreCard extends StatelessWidget {
                 children: [
                   // Store Name
                   Text(
-                    store.name,
+                    store.fullName,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -53,7 +53,7 @@ class StoreCard extends StatelessWidget {
                   
                   // Category
                   Text(
-                    store.category,
+                    store.storeType,
                     style: AppTextStyles.bodySmall,
                   ),
                   
@@ -70,7 +70,7 @@ class StoreCard extends StatelessWidget {
                         color: AppColors.ratingYellow,
                       ),
                       Text(
-                        ' ${Helpers.formatRating(store.rating)} ',
+                        ' ${Helpers.formatRating(store.averageRating)} ',
                         style: AppTextStyles.ratingText,
                       ),
                       
@@ -83,7 +83,7 @@ class StoreCard extends StatelessWidget {
                         color: AppColors.textSecondary,
                       ),
                       Text(
-                        ' ${Helpers.formatLargeNumber(store.followers)} ',
+                        ' ${Helpers.formatLargeNumber(store.followersCount)} ',
                         style: AppTextStyles.bodySmall,
                       ),
                       
@@ -96,7 +96,7 @@ class StoreCard extends StatelessWidget {
                         color: AppColors.textSecondary,
                       ),
                       Text(
-                        ' ${Helpers.formatDistance(store.distance)}',
+                        ' ${Helpers.formatDistance(store.distance ?? 0.0)}',
                         style: AppTextStyles.bodySmall,
                       ),
                     ],
@@ -115,29 +115,35 @@ class StoreCard extends StatelessWidget {
                   child: SizedBox(
                     width: 60,
                     height: 60,
-                    child: Image.network(
-                      store.imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: Colors.grey[200],
-                          alignment: Alignment.center,
-                          child: const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                    child: (store.profileImage != null && store.profileImage!.isNotEmpty)
+                        ? Image.network(
+                            store.profileImage!,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                alignment: Alignment.center,
+                                child: const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[200],
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.store, size: 26, color: Colors.grey),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.store, size: 26, color: Colors.grey),
                           ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.store, size: 26, color: Colors.grey),
-                        );
-                      },
-                    ),
                   ),
                 ),
                 

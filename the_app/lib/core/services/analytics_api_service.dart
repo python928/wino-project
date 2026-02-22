@@ -1,7 +1,5 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
-import 'storage_service.dart';
+import './api_service.dart';
 
 /// Handles communication with the analytics recommendations endpoint.
 ///
@@ -18,31 +16,18 @@ class AnalyticsApiService {
     int limit = 20,
     int? categoryId,
   }) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/api/analytics/recommendations/').replace(
-      queryParameters: {
-        'limit': limit.toString(),
-        if (categoryId != null) 'category_id': categoryId.toString(),
-      },
-    );
-
     try {
-      final token = await StorageService.getAccessToken();
-      if (token == null) return [];
+      String url = '${ApiConfig.baseUrl}/api/analytics/recommendations/'
+          '?limit=$limit';
+      if (categoryId != null) url += '&category_id=$categoryId';
 
-      final response = await http.get(uri, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is List) return decoded;
-        if (decoded is Map && decoded.containsKey('results')) {
-          return decoded['results'] as List;
-        }
+      final response = await ApiService.get(url);
+      if (response is List) return response;
+      if (response is Map && response.containsKey('results')) {
+        return response['results'] as List;
       }
       return [];
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }

@@ -3,5 +3,5 @@
 //   import 'package:the_app/features/analytics/analytics_export.dart';
 
 export 'models/recommendation_item.dart';
-export 'providers/analytics_provider.dart';
+export '../../core/providers/analytics_provider.dart';
 export 'widgets/recommendations_list.dart';

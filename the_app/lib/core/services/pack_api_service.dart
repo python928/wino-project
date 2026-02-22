@@ -54,6 +54,8 @@ class PackApiService {
     required double discountPrice,
     required int merchantId,
     bool isAvailable = true,
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     try {
       final body = {
@@ -63,6 +65,8 @@ class PackApiService {
         'discount_price': discountPrice.toStringAsFixed(2),
         'merchant_id': merchantId,
         'available_status': isAvailable ? 'available' : 'out_of_stock',
+        'delivery_available': deliveryAvailable,
+        'delivery_wilayas': deliveryWilayas.join(','),
       };
 
       final data = await ApiService.post('/api/catalog/packs/', body);

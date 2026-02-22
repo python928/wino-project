@@ -16,7 +16,7 @@ import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
-import '../../data/models/backend_store_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../../core/widgets/app_button.dart';
@@ -73,7 +73,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   double? _distanceKm;
 
   // Stores search
-  List<BackendStore> _searchedStores = [];
+  List<User> _searchedStores = [];
   bool _isLoadingStores = false;
 
   // User location for distance calculation
@@ -1317,7 +1317,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return _locationFilter!.selectedWilayas.length.toString();
   }
 
-  List<BackendStore> _getLocationFilteredStores() {
+  List<User> _getLocationFilteredStores() {
     if (_locationFilter == null || !_locationFilter!.hasFilters) {
       return _searchedStores;
     }
@@ -1326,7 +1326,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         .toList();
   }
 
-  List<BackendStore> _getDistanceFilteredStores() {
+  List<User> _getDistanceFilteredStores() {
     if (_distanceKm == null || _userLat == null || _userLng == null) {
       return _searchedStores;
     }
@@ -1337,7 +1337,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }).toList();
   }
 
-  List<BackendStore> _getActiveFilteredStores() {
+  List<User> _getActiveFilteredStores() {
     if (_distanceKm != null) return _getDistanceFilteredStores();
     if (_locationFilter?.hasFilters == true) return _getLocationFilteredStores();
     return _searchedStores;
@@ -1537,8 +1537,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           ? filteredStores
                           : filteredStores.take(6))
                       .map((store) => StoreChip(
-                            imageUrl: store.profileImageUrl,
-                            name: store.name,
+                            imageUrl: store.profileImage ?? '',
+                            name: store.fullName,
                             rating: store.averageRating,
                             followersCount: store.followersCount,
                             onTap: () => Navigator.pushNamed(
@@ -1872,8 +1872,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         runSpacing: 16,
         children: filteredStores
             .map((store) => StoreChip(
-                  imageUrl: store.profileImageUrl,
-                  name: store.name,
+                  imageUrl: store.profileImage ?? '',
+                  name: store.fullName,
                   rating: store.averageRating,
                   followersCount: store.followersCount,
                   onTap: () => Navigator.pushNamed(

@@ -1,5 +1,7 @@
 from django.db import models
 from rest_framework import filters, permissions, viewsets, status, serializers
+import math
+from .search_engine import calculate_adaptive_radius, apply_weighted_ranking
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -72,7 +74,42 @@ class ProductViewSet(viewsets.ModelViewSet):
 		store_id = self.request.query_params.get('store')
 		if store_id:
 			queryset = queryset.filter(store_id=store_id)
-		# No role-based filtering anymore
+		
+		# --- Advanced Search Logic (Academic) ---
+		lat = self.request.query_params.get('lat')
+		lng = self.request.query_params.get('lng')
+		category_id = self.request.query_params.get('category')
+		
+		# Only apply if location is provided (Search Mode)
+		if lat and lng:
+			try:
+				user_lat = float(lat)
+				user_lng = float(lng)
+				
+				# 1. Adaptive Radius Calculation
+				category = None
+				if category_id:
+					category = Category.objects.filter(id=category_id).first()
+				
+				radius_km = calculate_adaptive_radius(category)
+				
+				# 2. Bounding Box Filter (Spatial Optimization)
+				# 1 deg lat ~= 111 km
+				# 1 deg lng ~= 111 km * cos(lat)
+				lat_delta = radius_km / 111.0
+				lng_delta = radius_km / (111.0 * abs(math.cos(math.radians(user_lat))))
+				
+				queryset = queryset.filter(
+					store__latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
+					store__longitude__range=(user_lng - lng_delta, user_lng + lng_delta)
+				)
+				
+				# 3. Weighted Ranking (Distance, Price, Reputation)
+				queryset = apply_weighted_ranking(queryset, user_lat, user_lng)
+				
+			except (ValueError, TypeError):
+				pass # Fallback to standard filtering
+				
 		return queryset
 
 	def perform_create(self, serializer):

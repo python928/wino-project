@@ -13,8 +13,6 @@ import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
-import '../../data/models/user_model.dart';
-import '../../data/models/store_model.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import 'widgets/category_item.dart';
 import '../shared_widgets/cards/product_card.dart';
@@ -319,31 +317,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ==================== Featured Stores Section ====================
 
-  Store _userAsStore(User u) {
-    // Adapter: keep FeaturedStoreCard working while backend uses unified User profile
-    return Store.fromJson({
-      'id': u.id,
-      'name': u.name,
-      'description': u.storeDescription,
-      'logo': u.profileImage ?? '',
-      'cover_image': u.coverImage ?? '',
-      'average_rating': u.averageRating,
-      'followers_count': u.followersCount,
-      'products_count': 0,
-      'is_open': true,
-      'distance': 0,
-      'email': u.email,
-      'phone': u.phone ?? '',
-      'website': '',
-      'address': u.address,
-      'latitude': u.latitude,
-      'longitude': u.longitude,
-      'store_type': u.storeType,
-      'category': '',
-      'created_at': u.dateJoined.toIso8601String(),
-      'updated_at': u.dateJoined.toIso8601String(),
-    });
-  }
 
   Widget _buildFeaturedStoresSection() {
     return Consumer<HomeProvider>(
@@ -401,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final u = stores[index];
               return StoreChip(
                 imageUrl: u.profileImage,
-                name: u.name,
+                name: u.fullName,
                 rating: u.averageRating,
                 followersCount: u.followersCount,
                 onTap: () => Navigator.pushNamed(
@@ -930,7 +903,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Navigation Methods ====================
 
   void _showNotifications() {
-    Navigator.pushNamed(context, Routes.notifications);
+    Helpers.showSnackBar(context, 'Notifications coming soon');
   }
 
   void _navigateToSearch() {

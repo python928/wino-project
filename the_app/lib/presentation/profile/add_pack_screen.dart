@@ -12,6 +12,8 @@ import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/user_model.dart';
+import '../../data/models/category_model.dart';
+import '../common/location_filter_picker.dart';
 import 'package:flutter/services.dart';
 import 'widgets/product_picker_sheet.dart';
 
@@ -33,6 +35,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
   String? _formError;
   bool _isAvailable = true;
 
+  // Delivery state
+  bool _deliveryAvailable = false;
+  LocationFilterResult? _deliveryAreas;
+
   bool get _isEditMode => widget.pack != null;
 
   Future<void> _initAfterFirstFrame() async {
@@ -53,6 +59,14 @@ class _AddPackScreenState extends State<AddPackScreen> {
     _packPriceController.text = existingPack.discountPrice.toStringAsFixed(2);
     _enteredPackPrice = existingPack.discountPrice;
     _isAvailable = existingPack.isAvailable;
+    // Restore delivery state
+    _deliveryAvailable = existingPack.deliveryAvailable;
+    if (existingPack.deliveryWilayas.isNotEmpty) {
+      _deliveryAreas = LocationFilterResult(
+        selectedWilayas: existingPack.deliveryWilayas,
+        selectedBaladiyat: const {},
+      );
+    }
 
     final postProvider = context.read<PostProvider>();
 
@@ -303,6 +317,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
         return;
       }
 
+      // Compute delivery wilayas (empty = backend falls back to merchant.address)
+      final List<String> deliveryWilayas =
+          _deliveryAvailable ? (_deliveryAreas?.selectedWilayas ?? []) : [];
+
       if (_isEditMode) {
         await provider.updatePack(
           id: widget.pack!.id,
@@ -311,6 +329,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
           discountPrice: enteredPrice,
           isAvailable: _isAvailable,
           merchantId: store.id,
+          deliveryAvailable: _deliveryAvailable,
+          deliveryWilayas: deliveryWilayas,
         );
 
         if (mounted) {
@@ -324,6 +344,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
           discountPrice: enteredPrice,
           merchantId: store.id,
           isAvailable: _isAvailable,
+          deliveryAvailable: _deliveryAvailable,
+          deliveryWilayas: deliveryWilayas,
         );
         if (mounted) {
           Helpers.showSnackBar(context, 'Pack published successfully');
@@ -601,6 +623,59 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     setState(() => _isAvailable = value);
                   },
                 ),
+                const SizedBox(height: 4),
+                // ─── Delivery Section ─────────────────────────────────────
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Delivery Available'),
+                  subtitle: const Text('Enable home delivery for this pack'),
+                  value: _deliveryAvailable,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) {
+                    setState(() => _deliveryAvailable = value);
+                  },
+                ),
+                if (_deliveryAvailable) ...([
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: Text(
+                      _deliveryAreas != null &&
+                              _deliveryAreas!.selectedWilayas.isNotEmpty
+                          ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
+                          : 'Select delivery areas (optional)',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: () async {
+                      final result = await Navigator.push<LocationFilterResult>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LocationFilterPicker(
+                            initialFilter: _deliveryAreas,
+                          ),
+                        ),
+                      );
+                      if (result != null) {
+                        setState(() => _deliveryAreas = result);
+                      }
+                    },
+                  ),
+                  if (_deliveryAreas == null ||
+                      _deliveryAreas!.selectedWilayas.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'No areas selected — your store address will be used by default',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ),
+                ]),
                 if (_formError != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),

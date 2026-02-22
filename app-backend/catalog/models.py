@@ -5,8 +5,15 @@ from django.db import models
 class Category(models.Model):
 	name = models.CharField(max_length=255)
 	parent = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, null=True, related_name='subcategories')
+	# Material Icons fields — served to Flutter as a JSON object
+	icon_code_point = models.CharField(max_length=10, blank=True, default='', help_text='Hex codePoint from fonts.google.com/icons, e.g. e027, e532')
+	icon_font_family = models.CharField(max_length=100, default='MaterialIcons', blank=True)
+	icon_font_package = models.CharField(max_length=100, blank=True, default='')
+	
+	# Adaptive Search: 1=Abundant (low radius), 10=Scarce (high radius)
+	scarcity_level = models.IntegerField(default=5, help_text="1=Abundant (Bread), 10=Scarce (Cars)")
 
-	def __str__(self) -> str:  # pragma: no cover - simple repr
+	def __str__(self) -> str:
 		return self.name
 
 
@@ -23,6 +30,8 @@ class Product(models.Model):
 	hide_price = models.BooleanField(default=False)
 	negotiable = models.BooleanField(default=False)
 	available_status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=AVAILABLE)
+	delivery_available = models.BooleanField(default=False)
+	delivery_wilayas = models.TextField(blank=True, default='')  # comma-separated; empty = use store.address
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
@@ -73,6 +82,8 @@ class Pack(models.Model):
 	description = models.TextField(blank=True)
 	discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 	available_status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=AVAILABLE)
+	delivery_available = models.BooleanField(default=False)
+	delivery_wilayas = models.TextField(blank=True, default='')  # comma-separated; empty = use store.address
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr

@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -89,11 +88,10 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot determine user ID');
 
-      final file = File(pickedFile.path);
       await ApiService.updateMultipart(
         ApiConfig.userDetail(userId),
         {},
-        file,
+        pickedFile,
         'profile_image',
         method: 'PATCH',
       );

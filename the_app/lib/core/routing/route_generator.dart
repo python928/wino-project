@@ -284,3 +284,7 @@ class _SimpleRouteErrorScreen extends StatelessWidget {
     );
   }
 }
+
+/// Top-level function so [MaterialApp.onGenerateRoute] can reference it directly.
+Route<dynamic> onGenerateRoute(RouteSettings settings) =>
+    RouteGenerator.generateRoute(settings);

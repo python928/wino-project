@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/routing/routes.dart';
-import '../../data/models/backend_store_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../../core/widgets/app_button.dart';
@@ -20,7 +20,7 @@ class StoresListScreen extends StatefulWidget {
 
 class _StoresListScreenState extends State<StoresListScreen> {
   bool _isLoading = true;
-  List<BackendStore> _stores = [];
+  List<User> _stores = [];
   String? _error;
 
   late final VoidCallback _followListener;
@@ -108,8 +108,8 @@ class _StoresListScreenState extends State<StoresListScreen> {
     );
   }
 
-  Widget _buildStoreCard(BackendStore store) {
-    final avatarUrl = store.profileImageUrl;
+  Widget _buildStoreCard(User store) {
+    final avatarUrl = store.profileImage;
     final rating = store.averageRating;
 
     return GestureDetector(
@@ -148,7 +148,7 @@ class _StoresListScreenState extends State<StoresListScreen> {
                   color: AppColors.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
                 ),
-                child: avatarUrl.isNotEmpty
+                child: (avatarUrl != null && avatarUrl.isNotEmpty)
                     ? ClipRRect(
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusSmall),
@@ -179,7 +179,7 @@ class _StoresListScreenState extends State<StoresListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      store.name,
+                      store.fullName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

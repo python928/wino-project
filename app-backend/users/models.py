@@ -21,8 +21,16 @@ class User(AbstractUser):
 	address = models.CharField(max_length=255, blank=True)
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+	location_updated_at = models.DateTimeField(blank=True, null=True, help_text='Last time GPS coordinates were changed')
 	store_type = models.CharField(max_length=10, choices=[('physical', 'Physical'), ('online', 'Online')], default='physical')
 	cover_image = models.ImageField(upload_to='users/covers/', blank=True, null=True)
+
+	# Social Accounts
+	facebook = models.CharField(max_length=255, blank=True, default='')
+	instagram = models.CharField(max_length=255, blank=True, default='')
+	whatsapp = models.CharField(max_length=50, blank=True, default='')
+	tiktok = models.CharField(max_length=255, blank=True, default='')
+	youtube = models.CharField(max_length=255, blank=True, default='')
 
 	# Remove inherited fields we don't need
 	first_name = None

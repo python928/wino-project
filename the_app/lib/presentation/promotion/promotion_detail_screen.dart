@@ -51,7 +51,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
     try {
       final store = await StoreRepository.getStore(storeId);
-      final url = store?.profileImageUrl ?? '';
+      final url = store?.profileImage ?? '';
       if (!mounted) return;
       if (url.trim().isNotEmpty) {
         setState(() => _storeImageUrl = url);

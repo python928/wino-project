@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/card_styles.dart';
 import '../../../core/utils/helpers.dart';
-import '../../../data/models/store_model.dart';
+import '../../../data/models/user_model.dart';
 
 /// A card widget for displaying a featured store in horizontal lists
 class FeaturedStoreCard extends StatelessWidget {
-  final Store store;
+  final User store;
   final VoidCallback? onTap;
 
   const FeaturedStoreCard({
@@ -76,9 +76,9 @@ class FeaturedStoreCard extends StatelessWidget {
                       ],
                     ),
                     child: ClipOval(
-                      child: store.logo != null && store.logo!.isNotEmpty
+                      child: store.profileImage != null && store.profileImage!.isNotEmpty
                           ? Image.network(
-                              store.logo!,
+                              store.profileImage!,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return _buildDefaultAvatar();
@@ -95,7 +95,7 @@ class FeaturedStoreCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          store.name,
+                          store.fullName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
@@ -117,10 +117,10 @@ class FeaturedStoreCard extends StatelessWidget {
                   ),
 
                   // Category
-                  if (store.category.isNotEmpty) ...[
+                  if (store.storeType.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      store.category,
+                      store.storeType,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -141,7 +141,7 @@ class FeaturedStoreCard extends StatelessWidget {
                       const Icon(Icons.star, size: 11, color: Colors.amber),
                       const SizedBox(width: 2),
                       Text(
-                        store.rating.toStringAsFixed(1),
+                        store.averageRating.toStringAsFixed(1),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -199,7 +199,7 @@ class FeaturedStoreCard extends StatelessWidget {
 
 /// A horizontal card for displaying stores in a list
 class StoreListCard extends StatelessWidget {
-  final Store store;
+  final User store;
   final VoidCallback? onTap;
 
   const StoreListCard({
@@ -246,7 +246,7 @@ class StoreListCard extends StatelessWidget {
                       ],
                       Flexible(
                         child: Text(
-                          store.name,
+                          store.fullName,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -258,9 +258,9 @@ class StoreListCard extends StatelessWidget {
                   ),
 
                   // Category
-                  if (store.category.isNotEmpty)
+                  if (store.storeType.isNotEmpty)
                     Text(
-                      store.category,
+                      store.storeType,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -276,7 +276,7 @@ class StoreListCard extends StatelessWidget {
                       // Rating
                       const Icon(Icons.star, size: 14, color: Colors.amber),
                       Text(
-                        ' ${store.rating.toStringAsFixed(1)} ',
+                        ' ${store.averageRating.toStringAsFixed(1)} ',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -323,9 +323,9 @@ class StoreListCard extends StatelessWidget {
                   child: SizedBox(
                     width: 60,
                     height: 60,
-                    child: store.logo != null && store.logo!.isNotEmpty
+                    child: store.profileImage != null && store.profileImage!.isNotEmpty
                         ? Image.network(
-                            store.logo!,
+                            store.profileImage!,
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, progress) {
                               if (progress == null) return child;

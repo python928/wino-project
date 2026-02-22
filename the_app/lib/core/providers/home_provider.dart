@@ -2,57 +2,11 @@ import 'package:flutter/material.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/models/category_model.dart';
 import '../services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../services/product_api_service.dart';
 import '../services/store_api_service.dart';
-
-/// Category model for home screen
-class Category {
-  final int id;
-  final String name;
-  final String? icon;
-  final int productCount;
-
-  const Category({
-    required this.id,
-    required this.name,
-    this.icon,
-    this.productCount = 0,
-  });
-
-  factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      icon: json['icon'],
-      productCount: json['product_count'] ?? json['products_count'] ?? 0,
-    );
-  }
-
-  /// Get icon data based on category name (English only)
-  IconData get iconData {
-    final nameLower = name.toLowerCase();
-    if (nameLower.contains('electronic')) {
-      return Icons.smartphone;
-    } else if (nameLower.contains('fashion') || nameLower.contains('clothing')) {
-      return Icons.checkroom;
-    } else if (nameLower.contains('home')) {
-      return Icons.chair;
-    } else if (nameLower.contains('sport')) {
-      return Icons.sports_basketball;
-    } else if (nameLower.contains('beauty')) {
-      return Icons.face;
-    } else if (nameLower.contains('food')) {
-      return Icons.restaurant;
-    } else if (nameLower.contains('book')) {
-      return Icons.book;
-    } else if (nameLower.contains('car')) {
-      return Icons.directions_car;
-    }
-    return Icons.category;
-  }
-}
 
 class HomeProvider with ChangeNotifier {
   final ProductApiService _productService = ProductApiService();
@@ -105,8 +59,12 @@ class HomeProvider with ChangeNotifier {
   bool get isLoadingPacks => _isLoadingPacks;
   String? get packsError => _packsError;
 
-  bool get isLoading => _isLoadingCategories || _isLoadingStores ||
-                         _isLoadingProducts || _isLoadingHotDeals || _isLoadingPacks;
+  bool get isLoading =>
+      _isLoadingCategories ||
+      _isLoadingStores ||
+      _isLoadingProducts ||
+      _isLoadingHotDeals ||
+      _isLoadingPacks;
 
   /// Load all home data
   Future<void> loadHomeData() async {
@@ -129,13 +87,11 @@ class HomeProvider with ChangeNotifier {
       final data = await _productService.getCategories();
       _categories = data.map((json) => Category.fromJson(json)).toList();
 
-      // If no categories from API, use defaults
       if (_categories.isEmpty) {
         _categories = _getDefaultCategories();
       }
     } catch (e) {
       _categoriesError = e.toString();
-      // Use defaults on error
       _categories = _getDefaultCategories();
     } finally {
       _isLoadingCategories = false;
@@ -188,7 +144,6 @@ class HomeProvider with ChangeNotifier {
 
     try {
       final response = await _productService.getProducts(page: 1);
-      // Filter products with discounts
       _hotDeals = response.results
           .where((p) => (p.discountPercentage ?? 0) > 0 || p.isHotDeal)
           .take(10)
@@ -223,24 +178,24 @@ class HomeProvider with ChangeNotifier {
         // continue without enrichment
       }
 
-      final data = await ApiService.get('/api/catalog/packs/?available_status=available');
+      final data =
+          await ApiService.get('/api/catalog/packs/?available_status=available');
 
       if (data is Map<String, dynamic> && data['results'] != null) {
-        // API returns {count: X, results: [...]}
         _featuredPacks = (data['results'] as List)
-            .map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById))
-            .take(10) // Limit to 10 packs
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>,
+                storesById: storesById))
+            .take(10)
             .toList();
       } else if (data is List) {
-        // Fallback: API returns a direct list
         _featuredPacks = data
-            .map((json) => Pack.fromJson(json as Map<String, dynamic>, storesById: storesById))
-            .take(10) // Limit to 10 packs
+            .map((json) => Pack.fromJson(json as Map<String, dynamic>,
+                storesById: storesById))
+            .take(10)
             .toList();
       } else {
         _featuredPacks = [];
       }
-      _packsError = null;
     } catch (e) {
       _featuredPacks = [];
       _packsError = 'Failed to load packs: ${e.toString()}';
@@ -255,7 +210,7 @@ class HomeProvider with ChangeNotifier {
     await loadHomeData();
   }
 
-  /// Get default categories when API fails or returns empty (English only)
+  /// Default categories when API fails or returns empty
   List<Category> _getDefaultCategories() {
     return const [
       Category(id: 1, name: 'Electronics'),

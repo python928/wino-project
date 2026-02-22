@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +11,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
+import '../../data/models/category_model.dart';
 import '../search/category_selection_screen.dart';
 import '../common/location_filter_picker.dart';
 
@@ -60,6 +61,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _isAvailable = product.isAvailable;
       _showPrice = !product.hidePrice;
       _images.addAll(product.gallery);
+      // Restore delivery state
+      _deliveryAvailable = product.deliveryAvailable;
+      if (product.deliveryWilayas.isNotEmpty) {
+        _deliveryAreas = LocationFilterResult(
+          selectedWilayas: product.deliveryWilayas,
+          selectedBaladiyat: const {},
+        );
+      }
     }
   }
 
@@ -107,8 +116,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Widget _buildImage(dynamic image) {
-    if (image is File) {
-      return Image.file(image, fit: BoxFit.cover);
+    if (image is XFile) {
+      return FutureBuilder<Uint8List>(
+        future: image.readAsBytes(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return Image.memory(snapshot.data!, fit: BoxFit.cover);
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
     }
     if (image is String) {
       return Image.network(
@@ -192,7 +209,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         setState(() {
           final remainingSlots = 5 - _images.length;
           _images.addAll(
-            picked.take(remainingSlots).map((x) => File(x.path)),
+            picked.take(remainingSlots),
           );
         });
       }
@@ -236,8 +253,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         _priceController.text.isEmpty ? '0' : _priceController.text,
       ).toDouble();
 
+      // Compute effective delivery wilayas (empty = use store.address fallback on backend)
+      final List<String> deliveryWilayas =
+          _deliveryAvailable ? (_deliveryAreas?.selectedWilayas ?? []) : [];
+
       if (_isEditMode) {
-        final newFiles = _images.whereType<File>().toList();
+        final newFiles = _images.whereType<XFile>().toList();
         await provider.updateProduct(
           id: widget.product!.id,
           title: _titleController.text,
@@ -247,6 +268,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
           isAvailable: _isAvailable,
           hidePrice: !_showPrice,
           newImages: newFiles,
+          deliveryAvailable: _deliveryAvailable,
+          deliveryWilayas: deliveryWilayas,
         );
 
         if (mounted) {
@@ -259,10 +282,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           description: _descriptionController.text,
           price: price,
           category: primaryCategoryName,
-          images: _images.whereType<File>().toList(),
+          images: _images.whereType<XFile>().toList(),
           isAvailable: _isAvailable,
           isNegotiable: false,
           hidePrice: !_showPrice,
+          deliveryAvailable: _deliveryAvailable,
+          deliveryWilayas: deliveryWilayas,
         );
 
         if (mounted) {

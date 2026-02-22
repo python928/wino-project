@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/models/post_model.dart';
@@ -35,7 +35,6 @@ class PostProvider with ChangeNotifier {
   String? get postsError => _postsError;
   String? get offersError => _offersError;
 
-  // ... existing methods ...
 
   Future<void> loadOffers() async {
     _isLoadingOffers = true;
@@ -266,10 +265,12 @@ class PostProvider with ChangeNotifier {
     required String description,
     required double price,
     required String category,
-    required List<File> images,
+    required List<XFile> images,
     bool isAvailable = true,
     bool isNegotiable = false,
     bool hidePrice = false,
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     _isLoading = true;
     _error = null;
@@ -286,12 +287,11 @@ class PostProvider with ChangeNotifier {
         isAvailable: isAvailable,
         isNegotiable: isNegotiable,
         hidePrice: hidePrice,
+        deliveryAvailable: deliveryAvailable,
+        deliveryWilayas: deliveryWilayas,
       );
       debugPrint('Provider: Product added, inserting to list');
       _posts.insert(0, newPost);
-
-      // Always add to myPosts so it appears instantly in the merchant profile grid
-      // Backend may return store owner differently (store id vs user id), so we avoid over-filtering here.
       _myPosts.insert(0, newPost);
     } catch (e) {
       debugPrint('Provider: Error adding product: $e');
@@ -311,7 +311,9 @@ class PostProvider with ChangeNotifier {
     required String category,
     required bool isAvailable,
     bool hidePrice = false,
-    List<File> newImages = const [],
+    List<XFile> newImages = const [],
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     _isLoading = true;
     _error = null;
@@ -328,18 +330,14 @@ class PostProvider with ChangeNotifier {
         isAvailable: isAvailable,
         hidePrice: hidePrice,
         newImages: newImages,
+        deliveryAvailable: deliveryAvailable,
+        deliveryWilayas: deliveryWilayas,
       );
       
       final index = _posts.indexWhere((p) => p.id == id);
-      if (index != -1) {
-        _posts[index] = updatedPost;
-      }
-      
-      // Update myPosts as well
+      if (index != -1) _posts[index] = updatedPost;
       final myIndex = _myPosts.indexWhere((p) => p.id == id);
-      if (myIndex != -1) {
-        _myPosts[myIndex] = updatedPost;
-      }
+      if (myIndex != -1) _myPosts[myIndex] = updatedPost;
 
       notifyListeners();
     } catch (e) {

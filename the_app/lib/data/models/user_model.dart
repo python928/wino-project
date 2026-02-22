@@ -20,9 +20,20 @@ class User {
   final double? latitude;
   final double? longitude;
   final String storeType;
+  final bool isVerified;
+  final String? city;
+  final String? country;
   final String? coverImage;
   final int followersCount;
   final double averageRating;
+  final String? facebook;
+  final String? instagram;
+  final String? whatsapp;
+  final String? tiktok;
+  final String? youtube;
+  final DateTime? locationUpdatedAt;
+  final double? distance;
+  final bool isOpen;
 
   const User({
     required this.id,
@@ -40,9 +51,20 @@ class User {
     this.latitude,
     this.longitude,
     this.storeType = 'physical',
+    this.isVerified = false,
+    this.city,
+    this.country,
     this.coverImage,
     this.followersCount = 0,
     this.averageRating = 0.0,
+    this.facebook,
+    this.instagram,
+    this.whatsapp,
+    this.tiktok,
+    this.youtube,
+    this.locationUpdatedAt,
+    this.distance,
+    this.isOpen = true,
   });
 
   String get fullName => name.isNotEmpty ? name : username;
@@ -71,6 +93,19 @@ class User {
       coverImage: json['cover_image'],
       followersCount: json['followers_count'] ?? 0,
       averageRating: (json['average_rating'] as num?)?.toDouble() ?? 0.0,
+      facebook: json['facebook'],
+      instagram: json['instagram'],
+      whatsapp: json['whatsapp'],
+      tiktok: json['tiktok'],
+      youtube: json['youtube'],
+      isVerified: json['is_verified'] ?? false,
+      city: json['city']?.toString(),
+      country: json['country']?.toString(),
+      locationUpdatedAt: json['location_updated_at'] != null
+          ? DateTime.tryParse(json['location_updated_at'].toString())
+          : null,
+      distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
+      isOpen: json['is_open'] ?? true,
     );
   }
 
@@ -94,6 +129,17 @@ class User {
       'cover_image': coverImage,
       'followers_count': followersCount,
       'average_rating': averageRating,
+      'facebook': facebook,
+      'instagram': instagram,
+      'whatsapp': whatsapp,
+      'tiktok': tiktok,
+      'youtube': youtube,
+      'is_verified': isVerified,
+      'city': city,
+      'country': country,
+      'location_updated_at': locationUpdatedAt?.toIso8601String(),
+      'distance': distance,
+      'is_open': isOpen,
     };
   }
 }

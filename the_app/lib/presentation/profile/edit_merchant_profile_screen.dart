@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
@@ -9,6 +9,10 @@ import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
 import '../common/location_picker_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// dart:html is web-only, imported conditionally
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
@@ -17,6 +21,13 @@ class EditMerchantProfileScreen extends StatefulWidget {
   final String? initialCoverImage;
   final String? initialStoreDescription;
   final String? initialAddress;
+  final String? initialFacebook;
+  final String? initialInstagram;
+  final String? initialWhatsapp;
+  final String? initialTiktok;
+  final String? initialYoutube;
+  final double? initialLatitude;
+  final double? initialLongitude;
 
   const EditMerchantProfileScreen({
     super.key,
@@ -26,6 +37,13 @@ class EditMerchantProfileScreen extends StatefulWidget {
     this.initialCoverImage,
     this.initialStoreDescription,
     this.initialAddress,
+    this.initialFacebook,
+    this.initialInstagram,
+    this.initialWhatsapp,
+    this.initialTiktok,
+    this.initialYoutube,
+    this.initialLatitude,
+    this.initialLongitude,
   });
 
   @override
@@ -37,14 +55,27 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _descriptionController;
+
+// ... existing imports
+
+  // Social Controllers
+  late TextEditingController _facebookController;
+  late TextEditingController _instagramController;
+  late TextEditingController _whatsappController;
+  late TextEditingController _tiktokController;
+  late TextEditingController _youtubeController;
+
   bool _isLoading = false;
   bool _isUploadingImage = false;
   bool _isUploadingCover = false;
+  bool _isGettingLocation = false; // New state
   String? _avatarUrl;
   String? _coverUrl;
   int? _storeId;
   String? _selectedWilaya;
   String? _selectedBaladiya;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -53,10 +84,95 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     _phoneController = TextEditingController(text: widget.initialPhone);
     _descriptionController =
         TextEditingController(text: widget.initialStoreDescription ?? '');
+
+    _facebookController = TextEditingController(text: widget.initialFacebook ?? '');
+    _instagramController = TextEditingController(text: widget.initialInstagram ?? '');
+    _whatsappController = TextEditingController(text: widget.initialWhatsapp ?? '');
+    _tiktokController = TextEditingController(text: widget.initialTiktok ?? '');
+    _youtubeController = TextEditingController(text: widget.initialYoutube ?? '');
+
     _avatarUrl = widget.initialImage;
     _coverUrl = widget.initialCoverImage;
+    
+    // Initialize Lat/Lng
+    _latitude = widget.initialLatitude;
+    _longitude = widget.initialLongitude;
+    
+    // Fallback to storage if not passed in props but we have address
+    if (_latitude == null) {
+         final userData = StorageService.getUserData();
+         if (userData != null && userData['latitude'] != null) {
+             _latitude = double.tryParse(userData['latitude'].toString());
+             _longitude = double.tryParse(userData['longitude'].toString());
+         }
+    }
+
     _loadAddress();
     _loadStoreId();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    // 60-day coordinate lock check
+    final userData = StorageService.getUserData();
+    final locUpdatedStr = userData?['location_updated_at']?.toString();
+    if (locUpdatedStr != null && locUpdatedStr.isNotEmpty) {
+      final locUpdated = DateTime.tryParse(locUpdatedStr);
+      if (locUpdated != null) {
+        final daysSince = DateTime.now().difference(locUpdated).inDays;
+        if (daysSince < 60) {
+          final remaining = 60 - daysSince;
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Coordinates Locked'),
+                content: Text(
+                  'You can only change your GPS coordinates once every 60 days.\n\n'
+                  '$remaining day(s) remaining before you can update.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    if (!kIsWeb) {
+      if (mounted) Helpers.showSnackBar(context, 'GPS only works on the mobile app.');
+      return;
+    }
+
+    setState(() => _isGettingLocation = true);
+    try {
+      final geolocation = html.window.navigator.geolocation;
+
+      final completer = Completer<html.Geoposition>();
+      geolocation.getCurrentPosition(
+        enableHighAccuracy: true,
+        timeout: const Duration(seconds: 15),
+      ).then(completer.complete).catchError(completer.completeError);
+
+      final position = await completer.future;
+
+      setState(() {
+        _latitude = position.coords!.latitude!.toDouble();
+        _longitude = position.coords!.longitude!.toDouble();
+      });
+
+      if (mounted) Helpers.showSnackBar(context, 'Location updated successfully ✅');
+
+    } catch (e) {
+      if (mounted) Helpers.showSnackBar(context, 'Could not get location: $e');
+    } finally {
+      if (mounted) setState(() => _isGettingLocation = false);
+    }
   }
 
   @override
@@ -64,6 +180,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _descriptionController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _whatsappController.dispose();
+    _tiktokController.dispose();
+    _youtubeController.dispose();
     super.dispose();
   }
 
@@ -128,9 +249,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         final userId = userData?['id'];
         if (userId == null) throw Exception('Cannot identify user ID');
 
-        final file = File(pickedFile.path);
         await ApiService.updateMultipart(
-            '${ApiConfig.users}$userId/', {}, file, 'profile_image',
+            '${ApiConfig.users}$userId/', {}, pickedFile, 'profile_image',
             method: 'PATCH');
 
         final response = await ApiService.get('${ApiConfig.users}$userId/');
@@ -162,11 +282,10 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
     setState(() => _isUploadingCover = true);
     try {
-      final file = File(pickedFile.path);
       await ApiService.updateMultipart(
         ApiConfig.storeDetail(_storeId!),
         {},
-        file,
+        pickedFile,
         'cover_image',
         method: 'PATCH',
       );
@@ -187,69 +306,98 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (_nameController.text.isEmpty) {
-      Helpers.showSnackBar(context, 'Please fill in all required fields');
+    if (_nameController.text.trim().isEmpty) {
+      Helpers.showSnackBar(context, 'Please enter your name');
       return;
     }
 
     setState(() => _isLoading = true);
+    String? errorMessage;
+
     try {
       final userData = StorageService.getUserData();
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot identify user ID');
 
-      // Update user data (name, phone)
-      final userUpdateData = {
-        'name': _nameController.text,
-        'phone': _phoneController.text,
-      };
-      await ApiService.patch(ApiConfig.userDetail(userId), userUpdateData);
-
-      // Build address from wilaya/baladiya
+      // Build address
       final address = (_selectedWilaya != null && _selectedBaladiya != null)
           ? '$_selectedBaladiya, $_selectedWilaya'
-          : '';
+          : (userData?['address'] ?? '');
 
-      // Update store data (name, description, address, phone_number)
-      if (_storeId != null) {
-        final storeUpdateData = {
-          'name': _nameController.text,
-          'description': _descriptionController.text,
-          'address': address,
-          'phone_number': _phoneController.text,
-        };
+      // Single PATCH — store == user in this backend
+      final payload = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'store_description': _descriptionController.text.trim(),
+        'address': address,
+        'facebook': _facebookController.text.trim(),
+        'instagram': _instagramController.text.trim(),
+        'whatsapp': _whatsappController.text.trim(),
+        'tiktok': _tiktokController.text.trim(),
+        'youtube': _youtubeController.text.trim(),
+      };
 
-        await ApiService.patch(
-            ApiConfig.storeDetail(_storeId!), storeUpdateData);
-      }
+      // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
+      if (_latitude != null) payload['latitude'] = _latitude!.toStringAsFixed(6);
+      if (_longitude != null) payload['longitude'] = _longitude!.toStringAsFixed(6);
 
-      // Update local storage
-      if (userData != null) {
-        userData['name'] = _nameController.text;
-        userData['phone'] = _phoneController.text;
-        if (_descriptionController.text.trim().isNotEmpty) {
+      debugPrint('💾 Saving profile payload: $payload');
+
+      final updated = await ApiService.patch(ApiConfig.userDetail(userId), payload);
+      debugPrint('✅ Save response: $updated');
+
+      // Sync local storage with fresh server values
+      if (updated is Map<String, dynamic>) {
+        final merged = <String, dynamic>{...(userData ?? {}), ...updated};
+        // Address keys in sync
+        merged['location'] = merged['address'] ?? address;
+        await StorageService.saveUserData(merged);
+        debugPrint('✅ Local storage updated');
+      } else {
+        // Fallback: update locally
+        if (userData != null) {
+          userData['name'] = _nameController.text.trim();
+          userData['phone'] = _phoneController.text.trim();
           userData['store_description'] = _descriptionController.text.trim();
-        } else {
-          userData['store_description'] = '';
+          userData['address'] = address;
+          userData['location'] = address;
+          userData['facebook'] = _facebookController.text.trim();
+          userData['instagram'] = _instagramController.text.trim();
+          userData['whatsapp'] = _whatsappController.text.trim();
+          userData['tiktok'] = _tiktokController.text.trim();
+          userData['youtube'] = _youtubeController.text.trim();
+          if (_latitude != null) userData['latitude'] = _latitude.toString();
+          if (_longitude != null) userData['longitude'] = _longitude.toString();
+          await StorageService.saveUserData(userData);
         }
-        if (address.trim().isNotEmpty) {
-          // Keep both keys in sync (some screens read 'location', others 'address')
-          userData['location'] = address.trim();
-          userData['address'] = address.trim();
-        }
-        await StorageService.saveUserData(userData);
-      }
-
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Data saved successfully');
-        Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Error saving data: $e');
-      }
+      debugPrint('❌ Save error: $e');
+      errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+
+    if (!mounted) return;
+
+    if (errorMessage != null) {
+      // Show error as a dialog so it cannot be missed
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Save Failed'),
+          content: Text(errorMessage!),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Helpers.showSnackBar(context, '✅ Profile saved successfully');
+      Navigator.pop(context, true);
     }
   }
 
@@ -334,6 +482,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Form Fields
                   AppTextField(
@@ -366,6 +515,58 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                   const SizedBox(height: 8),
                   _buildLocationSection(),
                   const SizedBox(height: 28),
+
+                  // Social Accounts Section
+                  Text('Social Accounts',
+                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 16),
+
+                  AppTextField(
+                    controller: _facebookController,
+                    label: 'Facebook',
+                    hint: 'https://facebook.com/...',
+                    icon: Icons.facebook,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _instagramController,
+                    label: 'Instagram',
+                    hint: 'https://instagram.com/...',
+                    icon: Icons.camera_alt_outlined, // Fallback as we don't have font_awesome here yet
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _whatsappController,
+                    label: 'WhatsApp',
+                    hint: 'Number (e.g. 213555...)',
+                    icon: Icons.phone_android,
+                    keyboardType: TextInputType.phone,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _tiktokController,
+                    label: 'TikTok',
+                    hint: 'https://tiktok.com/@...',
+                    icon: Icons.music_note,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                   const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _youtubeController,
+                    label: 'YouTube',
+                    hint: 'https://youtube.com/@...',
+                    icon: Icons.video_library,
+                    style: AppTextFieldStyle.profile,
+                  ),
+
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -602,6 +803,28 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                       : AppColors.textSecondary,
                 ),
               ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // GPS Button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _isGettingLocation ? null : _getCurrentLocation,
+            icon: _isGettingLocation 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.my_location, size: 18),
+            label: Text(_latitude != null 
+                ? 'Update Grid Coordinates (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})' 
+                : 'Get Current GPS Location'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: BorderSide(color: AppColors.primaryColor.withValues(alpha: 0.5)),
+              foregroundColor: AppColors.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -23,6 +25,13 @@ class ProfileMerchantHeader extends StatelessWidget {
   final VoidCallback? onFollowTap;
   final VoidCallback? onFavoriteTap;
   final Gradient primaryGradient;
+  
+  // Social Links
+  final String? facebook;
+  final String? instagram;
+  final String? whatsapp;
+  final String? tiktok;
+  final String? youtube;
 
   const ProfileMerchantHeader({
     super.key,
@@ -45,6 +54,11 @@ class ProfileMerchantHeader extends StatelessWidget {
     this.onFollowTap,
     this.onFavoriteTap,
     required this.primaryGradient,
+    this.facebook,
+    this.instagram,
+    this.whatsapp,
+    this.tiktok,
+    this.youtube,
   });
 
   @override
@@ -303,11 +317,65 @@ class ProfileMerchantHeader extends StatelessWidget {
                   ],
                 ),
               ],
+              
+              // Social Icons Row
+              if (_hasAnySocial) ...[
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      if (facebook?.isNotEmpty == true) 
+                        _buildSocialIcon(FontAwesomeIcons.facebook, facebook!, Colors.blue[800]!),
+                      if (instagram?.isNotEmpty == true) 
+                        _buildSocialIcon(FontAwesomeIcons.instagram, instagram!, Colors.pink),
+                      if (whatsapp?.isNotEmpty == true) 
+                        _buildSocialIcon(FontAwesomeIcons.whatsapp, 'https://wa.me/$whatsapp', Colors.green),
+                      if (tiktok?.isNotEmpty == true) 
+                        _buildSocialIcon(FontAwesomeIcons.tiktok, tiktok!, Colors.black),
+                      if (youtube?.isNotEmpty == true) 
+                        _buildSocialIcon(FontAwesomeIcons.youtube, youtube!, Colors.red),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         const SizedBox(height: 10),
       ],
     );
+  }
+
+  bool get _hasAnySocial => 
+    (facebook?.isNotEmpty == true) || 
+    (instagram?.isNotEmpty == true) || 
+    (whatsapp?.isNotEmpty == true) || 
+    (tiktok?.isNotEmpty == true) || 
+    (youtube?.isNotEmpty == true);
+
+  Widget _buildSocialIcon(IconData icon, String url, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: InkWell(
+        onTap: () => _launchURL(url),
+        borderRadius: BorderRadius.circular(50),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withOpacity(0.1),
+          ),
+          child: FaIcon(icon, size: 20, color: color),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
+    }
   }
 }

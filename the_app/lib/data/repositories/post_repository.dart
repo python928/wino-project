@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
@@ -82,18 +82,10 @@ class PostRepository {
           : '';
 
       final productsResp = await ApiService.get('${ApiConfig.products}$queryString');
-      final storesById = await _loadStoresById();
-      final categoriesById = await _loadCategoriesById();
-      final promotionsByProduct = await _loadPromotionsByProduct();
 
       final list = _extractList(productsResp);
       return list
-          .map((item) => Post.fromBackend(
-                item as Map<String, dynamic>,
-                storesById: storesById,
-                categoriesById: categoriesById,
-                promoPercentageByProduct: promotionsByProduct,
-              ))
+          .map((item) => Post.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to load products: $e');
@@ -103,15 +95,7 @@ class PostRepository {
   static Future<Post> getPost(int id) async {
     try {
       final response = await ApiService.get(ApiConfig.productDetail(id));
-      final storesById = await _loadStoresById();
-      final categoriesById = await _loadCategoriesById();
-      final promotionsByProduct = await _loadPromotionsByProduct();
-      return Post.fromBackend(
-        response as Map<String, dynamic>,
-        storesById: storesById,
-        categoriesById: categoriesById,
-        promoPercentageByProduct: promotionsByProduct,
-      );
+      return Post.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to load product: $e');
     }
@@ -157,17 +141,19 @@ class PostRepository {
     required String description,
     required double price,
     required String category,
-    required List<File> images,
+    required List<XFile> images,
     bool isAvailable = true,
     bool isNegotiable = false,
     bool hidePrice = false,
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     try {
       final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
-      final userId = await _ensureStoreForCurrentUser(); // Now returns user ID directly
+      final userId = await _ensureStoreForCurrentUser();
 
       final productPayload = {
-        'store': userId, // User ID is now the store ID
+        'store': userId,
         'category': categoryId,
         'name': title,
         'description': description,
@@ -175,6 +161,9 @@ class PostRepository {
         'negotiable': isNegotiable,
         'hide_price': hidePrice,
         'available_status': isAvailable ? 'available' : 'out_of_stock',
+        'delivery_available': deliveryAvailable,
+        // Empty string = use store.address as default (handled in serializer)
+        'delivery_wilayas': deliveryWilayas.join(','),
       };
 
       final productResponse = await ApiService.post(ApiConfig.products, productPayload);
@@ -197,8 +186,6 @@ class PostRepository {
           debugPrint('Repository: Image ${i + 1} uploaded successfully');
         } catch (imageError) {
           debugPrint('Repository: Failed to upload image ${i + 1}: $imageError');
-          // Continue uploading other images even if one fails
-          // but rethrow on the last image to notify user of partial failure
           if (i == images.length - 1 && images.length == 1) {
             rethrow;
           }
@@ -220,7 +207,9 @@ class PostRepository {
     required String category,
     required bool isAvailable,
     bool hidePrice = false,
-    List<File> newImages = const [],
+    List<XFile> newImages = const [],
+    bool deliveryAvailable = false,
+    List<String> deliveryWilayas = const [],
   }) async {
     try {
       final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
@@ -231,6 +220,8 @@ class PostRepository {
         'category': categoryId,
         'available_status': isAvailable ? 'available' : 'out_of_stock',
         'hide_price': hidePrice,
+        'delivery_available': deliveryAvailable,
+        'delivery_wilayas': deliveryWilayas.join(','),
       };
 
       await ApiService.patch(ApiConfig.productDetail(id), fields);

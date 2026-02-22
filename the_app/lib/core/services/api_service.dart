@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../utils/jwt_validator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -353,7 +353,7 @@ class ApiService {
   static Future<dynamic> postMultipart(
     String endpoint,
     Map<String, String> fields,
-    File? imageFile,
+    XFile? imageFile,
     String? imageFieldName,
   ) async {
     return await _requestWithRetry(() => _postMultipart(endpoint, fields, imageFile, imageFieldName));
@@ -363,7 +363,7 @@ class ApiService {
   
   static Future<dynamic> uploadImage(
     String endpoint,
-    File imageFile,
+    XFile imageFile,
     String fieldName,
   ) async {
     try {
@@ -371,10 +371,15 @@ class ApiService {
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
       
       var request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
+      request.headers.addAll(ApiConfig.getHeaders(token: token));
       
+      final bytes = await imageFile.readAsBytes();
       request.files.add(
-        await http.MultipartFile.fromPath(fieldName, imageFile.path),
+        http.MultipartFile.fromBytes(
+          fieldName,
+          bytes,
+          filename: imageFile.name,
+        ),
       );
       
       final streamedResponse = await request.send()
@@ -390,7 +395,7 @@ class ApiService {
   static Future<dynamic> _postMultipart(
     String endpoint,
     Map<String, String> fields,
-    File? imageFile,
+    XFile? imageFile,
     String? imageFieldName,
   ) async {
     try {
@@ -406,9 +411,14 @@ class ApiService {
       debugPrint('ApiService: Fields: $fields');
 
       if (imageFile != null && imageFieldName != null) {
-        debugPrint('ApiService: Adding image file: ${imageFile.path}');
+        debugPrint('ApiService: Adding image file: ${imageFile.name}');
+        final bytes = await imageFile.readAsBytes();
         request.files.add(
-          await http.MultipartFile.fromPath(imageFieldName, imageFile.path),
+          http.MultipartFile.fromBytes(
+            imageFieldName,
+            bytes,
+            filename: imageFile.name,
+          ),
         );
       }
       
@@ -429,7 +439,7 @@ class ApiService {
   static Future<dynamic> updateMultipart(
     String endpoint,
     Map<String, String> fields,
-    File? imageFile,
+    XFile? imageFile,
     String? imageFieldName, {
     String method = 'PUT',
   }) async {
@@ -439,7 +449,7 @@ class ApiService {
   static Future<dynamic> _updateMultipart(
     String endpoint,
     Map<String, String> fields,
-    File? imageFile,
+    XFile? imageFile,
     String? imageFieldName, {
     String method = 'PUT',
   }) async {
@@ -454,8 +464,13 @@ class ApiService {
       request.fields.addAll(fields);
 
       if (imageFile != null && imageFieldName != null) {
+        final bytes = await imageFile.readAsBytes();
         request.files.add(
-          await http.MultipartFile.fromPath(imageFieldName, imageFile.path),
+          http.MultipartFile.fromBytes(
+            imageFieldName,
+            bytes,
+            filename: imageFile.name,
+          ),
         );
       }
       
@@ -531,15 +546,18 @@ class ApiService {
     }
   }
   
-  static String _handleError(dynamic error) {
-    if (error is SocketException) {
-      return 'No internet connection';
-    } else if (error is HttpException) {
-      return 'Connection failed';
-    } else if (error is FormatException) {
-      return 'Invalid response format';
-    } else {
-      return error.toString();
+  static Exception _handleError(dynamic error) {
+    debugPrint('❌ ApiService error: $error');
+    final msg = error.toString();
+    if (msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('Connection refused')) {
+      return Exception('No internet connection or server is unreachable');
+    } else if (msg.contains('TimeoutException') || msg.contains('timed out')) {
+      return Exception('Connection timed out. Please try again.');
+    } else if (msg.contains('FormatException')) {
+      return Exception('Invalid response format from server');
     }
+    // Re-wrap anything else so it's always an Exception
+    if (error is Exception) return error;
+    return Exception(msg);
   }
 }

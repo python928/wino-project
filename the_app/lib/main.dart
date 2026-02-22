@@ -11,7 +11,7 @@ import 'core/providers/post_provider.dart';
 import 'core/providers/home_provider.dart';
 import 'core/providers/store_provider.dart';
 import 'core/providers/pack_provider.dart';
-import 'core/navigation/route_generator.dart';
+import 'core/routing/route_generator.dart';
 import 'presentation/auth/splash_screen.dart';
 import 'features/analytics/analytics_export.dart';
 

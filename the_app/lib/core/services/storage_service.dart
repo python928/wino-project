@@ -1,10 +1,13 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 class StorageService {
   static SharedPreferences? _prefs;
-  static const _secureStorage = FlutterSecureStorage();
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   
   // Storage Keys (for SharedPreferences - non-sensitive data)
   static const String keyUserData = 'user_data';
@@ -53,7 +56,7 @@ class StorageService {
       await _secureStorage.delete(key: _secureKeyAccessToken);
       await _secureStorage.delete(key: _secureKeyRefreshToken);
     } catch (e) {
-      print('Error clearing tokens: $e');
+      debugPrint('Error clearing tokens: $e');
     }
   }
   

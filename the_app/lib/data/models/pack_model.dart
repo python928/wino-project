@@ -12,6 +12,8 @@ class Pack extends Equatable {
   final String updatedAt;
   final int merchantId;
   final String merchantName;
+  final bool deliveryAvailable;
+  final List<String> deliveryWilayas;
 
   const Pack({
     required this.id,
@@ -25,6 +27,8 @@ class Pack extends Equatable {
     required this.updatedAt,
     required this.merchantId,
     required this.merchantName,
+    this.deliveryAvailable = false,
+    this.deliveryWilayas = const [],
   });
 
   factory Pack.fromJson(Map<String, dynamic> json,
@@ -73,6 +77,8 @@ class Pack extends Equatable {
       updatedAt: json['updated_at'] as String? ?? '',
       merchantId: merchantId,
       merchantName: merchantName,
+      deliveryAvailable: json['delivery_available'] as bool? ?? false,
+      deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
   }
 
@@ -81,6 +87,14 @@ class Pack extends Equatable {
     if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  static List<String> _parseWilayas(dynamic value) {
+    if (value == null) return [];
+    if (value is String && value.trim().isNotEmpty) {
+      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return [];
   }
 
   Map<String, dynamic> toJson() {
@@ -96,6 +110,8 @@ class Pack extends Equatable {
       'updated_at': updatedAt,
       'merchant_id': merchantId,
       'merchant_name': merchantName,
+      'delivery_available': deliveryAvailable,
+      'delivery_wilayas': deliveryWilayas.join(','),
     };
   }
 
@@ -112,6 +128,8 @@ class Pack extends Equatable {
         updatedAt,
         merchantId,
         merchantName,
+        deliveryAvailable,
+        deliveryWilayas,
       ];
 }
 

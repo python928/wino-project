@@ -55,6 +55,10 @@ class Post {
   final DateTime createdAt;
   final List<ProductImageData> images;
   final String storeAddress;
+  final double? storeLatitude;
+  final double? storeLongitude;
+  final bool deliveryAvailable;
+  final List<String> deliveryWilayas;
 
   const Post({
     required this.id,
@@ -79,6 +83,10 @@ class Post {
     required this.createdAt,
     required this.images,
     this.storeAddress = '',
+    this.storeLatitude,
+    this.storeLongitude,
+    this.deliveryAvailable = false,
+    this.deliveryWilayas = const [],
   });
 
   String? get image {
@@ -106,6 +114,14 @@ class Post {
       storeName = json['store']['name'] ?? 'Local Store';
       storeAddress = json['store']['address']?.toString() ?? '';
     }
+
+    // Parse store coordinates
+    final double? storeLat = json['store_latitude'] != null
+        ? double.tryParse(json['store_latitude'].toString())
+        : null;
+    final double? storeLng = json['store_longitude'] != null
+        ? double.tryParse(json['store_longitude'].toString())
+        : null;
 
     // Handle category - can be an int ID, string, or object
     int? categoryId;
@@ -173,6 +189,10 @@ class Post {
       isFeatured: json['is_featured'] as bool? ?? false,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
       images: images,
+      storeLatitude: storeLat,
+      storeLongitude: storeLng,
+      deliveryAvailable: json['delivery_available'] as bool? ?? false,
+      deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
   }
 
@@ -182,6 +202,14 @@ class Post {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  static List<String> _parseWilayas(dynamic value) {
+    if (value == null) return [];
+    if (value is String && value.trim().isNotEmpty) {
+      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return [];
   }
 
   factory Post.fromBackend(
@@ -242,6 +270,8 @@ class Post {
       isFeatured: false,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
       images: images,
+      deliveryAvailable: json['delivery_available'] as bool? ?? false,
+      deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
   }
 
@@ -269,6 +299,8 @@ class Post {
     bool? isFeatured,
     DateTime? createdAt,
     List<ProductImageData>? images,
+    bool? deliveryAvailable,
+    List<String>? deliveryWilayas,
   }) {
     return Post(
       id: id ?? this.id,
@@ -293,6 +325,8 @@ class Post {
       isFeatured: isFeatured ?? this.isFeatured,
       createdAt: createdAt ?? this.createdAt,
       images: images ?? this.images,
+      deliveryAvailable: deliveryAvailable ?? this.deliveryAvailable,
+      deliveryWilayas: deliveryWilayas ?? this.deliveryWilayas,
     );
   }
 
@@ -313,6 +347,8 @@ class Post {
       'is_featured': isFeatured,
       'created_at': createdAt.toIso8601String(),
       'images': images.map((i) => {'id': i.id, 'image': i.url, 'is_main': i.isMain}).toList(),
+      'delivery_available': deliveryAvailable,
+      'delivery_wilayas': deliveryWilayas.join(','),
     };
   }
 }

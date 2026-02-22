@@ -3,15 +3,31 @@ import 'package:flutter/material.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../data/models/backend_store_model.dart';
+import '../../../core/utils/helpers.dart';
+import '../../../data/models/user_model.dart';
 
 class StoreResultCard extends StatelessWidget {
-  final BackendStore store;
+  final User store;
+  final double? userLat;
+  final double? userLng;
 
   const StoreResultCard({
     super.key,
     required this.store,
+    this.userLat,
+    this.userLng,
   });
+
+  /// Show distance if both user+store coords available, otherwise address
+  String _locationText() {
+    final dist = Helpers.haversineDistance(
+      userLat, userLng,
+      store.latitude, store.longitude,
+    );
+    if (dist != null) return Helpers.formatDistance(dist);
+    if (store.address.isNotEmpty) return store.address;
+    return 'Algeria';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,11 +64,11 @@ class StoreResultCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: store.profileImageUrl.isNotEmpty
+              child: (store.profileImage != null && store.profileImage!.isNotEmpty)
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: Image.network(
-                        store.profileImageUrl,
+                        store.profileImage!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.storefront_rounded,
@@ -75,7 +91,7 @@ class StoreResultCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    store.name,
+                    store.fullName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyLarge.copyWith(
@@ -83,9 +99,9 @@ class StoreResultCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (store.description.isNotEmpty)
+                  if (store.storeDescription.isNotEmpty)
                     Text(
-                      store.description,
+                      store.storeDescription,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodySmall.copyWith(
@@ -103,7 +119,7 @@ class StoreResultCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          store.address.isNotEmpty ? store.address : 'Algeria',
+                          _locationText(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.bodySmall.copyWith(

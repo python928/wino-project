@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
@@ -47,6 +46,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _currentUserId;
   bool _isUploadingImage = false;
 
+  // Social Links
+  String? _facebook;
+  String? _instagram;
+  String? _whatsapp;
+  String? _tiktok;
+  String? _youtube;
+  
+  double? _latitude;
+  double? _longitude;
+
   int _followersCount = 0;
   double _averageRating = 0.0;
 
@@ -71,6 +80,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showReviewForm = false;
 
   void _showPublishMenu() {
+    // Block publishing if store has no GPS coordinates
+    final userData = StorageService.getUserData();
+    final lat = userData?['latitude'];
+    final lng = userData?['longitude'];
+    if (lat == null || lng == null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('GPS Required'),
+          content: const Text(
+            'You must set your GPS coordinates before publishing.\n\n'
+            'Go to Edit Profile → Get Current GPS Location.\n\n'
+            'Note: You can only change your coordinates once every 60 days.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _navigateToEditProfile();
+              },
+              child: const Text('Go to Edit Profile'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -194,6 +235,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _followersCount = u.followersCount;
         _averageRating = u.averageRating;
         _location = u.address.isNotEmpty ? u.address : 'Select Location';
+        
+        _facebook = u.facebook;
+        _instagram = u.instagram;
+        _whatsapp = u.whatsapp;
+        _tiktok = u.tiktok;
+        _youtube = u.youtube;
       });
     } catch (e) {
       debugPrint('Error fetching unified profile: $e');
@@ -215,11 +262,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isUploadingCover = true);
 
       try {
-        final file = File(pickedFile.path);
         await ApiService.updateMultipart(
           '${ApiConfig.users}$_userId/',
           {},
-          file,
+          pickedFile,
           'cover_image',
           method: 'PATCH',
         );
@@ -271,9 +317,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isUploadingImage = true);
 
       try {
-        final file = File(pickedFile.path);
         await ApiService.updateMultipart(
-            '${ApiConfig.users}$_userId/', {}, file, 'profile_image',
+            '${ApiConfig.users}$_userId/', {}, pickedFile, 'profile_image',
             method: 'PATCH');
 
         // Fetch updated profile and save to storage
@@ -341,6 +386,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _storeDescription = (userData['store_description'] ?? '').toString();
         _avatarUrl = userData['profile_image'] ?? userData['avatar'];
         _storeCoverUrl = userData['cover_image'];
+        
+        _facebook = userData['facebook'];
+        _instagram = userData['instagram'];
+        _whatsapp = userData['whatsapp'];
+        _tiktok = userData['tiktok'];
+        _youtube = userData['youtube'];
+        
+        if (userData['latitude'] != null) {
+             _latitude = double.tryParse(userData['latitude'].toString());
+        }
+        if (userData['longitude'] != null) {
+             _longitude = double.tryParse(userData['longitude'].toString());
+        }
       });
     } else {
       setState(() {
@@ -354,6 +412,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _storeCoverUrl = null;
         _followersCount = 0;
         _averageRating = 0.0;
+        
+        _facebook = null;
+        _instagram = null;
+        _whatsapp = null;
+        _tiktok = null;
+        _youtube = null;
       });
     }
 
@@ -521,6 +585,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onFollowTap: !_isOwnerView ? _handleFollow : null,
       onFavoriteTap: !_isOwnerView ? _handleFavorite : null,
       primaryGradient: primaryGradient,
+      facebook: _facebook,
+      instagram: _instagram,
+      whatsapp: _whatsapp,
+      tiktok: _tiktok,
+      youtube: _youtube,
     );
   }
 
@@ -539,6 +608,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           initialCoverImage: _storeCoverUrl,
           initialStoreDescription: _storeDescription,
           initialAddress: _location,
+          initialFacebook: _facebook,
+          initialInstagram: _instagram,
+          initialWhatsapp: _whatsapp,
+          initialTiktok: _tiktok,
+          initialYoutube: _youtube,
+          initialLatitude: _latitude,
+          initialLongitude: _longitude,
         ),
       ),
     ).then((result) {
@@ -776,9 +852,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: _buildMerchantHeader(primaryColor, primaryGradient),
-            ),
-            SliverToBoxAdapter(
-              child: _buildReviewSection(),
             ),
             SliverToBoxAdapter(
               child: Consumer2<PostProvider, PackProvider>(

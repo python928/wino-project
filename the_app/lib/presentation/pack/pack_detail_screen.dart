@@ -44,7 +44,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
     try {
       final store = await StoreRepository.getStore(storeId);
-      final url = store?.profileImageUrl ?? '';
+      final url = store?.profileImage ?? '';
       if (!mounted) return;
       if (url.trim().isNotEmpty) {
         setState(() => _storeImageUrl = url);

@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 import uuid
+from datetime import timedelta
+from django.utils import timezone
 from django.db.models import Avg
 from .models import Follower
 
@@ -16,19 +18,59 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'name', 'email', 'phone', 'profile_image', 
             'gender', 'birthday',
-            'store_description', 'address', 'latitude', 'longitude', 
+            'store_description', 'address', 'latitude', 'longitude',
+            'location_updated_at',
             'store_type', 'cover_image', 'followers_count', 'average_rating', 
+            'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
             'date_joined'
         ]
-        read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating']
+        read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at']
+
+    def validate(self, attrs):
+        """Enforce 60-day coordinate lock."""
+        new_lat = attrs.get('latitude')
+        new_lng = attrs.get('longitude')
+        if new_lat is not None or new_lng is not None:
+            user = self.instance
+            if user and user.location_updated_at:
+                days_since = (timezone.now() - user.location_updated_at).days
+                if days_since < 60:
+                    remaining = 60 - days_since
+                    raise serializers.ValidationError(
+                        f'You can only change your GPS coordinates once every 60 days. '
+                        f'{remaining} day(s) remaining.'
+                    )
+        return attrs
+
+    def update(self, instance, validated_data):
+        """Auto-set location_updated_at when coordinates change."""
+        new_lat = validated_data.get('latitude')
+        new_lng = validated_data.get('longitude')
+        coords_changed = False
+        if new_lat is not None and new_lat != instance.latitude:
+            coords_changed = True
+        if new_lng is not None and new_lng != instance.longitude:
+            coords_changed = True
+        if coords_changed:
+            validated_data['location_updated_at'] = timezone.now()
+        return super().update(instance, validated_data)
     
     def get_followers_count(self, obj):
         return obj.followers.count()
     
     def get_average_rating(self, obj):
-        # Store == User: compute avg rating for this store/user from reviews.
+        """
+        Store rating = average of ALL reviews related to this store:
+          - Direct store reviews (product=null, store=this_user)
+          - Reviews on any product from this store
+          - Reviews on any pack product from this store (via product.store)
+        """
         from catalog.models import Review  # local import to avoid circulars
-        avg = Review.objects.filter(store=obj).aggregate(Avg('rating'))['rating__avg']
+        from django.db.models import Q
+
+        avg = Review.objects.filter(
+            Q(store=obj) | Q(product__store=obj)
+        ).aggregate(Avg('rating'))['rating__avg']
         return round(avg, 1) if avg else 0.0
 
 

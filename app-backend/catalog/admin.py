@@ -14,8 +14,35 @@ from .models import (
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-	list_display = ('name', 'parent')
+	list_display = ('name', 'parent', 'icon_preview')
 	search_fields = ('name',)
+
+	def icon_preview(self, obj):
+		from django.utils.html import format_html
+		if obj.icon_code_point:
+			return format_html(
+				'<span style="background:#f0eeff;color:#5b4fcf;'
+				'padding:2px 10px;border-radius:12px;'
+				'font-family:monospace;font-size:13px;">'
+				'{}</span>',
+				obj.icon_code_point,
+			)
+		return format_html('<span style="color:#aaa;">—</span>')
+	icon_preview.short_description = 'Code Point'
+
+	fieldsets = (
+		(None, {
+			'fields': ('name', 'parent', 'icon_code_point', 'icon_font_family', 'icon_font_package'),
+			'description': (
+				'<b>icon_code_point</b>: Enter the hex code from '
+				'<a href="https://fonts.google.com/icons?selected=Material+Icons" target="_blank">'
+				'fonts.google.com/icons?selected=Material+Icons</a> '
+				'(e.g. <code>e88a</code> for home). '
+				'<br>⚠️ <b>CRITICAL:</b> On the website, ensure <b>"Material Icons"</b> is selected in the filters. '
+				'Do NOT use "Material Symbols" codes (like e6b8) as they will show wrong icons.'
+			),
+		}),
+	)
 
 
 class ProductImageInline(admin.TabularInline):

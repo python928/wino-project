@@ -1,4 +1,5 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
@@ -94,10 +95,10 @@ class AuthRepository {
       try {
         return User.fromJson(response);
       } catch (e) {
-        print('--- FAILED TO PARSE USER FROM JSON (getProfile) ---');
-        print('Error: $e');
-        print('Received JSON: $response');
-        print('------------------------------------');
+        debugPrint('--- FAILED TO PARSE USER FROM JSON (getProfile) ---');
+        debugPrint('Error: $e');
+        debugPrint('Received JSON: $response');
+        debugPrint('------------------------------------');
         throw Exception('Error parsing user data.');
       }
     } catch (e) {
@@ -116,22 +117,6 @@ class AuthRepository {
       return User.fromJson(response);
     } catch (e) {
       throw Exception('Failed to update profile: $e');
-    }
-  }
-
-  static Future<User> _fetchUserFromToken(String accessToken) async {
-    final decoded = JwtDecoder.decode(accessToken);
-    final userId = decoded['user_id'];
-    final profileJson = await ApiService.get('${ApiConfig.users}$userId/');
-    
-    try {
-      return User.fromJson(profileJson);
-    } catch (e) {
-      print('--- FAILED TO PARSE USER FROM JSON (_fetchUserFromToken) ---');
-      print('Error: $e');
-      print('Received JSON: $profileJson');
-      print('------------------------------------');
-      throw Exception('Error parsing user data.');
     }
   }
 }

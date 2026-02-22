@@ -25,12 +25,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   List<Post> _favorites = [];
   bool _isLoading = true;
   String? _error;
+  double? _userLat;
+  double? _userLng;
 
   late final VoidCallback _favoritesListener;
 
   @override
   void initState() {
     super.initState();
+    // Load user coordinates for distance display
+    final userData = StorageService.getUserData();
+    if (userData != null) {
+      _userLat = userData['latitude'] != null
+          ? double.tryParse(userData['latitude'].toString())
+          : null;
+      _userLng = userData['longitude'] != null
+          ? double.tryParse(userData['longitude'].toString())
+          : null;
+    }
     _favoritesListener = () {
       if (!mounted) return;
       _loadFavorites();
@@ -169,6 +181,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               children: [
                 ProductCard(
                   product: product,
+                  userLat: _userLat,
+                  userLng: _userLng,
                   onTap: () {
                     Navigator.pushNamed(
                       context,

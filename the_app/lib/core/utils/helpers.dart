@@ -1,7 +1,26 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Helpers {
+  /// Haversine distance between two lat/lng points in kilometres.
+  static double? haversineDistance(
+    double? lat1, double? lng1,
+    double? lat2, double? lng2,
+  ) {
+    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return null;
+    const R = 6371.0; // Earth radius in km
+    final dLat = _degToRad(lat2 - lat1);
+    final dLng = _degToRad(lng2 - lng1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degToRad(lat1)) * math.cos(_degToRad(lat2)) *
+        math.sin(dLng / 2) * math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  static double _degToRad(double deg) => deg * (math.pi / 180);
+
   // Format large numbers (e.g., 1234 -> 1.2K)
   static String formatLargeNumber(int number) {
     if (number >= 1000000) {
