@@ -42,15 +42,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-	queryset = User.objects.all().order_by('-date_joined')
 	serializer_class = UserSerializer
-	permission_classes = [permissions.IsAuthenticated]
+	permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 	filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-	search_fields = ['username', 'email', 'phone']
+	search_fields = ['name', 'username', 'store_description', 'email', 'phone']
 	ordering_fields = ['date_joined', 'username']
+
+	def get_queryset(self):
+		queryset = User.objects.all().order_by('-date_joined')
+		has_posts = self.request.query_params.get('has_posts')
+		if has_posts and has_posts.lower() == 'true':
+			queryset = queryset.filter(products__available_status='available').distinct()
+		return queryset
 
 	def get_permissions(self):
 		if self.action in ['create']:
+			return [permissions.AllowAny()]
+		if self.action in ['list', 'retrieve']:
 			return [permissions.AllowAny()]
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsSelfOrAdmin()]
@@ -155,10 +163,17 @@ class LogoutView(APIView):
 
 
 class UserListView(generics.ListAPIView):
-	queryset = User.objects.all()
 	serializer_class = UserSerializer
+	permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 	filter_backends = [filters.SearchFilter]
 	search_fields = ['name', 'username', 'store_description']
+
+	def get_queryset(self):
+		queryset = User.objects.all()
+		has_posts = self.request.query_params.get('has_posts')
+		if has_posts and has_posts.lower() == 'true':
+			queryset = queryset.filter(products__available_status='available').distinct()
+		return queryset
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):

@@ -34,6 +34,9 @@ class User {
   final DateTime? locationUpdatedAt;
   final double? distance;
   final bool isOpen;
+  final int productCount;
+  final int reviewCount;
+  final List<String> categories;
 
   const User({
     required this.id,
@@ -65,6 +68,9 @@ class User {
     this.locationUpdatedAt,
     this.distance,
     this.isOpen = true,
+    this.productCount = 0,
+    this.reviewCount = 0,
+    this.categories = const [],
   });
 
   String get fullName => name.isNotEmpty ? name : username;
@@ -106,6 +112,12 @@ class User {
           : null,
       distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
       isOpen: json['is_open'] ?? true,
+      productCount: json['product_count'] as int? ?? 0,
+      reviewCount: json['review_count'] as int? ?? 0,
+      categories: (json['categories'] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
     );
   }
 
@@ -140,6 +152,9 @@ class User {
       'location_updated_at': locationUpdatedAt?.toIso8601String(),
       'distance': distance,
       'is_open': isOpen,
+      'product_count': productCount,
+      'review_count': reviewCount,
+      'categories': categories,
     };
   }
 }

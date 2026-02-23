@@ -12,7 +12,10 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     followers_count = serializers.SerializerMethodField()
     average_rating = serializers.SerializerMethodField()
-    
+    product_count = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+    categories = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -22,9 +25,11 @@ class UserSerializer(serializers.ModelSerializer):
             'location_updated_at',
             'store_type', 'cover_image', 'followers_count', 'average_rating', 
             'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
+            'product_count', 'review_count', 'categories',
             'date_joined'
         ]
-        read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at']
+        read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at',
+                            'product_count', 'review_count', 'categories']
 
     def validate(self, attrs):
         """Enforce 60-day coordinate lock."""
@@ -72,6 +77,23 @@ class UserSerializer(serializers.ModelSerializer):
             Q(store=obj) | Q(product__store=obj)
         ).aggregate(Avg('rating'))['rating__avg']
         return round(avg, 1) if avg else 0.0
+
+    def get_product_count(self, obj):
+        return obj.products.filter(available_status='available').count()
+
+    def get_review_count(self, obj):
+        from catalog.models import Review
+        from django.db.models import Q
+        return Review.objects.filter(Q(store=obj) | Q(product__store=obj)).count()
+
+    def get_categories(self, obj):
+        """Distinct category names of the store's available products."""
+        return list(
+            obj.products.filter(available_status='available')
+               .exclude(category__isnull=True)
+               .values_list('category__name', flat=True)
+               .distinct()
+        )
 
 
 class RegisterSerializer(serializers.ModelSerializer):

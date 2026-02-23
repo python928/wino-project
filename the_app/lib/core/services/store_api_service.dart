@@ -77,6 +77,7 @@ class StoreApiService {
     String? wilaya,
     String? city,
     int page = 1,
+    int? pageSize,
     int retries = 2,
   }) async {
     int attempt = 0;
@@ -85,6 +86,8 @@ class StoreApiService {
         final params = <String, String>{};
         if (searchQuery != null && searchQuery.isNotEmpty) params['search'] = searchQuery;
         params['page'] = page.toString();
+        if (pageSize != null) params['page_size'] = pageSize.toString();
+        params['has_posts'] = 'true';
 
         String url = ApiConfig.users;
         if (params.isNotEmpty) {

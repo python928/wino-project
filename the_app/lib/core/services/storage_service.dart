@@ -16,6 +16,7 @@ class StorageService {
   static const String keyLanguage = 'language';
   static const String keyTheme = 'theme';
   static const String keyFirstTime = 'first_time';
+  static const String keyLastCategories = 'last_categories';
   
   // Secure Storage Keys (for tokens - sensitive data)
   static const String _secureKeyAccessToken = 'secure_access_token';
@@ -115,7 +116,39 @@ class StorageService {
   static String getLanguage() {
     return prefs.getString(keyLanguage) ?? 'ar';
   }
-  
+
+  // ==================== LAST CATEGORIES ====================
+
+  /// Save user's last viewed categories for store recommendations
+  static Future<void> saveLastCategories(List<String> categories) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('last_categories', categories.take(10).toList());
+    } catch (e) {
+      debugPrint('Failed to save last categories: $e');
+    }
+  }
+
+  /// Get user's last viewed categories
+  static List<String> getLastCategories() {
+    try {
+      return prefs.getStringList('last_categories') ?? <String>[];
+    } catch (e) {
+      debugPrint('Failed to get last categories: $e');
+      return <String>[];
+    }
+  }
+
+  // Make getLastCategories synchronous for immediate use
+  static List<String> getLastCategoriesSync() {
+    try {
+      // This is a simplified version - in practice you'd cache this
+      return <String>[]; // Fallback for now
+    } catch (e) {
+      return <String>[];
+    }
+  }
+
   // ==================== FIRST TIME ====================
   
   static bool isFirstTime() {

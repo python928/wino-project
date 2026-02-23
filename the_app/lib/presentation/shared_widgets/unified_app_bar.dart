@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../common/radius_picker_sheet.dart';
 
 /// Unified app bar — Travo style
 /// White background, location row, pill search hint, notification bell
@@ -29,53 +31,6 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onRadiusChanged,
   });
 
-  void _showRadiusPicker(BuildContext context) {
-    final options = [5.0, 10.0, 25.0, 50.0, 100.0];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Search Radius',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              ...options.map((km) => ListTile(
-                leading: Icon(
-                  radiusKm == km ? Icons.radio_button_checked : Icons.radio_button_off,
-                  color: AppColors.primaryColor,
-                ),
-                title: Text('${km.toInt()} km'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onRadiusChanged?.call(km);
-                },
-              )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -100,112 +55,115 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
               // Top row: location + icons
               Row(
                 children: [
+                  if (Navigator.canPop(context)) ...[
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          size: 20,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   if (showLocation) ...[
                     Expanded(
-                      child: GestureDetector(
-                        onTap: onLocationTap,
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryColor.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.location_on_rounded,
-                                color: AppColors.primaryColor,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'Location',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                            // "City" Segment
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: onLocationTap,
+                                child: Container(
+                                  margin: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: radiusKm == null ? AppColors.primaryColor : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(18),
                                   ),
-                                  Row(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
+                                      Icon(
+                                        Icons.location_on_outlined,
+                                        size: 16,
+                                        color: radiusKm == null ? Colors.white : AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
                                       Flexible(
                                         child: Text(
-                                          location ?? 'Select location',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.textPrimary,
-                                          ),
+                                          (location != null && location!.isNotEmpty && location != '/') ? location! : 'City',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: radiusKm == null ? Colors.white : AppColors.textSecondary,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      const Icon(
-                                        Icons.keyboard_arrow_down_rounded,
-                                        size: 16,
-                                        color: AppColors.textPrimary,
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
+                            // "Nearby" Segment
+                            if (onRadiusChanged != null)
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => showRadiusPickerSheet(
+                                    context,
+                                    initialRadius: radiusKm ?? 20.0,
+                                    onRadiusChanged: onRadiusChanged!,
+                                  ),
+                                  child: Container(
+                                    margin: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: radiusKm != null ? AppColors.primaryColor : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.radar,
+                                          size: 16,
+                                          color: radiusKm != null ? Colors.white : AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            radiusKm != null ? '${radiusKm!.toInt()} km' : 'Nearby',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: radiusKm != null ? Colors.white : AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
-                    // Radius chip — always visible; shows "/" when address mode is active
-                    if (onRadiusChanged != null) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => _showRadiusPicker(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: radiusKm != null
-                                ? AppColors.primaryColor.withOpacity(0.10)
-                                : const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: radiusKm != null
-                                  ? AppColors.primaryColor.withOpacity(0.25)
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.radar,
-                                size: 14,
-                                color: radiusKm != null
-                                    ? AppColors.primaryColor
-                                    : Colors.grey.shade400,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                radiusKm != null ? '${radiusKm!.toInt()} km' : '/',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: radiusKm != null
-                                      ? AppColors.primaryColor
-                                      : Colors.grey.shade400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                   if (!showLocation) const Spacer(),
 

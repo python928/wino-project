@@ -266,3 +266,83 @@ def _get_popular_products(limit=20):
 
 	products = qs.filter(id__in=list(popular_ids))
 	return [{'product': p, 'score': 50, 'breakdown': {}, 'match_reasons': ['Trending this week']} for p in products]
+
+
+def get_recommended_stores(user, limit=8):
+	"""
+	Get recommended stores based on user's interaction history and comprehensive scoring.
+	Does NOT filter stores without posts - shows ALL stores.
+	"""
+	import random
+	import math
+	from django.utils import timezone
+	from users.models import User
+	
+	# Get user's category preferences from interactions
+	preferred_categories = []
+	if user and user.is_authenticated:
+		try:
+			profile = UserInterestProfile.objects.get(user=user)
+			preferred_categories = profile.get_top_categories(limit=5)
+		except UserInterestProfile.DoesNotExist:
+			# Fallback: get from recent interactions
+			recent_cats = InteractionLog.objects.filter(
+				user=user,
+				category__isnull=False,
+				timestamp__gte=timezone.now() - timezone.timedelta(days=30)
+			).values_list('category_id', flat=True).distinct()[:5]
+			preferred_categories = list(recent_cats)
+	
+	# Get ALL stores with annotations - NO posts_count filter
+	stores = User.objects.annotate(
+		avg_rating=models.Avg('store_reviews__rating'),
+		review_count=models.Count('store_reviews', distinct=True),
+		posts_count=models.Count('posts', distinct=True),
+		followers_count_ann=models.Count('following', distinct=True),
+	)
+	
+	scored_stores = []
+	now = timezone.now()
+	
+	for store in stores:
+		score = 0.0
+		
+		# Multi-factor scoring (same as backend)
+		avg_rating = store.avg_rating or 0
+		review_count = store.review_count or 0
+		posts_count = store.posts_count or 0
+		followers = store.followers_count_ann or 0
+		
+		# Rating with confidence
+		rating_confidence = min(review_count / 10.0, 1.0)
+		score += (avg_rating / 5.0) * 25.0 * rating_confidence
+		
+		# Logarithmic scaling for counts
+		if review_count > 0:
+			score += min(math.log(review_count + 1) * 3, 15)
+		if posts_count > 0:
+			score += min(math.log(posts_count + 1) * 4, 20)
+		if followers > 0:
+			score += min(math.log(followers + 1) * 2, 10)
+		
+		# Account age
+		age_days = (now - store.date_joined).days
+		score += min(age_days / 365.0 * 10, 10)
+		
+		# Category matching
+		if preferred_categories:
+			store_cats = set(store.posts.values_list('category_id', flat=True).distinct())
+			matches = len(set(preferred_categories) & store_cats)
+			if matches > 0:
+				score += min(matches * 5, 20)
+		
+		# Random jitter for variety
+		score += random.uniform(0, 5)
+		
+		scored_stores.append((score, store))
+	
+	# Sort and randomize
+	random.shuffle(scored_stores)
+	scored_stores.sort(key=lambda x: x[0], reverse=True)
+	
+	return [store for _, store in scored_stores[:limit]]

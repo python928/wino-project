@@ -102,6 +102,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Filter a list of Posts to only those within [_radiusKm] km.
+  /// Products without store coordinates are kept (fail-open).
+  List<Post> _filterByRadius(List<Post> products) {
+    if (_radiusKm == null || _userLat == null || _userLng == null) return products;
+    return products.where((p) {
+      final dist = Helpers.haversineDistance(
+          _userLat, _userLng, p.storeLatitude, p.storeLongitude);
+      if (dist == null) return true; // no coords → keep
+      return dist <= _radiusKm!;
+    }).toList();
+  }
+
   double _gridCardWidth(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final crossAxisCount = CardConstants.gridCrossAxisCount;
@@ -132,8 +144,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   onLocationTap: _showLocationPicker,
                   radiusKm: _radiusKm,
                   onRadiusChanged: (km) => setState(() {
-                    _radiusKm = km; // distance mode active → clear address
-                    _selectedLocation = '/';
+                    if (km <= 0) {
+                      // Clear signal from the "Clear" button
+                      _radiusKm = null;
+                      _selectedLocation = 'Algiers, Algeria';
+                    } else {
+                      _radiusKm = km;
+                      _selectedLocation = '/';
+                    }
                   }),
                 ),
 
@@ -470,13 +488,15 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildProductsShimmer();
         }
 
-        final hotDeals = homeProvider.hotDeals;
+        final hotDeals = _filterByRadius(homeProvider.hotDeals);
         if (hotDeals.isEmpty) {
           return SizedBox(
             height: 220,
             child: Center(
               child: Text(
-                'No hot deals at the moment',
+                _radiusKm != null
+                    ? 'No hot deals found within ${_radiusKm!.toInt()} km'
+                    : 'No hot deals at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -769,13 +789,15 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        final products = homeProvider.recentProducts;
+        final products = _filterByRadius(homeProvider.recentProducts);
         if (products.isEmpty) {
           return SizedBox(
             height: 220,
             child: Center(
               child: Text(
-                'No products available at the moment',
+                _radiusKm != null
+                    ? 'No products found within ${_radiusKm!.toInt()} km'
+                    : 'No products available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -866,12 +888,26 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        if (offers.isEmpty) {
+        // Apply radius filter on the embedded product's store location
+        final filteredOffers = (_radiusKm == null ||
+                _userLat == null ||
+                _userLng == null)
+            ? offers
+            : offers.where((o) {
+                final dist = Helpers.haversineDistance(_userLat, _userLng,
+                    o.product.storeLatitude, o.product.storeLongitude);
+                if (dist == null) return true;
+                return dist <= _radiusKm!;
+              }).toList();
+
+        if (filteredOffers.isEmpty) {
           return SizedBox(
             height: 220,
             child: Center(
               child: Text(
-                'No discounts available at the moment',
+                _radiusKm != null
+                    ? 'No discounts found within ${_radiusKm!.toInt()} km'
+                    : 'No discounts available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -884,14 +920,18 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(
                 horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
-            itemCount: offers.length,
+            itemCount: filteredOffers.length,
             separatorBuilder: (_, __) =>
                 const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
-              final offer = offers[index];
+              final offer = filteredOffers[index];
               return SizedBox(
                 width: _gridCardWidth(context),
-                child: PromotionCard(offer: offer),
+                child: PromotionCard(
+                  offer: offer,
+                  userLat: _userLat,
+                  userLng: _userLng,
+                ),
               );
             },
           ),

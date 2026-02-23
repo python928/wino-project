@@ -38,8 +38,8 @@ class StoreRepository {
   static Future<List<User>> searchStores({String? query}) async {
     try {
       final url = query != null && query.isNotEmpty
-          ? '${ApiConfig.users}?search=$query'
-          : ApiConfig.users;
+          ? '${ApiConfig.users}?search=$query&has_posts=true'
+          : '${ApiConfig.users}?has_posts=true';
 
       final resp = await ApiService.get(url);
       final list = _extractList(resp);
@@ -105,6 +105,23 @@ class StoreRepository {
       return storesById.values.toList();
     } catch (_) {
       return [];
+    }
+  }
+
+  /// Get recommended stores with comprehensive scoring
+  /// NO filtering by post count - includes ALL stores
+  static Future<List<User>> getRecommendedStores({int limit = 8}) async {
+    try {
+      final resp = await ApiService.get('${ApiConfig.users}recommended-stores/?has_posts=true');
+      final list = _extractList(resp);
+
+      return list
+          .where((item) => item is Map<String, dynamic>)
+          .map((item) => User.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Fallback to all stores if recommended endpoint fails
+      return await searchStores();
     }
   }
 }

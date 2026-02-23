@@ -18,7 +18,8 @@ import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
-import '../common/location_filter_picker.dart';
+import '../common/location_picker_screen.dart';
+import '../common/radius_picker_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import 'category_selection_screen.dart';
 import '../shared_widgets/cards/store_chip.dart';
@@ -66,10 +67,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   RangeValues _priceRange = const RangeValues(0, 100000);
   double _minRating = 0;
 
-  // Location filter (single source of truth — uses LocationFilterPicker)
-  LocationFilterResult? _locationFilter;
+  // Location filter (single source of truth — uses LocationPickerScreen)
+  String _selectedLocation = '';
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
 
-  // Distance filter — mutually exclusive with _locationFilter
+  // Distance filter — mutually exclusive with location selection
   double? _distanceKm;
 
   // Stores search
@@ -237,91 +240,43 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
   }
 
-  void _showLocationFilter() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => LocationFilterPicker(
-        initialFilter: _locationFilter,
+  void _showLocationPicker() async {
+    final result = await Navigator.push<LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
+        ),
       ),
-    ).then((result) {
-      if (result != null && result is LocationFilterResult) {
-        setState(() {
-          _locationFilter = result;
-          _distanceKm = null; // location mode active → clear distance
-        });
-      }
-    });
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
+        _selectedLocation = result.address;
+        _distanceKm = null; // location mode active → clear distance
+      });
+    }
   }
 
   void _showDistancePicker() {
-    final options = [5.0, 10.0, 25.0, 50.0, 100.0];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Search Radius',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Show results within distance from your location',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 8),
-              ...options.map((km) => ListTile(
-                leading: Icon(
-                  _distanceKm == km
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: AppColors.primaryColor,
-                ),
-                title: Text('${km.toInt()} km'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() {
-                    _distanceKm = km;
-                    _locationFilter = null; // distance mode active → clear location
-                  });
-                },
-              )),
-              if (_distanceKm != null)
-                ListTile(
-                  leading: Icon(Icons.close_rounded, color: Colors.red.shade400),
-                  title: Text(
-                    'Clear distance filter',
-                    style: TextStyle(color: Colors.red.shade400),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    setState(() => _distanceKm = null);
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
+    showRadiusPickerSheet(
+      context,
+      initialRadius: _distanceKm ?? 20.0,
+      onRadiusChanged: (km) {
+        setState(() {
+          if (km <= 0) {
+            _distanceKm = null;
+          } else {
+            _distanceKm = km;
+            _selectedWilaya = null;
+            _selectedBaladiya = null;
+            _selectedLocation = '';
+          }
+        });
+      },
     );
   }
 
@@ -340,7 +295,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _selectedSort = 'Newest';
       _priceRange = const RangeValues(0, 100000);
       _minRating = 0;
-      _locationFilter = null;
+      _selectedWilaya = null;
+      _selectedBaladiya = null;
+      _selectedLocation = '';
       _distanceKm = null;
     });
   }
@@ -350,11 +307,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _minRating > 0 ||
       _priceRange.start > 0 ||
       _priceRange.end < 100000 ||
-      _locationFilter?.hasFilters == true ||
+      (_selectedWilaya != null) ||
       _distanceKm != null;
 
   bool get _hasAnyLocationFilter =>
-      _locationFilter?.hasFilters == true || _distanceKm != null;
+      (_selectedWilaya != null) || _distanceKm != null;
 
   Map<int, String> _categoriesById(HomeProvider homeProvider) {
     return {for (final c in homeProvider.categories) c.id: c.name};
@@ -409,7 +366,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Search header (back + search field + filter button)
+              // Search header (containing back button, location toggle, search field, and filter button)
               _buildHeader(),
 
               // Type Toggle Buttons
@@ -431,8 +388,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildHeader() {
+    final distanceActive = _distanceKm != null;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -443,45 +402,144 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0EEFF),
-                borderRadius: BorderRadius.circular(12),
+          // Row 1: Back button + Location Toggle
+          Row(
+            children: [
+              // Back button
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0EEFF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded,
+                      color: AppColors.primaryColor, size: 20),
+                ),
               ),
-              child: const Icon(Icons.arrow_back_rounded,
-                  color: AppColors.primaryColor, size: 20),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Search field
-          Expanded(
-            child: SizedBox(
-              height: 46,
-              child: AppSearchField(
-                controller: _searchController,
-                focusNode: _searchFocus,
-                hintText: 'Search products, stores...',
-                onChanged: (_) => setState(() {}),
-                onSubmitted: () => _searchFocus.unfocus(),
-                onClear: () => setState(() {}),
+              const SizedBox(width: 12),
+              // Location Toggle
+              Expanded(
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Row(
+                    children: [
+                      // "City" Segment
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _showLocationPicker,
+                          child: Container(
+                            margin: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: !distanceActive ? AppColors.primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: !distanceActive ? Colors.white : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    (!distanceActive && _selectedLocation.isNotEmpty && _selectedLocation != '/')
+                                        ? _selectedLocation
+                                        : 'City',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: !distanceActive ? Colors.white : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // "Nearby" Segment
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _showDistancePicker,
+                          child: Container(
+                            margin: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: distanceActive ? AppColors.primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.radar,
+                                  size: 16,
+                                  color: distanceActive ? Colors.white : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    distanceActive ? '${_distanceKm!.toInt()} km' : 'Nearby',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: distanceActive ? Colors.white : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // Filter button
-          _buildHeaderButton(
-            icon: Icons.tune_rounded,
-            isActive: _minRating > 0 ||
-                _priceRange.start > 0 ||
-                _priceRange.end < 100000,
-            onTap: _showFiltersSheet,
+          const SizedBox(height: 12),
+          // Row 2: Search field + Filter button
+          Row(
+            children: [
+              // Search field
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: AppSearchField(
+                    controller: _searchController,
+                    focusNode: _searchFocus,
+                    hintText: 'Search products, stores...',
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: () => _searchFocus.unfocus(),
+                    onClear: () => setState(() {}),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Filter button
+              _buildHeaderButton(
+                icon: Icons.tune_rounded,
+                isActive: _minRating > 0 ||
+                    _priceRange.start > 0 ||
+                    _priceRange.end < 100000,
+                onTap: _showFiltersSheet,
+              ),
+            ],
           ),
         ],
       ),
@@ -579,19 +637,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         final categories = homeProvider.categories;
         if (categories.isEmpty) return const SizedBox.shrink();
 
-        final locationActive = _locationFilter?.hasFilters == true;
-        final distanceActive = _distanceKm != null;
-
-        // Location chip label: show "/" when distance mode is active
-        final locationLabel = distanceActive
-            ? '/'
-            : (_locationFilter?.displayText ?? 'All Algeria');
-
-        // Distance chip label: show "/" when location mode is active
-        final distanceLabel = locationActive
-            ? '/'
-            : (distanceActive ? '${_distanceKm!.toInt()} km' : 'Distance');
-
         return Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
@@ -631,121 +676,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                             color: AppColors.primaryColor,
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ─── Row 2: Location chip + Distance chip ───
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    // Location chip
-                    GestureDetector(
-                      onTap: _showLocationFilter,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: locationActive
-                              ? AppColors.primaryColor.withOpacity(0.12)
-                              : const Color(0xFFF0EEFF),
-                          borderRadius: BorderRadius.circular(20),
-                          border: locationActive
-                              ? Border.all(
-                                  color: AppColors.primaryColor, width: 1.2)
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.location_on_rounded,
-                              size: 12,
-                              color: locationActive
-                                  ? AppColors.primaryColor
-                                  : AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: 3),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 80),
-                              child: Text(
-                                locationLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: locationActive
-                                      ? AppColors.primaryColor
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 14,
-                              color: locationActive
-                                  ? AppColors.primaryColor
-                                  : AppColors.textSecondary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Distance chip
-                    GestureDetector(
-                      onTap: _showDistancePicker,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: distanceActive
-                              ? AppColors.primaryColor.withOpacity(0.12)
-                              : const Color(0xFFF0EEFF),
-                          borderRadius: BorderRadius.circular(20),
-                          border: distanceActive
-                              ? Border.all(
-                                  color: AppColors.primaryColor, width: 1.2)
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.radar,
-                              size: 12,
-                              color: distanceActive
-                                  ? AppColors.primaryColor
-                                  : AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              distanceLabel,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: distanceActive
-                                    ? AppColors.primaryColor
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 14,
-                              color: distanceActive
-                                  ? AppColors.primaryColor
-                                  : AppColors.textSecondary,
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ],
@@ -928,9 +858,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  if (_locationFilter?.hasFilters == true)
+                  if (_selectedWilaya != null)
                     _buildFilterTag(
-                      _locationFilter!.displayText,
+                      _selectedLocation.isNotEmpty && _selectedLocation != '/'
+                          ? _selectedLocation
+                          : _selectedWilaya!,
                       Icons.location_on_rounded,
                     ),
                   if (_distanceKm != null)
@@ -1274,51 +1206,29 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   // Location filter helpers
   bool _storeMatchesLocationFilter(String address) {
-    if (_locationFilter == null || !_locationFilter!.hasFilters) return true;
-    if (_locationFilter!.allAlgeria) return true;
+    if (_selectedWilaya == null) return true;
     if (address.isEmpty) return false;
 
     final addressLower = address.toLowerCase();
 
-    for (final wilaya in _locationFilter!.selectedWilayas) {
-      if (addressLower.contains(wilaya.toLowerCase())) {
-        // Check if there are specific baladiyat selected for this wilaya
-        final wilayaBaladiyat = _locationFilter!.selectedBaladiyat[wilaya];
-        if (wilayaBaladiyat != null && wilayaBaladiyat.isNotEmpty) {
-          // Only match if one of the specific baladiyat matches
-          for (final baladiya in wilayaBaladiyat) {
-            if (addressLower.contains(baladiya.toLowerCase())) {
-              return true;
-            }
-          }
-        } else {
-          // No specific baladiyat = all baladiyat in this wilaya
-          return true;
-        }
-      }
+    if (!addressLower.contains(_selectedWilaya!.toLowerCase())) {
+      return false;
+    }
+    if (_selectedBaladiya != null &&
+        !addressLower.contains(_selectedBaladiya!.toLowerCase())) {
+      return false;
     }
 
-    return false;
+    return true;
   }
 
   String? _getLocationBadgeCount() {
-    if (_locationFilter == null || !_locationFilter!.hasFilters) return null;
-    if (_locationFilter!.allAlgeria) return null;
-
-    // Count total baladiyat selected
-    int totalBaladiyat = 0;
-    for (final list in _locationFilter!.selectedBaladiyat.values) {
-      totalBaladiyat += list.length;
-    }
-
-    if (totalBaladiyat > 0) {
-      return totalBaladiyat.toString();
-    }
-    return _locationFilter!.selectedWilayas.length.toString();
+    if (_selectedWilaya == null) return null;
+    return '1';
   }
 
   List<User> _getLocationFilteredStores() {
-    if (_locationFilter == null || !_locationFilter!.hasFilters) {
+    if (_selectedWilaya == null) {
       return _searchedStores;
     }
     return _searchedStores
@@ -1339,7 +1249,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   List<User> _getActiveFilteredStores() {
     if (_distanceKm != null) return _getDistanceFilteredStores();
-    if (_locationFilter?.hasFilters == true) return _getLocationFilteredStores();
+    if (_selectedWilaya != null) return _getLocationFilteredStores();
     return _searchedStores;
   }
 

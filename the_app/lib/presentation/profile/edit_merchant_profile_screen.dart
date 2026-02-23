@@ -10,9 +10,8 @@ import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
 import '../common/location_picker_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// dart:html is web-only, imported conditionally
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import '../../core/utils/geolocation_stub.dart'
+    if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
@@ -151,23 +150,14 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
     setState(() => _isGettingLocation = true);
     try {
-      final geolocation = html.window.navigator.geolocation;
-
-      final completer = Completer<html.Geoposition>();
-      geolocation.getCurrentPosition(
-        enableHighAccuracy: true,
-        timeout: const Duration(seconds: 15),
-      ).then(completer.complete).catchError(completer.completeError);
-
-      final position = await completer.future;
-
-      setState(() {
-        _latitude = position.coords!.latitude!.toDouble();
-        _longitude = position.coords!.longitude!.toDouble();
-      });
-
-      if (mounted) Helpers.showSnackBar(context, 'Location updated successfully ✅');
-
+      final coords = await getWebCurrentPosition();
+      if (coords != null) {
+        setState(() {
+          _latitude = coords['latitude'];
+          _longitude = coords['longitude'];
+        });
+        if (mounted) Helpers.showSnackBar(context, 'Location updated successfully ✅');
+      }
     } catch (e) {
       if (mounted) Helpers.showSnackBar(context, 'Could not get location: $e');
     } finally {
