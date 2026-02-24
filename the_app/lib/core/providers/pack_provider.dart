@@ -94,6 +94,17 @@ class PackProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearAllData({bool notify = true}) {
+    _selectedProducts.clear();
+    _quantities.clear();
+    _myPacks.clear();
+    _storePacks.clear();
+    _isSubmitting = false;
+    _isLoadingPacks = false;
+    _error = null;
+    if (notify) notifyListeners();
+  }
+
   Future<Pack> submitPack({
     required String name,
     required String description,

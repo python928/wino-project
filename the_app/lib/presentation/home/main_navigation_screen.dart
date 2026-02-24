@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
+import '../../core/services/notification_badge_service.dart';
 import '../../core/providers/post_provider.dart';
 import '../shared_widgets/custom_bottom_nav.dart';
 import 'home_screen.dart';
@@ -31,6 +32,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
   String? _searchQuery;
   int _unreadCount = 0;
   Timer? _badgeTimer;
+  late final VoidCallback _badgeListener;
 
   // Method to navigate to search tab with a query
   void navigateToSearchWithQuery(String query) {
@@ -55,6 +57,13 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     _searchQuery = widget.initialSearchQuery; // Use initial search query if provided
     WidgetsBinding.instance.addObserver(this);
     _refreshTokenIfNeeded();
+    _badgeListener = () {
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = NotificationBadgeService.instance.unreadCount.value;
+      });
+    };
+    NotificationBadgeService.instance.unreadCount.addListener(_badgeListener);
     
     // Fetch badge count immediately and set up periodic refresh
     _fetchUnreadBadgeCount();
@@ -64,6 +73,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void dispose() {
     _badgeTimer?.cancel();
+    NotificationBadgeService.instance.unreadCount.removeListener(_badgeListener);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -74,6 +84,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     if (state == AppLifecycleState.resumed) {
       _refreshTokenIfNeeded();
       _fetchUnreadBadgeCount();
+      NotificationBadgeService.instance.syncMissedUnreadToShade();
     }
   }
 
@@ -90,9 +101,9 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
       final response = await ApiService.get(ApiConfig.notificationsUnreadCount);
       if (response is Map<String, dynamic> && response.containsKey('unread_count')) {
         if (mounted) {
-          setState(() {
-            _unreadCount = response['unread_count'] as int;
-          });
+          final next = response['unread_count'] as int;
+          setState(() => _unreadCount = next);
+          NotificationBadgeService.instance.unreadCount.value = next;
         }
       }
     } catch (e) {
@@ -115,6 +126,8 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final liveUnread = NotificationBadgeService.instance.unreadCount.value;
+    final badge = liveUnread > 0 ? liveUnread : _unreadCount;
     return Directionality(
       textDirection: TextDirection.ltr,  // Changed to LTR
       child: Scaffold(
@@ -127,7 +140,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
         bottomNavigationBar: CustomBottomNavBar(
           selectedIndex: _selectedIndex,
           onItemTapped: _onItemTapped,
-          notificationsBadgeCount: _unreadCount > 0 ? _unreadCount : null,
+          notificationsBadgeCount: badge > 0 ? badge : null,
         ),
       ),
     );

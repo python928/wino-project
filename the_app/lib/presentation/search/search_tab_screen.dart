@@ -78,6 +78,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   // Stores search
   List<User> _searchedStores = [];
   bool _isLoadingStores = false;
+  static const int _pageSize = 12;
+  int _allVisibleCount = _pageSize;
+  int _productsVisibleCount = _pageSize;
+  int _discountsVisibleCount = _pageSize;
+  int _packsVisibleCount = _pageSize;
+  int _storesVisibleCount = _pageSize;
 
   // User location for distance calculation
   double? _userLat;
@@ -143,12 +149,32 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     super.dispose();
   }
 
+  void _resetVisibleCounts() {
+    _allVisibleCount = _pageSize;
+    _productsVisibleCount = _pageSize;
+    _discountsVisibleCount = _pageSize;
+    _packsVisibleCount = _pageSize;
+    _storesVisibleCount = _pageSize;
+  }
+
+  Widget _buildLoadMoreButton(VoidCallback onPressed) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 18),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.expand_more_rounded),
+        label: const Text('Load more'),
+      ),
+    );
+  }
+
   void _performSearch() {
     _searchFocus.unfocus();
 
     if (!_hasSearched) {
       setState(() => _hasSearched = true);
     }
+    _resetVisibleCounts();
 
     final postProvider = context.read<PostProvider>();
     postProvider.loadPosts(
@@ -236,7 +262,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
 
     if (result != null) {
-      setState(() => _selectedCategoryIds = result);
+      setState(() {
+        _selectedCategoryIds = result;
+        _resetVisibleCounts();
+      });
     }
   }
 
@@ -257,6 +286,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _selectedBaladiya = result.baladiya;
         _selectedLocation = result.address;
         _distanceKm = null; // location mode active → clear distance
+        _resetVisibleCounts();
       });
     }
   }
@@ -275,6 +305,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             _selectedBaladiya = null;
             _selectedLocation = '';
           }
+          _resetVisibleCounts();
         });
       },
     );
@@ -299,6 +330,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _selectedBaladiya = null;
       _selectedLocation = '';
       _distanceKm = null;
+      _resetVisibleCounts();
     });
   }
 
@@ -612,7 +644,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       child: AppToggleButtonGroup(
         options: _typeOptions,
         selectedIndex: safeSelectedIndex,
-        onChanged: (i) => setState(() => _selectedType = _typeOptions[i].value),
+        onChanged: (i) => setState(() {
+          _selectedType = _typeOptions[i].value;
+          _resetVisibleCounts();
+        }),
         scrollable: true,
         compact: true,
       ),
@@ -697,8 +732,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         label: 'All',
                         color: AppColors.primaryColor,
                         isSelected: _selectedCategoryIds.isEmpty,
-                        onTap: () =>
-                            setState(() => _selectedCategoryIds = {}),
+                        onTap: () => setState(() {
+                          _selectedCategoryIds = {};
+                          _resetVisibleCounts();
+                        }),
                       );
                     }
                     final cat = categories[index - 1];
@@ -716,6 +753,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         } else {
                           _selectedCategoryIds.add(cat.id);
                         }
+                        _resetVisibleCounts();
                       }),
                     );
                   },
@@ -1360,6 +1398,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ...filteredOffers.map((o) => PromotionCard(offer: o)),
           ...filteredPacks.map((p) => PackCard(pack: p)),
         ];
+        final visibleCards = combinedCards.take(_allVisibleCount).toList();
 
         if (!hasItems && !hasStores) {
           return _buildEmptyState();
@@ -1401,15 +1440,21 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: combinedCards.length,
+                  itemCount: visibleCards.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: CardConstants.gridCrossAxisCount,
                     crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
                     mainAxisSpacing: CardConstants.gridMainAxisSpacing,
                     childAspectRatio: CardConstants.gridChildAspectRatio,
                   ),
-                  itemBuilder: (context, index) => combinedCards[index],
+                  itemBuilder: (context, index) => visibleCards[index],
                 ),
+                if (combinedCards.length > visibleCards.length)
+                  _buildLoadMoreButton(() {
+                    setState(() {
+                      _allVisibleCount += _pageSize;
+                    });
+                  }),
                 const SizedBox(height: 28),
               ],
               if (hasStores) ...[
@@ -1443,9 +1488,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Wrap(
                   spacing: 12,
                   runSpacing: 16,
+                  // keep "All" tab compact unless user explicitly expands stores
                   children: (_showAllStoresInAllView
-                          ? filteredStores
-                          : filteredStores.take(6))
+                          ? filteredStores.take(_storesVisibleCount)
+                          : filteredStores.take(_storesVisibleCount > 6
+                              ? 6
+                              : _storesVisibleCount))
                       .map((store) => StoreChip(
                             imageUrl: store.profileImage ?? '',
                             name: store.fullName,
@@ -1459,6 +1507,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           ))
                       .toList(),
                 ),
+                if (filteredStores.length >
+                    (_showAllStoresInAllView
+                        ? _storesVisibleCount
+                        : (_storesVisibleCount > 6 ? 6 : _storesVisibleCount)))
+                  _buildLoadMoreButton(() {
+                    setState(() {
+                      _storesVisibleCount += _pageSize;
+                    });
+                  }),
               ],
             ],
           ),
@@ -1635,33 +1692,48 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildEmptyState();
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(
-            horizontal: CardConstants.gridHorizontalPadding,
-            vertical: CardConstants.gridVerticalPadding,
+        final visible = products.take(_productsVisibleCount).toList();
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              GridView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CardConstants.gridHorizontalPadding,
+                  vertical: CardConstants.gridVerticalPadding,
+                ),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: CardConstants.gridCrossAxisCount,
+                  childAspectRatio: CardConstants.gridChildAspectRatio,
+                  mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                  crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                ),
+                itemCount: visible.length,
+                itemBuilder: (context, index) {
+                  return ProductCard(
+                    product: visible[index],
+                    userLat: _userLat,
+                    userLng: _userLng,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.productDetails,
+                        arguments: visible[index],
+                      );
+                    },
+                    onFavoriteTap: () {},
+                  );
+                },
+              ),
+              if (products.length > visible.length)
+                _buildLoadMoreButton(() {
+                  setState(() {
+                    _productsVisibleCount += _pageSize;
+                  });
+                }),
+            ],
           ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: CardConstants.gridCrossAxisCount,
-            childAspectRatio: CardConstants.gridChildAspectRatio,
-            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
-            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
-          ),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            return ProductCard(
-              product: products[index],
-              userLat: _userLat,
-              userLng: _userLng,
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  Routes.productDetails,
-                  arguments: products[index],
-                );
-              },
-              onFavoriteTap: () {},
-            );
-          },
         );
       },
     );
@@ -1698,21 +1770,36 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildEmptyState();
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(
-            horizontal: CardConstants.gridHorizontalPadding,
-            vertical: CardConstants.gridVerticalPadding,
+        final visible = offers.take(_discountsVisibleCount).toList();
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              GridView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CardConstants.gridHorizontalPadding,
+                  vertical: CardConstants.gridVerticalPadding,
+                ),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: CardConstants.gridCrossAxisCount,
+                  childAspectRatio: CardConstants.gridChildAspectRatio,
+                  mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                  crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                ),
+                itemCount: visible.length,
+                itemBuilder: (context, index) {
+                  return PromotionCard(offer: visible[index]);
+                },
+              ),
+              if (offers.length > visible.length)
+                _buildLoadMoreButton(() {
+                  setState(() {
+                    _discountsVisibleCount += _pageSize;
+                  });
+                }),
+            ],
           ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: CardConstants.gridCrossAxisCount,
-            childAspectRatio: CardConstants.gridChildAspectRatio,
-            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
-            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
-          ),
-          itemCount: offers.length,
-          itemBuilder: (context, index) {
-            return PromotionCard(offer: offers[index]);
-          },
         );
       },
     );
@@ -1742,21 +1829,36 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildEmptyState();
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(
-            horizontal: CardConstants.gridHorizontalPadding,
-            vertical: CardConstants.gridVerticalPadding,
+        final visible = packs.take(_packsVisibleCount).toList();
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              GridView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CardConstants.gridHorizontalPadding,
+                  vertical: CardConstants.gridVerticalPadding,
+                ),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: CardConstants.gridCrossAxisCount,
+                  childAspectRatio: CardConstants.gridChildAspectRatio,
+                  mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                  crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                ),
+                itemCount: visible.length,
+                itemBuilder: (context, index) {
+                  return PackCard(pack: visible[index]);
+                },
+              ),
+              if (packs.length > visible.length)
+                _buildLoadMoreButton(() {
+                  setState(() {
+                    _packsVisibleCount += _pageSize;
+                  });
+                }),
+            ],
           ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: CardConstants.gridCrossAxisCount,
-            childAspectRatio: CardConstants.gridChildAspectRatio,
-            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
-            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
-          ),
-          itemCount: packs.length,
-          itemBuilder: (context, index) {
-            return PackCard(pack: packs[index]);
-          },
         );
       },
     );
@@ -1775,24 +1877,35 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       return _buildEmptyState();
     }
 
+    final visibleStores = filteredStores.take(_storesVisibleCount).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 16,
-        children: filteredStores
-            .map((store) => StoreChip(
-                  imageUrl: store.profileImage ?? '',
-                  name: store.fullName,
-                  rating: store.averageRating,
-                  followersCount: store.followersCount,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    Routes.store,
-                    arguments: store.id,
-                  ),
-                ))
-            .toList(),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 16,
+            children: visibleStores
+                .map((store) => StoreChip(
+                      imageUrl: store.profileImage ?? '',
+                      name: store.fullName,
+                      rating: store.averageRating,
+                      followersCount: store.followersCount,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        Routes.store,
+                        arguments: store.id,
+                      ),
+                    ))
+                .toList(),
+          ),
+          if (filteredStores.length > visibleStores.length)
+            _buildLoadMoreButton(() {
+              setState(() {
+                _storesVisibleCount += _pageSize;
+              });
+            }),
+        ],
       ),
     );
   }
@@ -1819,4 +1932,3 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
 }
-

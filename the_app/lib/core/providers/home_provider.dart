@@ -267,6 +267,28 @@ class HomeProvider with ChangeNotifier {
     }
   }
 
+  void clearAllData({bool notify = true}) {
+    _categories = [];
+    _featuredStores = [];
+    _recentProducts = [];
+    _hotDeals = [];
+    _featuredPacks = [];
+
+    _isLoadingCategories = false;
+    _isLoadingStores = false;
+    _isLoadingProducts = false;
+    _isLoadingHotDeals = false;
+    _isLoadingPacks = false;
+
+    _categoriesError = null;
+    _storesError = null;
+    _productsError = null;
+    _hotDealsError = null;
+    _packsError = null;
+
+    if (notify) notifyListeners();
+  }
+
   /// Load featured packs
   Future<void> loadFeaturedPacks() async {
     _isLoadingPacks = true;

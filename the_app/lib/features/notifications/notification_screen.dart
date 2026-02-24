@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -80,20 +81,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final res = await ApiService.get(ApiConfig.notifications);
-      if (res.statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(res.bodyBytes));
-        final List raw = decoded is Map
-            ? (decoded['results'] ?? decoded['notifications'] ?? [])
-            : decoded;
-        final items = raw.map((e) => NotificationItem.fromJson(e)).toList();
-        setState(() {
-          _notifications = items;
-          _unreadCount = items.where((n) => !n.isRead).length;
-          _loading = false;
-        });
-      } else {
-        setState(() { _error = 'Failed to load notifications'; _loading = false; });
-      }
+      final decoded = (res is Map<String, dynamic> || res is List) ? res : jsonDecode(utf8.decode(res.bodyBytes));
+      final List raw = decoded is Map
+          ? (decoded['results'] ?? decoded['notifications'] ?? [])
+          : (decoded is List ? decoded : const []);
+      final items = raw.map((e) => NotificationItem.fromJson(Map<String, dynamic>.from(e))).toList();
+      setState(() {
+        _notifications = items;
+        _unreadCount = items.where((n) => !n.isRead).length;
+        _loading = false;
+      });
+      NotificationBadgeService.instance.unreadCount.value = _unreadCount;
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }
@@ -105,6 +103,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
       _unreadCount = 0;
     });
+    NotificationBadgeService.instance.clear();
   }
 
   Future<void> _markRead(NotificationItem item) async {
@@ -120,11 +119,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
         _unreadCount = _notifications.where((n) => !n.isRead).length;
       }
     });
+    NotificationBadgeService.instance.unreadCount.value = _unreadCount;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -205,6 +207,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 }

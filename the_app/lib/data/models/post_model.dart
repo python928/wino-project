@@ -104,15 +104,17 @@ class Post {
 
     // Handle store - can be an int ID or an object
     int storeId = 0;
-    String storeName = 'Local Store';
+    String storeName = _resolveStoreName(json);
     String storeAddress = '';
     if (json['store'] is int) {
       storeId = json['store'];
       storeAddress = json['store_address']?.toString() ?? '';
     } else if (json['store'] is Map) {
-      storeId = json['store']['id'] ?? 0;
-      storeName = json['store']['name'] ?? 'Local Store';
-      storeAddress = json['store']['address']?.toString() ?? '';
+      final storeMap = json['store'] as Map<String, dynamic>;
+      storeId = storeMap['id'] ?? 0;
+      storeName = _resolveStoreName(json);
+      storeAddress =
+          (json['store_address'] ?? storeMap['address'])?.toString() ?? '';
     }
 
     // Parse store coordinates
@@ -221,7 +223,7 @@ class Post {
   }) {
     final productId = json['id'] as int;
     final storeId = json['store'] as int;
-    final storeName = storesById?[storeId] ?? 'Local Store';
+    final storeName = storesById?[storeId] ?? _resolveStoreName(json);
 
     final user = usersById != null
         ? usersById[json['owner_id'] ?? storeId] // owner_id is not present; fall back to storeId
@@ -273,6 +275,27 @@ class Post {
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
+  }
+
+  static String _resolveStoreName(Map<String, dynamic> json) {
+    final topLevel = (json['store_name'] ?? json['display_name'] ?? '')
+        .toString()
+        .trim();
+    if (topLevel.isNotEmpty) return topLevel;
+
+    final rawStore = json['store'];
+    if (rawStore is Map<String, dynamic>) {
+      final nested = (rawStore['display_name'] ??
+              rawStore['store_name'] ??
+              rawStore['name'] ??
+              rawStore['username'] ??
+              '')
+          .toString()
+          .trim();
+      if (nested.isNotEmpty) return nested;
+    }
+
+    return 'Store';
   }
 
   /// Create a copy of this Post with modified fields

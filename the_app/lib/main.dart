@@ -14,6 +14,7 @@ import 'core/providers/pack_provider.dart';
 import 'core/routing/route_generator.dart';
 import 'presentation/auth/splash_screen.dart';
 import 'features/analytics/analytics_export.dart';
+import 'core/services/notification_badge_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -27,11 +28,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
+const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
+  'dz_local_channel',
+  'DZ Local Notifications',
+  description: 'General notifications for Topri app',
+  importance: Importance.high,
+);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 
   // Setup local notifications for foreground
   const AndroidInitializationSettings initializationSettingsAndroid =
@@ -39,18 +53,31 @@ void main() async {
   const InitializationSettings initializationSettings =
       InitializationSettings(android: initializationSettingsAndroid);
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(_androidChannel);
+  NotificationBadgeService.instance
+      .attachLocalNotifications(flutterLocalNotificationsPlugin);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     debugPrint('Got a message whilst in the foreground!');
-    if (message.notification != null) {
+    NotificationBadgeService.instance.refresh();
+    final title =
+        message.notification?.title ?? message.data['title']?.toString();
+    final body =
+        message.notification?.body ?? message.data['body']?.toString();
+    if ((title != null && title.isNotEmpty) ||
+        (body != null && body.isNotEmpty)) {
       flutterLocalNotificationsPlugin.show(
-        message.notification.hashCode,
-        message.notification?.title,
-        message.notification?.body,
-        const NotificationDetails(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title ?? 'Notification',
+        body ?? '',
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'dz_local_channel',
-            'DZ Local Notifications',
+            _androidChannel.id,
+            _androidChannel.name,
+            channelDescription: _androidChannel.description,
             importance: Importance.max,
             priority: Priority.high,
           ),
@@ -58,9 +85,19 @@ void main() async {
       );
     }
   });
+  FirebaseMessaging.onMessageOpenedApp.listen((_) {
+    NotificationBadgeService.instance.refresh();
+  });
+
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    NotificationBadgeService.instance.refresh();
+  }
 
   // Initialize Storage Service
   await StorageService.init();
+  await NotificationBadgeService.instance.refresh();
+  await NotificationBadgeService.instance.syncMissedUnreadToShade();
   
   runApp(const DzLocalApp());
 }

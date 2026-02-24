@@ -89,12 +89,12 @@ class PostProvider with ChangeNotifier {
     }
   }
 
-  void clearMyData() {
+  void clearMyData({bool notify = true}) {
     _myPosts = [];
     _myOffers = [];
     _storePosts = [];
     _storeOffers = [];
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   Future<void> createOffer({
@@ -371,5 +371,28 @@ class PostProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  void clearAllData({bool notify = true}) {
+    _posts = [];
+    _myPosts = [];
+    _storePosts = [];
+    _offers = [];
+    _myOffers = [];
+    _storeOffers = [];
+    _isLoading = false;
+    _isLoadingPosts = false;
+    _isLoadingOffers = false;
+    _error = null;
+    _postsError = null;
+    _offersError = null;
+    _searchDebounce?.cancel();
+    if (notify) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -184,16 +185,23 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
 
                   if (showNotificationIcon) ...[
                     const SizedBox(width: 8),
-                    _IconBtn(
-                      icon: Icons.notifications_outlined,
-                      onTap: onNotificationTap ?? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NotificationsScreen(),
-                          ),
-                        );
-                      },
+                    ValueListenableBuilder<int>(
+                      valueListenable:
+                          NotificationBadgeService.instance.unreadCount,
+                      builder: (context, unread, _) => _IconBtn(
+                        icon: Icons.notifications_outlined,
+                        badgeCount: unread > 0 ? unread : null,
+                        onTap: onNotificationTap ??
+                            () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NotificationsScreen(),
+                                ),
+                              );
+                              NotificationBadgeService.instance.refresh();
+                            },
+                      ),
                     ),
                   ],
                 ],
@@ -212,7 +220,12 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _IconBtn({required this.icon, required this.onTap});
+  final int? badgeCount;
+  const _IconBtn({
+    required this.icon,
+    required this.onTap,
+    this.badgeCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +238,41 @@ class _IconBtn extends StatelessWidget {
           color: const Color(0xFFF0EEFF),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: AppColors.primaryColor, size: 20),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Align(
+              alignment: Alignment.center,
+              child: Icon(icon, color: AppColors.primaryColor, size: 20),
+            ),
+            if (badgeCount != null && badgeCount! > 0)
+              Positioned(
+                right: -3,
+                top: -3,
+                child: Container(
+                  constraints:
+                      const BoxConstraints(minWidth: 16, minHeight: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  child: Text(
+                    badgeCount! > 99 ? '99+' : badgeCount.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

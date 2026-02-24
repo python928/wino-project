@@ -17,6 +17,7 @@ class StorageService {
   static const String keyTheme = 'theme';
   static const String keyFirstTime = 'first_time';
   static const String keyLastCategories = 'last_categories';
+  static const String keyLastNotifiedNotificationId = 'last_notified_notification_id';
   
   // Secure Storage Keys (for tokens - sensitive data)
   static const String _secureKeyAccessToken = 'secure_access_token';
@@ -147,6 +148,16 @@ class StorageService {
     } catch (e) {
       return <String>[];
     }
+  }
+
+  // ==================== NOTIFICATION SYNC ====================
+
+  static int getLastNotifiedNotificationId() {
+    return prefs.getInt(keyLastNotifiedNotificationId) ?? 0;
+  }
+
+  static Future<void> setLastNotifiedNotificationId(int id) async {
+    await prefs.setInt(keyLastNotifiedNotificationId, id);
   }
 
   // ==================== FIRST TIME ====================

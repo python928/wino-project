@@ -8,8 +8,12 @@ import '../../core/routing/routes.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/services/follow_change_notifier.dart';
+import '../../core/services/notification_badge_service.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/pack_provider.dart';
+import '../../core/providers/home_provider.dart';
+import '../../core/providers/store_provider.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
@@ -70,6 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Filter state for toggle buttons (replaces dropdown)
   int _selectedFilterIndex = 0; // 0=all, 1=product, 2=promotion, 3=pack
+  int _profileVisibleCount = 12;
 
   int? _storeId; // keep, but storeId == userId now
   String? _lastProfileType; // remove usage (kept field is harmless but unused)
@@ -78,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _reviewController = TextEditingController();
   double _rating = 0.0;
   bool _showReviewForm = false;
+  bool _isProfileContentLoading = true;
 
   void _showPublishMenu() {
     // Block publishing if store has no GPS coordinates
@@ -358,6 +364,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
+    if (mounted) {
+      setState(() {
+        _isProfileContentLoading = true;
+      });
+    }
+
+    // Clear previous store/profile lists to avoid flashing stale data
+    try {
+      context.read<PostProvider>().clearMyData(notify: false);
+      context.read<PackProvider>().clearAllData(notify: false);
+    } catch (_) {
+      // best-effort
+    }
+
     final userData = StorageService.getUserData();
     if (userData == null) {
       if (!mounted) return;
@@ -428,21 +448,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (!mounted || _userId == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+
+    try {
       if (_isOwnerView) {
-        context.read<PostProvider>().loadMyPosts(_userId.toString());
-        context.read<PostProvider>().loadMyOffers(_userId.toString());
-        context.read<PackProvider>().loadMyPacks(_userId!);
+        await Future.wait([
+          context.read<PostProvider>().loadMyPosts(_userId.toString()),
+          context.read<PostProvider>().loadMyOffers(_userId.toString()),
+          context.read<PackProvider>().loadMyPacks(_userId!),
+        ]);
       } else {
-        context.read<PostProvider>().loadStorePosts(_userId!);
-        context.read<PostProvider>().loadStoreOffers(_userId!);
-        context.read<PackProvider>().loadStorePacks(_userId!);
+        await Future.wait([
+          context.read<PostProvider>().loadStorePosts(_userId!),
+          context.read<PostProvider>().loadStoreOffers(_userId!),
+          context.read<PackProvider>().loadStorePacks(_userId!),
+        ]);
       }
-    });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProfileContentLoading = false;
+        });
+      }
+    }
   }
 
   void _handleLogout() async {
+    try {
+      await context.read<AuthProvider>().logout();
+    } catch (_) {
+      // best-effort
+    }
+    context.read<PostProvider>().clearAllData(notify: false);
+    context.read<PackProvider>().clearAllData(notify: false);
+    context.read<HomeProvider>().clearAllData(notify: false);
+    context.read<StoreProvider>().clear();
+    NotificationBadgeService.instance.clear();
     await StorageService.clearAll();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -872,11 +912,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     selectedIndex: _selectedFilterIndex,
                     postsCount: postsCount,
                     onFilterChanged: (index) {
-                      setState(() => _selectedFilterIndex = index);
+                      setState(() {
+                        _selectedFilterIndex = index;
+                        _profileVisibleCount = 12;
+                      });
                     },
                     searchController: _searchController,
                     onSearchChanged: (value) {
-                      setState(() => _searchQuery = value);
+                      setState(() {
+                        _searchQuery = value;
+                        _profileVisibleCount = 12;
+                      });
                     },
                   );
                 },
@@ -895,6 +941,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMerchantPosts({required String type}) {
     return Consumer2<PostProvider, PackProvider>(
       builder: (context, postProvider, packProvider, child) {
+        if (_isProfileContentLoading) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 28),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final products = _isOwnerView ? postProvider.myPosts : postProvider.storePosts;
         final offers = _isOwnerView ? postProvider.myOffers : postProvider.storeOffers;
         final packs = _isOwnerView ? packProvider.myPacks : packProvider.storePacks;
@@ -969,129 +1022,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(
-            horizontal: CardConstants.gridHorizontalPadding,
-            vertical: CardConstants.gridVerticalPadding,
-          ),
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: CardConstants.gridCrossAxisCount,
-            crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
-            mainAxisSpacing: CardConstants.gridMainAxisSpacing,
-            childAspectRatio: CardConstants.gridChildAspectRatio,
-          ),
-          itemCount: filteredItems.length,
-          itemBuilder: (context, index) {
-            final item = filteredItems[index];
-            if (item is Post) {
-              return ProductCard(
-                product: item,
-                showUnavailableOverlay: true,
-                showStoreName: false,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.productDetails,
-                    arguments: item,
-                  );
-                },
-                onEditTap: _isOwnerView
-                    ? () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    AddProductScreen(product: item))).then(
-                            (result) {
-                          if (result == true && _userId != null) {
-                            context
-                                .read<PostProvider>()
-                                .loadMyPosts(_userId.toString());
-                          }
-                        });
-                      }
-                    : null,
-              );
-            } else if (item is Pack) {
-              return PackCard(
-                pack: item,
-                isUnavailable: !item.isAvailable,
-                showUnavailableOverlay: true,
-                onTap: () {
-                  Navigator.pushNamed(context, Routes.packDetails,
-                      arguments: item);
-                },
-                onEditTap: _isOwnerView
-                    ? () {
-                        Navigator.pushNamed(context, Routes.addPack,
-                                arguments: item)
-                            .then((result) {
-                          if (result == true && mounted) {
-                            // Refresh packs so updated discount/products are reflected.
-                            final storeId = _storeId;
-                            if (storeId != null) {
-                              context.read<PackProvider>().loadMyPacks(storeId);
-                            }
-                          }
-                        });
-                      }
-                    : null,
-              );
-            } else if (item is Offer) {
-              try {
-                return PromotionCard(
-                  offer: item,
-                  showUnavailableOverlay: true,
-                  showStoreName: false,
-                  onTap: () {
-                    final product = item.product;
-                    final productWithPromotion = product.copyWith(
-                      price: item.newPrice,
-                      oldPrice: product.price,
-                      discountPercentage: item.discountPercentage,
-                    );
-                    Navigator.pushNamed(
-                      context,
-                      Routes.productDetails,
-                      arguments: productWithPromotion,
-                    );
-                  },
-                  onEditTap: _isOwnerView
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  AddPromotionScreen(offer: item),
-                            ),
-                          ).then((result) {
-                            if (result == true && mounted) {
-                              final provider = Provider.of<PostProvider>(context,
-                                  listen: false);
-                              if (_userId != null) {
-                                provider.loadMyPosts(_userId.toString());
-                              }
-                              if (_storeId != null) {
-                                provider.loadMyOffers(_storeId.toString());
+        final displayedItems = filteredItems.take(_profileVisibleCount).toList();
+        final hasMore = filteredItems.length > displayedItems.length;
+
+        return Column(
+          children: [
+            GridView.builder(
+              padding: const EdgeInsets.symmetric(
+                horizontal: CardConstants.gridHorizontalPadding,
+                vertical: CardConstants.gridVerticalPadding,
+              ),
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: CardConstants.gridCrossAxisCount,
+                crossAxisSpacing: CardConstants.gridCrossAxisSpacing,
+                mainAxisSpacing: CardConstants.gridMainAxisSpacing,
+                childAspectRatio: CardConstants.gridChildAspectRatio,
+              ),
+              itemCount: displayedItems.length,
+              itemBuilder: (context, index) {
+                final item = displayedItems[index];
+                if (item is Post) {
+                  return ProductCard(
+                    product: item,
+                    showUnavailableOverlay: true,
+                    showStoreName: false,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.productDetails,
+                        arguments: item,
+                      );
+                    },
+                    onEditTap: _isOwnerView
+                        ? () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        AddProductScreen(product: item))).then(
+                                (result) {
+                              if (result == true && _userId != null) {
                                 context
-                                    .read<PackProvider>()
-                                    .loadMyPacks(_storeId!);
+                                    .read<PostProvider>()
+                                    .loadMyPosts(_userId.toString());
                               }
-                              provider.loadOffers();
+                            });
+                          }
+                        : null,
+                  );
+                } else if (item is Pack) {
+                  return PackCard(
+                    pack: item,
+                    isUnavailable: !item.isAvailable,
+                    showUnavailableOverlay: true,
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.packDetails,
+                          arguments: item);
+                    },
+                    onEditTap: _isOwnerView
+                        ? () {
+                            Navigator.pushNamed(context, Routes.addPack,
+                                    arguments: item)
+                                .then((result) {
+                              if (result == true && mounted) {
+                                final storeId = _storeId;
+                                if (storeId != null) {
+                                  context
+                                      .read<PackProvider>()
+                                      .loadMyPacks(storeId);
+                                }
+                              }
+                            });
+                          }
+                        : null,
+                  );
+                } else if (item is Offer) {
+                  try {
+                    return PromotionCard(
+                      offer: item,
+                      showUnavailableOverlay: true,
+                      showStoreName: false,
+                      onTap: () {
+                        final product = item.product;
+                        final productWithPromotion = product.copyWith(
+                          price: item.newPrice,
+                          oldPrice: product.price,
+                          discountPercentage: item.discountPercentage,
+                        );
+                        Navigator.pushNamed(
+                          context,
+                          Routes.productDetails,
+                          arguments: productWithPromotion,
+                        );
+                      },
+                      onEditTap: _isOwnerView
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      AddPromotionScreen(offer: item),
+                                ),
+                              ).then((result) {
+                                if (result == true && mounted) {
+                                  final provider = Provider.of<PostProvider>(
+                                      context,
+                                      listen: false);
+                                  if (_userId != null) {
+                                    provider.loadMyPosts(_userId.toString());
+                                  }
+                                  if (_storeId != null) {
+                                    provider.loadMyOffers(_storeId.toString());
+                                    context
+                                        .read<PackProvider>()
+                                        .loadMyPacks(_storeId!);
+                                  }
+                                  provider.loadOffers();
+                                }
+                              });
                             }
-                          });
-                        }
-                      : null,
-                );
-              } catch (e) {
-                debugPrint('Profile: Error displaying offer: $e');
+                          : null,
+                    );
+                  } catch (e) {
+                    debugPrint('Profile: Error displaying offer: $e');
+                    return const SizedBox.shrink();
+                  }
+                }
                 return const SizedBox.shrink();
-              }
-            }
-            return const SizedBox.shrink();
-          },
+              },
+            ),
+            if (hasMore)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _profileVisibleCount += 12;
+                    });
+                  },
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: const Text('Load more'),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -1227,4 +1302,3 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
-
