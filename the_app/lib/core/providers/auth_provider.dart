@@ -3,6 +3,7 @@ import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/storage_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -12,6 +13,20 @@ class AuthProvider with ChangeNotifier {
 
   AuthProvider() {
     _loadUserFromStorage();
+  }
+
+  Future<void> _syncFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await ApiService.updateFcmToken(token);
+      }
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        ApiService.updateFcmToken(newToken);
+      });
+    } catch (e) {
+      debugPrint('Error syncing FCM token: $e');
+    }
   }
 
   void _loadUserFromStorage() {
@@ -65,6 +80,7 @@ class AuthProvider with ChangeNotifier {
       print('AuthProvider: User parsed successfully: ${_user?.username}');
 
       await StorageService.saveUserData(_user!.toJson());
+      _syncFcmToken();
 
       _isLoading = false;
       notifyListeners();
@@ -98,6 +114,7 @@ class AuthProvider with ChangeNotifier {
       }
 
       await StorageService.saveUserData(_user!.toJson());
+      _syncFcmToken();
 
       _isLoading = false;
       notifyListeners();
@@ -174,6 +191,7 @@ class AuthProvider with ChangeNotifier {
     if (accessToken != null) {
       try {
         await loadProfile();
+        _syncFcmToken();
         return true;
       } catch (e) {
         debugPrint('--- FAILED TO PARSE USER FROM JSON (loadProfile) ---');

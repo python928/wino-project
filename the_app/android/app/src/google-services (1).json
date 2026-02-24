@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "39284761663",
+    "project_id": "wino-ea17f",
+    "storage_bucket": "wino-ea17f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:39284761663:android:caec6485cc724f0ea3848a",
+        "android_client_info": {
+          "package_name": "com.example.the_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD28yNdggpRN58DF9f3YfK_tUl7IDNg8ac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/config/api_config.dart';
 import '../../core/providers/post_provider.dart';
 import '../shared_widgets/custom_bottom_nav.dart';
 import 'home_screen.dart';
@@ -27,6 +29,8 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     with WidgetsBindingObserver {
   late int _selectedIndex;
   String? _searchQuery;
+  int _unreadCount = 0;
+  Timer? _badgeTimer;
 
   // Method to navigate to search tab with a query
   void navigateToSearchWithQuery(String query) {
@@ -51,10 +55,15 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     _searchQuery = widget.initialSearchQuery; // Use initial search query if provided
     WidgetsBinding.instance.addObserver(this);
     _refreshTokenIfNeeded();
+    
+    // Fetch badge count immediately and set up periodic refresh
+    _fetchUnreadBadgeCount();
+    _badgeTimer = Timer.periodic(const Duration(minutes: 2), (_) => _fetchUnreadBadgeCount());
   }
 
   @override
   void dispose() {
+    _badgeTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -64,6 +73,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       _refreshTokenIfNeeded();
+      _fetchUnreadBadgeCount();
     }
   }
 
@@ -72,6 +82,21 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
       await ApiService.proactiveRefreshIfNeeded();
     } catch (e) {
       debugPrint('Token refresh check failed: $e');
+    }
+  }
+  
+  Future<void> _fetchUnreadBadgeCount() async {
+    try {
+      final response = await ApiService.get(ApiConfig.notificationsUnreadCount);
+      if (response is Map<String, dynamic> && response.containsKey('unread_count')) {
+        if (mounted) {
+          setState(() {
+            _unreadCount = response['unread_count'] as int;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch unread badge count: $e');
     }
   }
 
@@ -102,6 +127,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
         bottomNavigationBar: CustomBottomNavBar(
           selectedIndex: _selectedIndex,
           onItemTapped: _onItemTapped,
+          notificationsBadgeCount: _unreadCount > 0 ? _unreadCount : null,
         ),
       ),
     );

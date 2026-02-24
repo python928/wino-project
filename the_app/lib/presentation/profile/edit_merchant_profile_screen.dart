@@ -9,6 +9,7 @@ import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
 import '../common/location_picker_screen.dart';
+import '../../core/services/location_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
@@ -84,26 +85,30 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     _descriptionController =
         TextEditingController(text: widget.initialStoreDescription ?? '');
 
-    _facebookController = TextEditingController(text: widget.initialFacebook ?? '');
-    _instagramController = TextEditingController(text: widget.initialInstagram ?? '');
-    _whatsappController = TextEditingController(text: widget.initialWhatsapp ?? '');
+    _facebookController =
+        TextEditingController(text: widget.initialFacebook ?? '');
+    _instagramController =
+        TextEditingController(text: widget.initialInstagram ?? '');
+    _whatsappController =
+        TextEditingController(text: widget.initialWhatsapp ?? '');
     _tiktokController = TextEditingController(text: widget.initialTiktok ?? '');
-    _youtubeController = TextEditingController(text: widget.initialYoutube ?? '');
+    _youtubeController =
+        TextEditingController(text: widget.initialYoutube ?? '');
 
     _avatarUrl = widget.initialImage;
     _coverUrl = widget.initialCoverImage;
-    
+
     // Initialize Lat/Lng
     _latitude = widget.initialLatitude;
     _longitude = widget.initialLongitude;
-    
+
     // Fallback to storage if not passed in props but we have address
     if (_latitude == null) {
-         final userData = StorageService.getUserData();
-         if (userData != null && userData['latitude'] != null) {
-             _latitude = double.tryParse(userData['latitude'].toString());
-             _longitude = double.tryParse(userData['longitude'].toString());
-         }
+      final userData = StorageService.getUserData();
+      if (userData != null && userData['latitude'] != null) {
+        _latitude = double.tryParse(userData['latitude'].toString());
+        _longitude = double.tryParse(userData['longitude'].toString());
+      }
     }
 
     _loadAddress();
@@ -143,20 +148,26 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       }
     }
 
-    if (!kIsWeb) {
-      if (mounted) Helpers.showSnackBar(context, 'GPS only works on the mobile app.');
-      return;
-    }
-
     setState(() => _isGettingLocation = true);
     try {
-      final coords = await getWebCurrentPosition();
-      if (coords != null) {
+      if (kIsWeb) {
+        final coords = await getWebCurrentPosition();
+        if (coords != null) {
+          setState(() {
+            _latitude = coords['latitude'];
+            _longitude = coords['longitude'];
+          });
+          if (mounted)
+            Helpers.showSnackBar(context, 'Location updated successfully ✅');
+        }
+      } else {
+        final pos = await LocationService.getCurrentPosition();
         setState(() {
-          _latitude = coords['latitude'];
-          _longitude = coords['longitude'];
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
         });
-        if (mounted) Helpers.showSnackBar(context, 'Location updated successfully ✅');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Location updated successfully ✅');
       }
     } catch (e) {
       if (mounted) Helpers.showSnackBar(context, 'Could not get location: $e');
@@ -328,12 +339,15 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       };
 
       // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
-      if (_latitude != null) payload['latitude'] = _latitude!.toStringAsFixed(6);
-      if (_longitude != null) payload['longitude'] = _longitude!.toStringAsFixed(6);
+      if (_latitude != null)
+        payload['latitude'] = _latitude!.toStringAsFixed(6);
+      if (_longitude != null)
+        payload['longitude'] = _longitude!.toStringAsFixed(6);
 
       debugPrint('💾 Saving profile payload: $payload');
 
-      final updated = await ApiService.patch(ApiConfig.userDetail(userId), payload);
+      final updated =
+          await ApiService.patch(ApiConfig.userDetail(userId), payload);
       debugPrint('✅ Save response: $updated');
 
       // Sync local storage with fresh server values
@@ -508,7 +522,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
                   // Social Accounts Section
                   Text('Social Accounts',
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
 
                   AppTextField(
@@ -524,7 +539,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     controller: _instagramController,
                     label: 'Instagram',
                     hint: 'https://instagram.com/...',
-                    icon: Icons.camera_alt_outlined, // Fallback as we don't have font_awesome here yet
+                    icon: Icons
+                        .camera_alt_outlined, // Fallback as we don't have font_awesome here yet
                     style: AppTextFieldStyle.profile,
                   ),
                   const SizedBox(height: 12),
@@ -546,7 +562,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     icon: Icons.music_note,
                     style: AppTextFieldStyle.profile,
                   ),
-                   const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
                   AppTextField(
                     controller: _youtubeController,
@@ -796,25 +812,30 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // GPS Button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _isGettingLocation ? null : _getCurrentLocation,
-            icon: _isGettingLocation 
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+            icon: _isGettingLocation
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.my_location, size: 18),
-            label: Text(_latitude != null 
-                ? 'Update Grid Coordinates (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})' 
+            label: Text(_latitude != null
+                ? 'Update Grid Coordinates (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})'
                 : 'Get Current GPS Location'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: AppColors.primaryColor.withValues(alpha: 0.5)),
+              side: BorderSide(
+                  color: AppColors.primaryColor.withValues(alpha: 0.5)),
               foregroundColor: AppColors.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),

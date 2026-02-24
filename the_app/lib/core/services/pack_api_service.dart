@@ -47,6 +47,18 @@ class PackApiService {
     }
   }
 
+  Future<Pack> getPack(int packId) async {
+    try {
+      final data = await ApiService.get('/api/catalog/packs/$packId/');
+      if (data is Map<String, dynamic>) {
+        return Pack.fromJson(data);
+      }
+      throw Exception('Unexpected response when getting pack');
+    } catch (e) {
+      throw Exception('Error getting pack: $e');
+    }
+  }
+
   Future<Pack> createPack({
     required String name,
     required String description,
@@ -71,7 +83,20 @@ class PackApiService {
 
       final data = await ApiService.post('/api/catalog/packs/', body);
       if (data is Map<String, dynamic>) {
-        return Pack.fromJson(data);
+        final pack = Pack.fromJson(data);
+
+        // Trigger notification
+        try {
+          await ApiService.post(ApiConfig.notificationsTrigger, {
+            'post_id': pack.id,
+            'post_type': 'pack',
+            'post_title': pack.name,
+          });
+        } catch (e) {
+          // ignore error to return pack
+        }
+
+        return pack;
       }
       throw Exception('Unexpected response when creating pack');
     } catch (e) {

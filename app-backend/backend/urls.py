@@ -21,6 +21,11 @@ from django.contrib.auth.views import LogoutView
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
+from rest_framework.routers import DefaultRouter
+from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
+
+router = DefaultRouter()
+router.register('devices', FCMDeviceAuthorizedViewSet)
 
 urlpatterns = [
     # Override logout to allow GET redirect instead of 405 when hit directly
@@ -42,9 +47,10 @@ urlpatterns = [
     path('api/catalog/', include('catalog.urls')),
     # Remove unused messaging and notifications if not needed
     # path('api/messaging/', include('messaging.urls')),
-    # path('api/notifications/', include('notifications.urls')),
+    path('api/notifications/', include('notifications.urls')),
     path('api/subscriptions/', include('subscriptions.urls')),
     path('api/analytics/', include('analytics.urls')),
+    path('api/devices/', include(router.urls)),
 ]
 
 if settings.DEBUG:

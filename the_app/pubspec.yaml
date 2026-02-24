@@ -22,6 +22,7 @@ dependencies:
   jwt_decoder: ^2.0.1
   provider: ^6.1.1
   image_picker: ^1.2.1
+  geolocator: ^13.0.0
 
   # Advanced UI/UX Framework - Premium Experience
   google_fonts: ^6.2.1
@@ -75,6 +76,10 @@ dependencies:
   share_plus: ^10.0.2              # Social sharing
   url_launcher: ^6.3.0             # External links
   local_auth: ^2.3.0               # Biometric auth
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
+  flutter_local_notifications: ^18.0.1
+  intl: ^0.20.2
   
 
 

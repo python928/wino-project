@@ -211,6 +211,36 @@ JAZZMIN_SETTINGS = {
     ],
 }
 
+# Celery Settings
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Run Celery tasks eagerly strictly in development environment (without a worker)
+CELERY_TASK_ALWAYS_EAGER = DEBUG
+
+# Initialize Firebase Admin SDK
+import firebase_admin
+from firebase_admin import credentials
+
+cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', str(BASE_DIR / 'firebase-adminsdk.json'))
+if os.path.exists(cred_path):
+    cred = credentials.Certificate(cred_path)
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+else:
+    print(f"Warning: Firebase credentials not found at {cred_path}. Push notifications will not work.")
+
+# Add HEIC support for uploaded images
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    print("pillow-heif not installed, HEIC image uploads might fail.")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

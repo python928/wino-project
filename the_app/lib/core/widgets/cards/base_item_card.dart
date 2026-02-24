@@ -310,7 +310,7 @@ class BaseItemCard extends StatelessWidget {
   Widget _buildTitle() {
     return Text(
       title,
-      maxLines: 2,
+      maxLines: 1, // was 2 – avoid overflow when grid tiles are short
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         fontWeight: FontWeight.w700,

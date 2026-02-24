@@ -192,6 +192,17 @@ class PostRepository {
         }
       }
 
+      // Explicitly trigger notification now that the post and images are fully saved
+      try {
+        await ApiService.post(ApiConfig.notificationsTrigger, {
+          'post_id': productId,
+          'post_type': 'product',
+          'post_title': title,
+        });
+      } catch (e) {
+        debugPrint('Repository: Warning: Failed to trigger follower notification: $e');
+      }
+
       return await getPost(productId);
     } catch (e) {
       debugPrint('Repository: Error creating product: $e');
@@ -399,8 +410,21 @@ class PostRepository {
       final product = await getPost(productId);
       final double newPrice = (product.price * (1 - (discountPercentage / 100))).toDouble();
 
+      // Trigger notification for the promotion
+      final offerId = resp['id'] ?? 0;
+      final title = '$discountPercentage% OFF on ${product.title}';
+      try {
+        await ApiService.post(ApiConfig.notificationsTrigger, {
+          'post_id': offerId,
+          'post_type': 'promotion',
+          'post_title': title,
+        });
+      } catch (e) {
+        debugPrint('Repository: Warning: Failed to trigger follower notification: $e');
+      }
+
       return Offer(
-        id: resp['id'] ?? 0,
+        id: offerId,
         product: product,
         discountPercentage: discountPercentage,
         newPrice: newPrice,

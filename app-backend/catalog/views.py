@@ -114,7 +114,17 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		# Prevent store spoofing: the authenticated user IS the store
-		serializer.save(store=self.request.user)
+		instance = serializer.save(store=self.request.user)
+		try:
+			from notifications.tasks import async_send_new_post_notification
+			async_send_new_post_notification.delay(
+				store_id=self.request.user.id,
+				post_id=instance.id,
+				post_type='product',
+				post_title=instance.name
+			)
+		except Exception as e:
+			print(f"Failed to trigger push task for product: {e}")
 
 	def retrieve(self, request, *args, **kwargs):
 		instance = self.get_object()
@@ -202,7 +212,17 @@ class PackViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		# Prevent merchant_id spoofing
-		serializer.save(merchant=self.request.user)
+		instance = serializer.save(merchant=self.request.user)
+		try:
+			from notifications.tasks import async_send_new_post_notification
+			async_send_new_post_notification.delay(
+				store_id=self.request.user.id,
+				post_id=instance.id,
+				post_type='pack',
+				post_title=instance.name
+			)
+		except Exception as e:
+			print(f"Failed to trigger push task for pack: {e}")
 
 
 class PackProductViewSet(viewsets.ModelViewSet):
@@ -447,7 +467,17 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		return [permissions.IsAuthenticated()]
 
 	def perform_create(self, serializer):
-		serializer.save(store=self.request.user)
+		instance = serializer.save(store=self.request.user)
+		try:
+			from notifications.tasks import async_send_new_post_notification
+			async_send_new_post_notification.delay(
+				store_id=self.request.user.id,
+				post_id=instance.id,
+				post_type='promotion',
+				post_title=instance.name
+			)
+		except Exception as e:
+			print(f"Failed to trigger push task for promotion: {e}")
 
 
 class PromotionImageViewSet(viewsets.ModelViewSet):

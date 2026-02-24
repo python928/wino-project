@@ -29,4 +29,7 @@ class Routes {
   // ── Favorites ─────────────────────────────────────────────────────────────
   static const String favorites        = '/favorites';
   static const String wishlist         = '/wishlist';
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  static const String notifications    = '/notifications';
 }

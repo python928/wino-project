@@ -143,6 +143,27 @@ class ApiService {
     return await patch(ApiConfig.authMe, data);
   }
   
+  /// Send FCM token to backend
+  static Future<void> updateFcmToken(String token) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/devices/');
+      final accessToken = await StorageService.getAccessToken();
+      if (accessToken == null) return;
+      
+      await http.post(
+        uri,
+        headers: ApiConfig.getHeaders(token: accessToken),
+        body: jsonEncode({
+          'registration_id': token,
+          'type': kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+        }),
+      ).timeout(ApiConfig.connectionTimeout);
+      debugPrint('FCM token sent to backend');
+    } catch (e) {
+      debugPrint('Failed to send FCM token to backend: $e');
+    }
+  }
+  
   // ==================== TOKEN REFRESH ====================
   
   static Future<bool> refreshToken() async {

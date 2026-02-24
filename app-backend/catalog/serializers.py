@@ -36,8 +36,32 @@ class ProductImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class StoreMinimalSerializer(serializers.ModelSerializer):
+    """Minimal store info embedded in product/pack responses."""
+    store_avatar = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
+    store_name = serializers.CharField(source='name', read_only=True)
+
+    class Meta:
+        from django.contrib.auth import get_user_model
+        model = get_user_model()
+        fields = ['id', 'username', 'store_name', 'display_name', 'store_avatar']
+
+    def get_store_avatar(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image:
+            if request:
+                return request.build_absolute_uri(obj.profile_image.url)
+            return obj.profile_image.url
+        return None
+
+    def get_display_name(self, obj):
+        # Return name if set, fall back to username — never "local store"
+        return obj.name or obj.username
+
+
 class ProductSerializer(serializers.ModelSerializer):
-    store = serializers.PrimaryKeyRelatedField(read_only=True)
+    store = StoreMinimalSerializer(read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()

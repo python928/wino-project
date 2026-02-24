@@ -78,10 +78,36 @@ class CustomBottomNavBar extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? item.activeIcon : item.inactiveIcon,
-              color: isSelected ? AppColors.primaryColor : AppColors.greyColor,
-              size: 22,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isSelected ? item.activeIcon : item.inactiveIcon,
+                  color: isSelected ? AppColors.primaryColor : AppColors.greyColor,
+                  size: 22,
+                ),
+                if (index == 0 && notificationsBadgeCount != null)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        notificationsBadgeCount! > 9 ? '9+' : notificationsBadgeCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             if (isSelected) ...[
               const SizedBox(width: 6),

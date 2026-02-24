@@ -14,10 +14,51 @@ import 'core/providers/pack_provider.dart';
 import 'core/routing/route_generator.dart';
 import 'presentation/auth/splash_screen.dart';
 import 'features/analytics/analytics_export.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Setup local notifications for foreground
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    debugPrint('Got a message whilst in the foreground!');
+    if (message.notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        message.notification.hashCode,
+        message.notification?.title,
+        message.notification?.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'dz_local_channel',
+            'DZ Local Notifications',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    }
+  });
+
   // Initialize Storage Service
   await StorageService.init();
   

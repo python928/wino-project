@@ -17,6 +17,7 @@ import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
 import 'routes.dart';
+import '../../features/notifications/notification_screen.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -167,6 +168,13 @@ class RouteGenerator {
         return _slideTransition(
           settings: settings,
           child: const FavoritesScreen(),
+        );
+
+      // ===== NOTIFICATIONS =====
+      case Routes.notifications:
+        return MaterialPageRoute(
+          builder: (_) => const NotificationScreen(),
+          settings: settings,
         );
 
       default:
