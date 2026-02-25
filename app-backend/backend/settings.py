@@ -222,6 +222,11 @@ CELERY_TIMEZONE = TIME_ZONE
 # Run Celery tasks eagerly strictly in development environment (without a worker)
 CELERY_TASK_ALWAYS_EAGER = DEBUG
 
+# Twilio SMS OTP
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
+
 # Initialize Firebase Admin SDK
 import firebase_admin
 from firebase_admin import credentials

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,7 +14,16 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from rest_framework import generics
 
 from .models import Follower
-from .serializers import RegisterSerializer, UserSerializer, ChangePasswordSerializer, FollowerSerializer
+from .models import PhoneOTP
+from .serializers import (
+	RegisterSerializer,
+	UserSerializer,
+	ChangePasswordSerializer,
+	FollowerSerializer,
+	SendPhoneOTPSerializer,
+	VerifyPhoneOTPSerializer,
+)
+from .services import generate_otp_code, send_otp_sms
 
 User = get_user_model()
 
@@ -80,6 +90,108 @@ class RegisterView(APIView):
 				'access': str(refresh.access_token),
 			},
 			status=status.HTTP_201_CREATED,
+		)
+
+
+class SendPhoneOTPView(APIView):
+	permission_classes = [permissions.AllowAny]
+
+	def post(self, request, *args, **kwargs):
+		serializer = SendPhoneOTPSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		phone = serializer.validated_data['phone']
+
+		latest = PhoneOTP.objects.filter(phone=phone).first()
+		if latest and (timezone.now() - latest.created_at).total_seconds() < 60:
+			return Response(
+				{'detail': 'انتظر 60 ثانية قبل طلب رمز جديد'},
+				status=status.HTTP_429_TOO_MANY_REQUESTS,
+			)
+
+		code = generate_otp_code()
+		otp = PhoneOTP.objects.create(
+			phone=phone,
+			code=code,
+			expires_at=PhoneOTP.expiry_time(),
+		)
+		try:
+			send_otp_sms(phone, code)
+		except Exception as exc:
+			otp.delete()
+			return Response(
+				{'detail': f'فشل إرسال رمز التحقق: {exc}'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		return Response(
+			{'detail': 'تم إرسال رمز التحقق بنجاح'},
+			status=status.HTTP_200_OK,
+		)
+
+
+class VerifyPhoneOTPView(APIView):
+	permission_classes = [permissions.AllowAny]
+
+	def post(self, request, *args, **kwargs):
+		serializer = VerifyPhoneOTPSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		phone = serializer.validated_data['phone']
+		code = serializer.validated_data['code']
+		display_name = serializer.validated_data.get('name', '').strip()
+
+		otp = PhoneOTP.objects.filter(phone=phone, is_verified=False).first()
+		if not otp:
+			return Response(
+				{'detail': 'لا يوجد رمز تحقق لهذا الرقم'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if otp.is_expired:
+			return Response(
+				{'detail': 'انتهت صلاحية رمز التحقق'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if otp.attempts >= 5:
+			return Response(
+				{'detail': 'تم تجاوز عدد محاولات التحقق'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if otp.code != code:
+			otp.attempts += 1
+			otp.save(update_fields=['attempts'])
+			return Response(
+				{'detail': 'رمز التحقق غير صحيح'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		otp.is_verified = True
+		otp.save(update_fields=['is_verified'])
+
+		user = User.objects.filter(phone=phone).first()
+		is_new_user = False
+		if user is None:
+			is_new_user = True
+			base_username = f"user_{phone.replace('+', '')[-8:]}"
+			username = base_username
+			counter = 1
+			while User.objects.filter(username=username).exists():
+				username = f"{base_username}_{counter}"
+				counter += 1
+			user = User.objects.create(
+				username=username,
+				name=display_name or username,
+				phone=phone,
+				email='',
+			)
+
+		refresh = RefreshToken.for_user(user)
+		return Response(
+			{
+				'user': UserSerializer(user, context={'request': request}).data,
+				'refresh': str(refresh),
+				'access': str(refresh.access_token),
+				'is_new_user': is_new_user,
+			},
+			status=status.HTTP_200_OK,
 		)
 
 

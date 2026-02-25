@@ -10,3 +10,4 @@ celery==5.4.0
 redis==5.0.3
 firebase-admin==6.5.0
 pillow-heif==0.16.0
+twilio==9.3.7

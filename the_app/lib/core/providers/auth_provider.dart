@@ -67,14 +67,15 @@ class AuthProvider with ChangeNotifier {
       print('AuthProvider: Calling AuthRepository.login...');
       final response = await AuthRepository.login(email, password);
       print('AuthProvider: AuthRepository.login returned successfully.');
-      
+
       final userObj = response['user'];
 
       if (userObj is User) {
-         _user = userObj;
+        _user = userObj;
       } else {
-         print('AuthProvider: Warning - user object is not of type User, trying fromJson...');
-         _user = User.fromJson(userObj);
+        print(
+            'AuthProvider: Warning - user object is not of type User, trying fromJson...');
+        _user = User.fromJson(userObj);
       }
 
       print('AuthProvider: User parsed successfully: ${_user?.username}');
@@ -95,6 +96,55 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> sendPhoneOtp(String phone) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await AuthRepository.sendPhoneOtp(phone);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> verifyPhoneOtp({
+    required String phone,
+    required String code,
+    String? name,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await AuthRepository.verifyPhoneOtp(
+        phone: phone,
+        code: code,
+        name: name,
+      );
+      final userObj = response['user'];
+      _user = userObj is User ? userObj : User.fromJson(userObj);
+      await StorageService.saveUserData(_user!.toJson());
+      _syncFcmToken();
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> register(Map<String, dynamic> data) async {
     _isLoading = true;
     _error = null;
@@ -108,9 +158,9 @@ class AuthProvider with ChangeNotifier {
       final userObj = response['user'];
 
       if (userObj is User) {
-         _user = userObj;
+        _user = userObj;
       } else {
-         _user = User.fromJson(userObj);
+        _user = User.fromJson(userObj);
       }
 
       await StorageService.saveUserData(_user!.toJson());

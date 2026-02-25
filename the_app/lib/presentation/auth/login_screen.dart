@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -7,7 +8,6 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/providers/auth_provider.dart';
-import 'register_screen.dart';
 import '../home/main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,12 +20,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _emailFocusNode = FocusNode();
-  final _passwordFocusNode = FocusNode();
+  final _phoneController = TextEditingController();
+  final _phoneFocusNode = FocusNode();
 
   bool _isLoading = false;
+  bool _otpSent = false;
+  String _otpCode = '';
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -44,15 +45,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _emailFocusNode.dispose();
-    _passwordFocusNode.dispose();
+    _phoneController.dispose();
+    _phoneFocusNode.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _loginUser() async {
+  Future<void> _sendOtp() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -61,22 +60,53 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text,
+      final success =
+          await authProvider.sendPhoneOtp(_phoneController.text.trim());
+
+      if (success && mounted) {
+        setState(() {
+          _otpSent = true;
+        });
+        Helpers.showSnackBar(context, 'Verification code sent');
+      } else if (!success && mounted) {
+        final errorMsg =
+            authProvider.error ?? 'Failed to send verification code.';
+        Helpers.showSnackBar(context, errorMsg);
+      }
+    } catch (_) {
+      if (mounted) {
+        Helpers.showSnackBar(
+            context, 'Server connection failed. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    if (_otpCode.length != 6) {
+      Helpers.showSnackBar(context, 'Enter the 6-digit code');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.verifyPhoneOtp(
+        phone: _phoneController.text.trim(),
+        code: _otpCode,
       );
 
       if (success && mounted) {
-        Helpers.showSnackBar(context, 'Login successful!');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       } else if (!success && mounted) {
-        final errorMsg =
-            authProvider.error ?? 'Login failed, check your credentials.';
+        final errorMsg = authProvider.error ?? 'OTP verification failed.';
         Helpers.showSnackBar(context, errorMsg);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         Helpers.showSnackBar(
             context, 'Server connection failed. Please try again.');
@@ -95,15 +125,12 @@ class _LoginScreenState extends State<LoginScreen>
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Purple gradient header
-              _buildPurpleHeader(),
-
-              // Form section
+              _buildHeader(),
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
-                  child: _buildLoginForm(),
+                  child: _buildBody(),
                 ),
               ),
             ],
@@ -113,10 +140,9 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildPurpleHeader() {
+  Widget _buildHeader() {
     return Stack(
       children: [
-        // Gradient background
         Container(
           height: 280,
           width: double.infinity,
@@ -124,7 +150,6 @@ class _LoginScreenState extends State<LoginScreen>
             gradient: AppColors.purpleGradient,
           ),
         ),
-        // Decorative concentric circles
         Positioned(
           top: -60,
           right: -60,
@@ -140,7 +165,6 @@ class _LoginScreenState extends State<LoginScreen>
           right: 20,
           child: _CircleDecoration(80, 0.12),
         ),
-        // Header content: logo + title + tagline
         Positioned.fill(
           child: SafeArea(
             child: Column(
@@ -154,14 +178,14 @@ class _LoginScreenState extends State<LoginScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Icon(
-                    Icons.storefront_rounded,
+                    Icons.phone_android_rounded,
                     color: Colors.white,
                     size: 40,
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'DZ Local',
+                  'Topri',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -171,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Your Local Marketplace',
+                  'Phone Verification Login',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 15,
@@ -185,105 +209,76 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildLoginForm() {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome Back',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.h3.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+  Widget _buildBody() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _otpSent ? 'Enter Verification Code' : 'Sign In With Phone',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.h3.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Sign in to continue',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _otpSent
+                ? 'We sent a 6-digit code to your number'
+                : 'Use your phone number to receive an OTP',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
-            const SizedBox(height: 32),
-
-            // Email Field
-            AppTextField(
-              controller: _emailController,
-              focusNode: _emailFocusNode,
-              label: 'Email Address',
-              hint: 'Enter your email',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => _passwordFocusNode.requestFocus(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!value.contains('@') || !value.contains('.')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
+          ),
+          const SizedBox(height: 32),
+          AppTextField(
+            controller: _phoneController,
+            focusNode: _phoneFocusNode,
+            label: 'Phone Number',
+            hint: '+213XXXXXXXXX',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            validator: (value) {
+              final text = (value ?? '').trim();
+              if (text.isEmpty) return 'Please enter your phone number';
+              if (text.length < 8) return 'Please enter a valid phone number';
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          if (_otpSent) ...[
+            OtpTextField(
+              numberOfFields: 6,
+              borderColor: AppColors.primary,
+              focusedBorderColor: AppColors.primary,
+              showFieldAsBox: true,
+              borderRadius: BorderRadius.circular(10),
+              fieldWidth: 42,
+              onCodeChanged: (_) {},
+              onSubmit: (verificationCode) {
+                _otpCode = verificationCode;
               },
-            ),
-            const SizedBox(height: 16),
-
-            // Password Field
-            AppTextField(
-              controller: _passwordController,
-              focusNode: _passwordFocusNode,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outlined,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _loginUser(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-
-            // Login Button
-            AppPrimaryButton(
-              text: 'Sign In',
-              onPressed: _loginUser,
-              isLoading: _isLoading,
-              height: 52,
             ),
             const SizedBox(height: 24),
-
-            // Register Link
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Don't have an account? ",
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                AppTextButton(
-                  text: 'Sign Up',
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (context) => const RegisterScreen()),
-                    );
-                  },
-                ),
-              ],
+          ],
+          AppPrimaryButton(
+            text: _otpSent ? 'Verify Code' : 'Send Code',
+            onPressed: _otpSent ? _verifyOtp : _sendOtp,
+            isLoading: _isLoading,
+            height: 52,
+          ),
+          if (_otpSent) ...[
+            const SizedBox(height: 14),
+            AppTextButton(
+              text: 'Resend code',
+              onPressed: _sendOtp,
             ),
           ],
-        ),
+        ],
       ),
     );
   }

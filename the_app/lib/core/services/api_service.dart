@@ -12,55 +12,59 @@ class ApiService {
   static int _consecutiveRefreshServerErrors = 0;
 
   // ==================== PUBLIC METHODS WITH AUTO-RETRY ====================
-  
+
   static Future<dynamic> get(String endpoint) async {
     return await _requestWithRetry(() => _get(endpoint));
   }
-  
+
   static Future<dynamic> post(
     String endpoint,
     Map<String, dynamic> data,
   ) async {
     return await _requestWithRetry(() => _post(endpoint, data));
   }
-  
+
   static Future<dynamic> put(
     String endpoint,
     Map<String, dynamic> data,
   ) async {
     return await _requestWithRetry(() => _put(endpoint, data));
   }
-  
+
   static Future<dynamic> patch(
     String endpoint,
     Map<String, dynamic> data,
   ) async {
     return await _requestWithRetry(() => _patch(endpoint, data));
   }
-  
+
   static Future<dynamic> delete(String endpoint) async {
     return await _requestWithRetry(() => _delete(endpoint));
   }
-  
+
   // ==================== AUTHENTICATION METHODS (NO TOKEN) ====================
-  
-  static Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+
+  static Future<Map<String, dynamic>> register(
+      Map<String, dynamic> data) async {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.register}');
 
-      final response = await http.post(
-        uri,
-        headers: ApiConfig.getHeaders(), // No token
-        body: jsonEncode(data),
-      ).timeout(ApiConfig.connectionTimeout);
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(), // No token
+            body: jsonEncode(data),
+          )
+          .timeout(ApiConfig.connectionTimeout);
 
       return _handleResponse(response, treat401AsSessionExpired: false);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
-  static Future<Map<String, dynamic>> login(String usernameOrEmail, String password) async {
+
+  static Future<Map<String, dynamic>> login(
+      String usernameOrEmail, String password) async {
     try {
       final data = {
         // SimpleJWT expects the username field. Backend accepts username and we
@@ -71,12 +75,59 @@ class ApiService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authToken}');
 
-      final response = await http.post(
-        uri,
-        headers: ApiConfig.getHeaders(), // No token
-        body: jsonEncode(data),
-      ).timeout(ApiConfig.connectionTimeout);
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(), // No token
+            body: jsonEncode(data),
+          )
+          .timeout(ApiConfig.connectionTimeout);
 
+      return _handleResponse(response, treat401AsSessionExpired: false);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
+    try {
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/users/auth/phone/send-otp/');
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(),
+            body: jsonEncode({'phone': phone}),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+      return _handleResponse(response, treat401AsSessionExpired: false);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyPhoneOtp({
+    required String phone,
+    required String code,
+    String? name,
+  }) async {
+    try {
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/users/auth/phone/verify-otp/');
+      final payload = <String, dynamic>{
+        'phone': phone,
+        'code': code,
+      };
+      if (name != null && name.trim().isNotEmpty) {
+        payload['name'] = name.trim();
+      }
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(),
+            body: jsonEncode(payload),
+          )
+          .timeout(ApiConfig.connectionTimeout);
       return _handleResponse(response, treat401AsSessionExpired: false);
     } catch (e) {
       throw _handleError(e);
@@ -91,17 +142,20 @@ class ApiService {
   }) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authChangePassword}');
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authChangePassword}');
 
-      final response = await http.post(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-        body: jsonEncode({
-          'old_password': oldPassword,
-          'new_password': newPassword,
-          'confirm_password': confirmPassword,
-        }),
-      ).timeout(ApiConfig.connectionTimeout);
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+            body: jsonEncode({
+              'old_password': oldPassword,
+              'new_password': newPassword,
+              'confirm_password': confirmPassword,
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout);
 
       return _handleResponse(response);
     } catch (e) {
@@ -118,11 +172,13 @@ class ApiService {
       if (token != null && refreshToken != null) {
         final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authLogout}');
 
-        await http.post(
-          uri,
-          headers: ApiConfig.getHeaders(token: token),
-          body: jsonEncode({'refresh': refreshToken}),
-        ).timeout(ApiConfig.connectionTimeout);
+        await http
+            .post(
+              uri,
+              headers: ApiConfig.getHeaders(token: token),
+              body: jsonEncode({'refresh': refreshToken}),
+            )
+            .timeout(ApiConfig.connectionTimeout);
       }
     } catch (e) {
       debugPrint('Logout API call failed: $e');
@@ -139,38 +195,46 @@ class ApiService {
   }
 
   /// Update current user profile
-  static Future<Map<String, dynamic>> updateMe(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> updateMe(
+      Map<String, dynamic> data) async {
     return await patch(ApiConfig.authMe, data);
   }
-  
+
   /// Send FCM token to backend
   static Future<void> updateFcmToken(String token) async {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}/api/devices/');
       final accessToken = await StorageService.getAccessToken();
       if (accessToken == null) return;
-      
-      await http.post(
-        uri,
-        headers: ApiConfig.getHeaders(token: accessToken),
-        body: jsonEncode({
-          'registration_id': token,
-          'type': kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-        }),
-      ).timeout(ApiConfig.connectionTimeout);
+
+      await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(token: accessToken),
+            body: jsonEncode({
+              'registration_id': token,
+              'type': kIsWeb
+                  ? 'web'
+                  : (defaultTargetPlatform == TargetPlatform.iOS
+                      ? 'ios'
+                      : 'android'),
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout);
       debugPrint('FCM token sent to backend');
     } catch (e) {
       debugPrint('Failed to send FCM token to backend: $e');
     }
   }
-  
+
   // ==================== TOKEN REFRESH ====================
-  
+
   static Future<bool> refreshToken() async {
     try {
       // Avoid spamming refresh endpoint
       final now = DateTime.now();
-      if (_lastRefreshAttempt != null && now.difference(_lastRefreshAttempt!) < const Duration(seconds: 30)) {
+      if (_lastRefreshAttempt != null &&
+          now.difference(_lastRefreshAttempt!) < const Duration(seconds: 30)) {
         return false;
       }
       _lastRefreshAttempt = now;
@@ -183,29 +247,31 @@ class ApiService {
         _refreshTokenInvalid = true;
         return false;
       }
-      
+
       final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authRefresh}');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refresh': refreshToken}),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refresh': refreshToken}),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        
+
         // Save new access token
         await StorageService.saveTokens(
           accessToken: data['access'],
           refreshToken: refreshToken, // Keep same refresh token
         );
-        
+
         debugPrint('✅ Token refreshed successfully');
         _refreshTokenInvalid = false;
-			_consecutiveRefreshServerErrors = 0;
+        _consecutiveRefreshServerErrors = 0;
         return true;
       }
-      
+
       debugPrint('❌ Token refresh failed: ${response.statusCode}');
 
       // If backend is erroring (e.g. migrations not applied yet), don't spam refresh.
@@ -229,21 +295,22 @@ class ApiService {
       return false;
     }
   }
-  
+
   /// Proactively refresh token if it expires soon
   static Future<void> proactiveRefreshIfNeeded() async {
     final accessToken = await StorageService.getAccessToken();
     if (accessToken == null) return;
-    
+
     // Check if token expires in next 5 minutes
-    if (JWTValidator.expiresSoon(accessToken, buffer: const Duration(minutes: 5))) {
+    if (JWTValidator.expiresSoon(accessToken,
+        buffer: const Duration(minutes: 5))) {
       debugPrint('⚠️ Access token expires soon, proactively refreshing...');
       await refreshToken();
     }
   }
-  
+
   // ==================== PRIVATE METHODS ====================
-  
+
   /// Wrapper that handles token refresh automatically
   static Future<dynamic> _requestWithRetry(
     Future<dynamic> Function() request,
@@ -253,15 +320,14 @@ class ApiService {
       return await request();
     } catch (e) {
       // Check if it's a 401 Unauthorized error
-      if (e.toString().contains('401') || 
+      if (e.toString().contains('401') ||
           e.toString().contains('Session expired') ||
           e.toString().contains('Unauthorized')) {
-        
         debugPrint('⚠️ Token expired, attempting refresh...');
-        
+
         // Try to refresh token
         final refreshed = await refreshToken();
-        
+
         if (refreshed) {
           // Retry request with new token
           debugPrint('✅ Retrying request with new token...');
@@ -276,25 +342,27 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // ==================== HTTP METHODS (PRIVATE) ====================
-  
+
   static Future<dynamic> _get(String endpoint) async {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await http.get(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+
+      final response = await http
+          .get(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> _post(
     String endpoint,
     Map<String, dynamic> data,
@@ -302,19 +370,21 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await http.post(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-        body: jsonEncode(data),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+
+      final response = await http
+          .post(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+            body: jsonEncode(data),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> _put(
     String endpoint,
     Map<String, dynamic> data,
@@ -322,19 +392,21 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await http.put(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-        body: jsonEncode(data),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+
+      final response = await http
+          .put(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+            body: jsonEncode(data),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> _patch(
     String endpoint,
     Map<String, dynamic> data,
@@ -342,46 +414,51 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await http.patch(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-        body: jsonEncode(data),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+
+      final response = await http
+          .patch(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+            body: jsonEncode(data),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> _delete(String endpoint) async {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await http.delete(
-        uri,
-        headers: ApiConfig.getHeaders(token: token),
-      ).timeout(ApiConfig.connectionTimeout);
-      
+
+      final response = await http
+          .delete(
+            uri,
+            headers: ApiConfig.getHeaders(token: token),
+          )
+          .timeout(ApiConfig.connectionTimeout);
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> postMultipart(
     String endpoint,
     Map<String, String> fields,
     XFile? imageFile,
     String? imageFieldName,
   ) async {
-    return await _requestWithRetry(() => _postMultipart(endpoint, fields, imageFile, imageFieldName));
+    return await _requestWithRetry(
+        () => _postMultipart(endpoint, fields, imageFile, imageFieldName));
   }
 
   // ==================== UPLOAD IMAGE ====================
-  
+
   static Future<dynamic> uploadImage(
     String endpoint,
     XFile imageFile,
@@ -390,10 +467,10 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
+
       var request = http.MultipartRequest('POST', uri);
       request.headers.addAll(ApiConfig.getHeaders(token: token));
-      
+
       final bytes = await imageFile.readAsBytes();
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -402,17 +479,17 @@ class ApiService {
           filename: imageFile.name,
         ),
       );
-      
-      final streamedResponse = await request.send()
-        .timeout(ApiConfig.connectionTimeout);
+
+      final streamedResponse =
+          await request.send().timeout(ApiConfig.connectionTimeout);
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
     }
   }
-  
+
   static Future<dynamic> _postMultipart(
     String endpoint,
     Map<String, String> fields,
@@ -423,11 +500,11 @@ class ApiService {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
       debugPrint('ApiService: POST Multipart to $uri');
-      
+
       var request = http.MultipartRequest('POST', uri);
       request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
       debugPrint('ApiService: Headers: ${request.headers}');
-      
+
       request.fields.addAll(fields);
       debugPrint('ApiService: Fields: $fields');
 
@@ -442,14 +519,14 @@ class ApiService {
           ),
         );
       }
-      
+
       debugPrint('ApiService: Sending request...');
-      final streamedResponse = await request.send()
-        .timeout(ApiConfig.connectionTimeout);
+      final streamedResponse =
+          await request.send().timeout(ApiConfig.connectionTimeout);
       final response = await http.Response.fromStream(streamedResponse);
       debugPrint('ApiService: Response status: ${response.statusCode}');
       debugPrint('ApiService: Response body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       debugPrint('ApiService: Error: $e');
@@ -464,7 +541,9 @@ class ApiService {
     String? imageFieldName, {
     String method = 'PUT',
   }) async {
-    return await _requestWithRetry(() => _updateMultipart(endpoint, fields, imageFile, imageFieldName, method: method));
+    return await _requestWithRetry(() => _updateMultipart(
+        endpoint, fields, imageFile, imageFieldName,
+        method: method));
   }
 
   static Future<dynamic> _updateMultipart(
@@ -478,10 +557,10 @@ class ApiService {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
       debugPrint('ApiService: $method Multipart to $uri');
-      
+
       var request = http.MultipartRequest(method, uri);
       request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
-      
+
       request.fields.addAll(fields);
 
       if (imageFile != null && imageFieldName != null) {
@@ -494,11 +573,11 @@ class ApiService {
           ),
         );
       }
-      
-      final streamedResponse = await request.send()
-        .timeout(ApiConfig.connectionTimeout);
+
+      final streamedResponse =
+          await request.send().timeout(ApiConfig.connectionTimeout);
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       return _handleResponse(response);
     } catch (e) {
       throw _handleError(e);
@@ -506,13 +585,13 @@ class ApiService {
   }
 
   // ==================== RESPONSE/ERROR HANDLING ====================
-  
+
   static dynamic _handleResponse(
     http.Response response, {
     bool treat401AsSessionExpired = true,
   }) {
     final statusCode = response.statusCode;
-    
+
     if (statusCode >= 200 && statusCode < 300) {
       if (response.body.isEmpty) {
         return {'success': true};
@@ -545,7 +624,7 @@ class ApiService {
           if (error.containsKey('error')) throw Exception(error['error']);
           if (error.containsKey('message')) throw Exception(error['message']);
           if (error.containsKey('detail')) throw Exception(error['detail']);
-          
+
           // If it's a list of errors (DRF standard)
           final buffer = StringBuffer();
           error.forEach((key, value) {
@@ -566,11 +645,13 @@ class ApiService {
       throw Exception('Server error. Please try again later.');
     }
   }
-  
+
   static Exception _handleError(dynamic error) {
     debugPrint('❌ ApiService error: $error');
     final msg = error.toString();
-    if (msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('Connection refused')) {
+    if (msg.contains('SocketException') ||
+        msg.contains('Failed host lookup') ||
+        msg.contains('Connection refused')) {
       return Exception('No internet connection or server is unreachable');
     } else if (msg.contains('TimeoutException') || msg.contains('timed out')) {
       return Exception('Connection timed out. Please try again.');

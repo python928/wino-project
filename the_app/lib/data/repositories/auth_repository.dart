@@ -6,7 +6,8 @@ import '../../core/services/storage_service.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
-  static Future<Map<String, dynamic>> login(String usernameOrEmail, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String usernameOrEmail, String password) async {
     try {
       final tokenResponse = await ApiService.login(usernameOrEmail, password);
 
@@ -31,7 +32,7 @@ class AuthRepository {
 
       // Now fetch profile (token is saved, so ApiService can use it)
       final profileJson = await ApiService.get('${ApiConfig.users}$userId/');
-      
+
       late final User user;
       try {
         user = User.fromJson(profileJson);
@@ -55,16 +56,19 @@ class AuthRepository {
     }
   }
 
-  static Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> register(
+      Map<String, dynamic> data) async {
     try {
       final registrationData = Map<String, dynamic>.from(data)..remove('role');
 
-      final response = await ApiService.post(ApiConfig.register, registrationData);
+      final response =
+          await ApiService.post(ApiConfig.register, registrationData);
 
       final access = response['access'];
       final refresh = response['refresh'];
       if (access != null && refresh != null) {
-        await StorageService.saveTokens(accessToken: access, refreshToken: refresh);
+        await StorageService.saveTokens(
+            accessToken: access, refreshToken: refresh);
       }
 
       // Prefer embedded user; otherwise fetch /me/
@@ -83,6 +87,52 @@ class AuthRepository {
     }
   }
 
+  static Future<void> sendPhoneOtp(String phone) async {
+    try {
+      await ApiService.sendPhoneOtp(phone);
+    } catch (e) {
+      throw Exception('Failed to send OTP: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyPhoneOtp({
+    required String phone,
+    required String code,
+    String? name,
+  }) async {
+    try {
+      final response = await ApiService.verifyPhoneOtp(
+        phone: phone,
+        code: code,
+        name: name,
+      );
+
+      final access = response['access'];
+      final refresh = response['refresh'];
+      if (access == null || refresh == null) {
+        throw Exception('Tokens not received from server');
+      }
+
+      await StorageService.saveTokens(
+        accessToken: access,
+        refreshToken: refresh,
+      );
+
+      final userData = (response['user'] is Map<String, dynamic>)
+          ? response['user'] as Map<String, dynamic>
+          : (await ApiService.get(ApiConfig.profile) as Map<String, dynamic>);
+      final user = User.fromJson(userData);
+
+      return {
+        'user': user,
+        'tokens': {'access': access, 'refresh': refresh},
+        'is_new_user': response['is_new_user'] == true,
+      };
+    } catch (e) {
+      throw Exception('OTP verification failed: $e');
+    }
+  }
+
   static Future<User> getProfile() async {
     try {
       // Decode current access token to find the user id, then fetch the profile
@@ -91,7 +141,7 @@ class AuthRepository {
       final decoded = JwtDecoder.decode(accessToken);
       final userId = decoded['user_id'];
       final response = await ApiService.get('${ApiConfig.users}$userId/');
-      
+
       try {
         return User.fromJson(response);
       } catch (e) {
@@ -113,7 +163,8 @@ class AuthRepository {
       final decoded = JwtDecoder.decode(accessToken);
       final userId = decoded['user_id'];
 
-      final response = await ApiService.patch('${ApiConfig.users}$userId/', data);
+      final response =
+          await ApiService.patch('${ApiConfig.users}$userId/', data);
       return User.fromJson(response);
     } catch (e) {
       throw Exception('Failed to update profile: $e');

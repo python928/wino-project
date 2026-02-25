@@ -1,10 +1,10 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 import uuid
-from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Avg
 from .models import Follower
+from .services import normalize_phone
 
 User = get_user_model()
 
@@ -194,3 +194,31 @@ class FollowerSerializer(serializers.ModelSerializer):
         model = Follower
         fields = ['id', 'user', 'followed_user', 'created_at']
         read_only_fields = ['id', 'user', 'created_at']
+
+
+class SendPhoneOTPSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+
+    def validate_phone(self, value):
+        phone = normalize_phone(value)
+        if not phone or len(phone) < 8:
+            raise serializers.ValidationError('رقم الهاتف غير صالح')
+        return phone
+
+
+class VerifyPhoneOTPSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    code = serializers.CharField(max_length=6)
+    name = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+    def validate_phone(self, value):
+        phone = normalize_phone(value)
+        if not phone or len(phone) < 8:
+            raise serializers.ValidationError('رقم الهاتف غير صالح')
+        return phone
+
+    def validate_code(self, value):
+        code = (value or '').strip()
+        if len(code) != 6 or not code.isdigit():
+            raise serializers.ValidationError('رمز التحقق يجب أن يكون 6 أرقام')
+        return code

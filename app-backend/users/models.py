@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 
 class User(AbstractUser):
@@ -56,3 +58,26 @@ class Follower(models.Model):
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
 		return f"{self.user} follows {self.followed_user}"
+
+
+class PhoneOTP(models.Model):
+	phone = models.CharField(max_length=20, db_index=True)
+	code = models.CharField(max_length=6)
+	created_at = models.DateTimeField(auto_now_add=True)
+	expires_at = models.DateTimeField()
+	attempts = models.PositiveSmallIntegerField(default=0)
+	is_verified = models.BooleanField(default=False)
+
+	class Meta:
+		ordering = ['-created_at']
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"OTP({self.phone})"
+
+	@property
+	def is_expired(self) -> bool:
+		return timezone.now() >= self.expires_at
+
+	@classmethod
+	def expiry_time(cls) -> timezone.datetime:
+		return timezone.now() + timedelta(minutes=5)
