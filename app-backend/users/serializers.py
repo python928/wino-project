@@ -201,8 +201,8 @@ class SendPhoneOTPSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         phone = normalize_phone(value)
-        if not phone or len(phone) < 8:
-            raise serializers.ValidationError('رقم الهاتف غير صالح')
+        if not phone:
+            raise serializers.ValidationError('الرقم يجب أن يكون جزائرياً: 0XXXXXXXXX')
         return phone
 
 
@@ -213,8 +213,8 @@ class VerifyPhoneOTPSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         phone = normalize_phone(value)
-        if not phone or len(phone) < 8:
-            raise serializers.ValidationError('رقم الهاتف غير صالح')
+        if not phone:
+            raise serializers.ValidationError('الرقم يجب أن يكون جزائرياً: 0XXXXXXXXX')
         return phone
 
     def validate_code(self, value):

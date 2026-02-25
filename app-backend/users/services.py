@@ -6,24 +6,36 @@ from django.conf import settings
 
 def normalize_phone(phone: str) -> str:
 	"""
-	Normalize input to a Twilio-friendly E.164-like value.
-	- strips spaces and punctuation
-	- if starts with 0, assumes Algeria (+213)
-	- if missing +, prefixes +
+	Normalize Algeria phone numbers to E.164 format.
+	Accepted formats:
+	- 0XXXXXXXXX (10 digits, must start with 0) -> +213XXXXXXXXX
+	- +213XXXXXXXXX
+	- 213XXXXXXXXX
 	"""
 	raw = (phone or '').strip()
 	if not raw:
 		return ''
 
-	digits = re.sub(r'[^\d+]', '', raw)
-	if digits.startswith('00'):
-		digits = f"+{digits[2:]}"
-	elif digits.startswith('0'):
-		digits = f"+213{digits[1:]}"
-	elif not digits.startswith('+'):
-		digits = f"+{digits}"
+	# Keep only digits and optional leading +
+	cleaned = re.sub(r'[^\d+]', '', raw)
+	if cleaned.startswith('+213'):
+		local = cleaned[4:]
+		if len(local) == 9 and local.isdigit():
+			return cleaned
+		return ''
 
-	return digits
+	digits = cleaned.lstrip('+')
+	if digits.startswith('213'):
+		local = digits[3:]
+		if len(local) == 9 and local.isdigit():
+			return f"+{digits}"
+		return ''
+
+	# Local Algeria format must be 10 digits and start with 0
+	if len(digits) == 10 and digits.startswith('0') and digits.isdigit():
+		return f"+213{digits[1:]}"
+
+	return ''
 
 
 def generate_otp_code() -> str:
