@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.246.21:8000';
-    if (Platform.isAndroid) return 'http://192.168.246.21:8000';
-    return 'http://192.168.246.21:8000';
+    if (kIsWeb) return 'http://192.168.250.21:8000';
+    if (Platform.isAndroid) return 'http://192.168.250.21:8000';
+    return 'http://192.168.250.21:8000';
   }
 
   // API prefix
@@ -23,6 +23,8 @@ class ApiConfig {
   static const String authMe = profile;
   static const String authChangePassword = '$api/users/change-password/';
   static const String authLogout = '$api/users/logout/';
+  static const String preferredCategories =
+      '$api/users/preferences/categories/';
 
   // Users
   static const String users = '$api/users/users/';
@@ -35,7 +37,8 @@ class ApiConfig {
   // Followers (backend: /api/users/followers/ and /api/users/followers/toggle/)
   static const String followers = '$api/users/followers/';
   static String followersToggle = '$api/users/followers/toggle/';
-  static String followersCheck(int userId) => '$api/users/followers/?user=$userId';
+  static String followersCheck(int userId) =>
+      '$api/users/followers/?user=$userId';
 
   // Catalog
   static const String catalog = '$api/catalog';
@@ -48,10 +51,12 @@ class ApiConfig {
   static const String packImages = '$catalog/pack-images/';
   static const String reviews = '$catalog/reviews/';
   static const String reviewsRateStore = '$catalog/reviews/rate-store/';
-  static String reviewsMyStoreRating(int storeId) => '$catalog/reviews/my-store-rating/$storeId/';
+  static String reviewsMyStoreRating(int storeId) =>
+      '$catalog/reviews/my-store-rating/$storeId/';
   static const String favorites = '$catalog/favorites/';
   static const String favoritesToggle = '$catalog/favorites/toggle/';
-  static String favoritesCheck(int productId) => '$catalog/favorites/check/$productId/';
+  static String favoritesCheck(int productId) =>
+      '$catalog/favorites/check/$productId/';
 
   // Promotions (now in catalog)
   static const String promotions = '$catalog/promotions/';
@@ -60,21 +65,25 @@ class ApiConfig {
   // Notifications
   // ✅ Use path-only constants (no baseUrl prefix) — ApiService prepends baseUrl
   static const String notifications = '/api/notifications/notifications/';
-  static const String notificationsMarkAllRead = '/api/notifications/notifications/mark-all-read/';
-  static const String notificationsUnreadCount = '/api/notifications/notifications/unread-count/';
-  static const String notificationsTrigger = '$api/notifications/notifications/trigger/';
+  static const String notificationsMarkAllRead =
+      '/api/notifications/notifications/mark-all-read/';
+  static const String notificationsUnreadCount =
+      '/api/notifications/notifications/unread-count/';
+  static const String notificationsTrigger =
+      '$api/notifications/notifications/trigger/';
   static const String devices = '$api/notifications/devices/';
 
   // Subscriptions
   static const String subscriptionPlans = '$api/subscriptions/plans/';
-  static const String merchantSubscriptions = '$api/subscriptions/merchant-subscriptions/';
+  static const String merchantSubscriptions =
+      '$api/subscriptions/merchant-subscriptions/';
 
   // Media URL
   static String get mediaUrl => '$baseUrl/media';
   static String getImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    
+
     // Handle paths that might already start with /media/ or media/
     if (path.startsWith('/media/')) {
       return '$baseUrl$path';
@@ -82,7 +91,7 @@ class ApiConfig {
     if (path.startsWith('media/')) {
       return '$baseUrl/$path';
     }
-    
+
     // Default case: assume it's a relative path inside media root
     // But wait, Django usually returns /media/xyz.jpg
     // If the path is just "products/image.jpg", we prepend mediaUrl

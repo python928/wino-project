@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -22,8 +23,9 @@ from .serializers import (
 	FollowerSerializer,
 	SendPhoneOTPSerializer,
 	VerifyPhoneOTPSerializer,
+	PreferredCategoriesSerializer,
 )
-from .services import generate_otp_code, send_otp_sms
+from .services import generate_otp_code, send_otp_message
 
 User = get_user_model()
 
@@ -103,19 +105,21 @@ class SendPhoneOTPView(APIView):
 
 		latest = PhoneOTP.objects.filter(phone=phone).first()
 		if latest and (timezone.now() - latest.created_at).total_seconds() < 60:
+			remaining = max(1, int(60 - (timezone.now() - latest.created_at).total_seconds()))
 			return Response(
-				{'detail': 'انتظر 60 ثانية قبل طلب رمز جديد'},
+				{'detail': f'انتظر {remaining} ثانية قبل طلب رمز جديد'},
 				status=status.HTTP_429_TOO_MANY_REQUESTS,
 			)
 
 		code = generate_otp_code()
+		print(f"[OTP DEBUG] phone={phone} code={code}")
 		otp = PhoneOTP.objects.create(
 			phone=phone,
 			code=code,
 			expires_at=PhoneOTP.expiry_time(),
 		)
 		try:
-			send_otp_sms(phone, code)
+			send_otp_message(phone, code)
 		except Exception as exc:
 			otp.delete()
 			return Response(
@@ -123,10 +127,10 @@ class SendPhoneOTPView(APIView):
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
-		return Response(
-			{'detail': 'تم إرسال رمز التحقق بنجاح'},
-			status=status.HTTP_200_OK,
-		)
+		payload = {'detail': 'تم إرسال رمز التحقق بنجاح'}
+		if settings.DEBUG:
+			payload['otp_code'] = code
+		return Response(payload, status=status.HTTP_200_OK)
 
 
 class VerifyPhoneOTPView(APIView):
@@ -193,6 +197,22 @@ class VerifyPhoneOTPView(APIView):
 			},
 			status=status.HTTP_200_OK,
 		)
+
+
+class PreferredCategoriesView(APIView):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def post(self, request, *args, **kwargs):
+		serializer = PreferredCategoriesSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		category_ids = serializer.validated_data['preferred_categories']
+
+		from analytics.models import UserInterestProfile
+		profile, _ = UserInterestProfile.objects.get_or_create(user=request.user)
+		profile.category_scores = {str(cat_id): 50 for cat_id in category_ids}
+		profile.save(update_fields=['category_scores', 'last_updated'])
+
+		return Response({'detail': 'تم حفظ الاهتمامات بنجاح'}, status=status.HTTP_200_OK)
 
 
 class IsSelfOrAdmin(permissions.BasePermission):

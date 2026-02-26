@@ -10,6 +10,7 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
+  bool _lastPhoneAuthIsNewUser = false;
 
   AuthProvider() {
     _loadUserFromStorage();
@@ -44,6 +45,7 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
+  bool get lastPhoneAuthIsNewUser => _lastPhoneAuthIsNewUser;
 
   /// Reload user data from storage
   void reloadFromStorage() {
@@ -129,11 +131,43 @@ class AuthProvider with ChangeNotifier {
         code: code,
         name: name,
       );
+      _lastPhoneAuthIsNewUser = response['is_new_user'] == true;
       final userObj = response['user'];
       _user = userObj is User ? userObj : User.fromJson(userObj);
       await StorageService.saveUserData(_user!.toJson());
       _syncFcmToken();
 
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> completePhoneProfile({
+    required String fullName,
+    required String gender,
+    required DateTime birthday,
+    List<int> preferredCategoryIds = const [],
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final updated = await AuthRepository.updateProfile({
+        'name': fullName.trim(),
+        'gender': gender,
+        'birthday': birthday.toIso8601String().split('T').first,
+      });
+      if (preferredCategoryIds.isNotEmpty) {
+        await AuthRepository.updatePreferredCategories(preferredCategoryIds);
+      }
+      _user = updated;
+      await StorageService.saveUserData(updated.toJson());
       _isLoading = false;
       notifyListeners();
       return true;

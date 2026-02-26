@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../search/search_tab_screen.dart';
@@ -77,10 +76,13 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   if (showLocation) ...[
                     Expanded(
                       child: Container(
-                        height: 44,
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 3, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(20),
+                          color: const Color(0xFFF4F7FF),
+                          borderRadius: BorderRadius.circular(23),
+                          border: Border.all(color: const Color(0xFFDDE5FF)),
                         ),
                         child: Row(
                           children: [
@@ -89,10 +91,19 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                               child: GestureDetector(
                                 onTap: onLocationTap,
                                 child: Container(
-                                  margin: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: radiusKm == null ? AppColors.primaryColor : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(18),
+                                    gradient: radiusKm == null
+                                        ? const LinearGradient(
+                                            colors: [
+                                              Color(0xFF1E5BFF),
+                                              Color(0xFF4A7DFF)
+                                            ],
+                                          )
+                                        : null,
+                                    color: radiusKm == null
+                                        ? null
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -100,18 +111,26 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                       Icon(
                                         Icons.location_on_outlined,
                                         size: 16,
-                                        color: radiusKm == null ? Colors.white : AppColors.textSecondary,
+                                        color: radiusKm == null
+                                            ? Colors.white
+                                            : AppColors.textSecondary,
                                       ),
                                       const SizedBox(width: 4),
                                       Flexible(
                                         child: Text(
-                                          (location != null && location!.isNotEmpty && location != '/') ? location! : 'City',
+                                          (location != null &&
+                                                  location!.isNotEmpty &&
+                                                  location != '/')
+                                              ? location!
+                                              : 'City',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: radiusKm == null ? Colors.white : AppColors.textSecondary,
+                                            color: radiusKm == null
+                                                ? Colors.white
+                                                : AppColors.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -130,29 +149,45 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                     onRadiusChanged: onRadiusChanged!,
                                   ),
                                   child: Container(
-                                    margin: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: radiusKm != null ? AppColors.primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(18),
+                                      gradient: radiusKm != null
+                                          ? const LinearGradient(
+                                              colors: [
+                                                Color(0xFF1E5BFF),
+                                                Color(0xFF4A7DFF)
+                                              ],
+                                            )
+                                          : null,
+                                      color: radiusKm != null
+                                          ? null
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.radar,
                                           size: 16,
-                                          color: radiusKm != null ? Colors.white : AppColors.textSecondary,
+                                          color: radiusKm != null
+                                              ? Colors.white
+                                              : AppColors.textSecondary,
                                         ),
                                         const SizedBox(width: 4),
                                         Flexible(
                                           child: Text(
-                                            radiusKm != null ? '${radiusKm!.toInt()} km' : 'Nearby',
+                                            radiusKm != null
+                                                ? '${radiusKm!.toInt()} km'
+                                                : 'Nearby',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: radiusKm != null ? Colors.white : AppColors.textSecondary,
+                                              color: radiusKm != null
+                                                  ? Colors.white
+                                                  : AppColors.textSecondary,
                                             ),
                                           ),
                                         ),
@@ -173,14 +208,15 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   // Search icon button
                   _IconBtn(
                     icon: Icons.search_rounded,
-                    onTap: onSearchTap ?? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SearchTabScreen(),
-                        ),
-                      );
-                    },
+                    onTap: onSearchTap ??
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SearchTabScreen(),
+                            ),
+                          );
+                        },
                   ),
 
                   if (showNotificationIcon) ...[

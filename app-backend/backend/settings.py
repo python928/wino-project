@@ -18,6 +18,25 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_dotenv_file() -> None:
+    """Load simple KEY=VALUE pairs from app-backend/.env if present."""
+    env_file = BASE_DIR / '.env'
+    if not env_file.exists():
+        return
+    for raw_line in env_file.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+_load_dotenv_file()
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -222,10 +241,13 @@ CELERY_TIMEZONE = TIME_ZONE
 # Run Celery tasks eagerly strictly in development environment (without a worker)
 CELERY_TASK_ALWAYS_EAGER = DEBUG
 
-# Twilio SMS OTP
+# Twilio WhatsApp OTP
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
+TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
+TWILIO_WHATSAPP_CONTENT_SID = os.environ.get('TWILIO_WHATSAPP_CONTENT_SID', '')
+TWILIO_OTP_CHANNEL = os.environ.get('TWILIO_OTP_CHANNEL', 'whatsapp')  # whatsapp | sms | both
 
 # Initialize Firebase Admin SDK
 import firebase_admin

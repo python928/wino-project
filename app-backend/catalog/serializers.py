@@ -162,7 +162,7 @@ class PackSerializer(serializers.ModelSerializer):
     
     # Input fields matching frontend
     products = serializers.ListField(write_only=True, required=False)
-    merchant_id = serializers.IntegerField(source='merchant_id', read_only=True)
+    merchant_id = serializers.IntegerField(read_only=True)
     merchant_name = serializers.CharField(source='merchant.name', read_only=True)
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()

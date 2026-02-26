@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/utils/helpers.dart';
 import '../../core/providers/auth_provider.dart';
-import '../home/main_navigation_screen.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_input_decorations.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
+import 'otp_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,10 +21,18 @@ class _LoginScreenState extends State<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _phoneFocusNode = FocusNode();
-
   bool _isLoading = false;
-  bool _otpSent = false;
-  String _otpCode = '';
+
+  String _normalizeDigits(String input) {
+    const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+    const easternArabicIndic = '۰۱۲۳۴۵۶۷۸۹';
+    var out = input;
+    for (var i = 0; i < 10; i++) {
+      out = out.replaceAll(arabicIndic[i], '$i');
+      out = out.replaceAll(easternArabicIndic[i], '$i');
+    }
+    return out;
+  }
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -52,59 +59,26 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _sendOtp() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-
     try {
       final authProvider = context.read<AuthProvider>();
-      final success =
-          await authProvider.sendPhoneOtp(_phoneController.text.trim());
+      final phone = _normalizeDigits(_phoneController.text.trim());
+      final success = await authProvider.sendPhoneOtp(phone);
 
-      if (success && mounted) {
-        setState(() {
-          _otpSent = true;
-        });
-        Helpers.showSnackBar(context, 'Verification code sent');
-      } else if (!success && mounted) {
-        final errorMsg =
-            authProvider.error ?? 'Failed to send verification code.';
-        Helpers.showSnackBar(context, errorMsg);
-      }
-    } catch (_) {
-      if (mounted) {
-        Helpers.showSnackBar(
-            context, 'Server connection failed. Please try again.');
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _verifyOtp() async {
-    if (_otpCode.length != 6) {
-      Helpers.showSnackBar(context, 'Enter the 6-digit code');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.verifyPhoneOtp(
-        phone: _phoneController.text.trim(),
-        code: _otpCode,
-      );
-
-      if (success && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+      if (!mounted) return;
+      if (success) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(phone: phone),
+          ),
         );
-      } else if (!success && mounted) {
-        final errorMsg = authProvider.error ?? 'OTP verification failed.';
-        Helpers.showSnackBar(context, errorMsg);
+      } else {
+        Helpers.showSnackBar(
+          context,
+          authProvider.error ?? 'Failed to send verification code.',
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -146,25 +120,11 @@ class _LoginScreenState extends State<LoginScreen>
         Container(
           height: 280,
           width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: AppColors.purpleGradient,
-          ),
+          decoration: const BoxDecoration(gradient: AppColors.purpleGradient),
         ),
-        Positioned(
-          top: -60,
-          right: -60,
-          child: _CircleDecoration(200, 0.08),
-        ),
-        Positioned(
-          top: -20,
-          right: -20,
-          child: _CircleDecoration(140, 0.10),
-        ),
-        Positioned(
-          top: 20,
-          right: 20,
-          child: _CircleDecoration(80, 0.12),
-        ),
+        Positioned(top: -60, right: -60, child: _CircleDecoration(200, 0.08)),
+        Positioned(top: -20, right: -20, child: _CircleDecoration(140, 0.10)),
+        Positioned(top: 20, right: 20, child: _CircleDecoration(80, 0.12)),
         Positioned.fill(
           child: SafeArea(
             child: Column(
@@ -195,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Phone Verification Login',
+                  'Sign in with phone number',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 15,
@@ -216,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            _otpSent ? 'Enter Verification Code' : 'Sign In With Phone',
+            'Sign In With Phone',
             textAlign: TextAlign.center,
             style: AppTextStyles.h3.copyWith(
               fontWeight: FontWeight.w700,
@@ -225,59 +185,46 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            _otpSent
-                ? 'We sent a 6-digit code to your number'
-                : 'Use your phone number to receive an OTP',
+            'Enter your Algerian number (0XXXXXXXXX)',
             textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 32),
-          AppTextField(
+          Text(
+            'Phone Number',
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
             controller: _phoneController,
             focusNode: _phoneFocusNode,
-            label: 'Phone Number',
-            hint: '+213XXXXXXXXX',
-            icon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _sendOtp(),
+            decoration: AppInputDecorations.form(
+              hintText: '0XXXXXXXXX',
+              prefixIcon: Icons.phone_outlined,
+            ),
             validator: (value) {
-              final text = (value ?? '').trim();
+              final text = _normalizeDigits((value ?? '').trim());
               if (text.isEmpty) return 'Please enter your phone number';
-              if (text.length < 8) return 'Please enter a valid phone number';
+              if (!RegExp(r'^0[567]\d{8}$').hasMatch(text)) {
+                return 'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX';
+              }
               return null;
             },
           ),
           const SizedBox(height: 24),
-          if (_otpSent) ...[
-            OtpTextField(
-              numberOfFields: 6,
-              borderColor: AppColors.primary,
-              focusedBorderColor: AppColors.primary,
-              showFieldAsBox: true,
-              borderRadius: BorderRadius.circular(10),
-              fieldWidth: 42,
-              onCodeChanged: (_) {},
-              onSubmit: (verificationCode) {
-                _otpCode = verificationCode;
-              },
-            ),
-            const SizedBox(height: 24),
-          ],
           AppPrimaryButton(
-            text: _otpSent ? 'Verify Code' : 'Send Code',
-            onPressed: _otpSent ? _verifyOtp : _sendOtp,
+            text: 'Send Code',
+            onPressed: _sendOtp,
             isLoading: _isLoading,
             height: 52,
           ),
-          if (_otpSent) ...[
-            const SizedBox(height: 14),
-            AppTextButton(
-              text: 'Resend code',
-              onPressed: _sendOtp,
-            ),
-          ],
         ],
       ),
     );

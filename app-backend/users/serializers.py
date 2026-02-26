@@ -202,7 +202,7 @@ class SendPhoneOTPSerializer(serializers.Serializer):
     def validate_phone(self, value):
         phone = normalize_phone(value)
         if not phone:
-            raise serializers.ValidationError('الرقم يجب أن يكون جزائرياً: 0XXXXXXXXX')
+            raise serializers.ValidationError('الرقم الجزائري يجب أن يكون: 05XXXXXXXX أو 06XXXXXXXX أو 07XXXXXXXX')
         return phone
 
 
@@ -214,7 +214,7 @@ class VerifyPhoneOTPSerializer(serializers.Serializer):
     def validate_phone(self, value):
         phone = normalize_phone(value)
         if not phone:
-            raise serializers.ValidationError('الرقم يجب أن يكون جزائرياً: 0XXXXXXXXX')
+            raise serializers.ValidationError('الرقم الجزائري يجب أن يكون: 05XXXXXXXX أو 06XXXXXXXX أو 07XXXXXXXX')
         return phone
 
     def validate_code(self, value):
@@ -222,3 +222,10 @@ class VerifyPhoneOTPSerializer(serializers.Serializer):
         if len(code) != 6 or not code.isdigit():
             raise serializers.ValidationError('رمز التحقق يجب أن يكون 6 أرقام')
         return code
+
+
+class PreferredCategoriesSerializer(serializers.Serializer):
+    preferred_categories = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )

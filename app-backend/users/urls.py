@@ -13,6 +13,7 @@ from .views import (
     FollowerToggleView,
     SendPhoneOTPView,
     VerifyPhoneOTPView,
+    PreferredCategoriesView,
 )
 
 router = DefaultRouter()
@@ -23,6 +24,7 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('auth/phone/send-otp/', SendPhoneOTPView.as_view(), name='send-phone-otp'),
     path('auth/phone/verify-otp/', VerifyPhoneOTPView.as_view(), name='verify-phone-otp'),
+    path('preferences/categories/', PreferredCategoriesView.as_view(), name='preferred-categories'),
     path('me/', MeView.as_view(), name='me'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('logout/', LogoutView.as_view(), name='logout'),

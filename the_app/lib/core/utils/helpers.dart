@@ -5,16 +5,22 @@ import 'package:url_launcher/url_launcher.dart';
 class Helpers {
   /// Haversine distance between two lat/lng points in kilometres.
   static double? haversineDistance(
-    double? lat1, double? lng1,
-    double? lat2, double? lng2,
+    double? lat1,
+    double? lng1,
+    double? lat2,
+    double? lng2,
   ) {
-    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return null;
+    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) {
+      return null;
+    }
     const R = 6371.0; // Earth radius in km
     final dLat = _degToRad(lat2 - lat1);
     final dLng = _degToRad(lng2 - lng1);
     final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_degToRad(lat1)) * math.cos(_degToRad(lat2)) *
-        math.sin(dLng / 2) * math.sin(dLng / 2);
+        math.cos(_degToRad(lat1)) *
+            math.cos(_degToRad(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
   }
@@ -52,18 +58,24 @@ class Helpers {
   // Format price with currency
   static String formatPrice(double price, {String currency = 'DZD'}) {
     return '${price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )} $currency';
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        )} $currency';
   }
 
   // Show snackbar
-  static void showSnackBar(BuildContext context, String message, {bool isError = false}) {
+  static void showSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, textAlign: TextAlign.right),
+        content: Text(
+          message,
+          textAlign: TextAlign.right,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 2),
       ),
@@ -75,7 +87,7 @@ class Helpers {
     final hours = duration.inHours.toString().padLeft(2, '0');
     final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    
+
     return {
       'hours': hours,
       'minutes': minutes,

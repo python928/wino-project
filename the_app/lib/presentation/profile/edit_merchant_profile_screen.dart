@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -157,8 +158,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             _latitude = coords['latitude'];
             _longitude = coords['longitude'];
           });
-          if (mounted)
+          if (mounted) {
             Helpers.showSnackBar(context, 'Location updated successfully ✅');
+          }
         }
       } else {
         final pos = await LocationService.getCurrentPosition();
@@ -166,14 +168,60 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           _latitude = pos.latitude;
           _longitude = pos.longitude;
         });
-        if (mounted)
+        if (mounted) {
           Helpers.showSnackBar(context, 'Location updated successfully ✅');
+        }
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Could not get location: $e');
+      if (!mounted) return;
+      final msg = e.toString();
+      if (msg.contains('Location services are disabled')) {
+        await _showLocationDialog(
+          title: 'Enable GPS',
+          message:
+              'GPS is disabled. Please enable location services to continue.',
+          openSettings: Geolocator.openLocationSettings,
+        );
+      } else if (msg.contains('permanently denied')) {
+        await _showLocationDialog(
+          title: 'Permission Required',
+          message:
+              'Location permission is permanently denied. Please enable it from app settings.',
+          openSettings: Geolocator.openAppSettings,
+        );
+      } else {
+        Helpers.showSnackBar(context, 'Could not get location: $e');
+      }
     } finally {
       if (mounted) setState(() => _isGettingLocation = false);
     }
+  }
+
+  Future<void> _showLocationDialog({
+    required String title,
+    required String message,
+    required Future<bool> Function() openSettings,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await openSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -261,11 +309,13 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           _avatarUrl = response['profile_image'] ?? response['avatar'];
         });
 
-        if (mounted)
+        if (mounted) {
           Helpers.showSnackBar(context, 'Profile picture updated successfully');
+        }
       } catch (e) {
-        if (mounted)
+        if (mounted) {
           Helpers.showSnackBar(context, 'Failed to update image: $e');
+        }
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
@@ -339,10 +389,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       };
 
       // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
-      if (_latitude != null)
+      if (_latitude != null) {
         payload['latitude'] = _latitude!.toStringAsFixed(6);
-      if (_longitude != null)
+      }
+      if (_longitude != null) {
         payload['longitude'] = _longitude!.toStringAsFixed(6);
+      }
 
       debugPrint('💾 Saving profile payload: $payload');
 

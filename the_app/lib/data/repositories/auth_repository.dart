@@ -170,4 +170,14 @@ class AuthRepository {
       throw Exception('Failed to update profile: $e');
     }
   }
+
+  static Future<void> updatePreferredCategories(List<int> categoryIds) async {
+    try {
+      await ApiService.post(ApiConfig.preferredCategories, {
+        'preferred_categories': categoryIds,
+      });
+    } catch (e) {
+      throw Exception('Failed to update preferred categories: $e');
+    }
+  }
 }
