@@ -81,3 +81,50 @@ class PhoneOTP(models.Model):
 	@classmethod
 	def expiry_time(cls) -> timezone.datetime:
 		return timezone.now() + timedelta(minutes=5)
+
+
+class StoreReport(models.Model):
+	REASON_SPAM = 'spam'
+	REASON_FAKE = 'fake'
+	REASON_FRAUD = 'fraud'
+	REASON_OFFENSIVE = 'offensive'
+	REASON_OTHER = 'other'
+
+	REASON_CHOICES = (
+		(REASON_SPAM, 'Spam'),
+		(REASON_FAKE, 'Fake Store'),
+		(REASON_FRAUD, 'Fraud / Scam'),
+		(REASON_OFFENSIVE, 'Offensive Content'),
+		(REASON_OTHER, 'Other'),
+	)
+
+	STATUS_PENDING = 'pending'
+	STATUS_REVIEWED = 'reviewed'
+	STATUS_REJECTED = 'rejected'
+	STATUS_CHOICES = (
+		(STATUS_PENDING, 'Pending'),
+		(STATUS_REVIEWED, 'Reviewed'),
+		(STATUS_REJECTED, 'Rejected'),
+	)
+
+	reporter = models.ForeignKey(
+		'User',
+		on_delete=models.CASCADE,
+		related_name='store_reports_sent',
+	)
+	store = models.ForeignKey(
+		'User',
+		on_delete=models.CASCADE,
+		related_name='store_reports_received',
+	)
+	reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+	details = models.TextField(blank=True, default='')
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['-created_at']
+		unique_together = ('reporter', 'store')
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"{self.reporter_id} -> {self.store_id} ({self.reason})"

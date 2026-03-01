@@ -5,9 +5,11 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/subscription_service.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/offer_model.dart';
 import 'widgets/product_picker_sheet.dart';
+import '../subscription/subscription_gate.dart';
 
 class AddPromotionScreen extends StatefulWidget {
   final Offer? offer;
@@ -345,6 +347,10 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       }
     } catch (e) {
       if (mounted) {
+        if (SubscriptionService.isSubscriptionRequiredError(e)) {
+          await showSubscriptionRequiredWindow(context);
+          return;
+        }
         Helpers.showSnackBar(
             context, 'Failed to ${_isEditMode ? 'edit' : 'add'} discount: $e');
       }

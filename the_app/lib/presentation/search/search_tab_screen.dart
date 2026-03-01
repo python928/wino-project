@@ -18,11 +18,14 @@ import '../shared_widgets/shimmer_loading.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
+import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
 import '../common/location_picker_screen.dart';
 import '../common/radius_picker_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import 'category_selection_screen.dart';
 import '../shared_widgets/cards/store_chip.dart';
+import '../shared_widgets/location_mode_switcher.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
@@ -57,8 +60,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
     ToggleOption(
         label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
-    ToggleOption(
-        label: 'Stores', icon: Icons.store_rounded, value: 'Stores'),
+    ToggleOption(label: 'Stores', icon: Icons.store_rounded, value: 'Stores'),
   ];
 
   // Filters
@@ -312,11 +314,18 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   void _showFiltersSheet() {
+    final initialSort = _selectedSort;
+    final initialPriceRange = _priceRange;
+    final initialMinRating = _minRating;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _buildFiltersBottomSheet(),
+      builder: (context) => _buildFiltersBottomSheet(
+        initialSort: initialSort,
+        initialPriceRange: initialPriceRange,
+        initialMinRating: initialMinRating,
+      ),
     );
   }
 
@@ -366,6 +375,68 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         .toSet();
     if (selectedNames.isEmpty) return true;
     return selectedNames.contains(post.category.toLowerCase());
+  }
+
+  String get _normalizedQuery => _searchController.text.trim().toLowerCase();
+
+  bool _matchesQueryText(String value) {
+    final query = _normalizedQuery;
+    if (query.isEmpty) return true;
+    return value.toLowerCase().contains(query);
+  }
+
+  bool _postMatchesQuery(Post post) {
+    final query = _normalizedQuery;
+    if (query.isEmpty) return true;
+    return _matchesQueryText(post.title) ||
+        _matchesQueryText(post.description) ||
+        _matchesQueryText(post.storeName) ||
+        _matchesQueryText(post.category);
+  }
+
+  bool _offerMatchesQuery(Offer offer) {
+    final query = _normalizedQuery;
+    if (query.isEmpty) return true;
+    return _postMatchesQuery(offer.product) ||
+        _matchesQueryText(offer.discountPercentage.toString());
+  }
+
+  bool _packMatchesQuery(Pack pack) {
+    final query = _normalizedQuery;
+    if (query.isEmpty) return true;
+    final productNames = pack.products.map((p) => p.productName).join(' ');
+    return _matchesQueryText(pack.name) ||
+        _matchesQueryText(pack.description) ||
+        _matchesQueryText(pack.merchantName) ||
+        _matchesQueryText(productNames);
+  }
+
+  bool _storeMatchesQuery(User store) {
+    final query = _normalizedQuery;
+    if (query.isEmpty) return true;
+    return _matchesQueryText(store.fullName) ||
+        _matchesQueryText(store.address) ||
+        _matchesQueryText(store.city ?? '');
+  }
+
+  double _offerEffectivePrice(Offer offer) {
+    if (offer.newPrice > 0) return offer.newPrice;
+    return offer.product.price;
+  }
+
+  double _packEffectivePrice(Pack pack) {
+    if (pack.discountPrice > 0) return pack.discountPrice;
+    return pack.totalPrice;
+  }
+
+  bool _matchesPriceFilter(double price) {
+    if (!(_priceRange.start > 0 || _priceRange.end < 100000)) return true;
+    return price >= _priceRange.start && price <= _priceRange.end;
+  }
+
+  DateTime _parsePackDate(Pack pack) {
+    return DateTime.tryParse(pack.createdAt) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   @override
@@ -456,90 +527,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               const SizedBox(width: 12),
               // Location Toggle
               Expanded(
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Row(
-                    children: [
-                      // "City" Segment
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: _showLocationPicker,
-                          child: Container(
-                            margin: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: !distanceActive ? AppColors.primaryColor : Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 16,
-                                  color: !distanceActive ? Colors.white : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    (!distanceActive && _selectedLocation.isNotEmpty && _selectedLocation != '/')
-                                        ? _selectedLocation
-                                        : 'City',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: !distanceActive ? Colors.white : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // "Nearby" Segment
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: _showDistancePicker,
-                          child: Container(
-                            margin: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: distanceActive ? AppColors.primaryColor : Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.radar,
-                                  size: 16,
-                                  color: distanceActive ? Colors.white : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    distanceActive ? '${_distanceKm!.toInt()} km' : 'Nearby',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: distanceActive ? Colors.white : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: LocationModeSwitcher(
+                  distanceActive: distanceActive,
+                  cityLabel: (!distanceActive &&
+                          _selectedLocation.isNotEmpty &&
+                          _selectedLocation != '/')
+                      ? _selectedLocation
+                      : 'City',
+                  nearbyLabel:
+                      distanceActive ? '${_distanceKm!.toInt()} km' : 'Nearby',
+                  onCityTap: _showLocationPicker,
+                  onNearbyTap: _showDistancePicker,
                 ),
               ),
             ],
@@ -723,7 +721,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: (categories.length > 5 ? 5 : categories.length) + 1,
+                  itemCount:
+                      (categories.length > 5 ? 5 : categories.length) + 1,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     if (index == 0) {
@@ -739,8 +738,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       );
                     }
                     final cat = categories[index - 1];
-                    final color = _categoryPalette[
-                        (index - 1) % _categoryPalette.length];
+                    final color =
+                        _categoryPalette[(index - 1) % _categoryPalette.length];
                     final isSelected = _selectedCategoryIds.contains(cat.id);
                     return _buildCategoryCard(
                       icon: cat.iconData,
@@ -789,9 +788,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     ? color.withOpacity(0.22)
                     : color.withOpacity(0.10),
                 shape: BoxShape.circle,
-                border: isSelected
-                    ? Border.all(color: color, width: 2)
-                    : null,
+                border: isSelected ? Border.all(color: color, width: 2) : null,
               ),
               child: Icon(icon, color: color, size: 26),
             ),
@@ -803,8 +800,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? color : AppColors.textPrimary,
               ),
             ),
@@ -813,7 +809,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       ),
     );
   }
-
 
   Widget _buildNonRemovableCategoryChip({required String name}) {
     return Container(
@@ -977,7 +972,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  Widget _buildFiltersBottomSheet() {
+  Widget _buildFiltersBottomSheet({
+    required String initialSort,
+    required RangeValues initialPriceRange,
+    required double initialMinRating,
+  }) {
+    var draftSort = initialSort;
+    var draftPriceRange = initialPriceRange;
+    var draftMinRating = initialMinRating;
+
     return StatefulBuilder(
       builder: (context, setSheetState) {
         return Container(
@@ -1008,18 +1011,35 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Filters',
-                      style: AppTextStyles.h3
-                          .copyWith(fontWeight: FontWeight.w700),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.tune_rounded,
+                            color: AppColors.primaryColor,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Filters',
+                          style: AppTextStyles.h3
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                     AppTextButton(
                       text: 'Reset',
                       onPressed: () {
                         setSheetState(() {
-                          _selectedSort = 'Newest';
-                          _priceRange = const RangeValues(0, 100000);
-                          _minRating = 0;
+                          draftSort = 'Newest';
+                          draftPriceRange = const RangeValues(0, 100000);
+                          draftMinRating = 0;
                         });
                       },
                     ),
@@ -1046,20 +1066,37 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: _sortOptions.map((option) {
-                          final isSelected = _selectedSort == option;
+                          final isSelected = draftSort == option;
                           return GestureDetector(
                             onTap: () =>
-                                setSheetState(() => _selectedSort = option),
-                            child: Container(
+                                setSheetState(() => draftSort = option),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.primaryColor
+                                    ? Colors.white
                                     : AppColors.neutral100,
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primaryColor
+                                      : Colors.transparent,
+                                  width: 1.4,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.primaryColor
+                                              .withOpacity(0.15),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Text(
                                 option,
@@ -1069,7 +1106,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                                       ? FontWeight.w600
                                       : FontWeight.w500,
                                   color: isSelected
-                                      ? Colors.white
+                                      ? AppColors.primaryColor
                                       : AppColors.textPrimary,
                                 ),
                               ),
@@ -1099,7 +1136,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '${_priceRange.start.toInt()} - ${_priceRange.end.toInt()} DZD',
+                              '${draftPriceRange.start.toInt()} - ${draftPriceRange.end.toInt()} DZD',
                               style: TextStyle(
                                 color: AppColors.primaryColor,
                                 fontWeight: FontWeight.w600,
@@ -1119,12 +1156,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           trackHeight: 4,
                         ),
                         child: RangeSlider(
-                          values: _priceRange,
+                          values: draftPriceRange,
                           min: 0,
                           max: 100000,
                           divisions: 100,
                           onChanged: (values) {
-                            setSheetState(() => _priceRange = values);
+                            setSheetState(() => draftPriceRange = values);
                           },
                         ),
                       ),
@@ -1155,7 +1192,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                                     color: Colors.amber, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _minRating.toStringAsFixed(1),
+                                  draftMinRating.toStringAsFixed(1),
                                   style: TextStyle(
                                     color: Colors.amber[800],
                                     fontWeight: FontWeight.w600,
@@ -1177,12 +1214,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           trackHeight: 4,
                         ),
                         child: Slider(
-                          value: _minRating,
+                          value: draftMinRating,
                           min: 0,
                           max: 5,
                           divisions: 10,
                           onChanged: (value) {
-                            setSheetState(() => _minRating = value);
+                            setSheetState(() => draftMinRating = value);
                           },
                         ),
                       ),
@@ -1209,8 +1246,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   child: AppPrimaryButton(
                     text: 'Apply Filters',
                     onPressed: () {
+                      setState(() {
+                        _selectedSort = draftSort;
+                        _priceRange = draftPriceRange;
+                        _minRating = draftMinRating;
+                        _resetVisibleCounts();
+                      });
                       Navigator.pop(context);
-                      setState(() {});
                     },
                   ),
                 ),
@@ -1266,19 +1308,21 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   List<User> _getLocationFilteredStores() {
+    final baseStores = _searchedStores.where(_storeMatchesQuery).toList();
     if (_selectedWilaya == null) {
-      return _searchedStores;
+      return baseStores;
     }
-    return _searchedStores
+    return baseStores
         .where((store) => _storeMatchesLocationFilter(store.address))
         .toList();
   }
 
   List<User> _getDistanceFilteredStores() {
+    final baseStores = _searchedStores.where(_storeMatchesQuery).toList();
     if (_distanceKm == null || _userLat == null || _userLng == null) {
-      return _searchedStores;
+      return baseStores;
     }
-    return _searchedStores.where((store) {
+    return baseStores.where((store) {
       final dist = Helpers.haversineDistance(
           _userLat, _userLng, store.latitude, store.longitude);
       return dist != null && dist <= _distanceKm!;
@@ -1332,17 +1376,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         filteredProducts = filteredProducts
             .where((p) => _postMatchesSelectedCategories(p, categoriesById))
             .toList();
+        filteredProducts =
+            filteredProducts.where((p) => _postMatchesQuery(p)).toList();
 
         if (_minRating > 0) {
           filteredProducts =
               filteredProducts.where((p) => p.rating >= _minRating).toList();
         }
-        if (_priceRange.start > 0 || _priceRange.end < 100000) {
-          filteredProducts = filteredProducts
-              .where((p) =>
-                  p.price >= _priceRange.start && p.price <= _priceRange.end)
-              .toList();
-        }
+        filteredProducts = filteredProducts
+            .where((p) => _matchesPriceFilter(p.price))
+            .toList();
 
         var filteredOffers = offers.toList();
         if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
@@ -1357,6 +1400,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((o) =>
                 _postMatchesSelectedCategories(o.product, categoriesById))
             .toList();
+        filteredOffers =
+            filteredOffers.where((o) => _offerMatchesQuery(o)).toList();
+        if (_minRating > 0) {
+          filteredOffers = filteredOffers
+              .where((o) => o.product.rating >= _minRating)
+              .toList();
+        }
+        filteredOffers = filteredOffers
+            .where((o) => _matchesPriceFilter(_offerEffectivePrice(o)))
+            .toList();
 
         var filteredPacks = packs.toList();
         if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
@@ -1365,6 +1418,57 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               .toList();
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredPacks = [];
+        }
+        filteredPacks =
+            filteredPacks.where((p) => _packMatchesQuery(p)).toList();
+        filteredPacks = filteredPacks
+            .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
+            .toList();
+
+        switch (_selectedSort) {
+          case 'Oldest':
+            filteredProducts = List.from(filteredProducts)
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            filteredOffers = List.from(filteredOffers)
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            filteredPacks = List.from(filteredPacks)
+              ..sort((a, b) => _parsePackDate(a).compareTo(_parsePackDate(b)));
+            break;
+          case 'Highest Rated':
+            filteredProducts = List.from(filteredProducts)
+              ..sort((a, b) => b.rating.compareTo(a.rating));
+            filteredOffers = List.from(filteredOffers)
+              ..sort((a, b) => b.product.rating.compareTo(a.product.rating));
+            break;
+          case 'Lowest Price':
+            filteredProducts = List.from(filteredProducts)
+              ..sort((a, b) => a.price.compareTo(b.price));
+            filteredOffers = List.from(filteredOffers)
+              ..sort((a, b) =>
+                  _offerEffectivePrice(a).compareTo(_offerEffectivePrice(b)));
+            filteredPacks = List.from(filteredPacks)
+              ..sort((a, b) =>
+                  _packEffectivePrice(a).compareTo(_packEffectivePrice(b)));
+            break;
+          case 'Highest Price':
+            filteredProducts = List.from(filteredProducts)
+              ..sort((a, b) => b.price.compareTo(a.price));
+            filteredOffers = List.from(filteredOffers)
+              ..sort((a, b) =>
+                  _offerEffectivePrice(b).compareTo(_offerEffectivePrice(a)));
+            filteredPacks = List.from(filteredPacks)
+              ..sort((a, b) =>
+                  _packEffectivePrice(b).compareTo(_packEffectivePrice(a)));
+            break;
+          case 'Newest':
+          default:
+            filteredProducts = List.from(filteredProducts)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            filteredOffers = List.from(filteredOffers)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            filteredPacks = List.from(filteredPacks)
+              ..sort((a, b) => _parsePackDate(b).compareTo(_parsePackDate(a)));
+            break;
         }
 
         final filteredStores = _getActiveFilteredStores();
@@ -1668,11 +1772,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         products = products
             .where((p) => _postMatchesSelectedCategories(p, categoriesById))
             .toList();
+        products = products.where((p) => _postMatchesQuery(p)).toList();
 
         switch (_selectedSort) {
           case 'Oldest':
             products = List.from(products)
-              ..sort((a, b) => a.id.compareTo(b.id));
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
             break;
           case 'Highest Rated':
             products = List.from(products)
@@ -1685,6 +1790,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           case 'Highest Price':
             products = List.from(products)
               ..sort((a, b) => b.price.compareTo(a.price));
+            break;
+          case 'Newest':
+          default:
+            products = List.from(products)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
             break;
         }
 
@@ -1765,6 +1875,40 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((o) =>
                 _postMatchesSelectedCategories(o.product, categoriesById))
             .toList();
+        offers = offers.where((o) => _offerMatchesQuery(o)).toList();
+
+        if (_minRating > 0) {
+          offers = offers.where((o) => o.product.rating >= _minRating).toList();
+        }
+        offers = offers
+            .where((o) => _matchesPriceFilter(_offerEffectivePrice(o)))
+            .toList();
+
+        switch (_selectedSort) {
+          case 'Oldest':
+            offers = List.from(offers)
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            break;
+          case 'Highest Rated':
+            offers = List.from(offers)
+              ..sort((a, b) => b.product.rating.compareTo(a.product.rating));
+            break;
+          case 'Lowest Price':
+            offers = List.from(offers)
+              ..sort((a, b) =>
+                  _offerEffectivePrice(a).compareTo(_offerEffectivePrice(b)));
+            break;
+          case 'Highest Price':
+            offers = List.from(offers)
+              ..sort((a, b) =>
+                  _offerEffectivePrice(b).compareTo(_offerEffectivePrice(a)));
+            break;
+          case 'Newest':
+          default:
+            offers = List.from(offers)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            break;
+        }
 
         if (offers.isEmpty) {
           return _buildEmptyState();
@@ -1823,6 +1967,34 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               packs.where((p) => validStoreIds.contains(p.merchantId)).toList();
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           packs = [];
+        }
+
+        packs = packs.where((p) => _packMatchesQuery(p)).toList();
+        packs = packs
+            .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
+            .toList();
+
+        switch (_selectedSort) {
+          case 'Oldest':
+            packs = List.from(packs)
+              ..sort((a, b) => _parsePackDate(a).compareTo(_parsePackDate(b)));
+            break;
+          case 'Lowest Price':
+            packs = List.from(packs)
+              ..sort((a, b) =>
+                  _packEffectivePrice(a).compareTo(_packEffectivePrice(b)));
+            break;
+          case 'Highest Price':
+            packs = List.from(packs)
+              ..sort((a, b) =>
+                  _packEffectivePrice(b).compareTo(_packEffectivePrice(a)));
+            break;
+          case 'Newest':
+          case 'Highest Rated':
+          default:
+            packs = List.from(packs)
+              ..sort((a, b) => _parsePackDate(b).compareTo(_parsePackDate(a)));
+            break;
         }
 
         if (packs.isEmpty) {
@@ -1930,5 +2102,4 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       ),
     );
   }
-
 }

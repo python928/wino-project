@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User, Follower, PhoneOTP
+from .models import User, Follower, PhoneOTP, StoreReport
 
 
 @admin.register(User)
@@ -26,4 +26,9 @@ class PhoneOTPAdmin(admin.ModelAdmin):
 	search_fields = ('phone',)
 	list_filter = ('is_verified',)
 
-# Register your models here.
+
+@admin.register(StoreReport)
+class StoreReportAdmin(admin.ModelAdmin):
+	list_display = ('reporter', 'store', 'reason', 'status', 'created_at')
+	search_fields = ('reporter__username', 'store__username', 'details')
+	list_filter = ('reason', 'status')

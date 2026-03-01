@@ -1,12 +1,16 @@
 from django.conf import settings
 from django.db import models
+from .constants import DEFAULT_SUBSCRIPTION_INSTRUCTIONS, DEFAULT_SUBSCRIPTION_RIB
 
 
 class SubscriptionPlan(models.Model):
 	name = models.CharField(max_length=255)
+	slug = models.SlugField(max_length=60, unique=True, default='')
 	max_products = models.IntegerField()
 	price = models.DecimalField(max_digits=10, decimal_places=2)
 	duration_days = models.IntegerField()
+	benefits = models.TextField(blank=True, default='')
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
 		return self.name
@@ -24,5 +28,52 @@ class MerchantSubscription(models.Model):
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
 		return f"{self.store} - {self.plan}"
+
+
+class SubscriptionPaymentRequest(models.Model):
+	STATUS_PENDING = 'pending'
+	STATUS_APPROVED = 'approved'
+	STATUS_REJECTED = 'rejected'
+	STATUS_CHOICES = (
+		(STATUS_PENDING, 'Pending'),
+		(STATUS_APPROVED, 'Approved'),
+		(STATUS_REJECTED, 'Rejected'),
+	)
+
+	merchant = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name='subscription_payment_requests',
+	)
+	plan = models.ForeignKey(
+		SubscriptionPlan,
+		on_delete=models.CASCADE,
+		related_name='payment_requests',
+	)
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+	payment_note = models.TextField(blank=True, default='')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['-created_at']
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"{self.merchant_id} -> {self.plan_id} ({self.status})"
+
+
+class SubscriptionPaymentConfig(models.Model):
+	rib = models.CharField(max_length=64, default=DEFAULT_SUBSCRIPTION_RIB)
+	instructions = models.TextField(
+		default=DEFAULT_SUBSCRIPTION_INSTRUCTIONS
+	)
+	is_active = models.BooleanField(default=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		verbose_name = 'Subscription Payment Config'
+		verbose_name_plural = 'Subscription Payment Config'
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"Payment Config ({'active' if self.is_active else 'inactive'})"
 
 # Create your models here.

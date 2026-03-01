@@ -14,7 +14,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework import generics
 
-from .models import Follower
+from .models import Follower, StoreReport
 from .models import PhoneOTP
 from .serializers import (
 	RegisterSerializer,
@@ -24,6 +24,7 @@ from .serializers import (
 	SendPhoneOTPSerializer,
 	VerifyPhoneOTPSerializer,
 	PreferredCategoriesSerializer,
+	StoreReportSerializer,
 )
 from .services import generate_otp_code, send_otp_message
 
@@ -341,3 +342,17 @@ class FollowerToggleView(generics.CreateAPIView):
 			return Response({'is_following': False})
 
 		return Response({'is_following': True})
+
+
+class StoreReportViewSet(viewsets.ModelViewSet):
+	serializer_class = StoreReportSerializer
+	permission_classes = [permissions.IsAuthenticated]
+
+	def get_queryset(self):
+		user = self.request.user
+		if user.is_superuser or user.is_staff:
+			return StoreReport.objects.select_related('reporter', 'store').all()
+		return StoreReport.objects.select_related('reporter', 'store').filter(reporter=user)
+
+	def perform_create(self, serializer):
+		serializer.save(reporter=self.request.user)

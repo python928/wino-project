@@ -14,10 +14,12 @@ from .views import (
     SendPhoneOTPView,
     VerifyPhoneOTPView,
     PreferredCategoriesView,
+    StoreReportViewSet,
 )
 
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
+router.register('store-reports', StoreReportViewSet, basename='store-report')
 
 urlpatterns = [
     path('', include(router.urls)),

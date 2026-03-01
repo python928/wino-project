@@ -21,6 +21,7 @@ from .serializers import (
 	PromotionImageSerializer,
 )
 from users.models import User
+from subscriptions.services import ensure_can_create_post
 
 # NOTE: Store == users.User now (unified profile)
 
@@ -113,6 +114,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 		return queryset
 
 	def perform_create(self, serializer):
+		ensure_can_create_post(self.request.user)
 		# Prevent store spoofing: the authenticated user IS the store
 		instance = serializer.save(store=self.request.user)
 		try:
@@ -211,6 +213,7 @@ class PackViewSet(viewsets.ModelViewSet):
 		return queryset
 
 	def perform_create(self, serializer):
+		ensure_can_create_post(self.request.user)
 		# Prevent merchant_id spoofing
 		instance = serializer.save(merchant=self.request.user)
 		try:
@@ -467,6 +470,7 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		return [permissions.IsAuthenticated()]
 
 	def perform_create(self, serializer):
+		ensure_can_create_post(self.request.user)
 		instance = serializer.save(store=self.request.user)
 		try:
 			from notifications.tasks import async_send_new_post_notification

@@ -24,8 +24,9 @@ class ProfileMerchantHeader extends StatelessWidget {
   final bool isFollowing;
   final VoidCallback? onFollowTap;
   final VoidCallback? onFavoriteTap;
+  final VoidCallback? onReportTap;
   final Gradient primaryGradient;
-  
+
   // Social Links
   final String? facebook;
   final String? instagram;
@@ -53,6 +54,7 @@ class ProfileMerchantHeader extends StatelessWidget {
     this.isFollowing = false,
     this.onFollowTap,
     this.onFavoriteTap,
+    this.onReportTap,
     required this.primaryGradient,
     this.facebook,
     this.instagram,
@@ -65,7 +67,8 @@ class ProfileMerchantHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final followersText = Helpers.formatNumber(followersCount);
     final ratingText = Helpers.formatRating(averageRating);
-    final hasPhone = phoneNumber.trim().isNotEmpty;
+    final displayPhone = _formatLocalPhone(phoneNumber);
+    final hasPhone = displayPhone.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,8 +122,8 @@ class ProfileMerchantHeader extends StatelessWidget {
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit_outlined, 
-                                   color: AppColors.primaryColor, size: 20),
+                              Icon(Icons.edit_outlined,
+                                  color: AppColors.primaryColor, size: 20),
                               const SizedBox(width: 12),
                               const Text('Edit Information'),
                             ],
@@ -130,11 +133,11 @@ class ProfileMerchantHeader extends StatelessWidget {
                           value: 'logout',
                           child: Row(
                             children: [
-                              const Icon(Icons.logout, 
-                                         color: Colors.red, size: 20),
+                              const Icon(Icons.logout,
+                                  color: Colors.red, size: 20),
                               const SizedBox(width: 12),
-                              const Text('Logout', 
-                                        style: TextStyle(color: Colors.red)),
+                              const Text('Logout',
+                                  style: TextStyle(color: Colors.red)),
                             ],
                           ),
                         ),
@@ -242,12 +245,11 @@ class ProfileMerchantHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               const SizedBox(height: 10),
-              
+
               // Follow and Favorite buttons for non-owner view
               if (!isOwnerView) ...[
                 Row(
                   children: [
-                    // Follow button
                     Expanded(
                       child: GestureDetector(
                         onTap: onFollowTap,
@@ -279,11 +281,39 @@ class ProfileMerchantHeader extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: onReportTap,
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.flag_outlined,
+                                size: 16, color: Colors.red.shade500),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Report',
+                              style: TextStyle(
+                                color: Colors.red.shade500,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               Row(
                 children: [
                   Icon(Icons.location_on_outlined,
@@ -308,7 +338,7 @@ class ProfileMerchantHeader extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        phoneNumber,
+                        displayPhone,
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -317,7 +347,7 @@ class ProfileMerchantHeader extends StatelessWidget {
                   ],
                 ),
               ],
-              
+
               // Social Icons Row
               if (_hasAnySocial) ...[
                 const SizedBox(height: 16),
@@ -325,16 +355,21 @@ class ProfileMerchantHeader extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      if (facebook?.isNotEmpty == true) 
-                        _buildSocialIcon(FontAwesomeIcons.facebook, facebook!, Colors.blue[800]!),
-                      if (instagram?.isNotEmpty == true) 
-                        _buildSocialIcon(FontAwesomeIcons.instagram, instagram!, Colors.pink),
-                      if (whatsapp?.isNotEmpty == true) 
-                        _buildSocialIcon(FontAwesomeIcons.whatsapp, 'https://wa.me/$whatsapp', Colors.green),
-                      if (tiktok?.isNotEmpty == true) 
-                        _buildSocialIcon(FontAwesomeIcons.tiktok, tiktok!, Colors.black),
-                      if (youtube?.isNotEmpty == true) 
-                        _buildSocialIcon(FontAwesomeIcons.youtube, youtube!, Colors.red),
+                      if (facebook?.isNotEmpty == true)
+                        _buildSocialIcon(FontAwesomeIcons.facebook, facebook!,
+                            Colors.blue[800]!),
+                      if (instagram?.isNotEmpty == true)
+                        _buildSocialIcon(FontAwesomeIcons.instagram, instagram!,
+                            Colors.pink),
+                      if (whatsapp?.isNotEmpty == true)
+                        _buildSocialIcon(FontAwesomeIcons.whatsapp,
+                            'https://wa.me/$whatsapp', Colors.green),
+                      if (tiktok?.isNotEmpty == true)
+                        _buildSocialIcon(
+                            FontAwesomeIcons.tiktok, tiktok!, Colors.black),
+                      if (youtube?.isNotEmpty == true)
+                        _buildSocialIcon(
+                            FontAwesomeIcons.youtube, youtube!, Colors.red),
                     ],
                   ),
                 ),
@@ -347,12 +382,28 @@ class ProfileMerchantHeader extends StatelessWidget {
     );
   }
 
-  bool get _hasAnySocial => 
-    (facebook?.isNotEmpty == true) || 
-    (instagram?.isNotEmpty == true) || 
-    (whatsapp?.isNotEmpty == true) || 
-    (tiktok?.isNotEmpty == true) || 
-    (youtube?.isNotEmpty == true);
+  bool get _hasAnySocial =>
+      (facebook?.isNotEmpty == true) ||
+      (instagram?.isNotEmpty == true) ||
+      (whatsapp?.isNotEmpty == true) ||
+      (tiktok?.isNotEmpty == true) ||
+      (youtube?.isNotEmpty == true);
+
+  String _formatLocalPhone(String raw) {
+    final compact = raw.replaceAll(' ', '').trim();
+    if (compact.isEmpty) return '';
+    if (compact.startsWith('+213')) {
+      final local = compact.substring(4);
+      if (local.isEmpty) return '';
+      return local.startsWith('0') ? local : '0$local';
+    }
+    if (compact.startsWith('213')) {
+      final local = compact.substring(3);
+      if (local.isEmpty) return '';
+      return local.startsWith('0') ? local : '0$local';
+    }
+    return compact;
+  }
 
   Widget _buildSocialIcon(IconData icon, String url, Color color) {
     return Padding(

@@ -8,14 +8,15 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/subscription_service.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/user_model.dart';
-import '../../data/models/category_model.dart';
 import '../common/location_filter_picker.dart';
 import 'package:flutter/services.dart';
 import 'widgets/product_picker_sheet.dart';
+import '../subscription/subscription_gate.dart';
 
 class AddPackScreen extends StatefulWidget {
   final Pack? pack;
@@ -353,6 +354,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
         }
       }
     } catch (e) {
+      if (SubscriptionService.isSubscriptionRequiredError(e) && mounted) {
+        await showSubscriptionRequiredWindow(context);
+        return;
+      }
       setState(() => _formError =
           'Error during publishing: ${provider.error ?? e.toString()}');
     }
@@ -635,47 +640,49 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     setState(() => _deliveryAvailable = value);
                   },
                 ),
-                if (_deliveryAvailable) ...([
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.map_outlined, size: 18),
-                    label: Text(
-                      _deliveryAreas != null &&
-                              _deliveryAreas!.selectedWilayas.isNotEmpty
-                          ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
-                          : 'Select delivery areas (optional)',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      alignment: Alignment.centerLeft,
-                    ),
-                    onPressed: () async {
-                      final result = await Navigator.push<LocationFilterResult>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LocationFilterPicker(
-                            initialFilter: _deliveryAreas,
-                          ),
-                        ),
-                      );
-                      if (result != null) {
-                        setState(() => _deliveryAreas = result);
-                      }
-                    },
-                  ),
-                  if (_deliveryAreas == null ||
-                      _deliveryAreas!.selectedWilayas.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'No areas selected — your store address will be used by default',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                if (_deliveryAvailable)
+                  ...([
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: Text(
+                        _deliveryAreas != null &&
+                                _deliveryAreas!.selectedWilayas.isNotEmpty
+                            ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
+                            : 'Select delivery areas (optional)',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: () async {
+                        final result =
+                            await Navigator.push<LocationFilterResult>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LocationFilterPicker(
+                              initialFilter: _deliveryAreas,
+                            ),
+                          ),
+                        );
+                        if (result != null) {
+                          setState(() => _deliveryAreas = result);
+                        }
+                      },
                     ),
-                ]),
+                    if (_deliveryAreas == null ||
+                        _deliveryAreas!.selectedWilayas.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'No areas selected — your store address will be used by default',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ),
+                  ]),
                 if (_formError != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),

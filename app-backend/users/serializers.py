@@ -3,7 +3,7 @@ from rest_framework import serializers
 import uuid
 from django.utils import timezone
 from django.db.models import Avg
-from .models import Follower
+from .models import Follower, StoreReport
 from .services import normalize_phone
 
 User = get_user_model()
@@ -229,3 +229,38 @@ class PreferredCategoriesSerializer(serializers.Serializer):
         child=serializers.IntegerField(min_value=1),
         allow_empty=False,
     )
+
+
+class StoreReportSerializer(serializers.ModelSerializer):
+    reporter = serializers.ReadOnlyField(source='reporter.id')
+    reporter_name = serializers.SerializerMethodField()
+    store_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StoreReport
+        fields = [
+            'id',
+            'reporter',
+            'reporter_name',
+            'store',
+            'store_name',
+            'reason',
+            'details',
+            'status',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'reporter', 'reporter_name', 'store_name', 'status', 'created_at']
+
+    def get_reporter_name(self, obj):
+        return obj.reporter.name or obj.reporter.username
+
+    def get_store_name(self, obj):
+        return obj.store.name or obj.store.username
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        reporter = getattr(request, 'user', None)
+        store = attrs.get('store')
+        if reporter and store and reporter == store:
+            raise serializers.ValidationError('You cannot report your own store.')
+        return attrs

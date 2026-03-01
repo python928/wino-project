@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../search/search_tab_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../common/radius_picker_sheet.dart';
+import 'location_mode_switcher.dart';
 
 /// Unified app bar — Travo style
 /// White background, location row, pill search hint, notification bell
@@ -75,129 +76,26 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ],
                   if (showLocation) ...[
                     Expanded(
-                      child: Container(
-                        height: 46,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 3, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F7FF),
-                          borderRadius: BorderRadius.circular(23),
-                          border: Border.all(color: const Color(0xFFDDE5FF)),
-                        ),
-                        child: Row(
-                          children: [
-                            // "City" Segment
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: onLocationTap,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: radiusKm == null
-                                        ? const LinearGradient(
-                                            colors: [
-                                              Color(0xFF1E5BFF),
-                                              Color(0xFF4A7DFF)
-                                            ],
-                                          )
-                                        : null,
-                                    color: radiusKm == null
-                                        ? null
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.location_on_outlined,
-                                        size: 16,
-                                        color: radiusKm == null
-                                            ? Colors.white
-                                            : AppColors.textSecondary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          (location != null &&
-                                                  location!.isNotEmpty &&
-                                                  location != '/')
-                                              ? location!
-                                              : 'City',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: radiusKm == null
-                                                ? Colors.white
-                                                : AppColors.textSecondary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // "Nearby" Segment
-                            if (onRadiusChanged != null)
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => showRadiusPickerSheet(
-                                    context,
-                                    initialRadius: radiusKm ?? 20.0,
-                                    onRadiusChanged: onRadiusChanged!,
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: radiusKm != null
-                                          ? const LinearGradient(
-                                              colors: [
-                                                Color(0xFF1E5BFF),
-                                                Color(0xFF4A7DFF)
-                                              ],
-                                            )
-                                          : null,
-                                      color: radiusKm != null
-                                          ? null
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.radar,
-                                          size: 16,
-                                          color: radiusKm != null
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            radiusKm != null
-                                                ? '${radiusKm!.toInt()} km'
-                                                : 'Nearby',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: radiusKm != null
-                                                  ? Colors.white
-                                                  : AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                      child: LocationModeSwitcher(
+                        distanceActive: radiusKm != null,
+                        cityLabel: (location != null &&
+                                location!.isNotEmpty &&
+                                location != '/')
+                            ? location!
+                            : 'City',
+                        nearbyLabel: radiusKm != null
+                            ? '${radiusKm!.toInt()} km'
+                            : 'Nearby',
+                        onCityTap: onLocationTap ?? () {},
+                        onNearbyTap: () {
+                          if (onRadiusChanged == null) return;
+                          showRadiusPickerSheet(
+                            context,
+                            initialRadius: radiusKm ?? 20.0,
+                            onRadiusChanged: onRadiusChanged!,
+                          );
+                        },
+                        showNearby: onRadiusChanged != null,
                       ),
                     ),
                   ],

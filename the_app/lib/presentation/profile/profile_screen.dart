@@ -19,6 +19,7 @@ import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/user_model.dart';
 import '../auth/splash_screen.dart';
+import '../notifications/notifications_screen.dart';
 import 'edit_merchant_profile_screen.dart';
 import 'add_product_screen.dart';
 import '../shared_widgets/cards/product_card.dart';
@@ -30,7 +31,6 @@ import '../shared_widgets/cards/promotion_card.dart';
 import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
 import 'widgets/profile_post_filter.dart';
-import '../shared_widgets/unified_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   final int? storeId;
@@ -56,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _whatsapp;
   String? _tiktok;
   String? _youtube;
-  
+
   double? _latitude;
   double? _longitude;
 
@@ -241,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _followersCount = u.followersCount;
         _averageRating = u.averageRating;
         _location = u.address.isNotEmpty ? u.address : 'Select Location';
-        
+
         _facebook = u.facebook;
         _instagram = u.instagram;
         _whatsapp = u.whatsapp;
@@ -278,9 +278,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         await _fetchStoreData();
 
-        if (mounted) Helpers.showSnackBar(context, 'Cover image updated successfully');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Cover image updated successfully');
       } catch (e) {
-        if (mounted) Helpers.showSnackBar(context, 'Failed to update cover image: $e');
+        if (mounted)
+          Helpers.showSnackBar(context, 'Failed to update cover image: $e');
       } finally {
         if (mounted) setState(() => _isUploadingCover = false);
       }
@@ -393,7 +395,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (targetUserId == null) return;
 
     String locationDisplay = 'Select Location';
-    final address = (userData['address'] ?? userData['location'] ?? '').toString();
+    final address =
+        (userData['address'] ?? userData['location'] ?? '').toString();
     if (address.isNotEmpty && address != 'Algeria') locationDisplay = address;
 
     if (targetUserId == _currentUserId) {
@@ -406,18 +409,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _storeDescription = (userData['store_description'] ?? '').toString();
         _avatarUrl = userData['profile_image'] ?? userData['avatar'];
         _storeCoverUrl = userData['cover_image'];
-        
+
         _facebook = userData['facebook'];
         _instagram = userData['instagram'];
         _whatsapp = userData['whatsapp'];
         _tiktok = userData['tiktok'];
         _youtube = userData['youtube'];
-        
+
         if (userData['latitude'] != null) {
-             _latitude = double.tryParse(userData['latitude'].toString());
+          _latitude = double.tryParse(userData['latitude'].toString());
         }
         if (userData['longitude'] != null) {
-             _longitude = double.tryParse(userData['longitude'].toString());
+          _longitude = double.tryParse(userData['longitude'].toString());
         }
       });
     } else {
@@ -432,7 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _storeCoverUrl = null;
         _followersCount = 0;
         _averageRating = 0.0;
-        
+
         _facebook = null;
         _instagram = null;
         _whatsapp = null;
@@ -540,7 +543,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    ApiService.post(ApiConfig.followersToggle, {'store': _storeId}).then((resp) {
+    ApiService.post(ApiConfig.followersToggle, {'store': _storeId})
+        .then((resp) {
       final isFollowing = (resp is Map && resp['is_following'] == true);
       if (!mounted) return;
       setState(() {
@@ -604,6 +608,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
     print('Favorite store: $_storeId');
   }
 
+  Future<void> _showReportStoreSheet() async {
+    if (_storeId == null) return;
+    const reasons = <Map<String, String>>[
+      {'value': 'spam', 'label': 'Spam'},
+      {'value': 'fake', 'label': 'Fake store'},
+      {'value': 'fraud', 'label': 'Fraud / scam'},
+      {'value': 'offensive', 'label': 'Offensive content'},
+      {'value': 'other', 'label': 'Other'},
+    ];
+    String selectedReason = 'spam';
+    final detailsController = TextEditingController();
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Report Store',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: reasons.map((r) {
+                    final selected = selectedReason == r['value'];
+                    return GestureDetector(
+                      onTap: () =>
+                          setModalState(() => selectedReason = r['value']!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected
+                                ? Colors.red.shade300
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          r['label']!,
+                          style: TextStyle(
+                            color:
+                                selected ? Colors.red.shade700 : Colors.black87,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: detailsController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Add details (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade500,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Send Report'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true) {
+      detailsController.dispose();
+      return;
+    }
+    try {
+      await ApiService.post(ApiConfig.storeReports, {
+        'store': _storeId,
+        'reason': selectedReason,
+        'details': detailsController.text.trim(),
+      });
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+    } finally {
+      detailsController.dispose();
+    }
+  }
+
   Widget _buildMerchantHeader(Color primaryColor, Gradient primaryGradient) {
     return ProfileMerchantHeader(
       userName: _userName,
@@ -619,11 +753,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onPickImage: _pickImage,
       onPickCoverImage: _pickCoverImage,
       onSettingsTap: null,
-      onSettingsMenuSelected: _isOwnerView ? _onSettingsMenuSelected : null,
+      onSettingsMenuSelected: null,
       isOwnerView: _isOwnerView,
       isFollowing: _isFollowingStore,
       onFollowTap: !_isOwnerView ? _handleFollow : null,
       onFavoriteTap: !_isOwnerView ? _handleFavorite : null,
+      onReportTap: !_isOwnerView ? _showReportStoreSheet : null,
       primaryGradient: primaryGradient,
       facebook: _facebook,
       instagram: _instagram,
@@ -734,10 +869,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       await _fetchStoreData();
-      if (mounted) Helpers.showSnackBar(context, 'Review submitted successfully');
+      if (mounted)
+        Helpers.showSnackBar(context, 'Review submitted successfully');
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to submit review: $e', isError: true);
+        Helpers.showSnackBar(context, 'Failed to submit review: $e',
+            isError: true);
       }
     } finally {
       if (mounted) setState(() => _isSubmittingReview = false);
@@ -746,7 +883,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildReviewSection() {
     if (_isOwnerView) return const SizedBox.shrink();
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(16),
@@ -818,7 +955,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isSubmittingReview || _rating == 0 ? null : _submitReview,
+                onPressed:
+                    _isSubmittingReview || _rating == 0 ? null : _submitReview,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryColor,
                   foregroundColor: Colors.white,
@@ -848,9 +986,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: _isOwnerView
-            ? UnifiedAppBar(
-                showLocation: false,
-                showNotificationIcon: true,
+            ? AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                centerTitle: true,
+                title: const Text(
+                  'Profile',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                actions: [
+                  ValueListenableBuilder<int>(
+                    valueListenable:
+                        NotificationBadgeService.instance.unreadCount,
+                    builder: (context, unread, _) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            tooltip: 'Notifications',
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
+                                ),
+                              );
+                              NotificationBadgeService.instance.refresh();
+                            },
+                            icon: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0EEFF),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_outlined,
+                                color: AppColors.primaryColor,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          if (unread > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                constraints: const BoxConstraints(minWidth: 16),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: _onSettingsMenuSelected,
+                    offset: const Offset(0, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                color: AppColors.primaryColor, size: 20),
+                            const SizedBox(width: 12),
+                            const Text('Edit Information'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, color: Colors.red, size: 20),
+                            SizedBox(width: 12),
+                            Text('Logout', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      margin: const EdgeInsets.only(right: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EEFF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.settings_outlined,
+                        color: AppColors.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
               )
             : AppBar(
                 backgroundColor: Colors.white,
@@ -896,17 +1150,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SliverToBoxAdapter(
               child: Consumer2<PostProvider, PackProvider>(
                 builder: (context, postProvider, packProvider, _) {
-                final productsCount = _isOwnerView
-                  ? postProvider.myPosts.length
-                  : postProvider.storePosts.length;
-                final offersCount = _isOwnerView
-                  ? postProvider.myOffers.length
-                  : postProvider.storeOffers.length;
-                final packsCount = _isOwnerView
-                  ? packProvider.myPacks.length
-                  : packProvider.storePacks.length;
+                  final productsCount = _isOwnerView
+                      ? postProvider.myPosts.length
+                      : postProvider.storePosts.length;
+                  final offersCount = _isOwnerView
+                      ? postProvider.myOffers.length
+                      : postProvider.storeOffers.length;
+                  final packsCount = _isOwnerView
+                      ? packProvider.myPacks.length
+                      : packProvider.storePacks.length;
 
-                final postsCount = productsCount + offersCount + packsCount;
+                  final postsCount = productsCount + offersCount + packsCount;
 
                   return ProfilePostFilter(
                     selectedIndex: _selectedFilterIndex,
@@ -948,9 +1202,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        final products = _isOwnerView ? postProvider.myPosts : postProvider.storePosts;
-        final offers = _isOwnerView ? postProvider.myOffers : postProvider.storeOffers;
-        final packs = _isOwnerView ? packProvider.myPacks : packProvider.storePacks;
+        final products =
+            _isOwnerView ? postProvider.myPosts : postProvider.storePosts;
+        final offers =
+            _isOwnerView ? postProvider.myOffers : postProvider.storeOffers;
+        final packs =
+            _isOwnerView ? packProvider.myPacks : packProvider.storePacks;
 
         List<dynamic> items = [];
         if (type == 'promotion') {
@@ -958,11 +1215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } else if (type == 'pack') {
           items = packs;
         } else if (type == 'all') {
-          items = [
-            ...products,
-            ...offers,
-            ...packs
-          ];
+          items = [...products, ...offers, ...packs];
         } else {
           items = products;
         }
@@ -1022,7 +1275,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        final displayedItems = filteredItems.take(_profileVisibleCount).toList();
+        final displayedItems =
+            filteredItems.take(_profileVisibleCount).toList();
         final hasMore = filteredItems.length > displayedItems.length;
 
         return Column(
@@ -1058,11 +1312,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onEditTap: _isOwnerView
                         ? () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        AddProductScreen(product: item))).then(
-                                (result) {
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddProductScreen(product: item)))
+                                .then((result) {
                               if (result == true && _userId != null) {
                                 context
                                     .read<PostProvider>()

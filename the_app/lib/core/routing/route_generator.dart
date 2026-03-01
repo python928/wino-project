@@ -161,7 +161,6 @@ class RouteGenerator {
           ),
         );
 
-
       // ===== FAVORITES =====
       case Routes.favorites:
       case Routes.wishlist:
@@ -206,9 +205,7 @@ class RouteGenerator {
       settings: settings,
       pageBuilder: (_, __, ___) => child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        // Check for RTL
-        final isRtl = Directionality.of(context) == TextDirection.rtl;
-        final begin = isRtl ? const Offset(-1.0, 0.0) : const Offset(1.0, 0.0);
+        const begin = Offset(1.0, 0.0);
         final tween = Tween(begin: begin, end: Offset.zero)
             .chain(CurveTween(curve: Curves.easeOutCubic));
         return SlideTransition(

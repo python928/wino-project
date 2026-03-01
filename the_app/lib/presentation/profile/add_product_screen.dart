@@ -4,16 +4,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/providers/post_provider.dart';
-import '../../core/providers/home_provider.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/subscription_service.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/category_model.dart';
 import '../search/category_selection_screen.dart';
 import '../common/location_filter_picker.dart';
+import '../subscription/subscription_gate.dart';
 
 class AddProductScreen extends StatefulWidget {
   final Post? product;
@@ -297,6 +298,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
+        if (SubscriptionService.isSubscriptionRequiredError(e)) {
+          await showSubscriptionRequiredWindow(context);
+          return;
+        }
         Helpers.showSnackBar(
           context,
           'Failed to ${_isEditMode ? 'update' : 'publish'} product: $e',
@@ -523,8 +528,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         children: [
           // Toggle row
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
                 Container(
@@ -567,8 +571,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
                 Switch(
                   value: _deliveryAvailable,
-                  onChanged: (v) =>
-                      setState(() => _deliveryAvailable = v),
+                  onChanged: (v) => setState(() => _deliveryAvailable = v),
                   activeColor: AppColors.primaryColor,
                 ),
               ],
@@ -577,9 +580,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
           // Delivery areas (only when enabled)
           if (_deliveryAvailable) ...[
-            Divider(
-                height: 1,
-                color: AppColors.primaryColor.withOpacity(0.15)),
+            Divider(height: 1, color: AppColors.primaryColor.withOpacity(0.15)),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Column(
@@ -589,8 +590,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _deliveryAreas == null ||
-                                !_deliveryAreas!.hasFilters
+                        _deliveryAreas == null || !_deliveryAreas!.hasFilters
                             ? 'No areas selected'
                             : _deliveryAreas!.displayText,
                         style: TextStyle(
@@ -722,8 +722,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color:
-                                    AppColors.primaryColor.withOpacity(0.10),
+                                color: AppColors.primaryColor.withOpacity(0.10),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                     color: AppColors.primaryColor
