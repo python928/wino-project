@@ -4,6 +4,7 @@
 1. Install dependencies (system Python):
    ```bash
    pip3 install -r requirements.txt --break-system-packages --default-timeout 300
+   pip3 install django-cors-headers --break-system-packages
    ```
 2. Apply migrations:
    ```bash

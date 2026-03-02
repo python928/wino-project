@@ -1,4 +1,3 @@
-import random
 import re
 import json
 
@@ -49,7 +48,8 @@ def normalize_phone(phone: str) -> str:
 
 
 def generate_otp_code() -> str:
-	return f"{random.randint(0, 999999):06d}"
+	# Temporary testing mode: use fixed OTP code.
+	return "123456"
 
 
 def send_otp_whatsapp(phone: str, code: str) -> None:
@@ -126,23 +126,6 @@ def send_otp_sms(phone: str, code: str) -> None:
 
 
 def send_otp_message(phone: str, code: str) -> None:
-	channel = getattr(settings, 'TWILIO_OTP_CHANNEL', 'whatsapp').lower().strip()
-	if channel == 'sms':
-		send_otp_sms(phone, code)
-		return
-	if channel == 'both':
-		whatsapp_error = None
-		sms_error = None
-		try:
-			send_otp_whatsapp(phone, code)
-		except Exception as exc:
-			whatsapp_error = str(exc)
-		try:
-			send_otp_sms(phone, code)
-		except Exception as exc:
-			sms_error = str(exc)
-		if whatsapp_error and sms_error:
-			raise RuntimeError(f'WhatsApp error: {whatsapp_error} | SMS error: {sms_error}')
-		return
-	# default: whatsapp
-	send_otp_whatsapp(phone, code)
+	# Temporary testing mode: disable Twilio delivery.
+	_ = phone, code
+	return
