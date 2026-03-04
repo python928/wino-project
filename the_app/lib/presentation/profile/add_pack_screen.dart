@@ -367,75 +367,72 @@ class _AddPackScreenState extends State<AddPackScreen> {
     return Consumer<PackProvider>(
       builder: (context, provider, child) {
         final selected = provider.selectedProducts;
-        return Expanded(
-          child: Column(
-            children: [
-              // Table Header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.grey[200],
-                child: const Row(
-                  children: [
-                    Expanded(
-                        flex: 3,
-                        child: Text('Product',
-                            style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(
-                        flex: 2,
-                        child: Text('Quantity',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center)),
-                    Expanded(
-                        flex: 2,
-                        child: Text('Total',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.end)),
-                  ],
-                ),
+        return Column(
+          children: [
+            // Table Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.grey[200],
+              child: const Row(
+                children: [
+                  Expanded(
+                      flex: 3,
+                      child: Text('Product',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(
+                      flex: 2,
+                      child: Text('Quantity',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('Total',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end)),
+                ],
               ),
-              // Table Body
-              Expanded(
-                child: Stack(
-                  children: [
-                    AnimatedList(
-                      shrinkWrap: true,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      key: _listKey,
-                      initialItemCount: selected.length,
-                      itemBuilder: (context, index, animation) {
-                        if (index >= selected.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return _buildTableRow(selected[index], animation);
-                      },
-                    ),
-                    if (selected.isEmpty)
-                      const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.shopping_basket_outlined,
-                                size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text(
-                              'You haven\'t added any products to the pack yet',
-                              style: TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              'Use the search above to add products',
-                              style: TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+            ),
+            // Table Body
+            Expanded(
+              child: Stack(
+                children: [
+                  AnimatedList(
+                    shrinkWrap: true,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    key: _listKey,
+                    initialItemCount: selected.length,
+                    itemBuilder: (context, index, animation) {
+                      if (index >= selected.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildTableRow(selected[index], animation);
+                    },
+                  ),
+                  if (selected.isEmpty)
+                    const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shopping_basket_outlined,
+                              size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'You haven\'t added any products to the pack yet',
+                            style: TextStyle(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            'Use the search above to add products',
+                            style: TextStyle(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -571,137 +568,142 @@ class _AddPackScreenState extends State<AddPackScreen> {
           ),
           child: SafeArea(
             top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppTextField(
-                  controller: _packNameController,
-                  label: 'Pack Name *',
-                  hint: 'Enter pack name',
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total Product Prices:',
-                        style: TextStyle(color: Colors.grey)),
-                    Text('${totalPrice.toStringAsFixed(2)} DZD',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        controller: _packPriceController,
-                        label: 'Pack Sale Price',
-                        hint: '0',
-                        keyboardType: TextInputType.number,
-                        suffixText: 'DZD',
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('Savings',
-                            style: TextStyle(fontSize: 10, color: Colors.grey)),
-                        Text(
-                          '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} DZD',
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppTextField(
+                    controller: _packNameController,
+                    label: 'Pack Name *',
+                    hint: 'Enter pack name',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Product Prices:',
+                          style: TextStyle(color: Colors.grey)),
+                      Text('${totalPrice.toStringAsFixed(2)} DZD',
                           style: const TextStyle(
-                              color: Colors.green, fontWeight: FontWeight.bold),
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          controller: _packPriceController,
+                          label: 'Pack Sale Price',
+                          hint: '0',
+                          keyboardType: TextInputType.number,
+                          suffixText: 'DZD',
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Available'),
-                  subtitle:
-                      const Text('Show this pack to customers in your store'),
-                  value: _isAvailable,
-                  onChanged: (value) {
-                    setState(() => _isAvailable = value);
-                  },
-                ),
-                const SizedBox(height: 4),
-                // ─── Delivery Section ─────────────────────────────────────
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Delivery Available'),
-                  subtitle: const Text('Enable home delivery for this pack'),
-                  value: _deliveryAvailable,
-                  activeColor: AppColors.primary,
-                  onChanged: (value) {
-                    setState(() => _deliveryAvailable = value);
-                  },
-                ),
-                if (_deliveryAvailable)
-                  ...([
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.map_outlined, size: 18),
-                      label: Text(
-                        _deliveryAreas != null &&
-                                _deliveryAreas!.selectedWilayas.isNotEmpty
-                            ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
-                            : 'Select delivery areas (optional)',
-                        maxLines: 2,
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Savings',
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.grey)),
+                          Text(
+                            '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} DZD',
+                            style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Available'),
+                    subtitle:
+                        const Text('Show this pack to customers in your store'),
+                    value: _isAvailable,
+                    onChanged: (value) {
+                      setState(() => _isAvailable = value);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  // ─── Delivery Section ─────────────────────────────────────
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Delivery Available'),
+                    subtitle: const Text('Enable home delivery for this pack'),
+                    value: _deliveryAvailable,
+                    activeColor: AppColors.primary,
+                    onChanged: (value) {
+                      setState(() => _deliveryAvailable = value);
+                    },
+                  ),
+                  if (_deliveryAvailable)
+                    ...([
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.map_outlined, size: 18),
+                        label: Text(
+                          _deliveryAreas != null &&
+                                  _deliveryAreas!.selectedWilayas.isNotEmpty
+                              ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
+                              : 'Select delivery areas (optional)',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: () async {
+                          final result =
+                              await Navigator.push<LocationFilterResult>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LocationFilterPicker(
+                                initialFilter: _deliveryAreas,
+                              ),
+                            ),
+                          );
+                          if (result != null) {
+                            setState(() => _deliveryAreas = result);
+                          }
+                        },
+                      ),
+                      if (_deliveryAreas == null ||
+                          _deliveryAreas!.selectedWilayas.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'No areas selected — your store address will be used by default',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ),
+                    ]),
+                  if (_formError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        _formError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        alignment: Alignment.centerLeft,
-                      ),
-                      onPressed: () async {
-                        final result =
-                            await Navigator.push<LocationFilterResult>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LocationFilterPicker(
-                              initialFilter: _deliveryAreas,
-                            ),
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() => _deliveryAreas = result);
-                        }
-                      },
                     ),
-                    if (_deliveryAreas == null ||
-                        _deliveryAreas!.selectedWilayas.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          'No areas selected — your store address will be used by default',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600),
-                        ),
-                      ),
-                  ]),
-                if (_formError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      _formError!,
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  const SizedBox(height: 16),
+                  AppPrimaryButton(
+                    text: provider.isSubmitting
+                        ? (_isEditMode ? 'Saving...' : 'Publishing...')
+                        : (_isEditMode ? 'Save Changes' : 'Publish Pack'),
+                    onPressed: _submit,
+                    isLoading: provider.isSubmitting,
                   ),
-                const SizedBox(height: 16),
-                AppPrimaryButton(
-                  text: provider.isSubmitting
-                      ? (_isEditMode ? 'Saving...' : 'Publishing...')
-                      : (_isEditMode ? 'Save Changes' : 'Publish Pack'),
-                  onPressed: _submit,
-                  isLoading: provider.isSubmitting,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -720,31 +722,43 @@ class _AddPackScreenState extends State<AddPackScreen> {
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
         ),
-        body: Column(
-          children: [
-            // Product picker field
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: InkWell(
-                onTap: _openProductPicker,
-                borderRadius: BorderRadius.circular(12),
-                child: IgnorePointer(
-                  child: AppSearchField(
-                    controller: _searchController,
-                    hintText: 'Select product to add...',
-                    compact: false,
-                    showClearButton: false,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final bottomPanelHeight =
+                (constraints.maxHeight * 0.38).clamp(260.0, 380.0);
+
+            return Column(
+              children: [
+                // Product picker field
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: InkWell(
+                    onTap: _openProductPicker,
+                    borderRadius: BorderRadius.circular(12),
+                    child: IgnorePointer(
+                      child: AppSearchField(
+                        controller: _searchController,
+                        hintText: 'Select product to add...',
+                        compact: false,
+                        showClearButton: false,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // Content Area
-            _buildSelectedProductsTable(),
+                // Give table most of the height
+                Expanded(
+                  child: _buildSelectedProductsTable(),
+                ),
 
-            // Bottom Summary Section
-            _buildSummarySection(),
-          ],
+                // Bottom panel stays fixed height; content inside is scrollable
+                SizedBox(
+                  height: bottomPanelHeight,
+                  child: _buildSummarySection(),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

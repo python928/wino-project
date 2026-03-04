@@ -544,52 +544,39 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
                   const SizedBox(height: 24),
 
-                  Row(
-                    children: [
-                      // Discount Percentage
-                      Expanded(
-                        child: AppTextField(
-                          controller: _discountPercentageController,
-                          label: 'Discount Percentage (%)',
-                          hint: '0',
-                          icon: Icons.percent,
-                          keyboardType: TextInputType.number,
-                          suffixText: '%',
-                          onChanged: _onPercentageChanged,
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Required';
-                            final n = double.tryParse(value);
-                            if (n == null || n <= 0 || n >= 100)
-                              return 'Invalid';
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // New Price
-                      Expanded(
-                        child: AppTextField(
-                          controller: _newPriceController,
-                          label: 'New Price',
-                          hint: '0',
-                          icon: Icons.attach_money,
-                          keyboardType: TextInputType.number,
-                          suffixText: 'DZD',
-                          onChanged: _onNewPriceChanged,
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Required';
-                            final n = double.tryParse(value);
-                            final original = _selectedProduct!.price;
-                            if (n == null || n <= 0 || n >= original)
-                              return 'Invalid';
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
+                  // Put fields in separate lines to avoid overflow on small widths
+                  AppTextField(
+                    controller: _discountPercentageController,
+                    label: 'Discount Percentage (%)',
+                    hint: '0',
+                    icon: Icons.percent,
+                    keyboardType: TextInputType.number,
+                    suffixText: '%',
+                    onChanged: _onPercentageChanged,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Required';
+                      final n = double.tryParse(value);
+                      if (n == null || n <= 0 || n >= 100) return 'Invalid';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  AppTextField(
+                    controller: _newPriceController,
+                    label: 'New Price',
+                    hint: '0',
+                    icon: Icons.attach_money,
+                    keyboardType: TextInputType.number,
+                    suffixText: 'DZD',
+                    onChanged: _onNewPriceChanged,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Required';
+                      final n = double.tryParse(value);
+                      final original = _selectedProduct!.price;
+                      if (n == null || n <= 0 || n >= original)
+                        return 'Invalid';
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 32),

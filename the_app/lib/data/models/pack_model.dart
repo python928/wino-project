@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/config/api_config.dart';
 
 class Pack extends Equatable {
   final int id;
@@ -12,6 +13,8 @@ class Pack extends Equatable {
   final String updatedAt;
   final int merchantId;
   final String merchantName;
+  final double? merchantLatitude;
+  final double? merchantLongitude;
   final bool deliveryAvailable;
   final List<String> deliveryWilayas;
 
@@ -27,6 +30,8 @@ class Pack extends Equatable {
     required this.updatedAt,
     required this.merchantId,
     required this.merchantName,
+    this.merchantLatitude,
+    this.merchantLongitude,
     this.deliveryAvailable = false,
     this.deliveryWilayas = const [],
   });
@@ -77,6 +82,12 @@ class Pack extends Equatable {
       updatedAt: json['updated_at'] as String? ?? '',
       merchantId: merchantId,
       merchantName: merchantName,
+      merchantLatitude: json['merchant_latitude'] != null
+          ? double.tryParse(json['merchant_latitude'].toString())
+          : null,
+      merchantLongitude: json['merchant_longitude'] != null
+          ? double.tryParse(json['merchant_longitude'].toString())
+          : null,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
@@ -92,7 +103,11 @@ class Pack extends Equatable {
   static List<String> _parseWilayas(dynamic value) {
     if (value == null) return [];
     if (value is String && value.trim().isNotEmpty) {
-      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      return value
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return [];
   }
@@ -110,6 +125,8 @@ class Pack extends Equatable {
       'updated_at': updatedAt,
       'merchant_id': merchantId,
       'merchant_name': merchantName,
+      'merchant_latitude': merchantLatitude,
+      'merchant_longitude': merchantLongitude,
       'delivery_available': deliveryAvailable,
       'delivery_wilayas': deliveryWilayas.join(','),
     };
@@ -128,6 +145,8 @@ class Pack extends Equatable {
         updatedAt,
         merchantId,
         merchantName,
+        merchantLatitude,
+        merchantLongitude,
         deliveryAvailable,
         deliveryWilayas,
       ];
@@ -149,10 +168,13 @@ class PackProduct extends Equatable {
   });
 
   factory PackProduct.fromJson(Map<String, dynamic> json) {
+    final rawImage = (json['product_image'] ?? '').toString();
+    final imageUrl = rawImage.isEmpty ? '' : ApiConfig.getImageUrl(rawImage);
+
     return PackProduct(
       productId: (json['product_id'] ?? json['product']) as int,
       productName: json['product_name'] as String,
-      productImage: json['product_image'] as String,
+      productImage: imageUrl,
       productPrice: Pack._parseDouble(json['product_price']),
       quantity: json['quantity'] as int,
     );

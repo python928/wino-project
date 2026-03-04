@@ -55,6 +55,7 @@ class StackedProductImages extends StatelessWidget {
     // Show up to 3 product images stacked
     final imagesToShow = products.take(3).toList();
     final imageCount = imagesToShow.length;
+    final remainingCount = products.length - imageCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -90,7 +91,25 @@ class StackedProductImages extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(11),
-                    child: _buildProductImage(imagesToShow[i]),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildProductImage(imagesToShow[i]),
+                        if (remainingCount > 0 && i == imageCount - 1)
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '+$remainingCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

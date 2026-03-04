@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
@@ -24,6 +25,9 @@ import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
 import '../../features/analytics/analytics_export.dart';
+import '../../core/services/location_service.dart';
+import '../../core/utils/geolocation_stub.dart'
+    if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedLocation = 'Algiers, Algeria';
   String? _selectedWilaya;
   String? _selectedBaladiya;
-  double? _radiusKm; // null = address mode active; non-null = distance mode active
+  double?
+      _radiusKm; // null = address mode active; non-null = distance mode active
   double? _userLat;
   double? _userLng;
 
@@ -81,6 +86,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _activateNearby(double km) async {
+    if (km <= 0) {
+      setState(() {
+        _radiusKm = null;
+        _selectedLocation = 'Algiers, Algeria';
+      });
+      return;
+    }
+
+    try {
+      double? lat;
+      double? lng;
+      if (kIsWeb) {
+        final coords = await getWebCurrentPosition();
+        lat = coords?['latitude'];
+        lng = coords?['longitude'];
+      } else {
+        final pos = await LocationService.getCurrentPosition();
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+
+      if (!mounted) return;
+      if (lat == null || lng == null) {
+        Helpers.showSnackBar(context, 'Could not get current GPS location');
+        return;
+      }
+
+      setState(() {
+        _userLat = lat;
+        _userLng = lng;
+        _radiusKm = km;
+        _selectedLocation = '/';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to get GPS location: $e');
+    }
+  }
+
   void _showLocationPicker() async {
     final result = await Navigator.push<LocationResult>(
       context,
@@ -105,11 +150,26 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Filter a list of Posts to only those within [_radiusKm] km.
   /// Products without store coordinates are kept (fail-open).
   List<Post> _filterByRadius(List<Post> products) {
-    if (_radiusKm == null || _userLat == null || _userLng == null) return products;
+    if (_radiusKm == null || _userLat == null || _userLng == null)
+      return products;
     return products.where((p) {
       final dist = Helpers.haversineDistance(
           _userLat, _userLng, p.storeLatitude, p.storeLongitude);
       if (dist == null) return true; // no coords → keep
+      return dist <= _radiusKm!;
+    }).toList();
+  }
+
+  List<Pack> _filterPacksByRadius(List<Pack> packs) {
+    if (_radiusKm == null || _userLat == null || _userLng == null) return packs;
+    return packs.where((pack) {
+      final dist = Helpers.haversineDistance(
+        _userLat,
+        _userLng,
+        pack.merchantLatitude,
+        pack.merchantLongitude,
+      );
+      if (dist == null) return true; // no coords -> keep
       return dist <= _radiusKm!;
     }).toList();
   }
@@ -143,16 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   location: _selectedLocation,
                   onLocationTap: _showLocationPicker,
                   radiusKm: _radiusKm,
-                  onRadiusChanged: (km) => setState(() {
-                    if (km <= 0) {
-                      // Clear signal from the "Clear" button
-                      _radiusKm = null;
-                      _selectedLocation = 'Algiers, Algeria';
-                    } else {
-                      _radiusKm = km;
-                      _selectedLocation = '/';
-                    }
-                  }),
+                  onRadiusChanged: _activateNearby,
                 ),
 
                 const SizedBox(height: 16),
@@ -334,7 +385,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ==================== Featured Stores Section ====================
-
 
   Widget _buildFeaturedStoresSection() {
     return Consumer<HomeProvider>(
@@ -563,13 +613,15 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        final packs = homeProvider.packs;
+        final packs = _filterPacksByRadius(homeProvider.packs);
         if (packs.isEmpty) {
           return SizedBox(
             height: 200,
             child: Center(
               child: Text(
-                'No packs available at the moment',
+                _radiusKm != null
+                    ? 'No packs found within ${_radiusKm!.toInt()} km'
+                    : 'No packs available at the moment',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ),
@@ -889,16 +941,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Apply radius filter on the embedded product's store location
-        final filteredOffers = (_radiusKm == null ||
-                _userLat == null ||
-                _userLng == null)
-            ? offers
-            : offers.where((o) {
-                final dist = Helpers.haversineDistance(_userLat, _userLng,
-                    o.product.storeLatitude, o.product.storeLongitude);
-                if (dist == null) return true;
-                return dist <= _radiusKm!;
-              }).toList();
+        final filteredOffers =
+            (_radiusKm == null || _userLat == null || _userLng == null)
+                ? offers
+                : offers.where((o) {
+                    final dist = Helpers.haversineDistance(_userLat, _userLng,
+                        o.product.storeLatitude, o.product.storeLongitude);
+                    if (dist == null) return true;
+                    return dist <= _radiusKm!;
+                  }).toList();
 
         if (filteredOffers.isEmpty) {
           return SizedBox(

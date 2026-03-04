@@ -164,6 +164,8 @@ class PackSerializer(serializers.ModelSerializer):
     products = serializers.ListField(write_only=True, required=False)
     merchant_id = serializers.IntegerField(read_only=True)
     merchant_name = serializers.CharField(source='merchant.name', read_only=True)
+    merchant_latitude = serializers.SerializerMethodField()
+    merchant_longitude = serializers.SerializerMethodField()
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
     # Effective delivery areas (same dynamic fallback as Product)
@@ -172,6 +174,7 @@ class PackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pack
         fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description',
+                  'merchant_latitude', 'merchant_longitude',
                   'discount_price', 'total_price', 'available_status',
                   'delivery_available', 'delivery_wilayas', 'delivery_areas',
                   'created_at', 'pack_products', 'images', 'products']
@@ -185,6 +188,14 @@ class PackSerializer(serializers.ModelSerializer):
         if obj.delivery_wilayas and obj.delivery_wilayas.strip():
             return obj.delivery_wilayas
         return getattr(obj.merchant, 'address', '') or ''
+
+    def get_merchant_latitude(self, obj):
+        lat = getattr(obj.merchant, 'latitude', None)
+        return str(lat) if lat is not None else None
+
+    def get_merchant_longitude(self, obj):
+        lng = getattr(obj.merchant, 'longitude', None)
+        return str(lng) if lng is not None else None
 
     def validate_products(self, value):
         """Ensure packs can only contain the current merchant's own products."""

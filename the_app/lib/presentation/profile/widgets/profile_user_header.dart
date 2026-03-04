@@ -28,14 +28,14 @@ class ProfileUserHeader extends StatelessWidget {
         const SizedBox(height: 40),
         // Avatar centered (no camera controls on profile screen)
         CircleAvatar(
-          radius: 50,
+          radius: 56,
           backgroundColor: Colors.grey.shade200,
           child: (avatarUrl != null && avatarUrl!.isNotEmpty)
               ? ClipOval(
                   child: Image.network(
                     avatarUrl!,
-                    width: 100,
-                    height: 100,
+                    width: 112,
+                    height: 112,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(
                       Icons.person,

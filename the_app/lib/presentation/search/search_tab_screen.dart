@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -26,6 +27,9 @@ import '../../core/widgets/app_button.dart';
 import 'category_selection_screen.dart';
 import '../shared_widgets/cards/store_chip.dart';
 import '../shared_widgets/location_mode_switcher.dart';
+import '../../core/services/location_service.dart';
+import '../../core/utils/geolocation_stub.dart'
+    if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
@@ -189,43 +193,61 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     _searchStores();
   }
 
+  Future<void> _refreshSearch() async {
+    if (_hasSearched) {
+      _performSearch();
+      return;
+    }
+    await context.read<HomeProvider>().loadHomeData();
+    await _searchStores();
+  }
+
   Widget _buildPreSearchState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.search_rounded,
-                size: 48,
-                color: AppColors.primaryColor,
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: 420,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 48,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Ready to search',
+                    style:
+                        AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose type and categories, then tap Search',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Ready to search',
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose type and categories, then tap Search',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -297,20 +319,51 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     showRadiusPickerSheet(
       context,
       initialRadius: _distanceKm ?? 20.0,
-      onRadiusChanged: (km) {
-        setState(() {
-          if (km <= 0) {
-            _distanceKm = null;
-          } else {
-            _distanceKm = km;
-            _selectedWilaya = null;
-            _selectedBaladiya = null;
-            _selectedLocation = '';
-          }
-          _resetVisibleCounts();
-        });
-      },
+      onRadiusChanged: _activateNearby,
     );
+  }
+
+  Future<void> _activateNearby(double km) async {
+    if (km <= 0) {
+      setState(() {
+        _distanceKm = null;
+        _resetVisibleCounts();
+      });
+      return;
+    }
+
+    try {
+      double? lat;
+      double? lng;
+      if (kIsWeb) {
+        final coords = await getWebCurrentPosition();
+        lat = coords?['latitude'];
+        lng = coords?['longitude'];
+      } else {
+        final pos = await LocationService.getCurrentPosition();
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+
+      if (!mounted) return;
+      if (lat == null || lng == null) {
+        Helpers.showSnackBar(context, 'Could not get current GPS location');
+        return;
+      }
+
+      setState(() {
+        _userLat = lat;
+        _userLng = lng;
+        _distanceKm = km;
+        _selectedWilaya = null;
+        _selectedBaladiya = null;
+        _selectedLocation = '';
+        _resetVisibleCounts();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to get GPS location: $e');
+    }
   }
 
   void _showFiltersSheet() {
@@ -482,7 +535,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               if (_hasActiveFilters) _buildActiveFilters(),
 
               // Content
-              Expanded(child: _buildContent()),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refreshSearch,
+                  child: _buildContent(),
+                ),
+              ),
             ],
           ),
         ),

@@ -72,7 +72,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   bool _isGettingLocation = false; // New state
   String? _avatarUrl;
   String? _coverUrl;
-  int? _storeId;
   String? _selectedWilaya;
   String? _selectedBaladiya;
   double? _latitude;
@@ -113,7 +112,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     }
 
     _loadAddress();
-    _loadStoreId();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -259,31 +257,38 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     }
   }
 
-  Future<void> _loadStoreId() async {
-    try {
-      final userData = StorageService.getUserData();
-      final userId = userData?['id'];
-      if (userId == null) return;
-
-      final response =
-          await ApiService.get('${ApiConfig.stores}?owner=$userId');
-      final storesList = response is Map && response.containsKey('results')
-          ? response['results'] as List
-          : (response is List ? response : []);
-
-      if (storesList.isNotEmpty) {
-        setState(() {
-          _storeId = storesList.first['id'];
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading store ID: $e');
-    }
+  Future<ImageSource?> _showImageSourcePicker() async {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose image source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.camera_alt, color: AppColors.primaryColor),
+              title: const Text('Camera'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library,
+                  color: AppColors.primaryColor),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImage() async {
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile == null) {
       if (mounted) Helpers.showSnackBar(context, 'No image selected');
@@ -323,9 +328,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   }
 
   Future<void> _pickCoverImage() async {
-    if (_storeId == null) return;
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
     if (pickedFile == null) {
       if (mounted) Helpers.showSnackBar(context, 'No image selected');
       return;
@@ -333,15 +340,19 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
     setState(() => _isUploadingCover = true);
     try {
+      final userData = StorageService.getUserData();
+      final userId = userData?['id'];
+      if (userId == null) throw Exception('Cannot identify user ID');
+
       await ApiService.updateMultipart(
-        ApiConfig.storeDetail(_storeId!),
+        '${ApiConfig.users}$userId/',
         {},
         pickedFile,
         'cover_image',
         method: 'PATCH',
       );
 
-      final store = await ApiService.get(ApiConfig.storeDetail(_storeId!));
+      final store = await ApiService.get('${ApiConfig.users}$userId/');
       setState(() {
         _coverUrl = store is Map ? store['cover_image']?.toString() : _coverUrl;
       });
@@ -351,6 +362,90 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       }
     } catch (e) {
       if (mounted) Helpers.showSnackBar(context, 'Failed to update cover: $e');
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
+  Future<void> _deleteImage() async {
+    if (_isUploadingImage) return;
+    final userData = StorageService.getUserData();
+    final userId = userData?['id'];
+    if (userId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete profile image?'),
+        content: const Text('This will remove your current profile image.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingImage = true);
+    try {
+      await ApiService.patch(
+          '${ApiConfig.users}$userId/', {'profile_image': null});
+      final response = await ApiService.get('${ApiConfig.users}$userId/');
+      await StorageService.saveUserData(response);
+      setState(() => _avatarUrl = null);
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) Helpers.showSnackBar(context, 'Failed to delete image: $e');
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<void> _deleteCoverImage() async {
+    if (_isUploadingCover) return;
+    final userData = StorageService.getUserData();
+    final userId = userData?['id'];
+    if (userId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete cover image?'),
+        content: const Text('This will remove your current cover image.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingCover = true);
+    try {
+      await ApiService.patch(
+          '${ApiConfig.users}$userId/', {'cover_image': null});
+      final response = await ApiService.get('${ApiConfig.users}$userId/');
+      await StorageService.saveUserData(response);
+      setState(() => _coverUrl = null);
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Cover image deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) Helpers.showSnackBar(context, 'Failed to delete cover: $e');
     } finally {
       if (mounted) setState(() => _isUploadingCover = false);
     }
@@ -674,33 +769,56 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             right: 0,
             height: 190,
             child: Center(
-              child: GestureDetector(
-                onTap: _isUploadingCover ? null : _pickCoverImage,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: _isUploadingCover ? null : _pickCoverImage,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
+                      alignment: Alignment.center,
+                      child: _isUploadingCover
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.camera_alt_outlined,
+                              size: 24, color: AppColors.textPrimary),
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: _isUploadingCover
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.camera_alt_outlined,
-                          size: 24, color: AppColors.textPrimary),
-                ),
+                  if ((_coverUrl ?? '').isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _isUploadingCover ? null : _deleteCoverImage,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.red.shade100),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(Icons.delete_outline,
+                            color: Colors.red.shade500, size: 22),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -725,7 +843,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                       ],
                     ),
                     child: CircleAvatar(
-                      radius: 34,
+                      radius: 40,
                       backgroundColor: Colors.grey.shade100,
                       child: _isUploadingImage
                           ? const SizedBox(
@@ -737,8 +855,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                               ? ClipOval(
                                   child: Image.network(
                                     _avatarUrl!,
-                                    width: 68,
-                                    height: 68,
+                                    width: 80,
+                                    height: 80,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
                                         Icons.store,
@@ -753,21 +871,44 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey[300]!, width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: Colors.grey[300]!, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.camera_alt,
+                              size: 14, color: AppColors.primaryColor),
+                        ),
+                        if ((_avatarUrl ?? '').isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: _isUploadingImage ? null : _deleteImage,
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.red.shade100, width: 1),
+                              ),
+                              child: Icon(Icons.delete_outline,
+                                  size: 14, color: Colors.red.shade500),
+                            ),
                           ),
                         ],
-                      ),
-                      child: Icon(Icons.camera_alt,
-                          size: 14, color: AppColors.primaryColor),
+                      ],
                     ),
                   ),
                 ],

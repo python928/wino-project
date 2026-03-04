@@ -3,6 +3,7 @@ import '../../../core/config/api_config.dart';
 import '../../../core/routing/routes.dart';
 import '../../../data/models/pack_model.dart';
 import '../../../core/widgets/cards/base_item_card.dart';
+import '../../common/widgets/stacked_product_images.dart';
 
 /// Pack Card inheriting from BaseItemCard
 /// Displays packs with custom image widget and specialized content
@@ -21,6 +22,7 @@ class PackCard extends BaseItemCard {
   }) : super(
           title: pack.name,
           imageUrl: _pickImage(pack),
+          customImageWidget: StackedProductImages(products: pack.products),
           price: pack.discountPrice,
           oldPrice:
               pack.totalPrice > pack.discountPrice ? pack.totalPrice : null,
@@ -63,6 +65,7 @@ class PackCard extends BaseItemCard {
     return BaseItemCard(
       title: title,
       imageUrl: imageUrl,
+      customImageWidget: customImageWidget,
       price: price,
       oldPrice: oldPrice,
       discountPercentage: discountPercentage,

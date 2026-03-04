@@ -298,13 +298,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
 			queryset = queryset.filter(store_id=store_id)
 
 		if product_id:
-			# If your app is "store review" (UNIQUE user+store), still show them on product pages.
 			try:
-				p = Product.objects.select_related('store').get(id=product_id)
-				queryset = queryset.filter(
-					models.Q(product_id=product_id) |
-					models.Q(product__isnull=True, store_id=p.store_id)
-				).distinct()
+				Product.objects.only('id').get(id=product_id)
+				# Product page should show reviews linked to this product only.
+				queryset = queryset.filter(product_id=product_id)
 			except Product.DoesNotExist:
 				# If product doesn't exist, return empty set instead of 500.
 				return queryset.none()
@@ -316,37 +313,52 @@ class ReviewViewSet(viewsets.ModelViewSet):
 		product_id = self.request.data.get('product')
 
 		store = None
+		product = None
 
-		# Allow creating/updating a store review from product page by passing product only.
-		if (store_id is None or store_id == '') and product_id not in (None, ''):
+		# Product review path: derive store from product and keep review linked to product.
+		if product_id not in (None, ''):
 			try:
-				p = Product.objects.select_related('store').get(id=product_id)
+				product = Product.objects.select_related('store').get(id=product_id)
 			except Product.DoesNotExist:
 				raise serializers.ValidationError({'product': 'Product not found'})
-			store = p.store
+			store = product.store
 
-		# Normal path: store is explicitly provided.
+			# If store is also provided, it must match the product owner.
+			if store_id not in (None, '') and str(store_id) != str(store.id):
+				raise serializers.ValidationError({
+					'store': 'Provided store does not match product store'
+				})
+
+		# Store review path.
 		if store is None:
 			if store_id in (None, ''):
-				raise serializers.ValidationError({'store': 'store is required'})
+				raise serializers.ValidationError({'store': 'store or product is required'})
 			try:
 				store = User.objects.get(id=store_id)
 			except User.DoesNotExist:
 				raise serializers.ValidationError({'store': 'Store not found'})
 
-		# UNIQUE(user, store) => create-or-update (no IntegrityError).
 		defaults = dict(serializer.validated_data)
 		defaults.pop('user', None)
 		defaults.pop('store', None)
+		defaults.pop('product', None)
+		defaults['store'] = store
 
-		# Keep reviews store-level (product nullable) to match the UNIQUE(user, store) constraint.
-		defaults['product'] = None
-
-		review, _created = Review.objects.update_or_create(
-			user=self.request.user,
-			store=store,
-			defaults=defaults,
-		)
+		# Enforce one review per user per product (when product is provided),
+		# otherwise one review per user per store.
+		if product is not None:
+			review, _created = Review.objects.update_or_create(
+				user=self.request.user,
+				product=product,
+				defaults=defaults,
+			)
+		else:
+			review, _created = Review.objects.update_or_create(
+				user=self.request.user,
+				store=store,
+				product=None,
+				defaults=defaults,
+			)
 		serializer.instance = review
 
 	@action(detail=False, methods=['post'], url_path='rate-store')

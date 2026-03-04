@@ -24,11 +24,24 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
   bool _isLoadingFavoriteState = false;
   bool _isTogglingFavorite = false;
   bool _isTogglingFollow = false;
+  int _currentImageIndex = 0;
 
   bool _isFollowingStore = false;
   bool _isLoadingFollowState = false;
 
   String? _storeImageUrl;
+
+  List<String> get _packMainImages {
+    final seen = <String>{};
+    final images = <String>[];
+    for (final product in widget.pack.products) {
+      final url = product.productImage.trim();
+      if (url.isEmpty || seen.contains(url)) continue;
+      seen.add(url);
+      images.add(url);
+    }
+    return images.isEmpty ? const [''] : images;
+  }
 
   @override
   void initState() {
@@ -98,9 +111,11 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
     setState(() => _isLoadingFavoriteState = true);
     try {
       final checks = await Future.wait(
-        widget.pack.products.map((p) => ApiService.get(ApiConfig.favoritesCheck(p.productId))),
+        widget.pack.products
+            .map((p) => ApiService.get(ApiConfig.favoritesCheck(p.productId))),
       );
-      final all = checks.every((resp) => resp is Map && resp['is_favorited'] == true);
+      final all =
+          checks.every((resp) => resp is Map && resp['is_favorited'] == true);
       if (!mounted) return;
       setState(() => _isAllFavorited = all);
     } catch (_) {
@@ -122,13 +137,15 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
     try {
       // Re-check current state so we apply a consistent action (add all / remove all)
       final checks = await Future.wait(
-        widget.pack.products.map((p) => ApiService.get(ApiConfig.favoritesCheck(p.productId))),
+        widget.pack.products
+            .map((p) => ApiService.get(ApiConfig.favoritesCheck(p.productId))),
       );
       final isFavoritedById = <int, bool>{};
       for (int i = 0; i < widget.pack.products.length; i++) {
         final productId = widget.pack.products[i].productId;
         final resp = checks[i];
-        isFavoritedById[productId] = (resp is Map && resp['is_favorited'] == true);
+        isFavoritedById[productId] =
+            (resp is Map && resp['is_favorited'] == true);
       }
 
       final allFavorited = isFavoritedById.values.every((v) => v == true);
@@ -137,7 +154,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
         // Remove all (toggle each favorite)
         await Future.wait(
           widget.pack.products.map(
-            (p) => ApiService.post(ApiConfig.favoritesToggle, {'product': p.productId}),
+            (p) => ApiService.post(
+                ApiConfig.favoritesToggle, {'product': p.productId}),
           ),
         );
         if (!mounted) return;
@@ -151,7 +169,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
             .toList();
         await Future.wait(
           toAdd.map(
-            (p) => ApiService.post(ApiConfig.favoritesToggle, {'product': p.productId}),
+            (p) => ApiService.post(
+                ApiConfig.favoritesToggle, {'product': p.productId}),
           ),
         );
         if (!mounted) return;
@@ -161,7 +180,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update favorites', isError: true);
+      Helpers.showSnackBar(context, 'Failed to update favorites',
+          isError: true);
     } finally {
       if (mounted) setState(() => _isTogglingFavorite = false);
     }
@@ -195,6 +215,14 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
     }
   }
 
+  Future<void> _refreshDetails() async {
+    await Future.wait([
+      _loadFavoriteState(),
+      _loadFollowState(),
+      _loadStoreImage(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -207,395 +235,446 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
           foregroundColor: Colors.black,
           elevation: 0,
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-            // Pack image from first product
-            SizedBox(
-              height: 200,
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: (widget.pack.products.isNotEmpty &&
-                              widget.pack.products.first.productImage.isNotEmpty)
-                          ? Image.network(
-                              widget.pack.products.first.productImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: Colors.grey[200],
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.image),
-                              ),
-                            )
-                          : Container(
-                              color: Colors.grey[200],
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.image),
-                            ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: GestureDetector(
-                      onTap: _togglePackFavorites,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: (_isLoadingFavoriteState || _isTogglingFavorite)
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Icon(
-                                _isAllFavorited
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            SizedBox(height: 20),
-            
-            // Pack name
-            Text(
-              widget.pack.name,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            
-            SizedBox(height: 20),
-            
-            // Products table
-            Text(
-              'Pack Contents',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12),
-            
-            // Table header
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      'Product',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      'Qty',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Price',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            SizedBox(height: 8),
-            
-            // Products list
-            Column(
-              children: widget.pack.products.map((product) {
-                return Container(
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  margin: EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Row(
-                          children: [
-                            // Product image
-                            if (product.productImage.isNotEmpty)
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  image: DecorationImage(
-                                    image: NetworkImage(product.productImage),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                product.productName,
-                                style: TextStyle(fontSize: 12),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          '${product.quantity}',
-                          style: TextStyle(fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          '\$${product.productPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-            
-            SizedBox(height: 20),
-            
-            // Pricing summary
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
+        body: RefreshIndicator(
+          onRefresh: _refreshDetails,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Regular Total:', style: TextStyle(fontSize: 14)),
-                      Text(
-                        '\$${widget.pack.totalPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          decoration: TextDecoration.lineThrough,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Pack Price:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '\$${widget.pack.discountPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'You Save:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '\$${(widget.pack.totalPrice - widget.pack.discountPrice).toStringAsFixed(2)} (${(((widget.pack.totalPrice - widget.pack.discountPrice) / widget.pack.totalPrice) * 100).round()}%)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            
-            SizedBox(height: 24),
-            
-            // Store information with follow and favorite buttons
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.primaryColor.withOpacity(0.1),
-                  backgroundImage: (_storeImageUrl != null && _storeImageUrl!.trim().isNotEmpty)
-                      ? NetworkImage(_storeImageUrl!)
-                      : null,
-                  onBackgroundImageError:
-                      (_storeImageUrl != null && _storeImageUrl!.trim().isNotEmpty)
-                          ? (_, __) {
-                              if (mounted) setState(() => _storeImageUrl = null);
-                            }
-                          : null,
-                  child: (_storeImageUrl == null || _storeImageUrl!.trim().isEmpty)
-                      ? Icon(Icons.store, color: AppColors.primaryColor, size: 16)
-                      : null,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        Routes.store,
-                        arguments: widget.pack.merchantId,
-                      );
-                    },
-                    child: Text(
-                      widget.pack.merchantName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.primaryColor,
-                        decoration: TextDecoration.underline,
-                      ),
+                  _buildPackImagesCarousel(),
+
+                  SizedBox(height: 20),
+
+                  // Pack name
+                  Text(
+                    widget.pack.name,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                SizedBox(width: 8),
-                // Follow button
-                GestureDetector(
-                  onTap: _toggleFollow,
-                  child: Container(
-                    height: 32,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+
+                  SizedBox(height: 20),
+
+                  // Products table
+                  Text(
+                    'Pack Contents',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // Table header
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryColor,
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppColors.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _isLoadingFollowState
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Icon(
-                                _isFollowingStore ? Icons.done : Icons.add,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                        SizedBox(width: 4),
-                        Text(
-                          _isTogglingFollow
-                              ? '...'
-                              : (_isFollowingStore ? 'Following' : 'Follow'),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'Product',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            'Qty',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Price',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.right,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  SizedBox(height: 8),
+
+                  // Products list
+                  Column(
+                    children: widget.pack.products.map((product) {
+                      return Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        margin: EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Row(
+                                children: [
+                                  // Product image
+                                  if (product.productImage.isNotEmpty)
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        image: DecorationImage(
+                                          image: NetworkImage(
+                                              product.productImage),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      product.productName,
+                                      style: TextStyle(fontSize: 12),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                '${product.quantity}',
+                                style: TextStyle(fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                Helpers.formatPrice(product.productPrice),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  SizedBox(height: 20),
+
+                  // Pricing summary
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Regular Total:',
+                                style: TextStyle(fontSize: 14)),
+                            Text(
+                              Helpers.formatPrice(widget.pack.totalPrice),
+                              style: TextStyle(
+                                fontSize: 14,
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Pack Price:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              Helpers.formatPrice(widget.pack.discountPrice),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'You Save:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${Helpers.formatPrice(widget.pack.totalPrice - widget.pack.discountPrice)} (${(((widget.pack.totalPrice - widget.pack.discountPrice) / widget.pack.totalPrice) * 100).round()}%)',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Store information with follow and favorite buttons
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor:
+                            AppColors.primaryColor.withOpacity(0.1),
+                        backgroundImage: (_storeImageUrl != null &&
+                                _storeImageUrl!.trim().isNotEmpty)
+                            ? NetworkImage(_storeImageUrl!)
+                            : null,
+                        onBackgroundImageError: (_storeImageUrl != null &&
+                                _storeImageUrl!.trim().isNotEmpty)
+                            ? (_, __) {
+                                if (mounted)
+                                  setState(() => _storeImageUrl = null);
+                              }
+                            : null,
+                        child: (_storeImageUrl == null ||
+                                _storeImageUrl!.trim().isEmpty)
+                            ? Icon(Icons.store,
+                                color: AppColors.primaryColor, size: 16)
+                            : null,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              Routes.store,
+                              arguments: widget.pack.merchantId,
+                            );
+                          },
+                          child: Text(
+                            widget.pack.merchantName,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primaryColor,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      // Follow button
+                      GestureDetector(
+                        onTap: _toggleFollow,
+                        child: Container(
+                          height: 32,
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _isLoadingFollowState
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Icon(
+                                      _isFollowingStore
+                                          ? Icons.done
+                                          : Icons.add,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                              SizedBox(width: 4),
+                              Text(
+                                _isTogglingFollow
+                                    ? '...'
+                                    : (_isFollowingStore
+                                        ? 'Following'
+                                        : 'Follow'),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Description
+                  if (widget.pack.description.isNotEmpty) ...[
+                    Text(
+                      'Description',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      widget.pack.description,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  ],
+                  ReviewsSection.store(storeId: widget.pack.merchantId),
+                ],
+              ),
             ),
-            
-            SizedBox(height: 24),
-            
-            // Description
-            if (widget.pack.description.isNotEmpty) ...[
-              Text(
-                'Description',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                widget.pack.description,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ],
-            ReviewsSection.store(storeId: widget.pack.merchantId),
-            ],
           ),
         ),
-        ),
+      ),
+    );
+  }
+
+  Widget _buildPackImagesCarousel() {
+    final images = _packMainImages;
+    final hasImages = images.first.isNotEmpty;
+    final showIndicators = images.length > 1 && hasImages;
+
+    return SizedBox(
+      height: 200,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: hasImages
+                  ? PageView.builder(
+                      itemCount: images.length,
+                      onPageChanged: (index) =>
+                          setState(() => _currentImageIndex = index),
+                      itemBuilder: (context, index) => Image.network(
+                        images[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey[200],
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.image),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey[200],
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image),
+                    ),
+            ),
+          ),
+          if (showIndicators)
+            Positioned(
+              bottom: 10,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  images.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentImageIndex == index ? 18 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _currentImageIndex == index
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: _togglePackFavorites,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: (_isLoadingFavoriteState || _isTogglingFavorite)
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _isAllFavorited
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

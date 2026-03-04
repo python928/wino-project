@@ -18,6 +18,8 @@ class ProfileMerchantHeader extends StatelessWidget {
   final double averageRating;
   final VoidCallback onPickImage;
   final VoidCallback onPickCoverImage;
+  final VoidCallback? onDeleteImage;
+  final VoidCallback? onDeleteCoverImage;
   final VoidCallback? onSettingsTap;
   final Function(String)? onSettingsMenuSelected;
   final bool isOwnerView;
@@ -48,6 +50,8 @@ class ProfileMerchantHeader extends StatelessWidget {
     required this.averageRating,
     required this.onPickImage,
     required this.onPickCoverImage,
+    this.onDeleteImage,
+    this.onDeleteCoverImage,
     this.onSettingsTap,
     this.onSettingsMenuSelected,
     required this.isOwnerView,
@@ -156,36 +160,42 @@ class ProfileMerchantHeader extends StatelessWidget {
             Positioned(
               bottom: -34,
               left: 20,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.14),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 34,
-                  backgroundColor: Colors.grey.shade100,
-                  child: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                      ? ClipOval(
-                          child: Image.network(
-                            avatarUrl!,
-                            width: 68,
-                            height: 68,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.store,
-                                size: 30,
-                                color: Colors.grey),
-                          ),
-                        )
-                      : const Icon(Icons.store, size: 30, color: Colors.grey),
-                ),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey.shade100,
+                      child: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                          ? ClipOval(
+                              child: Image.network(
+                                avatarUrl!,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.store,
+                                    size: 30,
+                                    color: Colors.grey),
+                              ),
+                            )
+                          : const Icon(Icons.store,
+                              size: 30, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -419,6 +429,30 @@ class ProfileMerchantHeader extends StatelessWidget {
           ),
           child: FaIcon(icon, size: 20, color: color),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    bool compact = false,
+  }) {
+    final size = compact ? 28.0 : 36.0;
+    final iconSize = compact ? 16.0 : 19.0;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(size / 2),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.45),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: iconSize, color: Colors.white),
       ),
     );
   }

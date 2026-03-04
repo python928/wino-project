@@ -258,56 +258,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return _currentUserId == _userId;
   }
 
-  Future<void> _pickCoverImage() async {
-    if (_userId == null) return;
-
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _isUploadingCover = true);
-
-      try {
-        await ApiService.updateMultipart(
-          '${ApiConfig.users}$_userId/',
-          {},
-          pickedFile,
-          'cover_image',
-          method: 'PATCH',
-        );
-
-        await _fetchStoreData();
-
-        if (mounted)
-          Helpers.showSnackBar(context, 'Cover image updated successfully');
-      } catch (e) {
-        if (mounted)
-          Helpers.showSnackBar(context, 'Failed to update cover image: $e');
-      } finally {
-        if (mounted) setState(() => _isUploadingCover = false);
-      }
-    }
-  }
-
-  Future<void> _pickImage() async {
-    // Show dialog to choose between camera and gallery
-    final ImageSource? source = await showDialog<ImageSource>(
+  Future<ImageSource?> _showImageSourcePicker() async {
+    return showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Choose image source'),
+          title: const Text('Choose image source'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt, color: AppColors.primaryColor),
-                title: Text('Camera'),
+                leading:
+                    const Icon(Icons.camera_alt, color: AppColors.primaryColor),
+                title: const Text('Camera'),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
-                leading:
-                    Icon(Icons.photo_library, color: AppColors.primaryColor),
-                title: Text('Gallery'),
+                leading: const Icon(Icons.photo_library,
+                    color: AppColors.primaryColor),
+                title: const Text('Gallery'),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
             ],
@@ -315,6 +284,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  Future<void> _pickCoverImage() async {
+    if (_userId == null) return;
+
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile == null) return;
+
+    setState(() => _isUploadingCover = true);
+
+    try {
+      await ApiService.updateMultipart(
+        '${ApiConfig.users}$_userId/',
+        {},
+        pickedFile,
+        'cover_image',
+        method: 'PATCH',
+      );
+
+      await _fetchStoreData();
+
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Cover image updated successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Failed to update cover image: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
+  Future<void> _deleteCoverImage() async {
+    if (_userId == null || _isUploadingCover) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete cover image?'),
+        content: const Text('This will remove your current cover image.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingCover = true);
+    try {
+      await ApiService.patch('${ApiConfig.users}$_userId/', {
+        'cover_image': null,
+      });
+      await _fetchStoreData();
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Cover image deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Failed to delete cover image: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImageSource? source = await _showImageSourcePicker();
 
     if (source == null) return;
 
@@ -349,6 +397,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
+    }
+  }
+
+  Future<void> _deleteProfileImage() async {
+    if (_userId == null || _isUploadingImage) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete profile image?'),
+        content: const Text('This will remove your current profile image.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingImage = true);
+    try {
+      await ApiService.patch('${ApiConfig.users}$_userId/', {
+        'profile_image': null,
+      });
+      final response = await ApiService.get('${ApiConfig.users}$_userId/');
+      await StorageService.saveUserData(response);
+      _loadUserData();
+
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Failed to delete profile image: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
     }
   }
 
@@ -473,6 +564,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     }
+  }
+
+  Future<void> _refreshProfile() async {
+    await _loadUserData();
   }
 
   void _handleLogout() async {
@@ -752,6 +847,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       averageRating: _averageRating,
       onPickImage: _pickImage,
       onPickCoverImage: _pickCoverImage,
+      onDeleteImage: _deleteProfileImage,
+      onDeleteCoverImage: _deleteCoverImage,
       onSettingsTap: null,
       onSettingsMenuSelected: null,
       isOwnerView: _isOwnerView,
@@ -1142,51 +1239,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Icon(Icons.add, color: Colors.white),
               )
             : null,
-        body: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: _buildMerchantHeader(primaryColor, primaryGradient),
-            ),
-            SliverToBoxAdapter(
-              child: Consumer2<PostProvider, PackProvider>(
-                builder: (context, postProvider, packProvider, _) {
-                  final productsCount = _isOwnerView
-                      ? postProvider.myPosts.length
-                      : postProvider.storePosts.length;
-                  final offersCount = _isOwnerView
-                      ? postProvider.myOffers.length
-                      : postProvider.storeOffers.length;
-                  final packsCount = _isOwnerView
-                      ? packProvider.myPacks.length
-                      : packProvider.storePacks.length;
-
-                  final postsCount = productsCount + offersCount + packsCount;
-
-                  return ProfilePostFilter(
-                    selectedIndex: _selectedFilterIndex,
-                    postsCount: postsCount,
-                    onFilterChanged: (index) {
-                      setState(() {
-                        _selectedFilterIndex = index;
-                        _profileVisibleCount = 12;
-                      });
-                    },
-                    searchController: _searchController,
-                    onSearchChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                        _profileVisibleCount = 12;
-                      });
-                    },
-                  );
-                },
+        body: RefreshIndicator(
+          onRefresh: _refreshProfile,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildMerchantHeader(primaryColor, primaryGradient),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: _buildMerchantPosts(
-                  type: _getFilterType(_selectedFilterIndex)),
-            ),
-          ],
+              SliverToBoxAdapter(
+                child: Consumer2<PostProvider, PackProvider>(
+                  builder: (context, postProvider, packProvider, _) {
+                    final productsCount = _isOwnerView
+                        ? postProvider.myPosts.length
+                        : postProvider.storePosts.length;
+                    final offersCount = _isOwnerView
+                        ? postProvider.myOffers.length
+                        : postProvider.storeOffers.length;
+                    final packsCount = _isOwnerView
+                        ? packProvider.myPacks.length
+                        : packProvider.storePacks.length;
+
+                    final postsCount = productsCount + offersCount + packsCount;
+
+                    return ProfilePostFilter(
+                      selectedIndex: _selectedFilterIndex,
+                      postsCount: postsCount,
+                      onFilterChanged: (index) {
+                        setState(() {
+                          _selectedFilterIndex = index;
+                          _profileVisibleCount = 12;
+                        });
+                      },
+                      searchController: _searchController,
+                      onSearchChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                          _profileVisibleCount = 12;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _buildMerchantPosts(
+                    type: _getFilterType(_selectedFilterIndex)),
+              ),
+            ],
+          ),
         ),
       ),
     );

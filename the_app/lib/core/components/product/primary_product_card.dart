@@ -108,7 +108,7 @@ class PrimaryProductCard extends StatelessWidget {
                       ? Row(
                           children: [
                             Text(
-                              "\$${priceAfterDiscount!.toStringAsFixed(2)}",
+                              "${priceAfterDiscount!.toStringAsFixed(2)} DZD",
                               style: const TextStyle(
                                 color: AppColors.primaryColor,
                                 fontWeight: FontWeight.w500,
@@ -117,7 +117,7 @@ class PrimaryProductCard extends StatelessWidget {
                             ),
                             const SizedBox(width: AppConstants.spacing4),
                             Text(
-                              "\$${price.toStringAsFixed(2)}",
+                              "${price.toStringAsFixed(2)} DZD",
                               style: TextStyle(
                                 color: Theme.of(context)
                                     .textTheme
@@ -130,7 +130,7 @@ class PrimaryProductCard extends StatelessWidget {
                           ],
                         )
                       : Text(
-                          "\$${price.toStringAsFixed(2)}",
+                          "${price.toStringAsFixed(2)} DZD",
                           style: const TextStyle(
                             color: AppColors.primaryColor,
                             fontWeight: FontWeight.w500,

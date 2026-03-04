@@ -57,27 +57,40 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('Failed to load plans: $_error'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _plans.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final p = _plans[index];
-                    return _PlanCard(
-                      plan: p,
-                      onSelect: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SubscriptionPaymentScreen(
-                            plan: p,
-                            rib: _rib,
-                            instructions: _instructions,
+              ? RefreshIndicator(
+                  onRefresh: _loadPlans,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 140),
+                      Center(child: Text('Failed to load plans: $_error')),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadPlans,
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _plans.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final p = _plans[index];
+                      return _PlanCard(
+                        plan: p,
+                        onSelect: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SubscriptionPaymentScreen(
+                              plan: p,
+                              rib: _rib,
+                              instructions: _instructions,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
     );
   }

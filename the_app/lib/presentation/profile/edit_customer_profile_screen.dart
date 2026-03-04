@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -72,9 +71,38 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     _selectedWilaya = parts[1];
   }
 
+  Future<ImageSource?> _showImageSourcePicker() async {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose image source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.camera_alt, color: AppColors.primaryColor),
+              title: const Text('Camera'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library,
+                  color: AppColors.primaryColor),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImage() async {
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
     if (pickedFile == null) {
       if (mounted) {
         Helpers.showSnackBar(context, 'No image selected');
@@ -110,6 +138,48 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
       }
     } catch (e) {
       if (mounted) Helpers.showSnackBar(context, 'Failed to update image: $e');
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<void> _deleteImage() async {
+    if (_isUploadingImage) return;
+    final userData = StorageService.getUserData();
+    final userId = userData?['id'];
+    if (userId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete profile image?'),
+        content: const Text('This will remove your current profile image.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingImage = true);
+    try {
+      await ApiService.patch(
+          ApiConfig.userDetail(userId), {'profile_image': null});
+      final response = await ApiService.get(ApiConfig.userDetail(userId));
+      await StorageService.saveUserData(response);
+      setState(() => _avatarUrl = null);
+      if (mounted) {
+        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) Helpers.showSnackBar(context, 'Failed to delete image: $e');
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
     }
@@ -245,7 +315,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                         ),
                       ),
                       child: CircleAvatar(
-                        radius: 48,
+                        radius: 56,
                         backgroundColor: Colors.white,
                         child: _isUploadingImage
                             ? const SizedBox(
@@ -258,8 +328,8 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                                 ? ClipOval(
                                     child: Image.network(
                                       _avatarUrl!,
-                                      width: 96,
-                                      height: 96,
+                                      width: 112,
+                                      height: 112,
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, __, ___) => Icon(
                                         Icons.person_rounded,
@@ -275,15 +345,37 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: const Icon(Icons.camera_alt,
-                            size: 16, color: Colors.white),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                            ),
+                            child: const Icon(Icons.camera_alt,
+                                size: 16, color: Colors.white),
+                          ),
+                          if ((_avatarUrl ?? '').isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: _isUploadingImage ? null : _deleteImage,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.red.shade100, width: 2),
+                                ),
+                                child: Icon(Icons.delete_outline,
+                                    size: 16, color: Colors.red.shade500),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
