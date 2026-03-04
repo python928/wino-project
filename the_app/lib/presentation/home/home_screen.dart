@@ -26,6 +26,7 @@ import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
 import '../../features/analytics/analytics_export.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/firebase_distance_search_service.dart';
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
@@ -107,6 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _radiusKm = km;
         _selectedLocation = '/';
       });
+
+      // Best-effort sync/log to Firebase on every distance search.
+      // ignore: discarded_futures
+      _syncDistanceSearchToFirebase(km: km, userLat: lat, userLng: lng);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
@@ -135,6 +140,41 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() => _isNearbyLoading = false);
       }
+    }
+  }
+
+  Future<void> _syncDistanceSearchToFirebase({
+    required double km,
+    required double userLat,
+    required double userLng,
+  }) async {
+    try {
+      final homeProvider = context.read<HomeProvider>();
+      final storesWithCoords = homeProvider.featuredStores
+          .where((s) => s.latitude != null && s.longitude != null)
+          .map(
+            (s) => <String, dynamic>{
+              'store_id': s.id,
+              'store_name': s.fullName,
+              'latitude': s.latitude,
+              'longitude': s.longitude,
+              'allow_nearby_visibility': s.allowNearbyVisibility,
+            },
+          )
+          .toList();
+
+      await FirebaseDistanceSearchService.syncStoreCoordinates(
+        stores: storesWithCoords,
+      );
+      await FirebaseDistanceSearchService.logDistanceSearch(
+        sourceScreen: 'home',
+        userLatitude: userLat,
+        userLongitude: userLng,
+        radiusKm: km,
+        storesCount: storesWithCoords.length,
+      );
+    } catch (e) {
+      debugPrint('Firebase distance sync failed (home): $e');
     }
   }
 

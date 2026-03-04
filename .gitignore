@@ -1,0 +1,23 @@
+# Python / Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+
+# Environment / secrets
+.env
+*.env
+firebase-adminsdk.json
+google-services.json
+google-services\ \(1\).json
+
+# Generated / local media
+app-backend/media/
+
+# Flutter build artifacts
+the_app/.dart_tool/
+the_app/build/
+the_app/.flutter-plugins
+the_app/.flutter-plugins-dependencies
+
