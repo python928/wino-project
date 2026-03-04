@@ -22,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'name', 'email', 'phone', 'profile_image', 
             'gender', 'birthday',
             'store_description', 'address', 'latitude', 'longitude',
+            'allow_nearby_visibility',
             'location_updated_at',
             'store_type', 'cover_image', 'followers_count', 'average_rating', 
             'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
@@ -33,18 +34,24 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Enforce 60-day coordinate lock."""
-        new_lat = attrs.get('latitude')
-        new_lng = attrs.get('longitude')
-        if new_lat is not None or new_lng is not None:
-            user = self.instance
-            if user and user.location_updated_at:
-                days_since = (timezone.now() - user.location_updated_at).days
-                if days_since < 60:
-                    remaining = 60 - days_since
-                    raise serializers.ValidationError(
-                        f'You can only change your GPS coordinates once every 60 days. '
-                        f'{remaining} day(s) remaining.'
-                    )
+        user = self.instance
+        if not user:
+            return attrs
+
+        lat_in_payload = 'latitude' in attrs
+        lng_in_payload = 'longitude' in attrs
+        new_lat = attrs.get('latitude') if lat_in_payload else user.latitude
+        new_lng = attrs.get('longitude') if lng_in_payload else user.longitude
+
+        coords_changed = (new_lat != user.latitude) or (new_lng != user.longitude)
+        if coords_changed and user.location_updated_at:
+            days_since = (timezone.now() - user.location_updated_at).days
+            if days_since < 60:
+                remaining = 60 - days_since
+                raise serializers.ValidationError(
+                    f'You can only change your GPS coordinates once every 60 days. '
+                    f'{remaining} day(s) remaining.'
+                )
         return attrs
 
     def update(self, instance, validated_data):

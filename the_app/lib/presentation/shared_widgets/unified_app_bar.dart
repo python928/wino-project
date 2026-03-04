@@ -18,6 +18,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
   final double? radiusKm;
   final ValueChanged<double>? onRadiusChanged;
+  final bool isNearbyLoading;
 
   const UnifiedAppBar({
     super.key,
@@ -30,6 +31,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.radiusKm,
     this.onRadiusChanged,
+    this.isNearbyLoading = false,
   });
 
   @override
@@ -96,6 +98,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                           );
                         },
                         showNearby: onRadiusChanged != null,
+                        isLoadingNearby: isNearbyLoading,
                       ),
                     ),
                   ],

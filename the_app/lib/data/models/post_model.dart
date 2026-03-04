@@ -23,7 +23,7 @@ class ProductImageData {
         url = ApiConfig.getImageUrl(url);
       }
     }
-    
+
     return ProductImageData(
       id: json['id'],
       url: url,
@@ -57,6 +57,7 @@ class Post {
   final String storeAddress;
   final double? storeLatitude;
   final double? storeLongitude;
+  final bool storeNearbyVisible;
   final bool deliveryAvailable;
   final List<String> deliveryWilayas;
 
@@ -85,6 +86,7 @@ class Post {
     this.storeAddress = '',
     this.storeLatitude,
     this.storeLongitude,
+    this.storeNearbyVisible = true,
     this.deliveryAvailable = false,
     this.deliveryWilayas = const [],
   });
@@ -124,6 +126,8 @@ class Post {
     final double? storeLng = json['store_longitude'] != null
         ? double.tryParse(json['store_longitude'].toString())
         : null;
+    final bool storeNearbyVisible =
+        json['store_nearby_visible'] as bool? ?? true;
 
     // Handle category - can be an int ID, string, or object
     int? categoryId;
@@ -140,11 +144,15 @@ class Post {
 
     // Parse price
     final double price = _parseDouble(json['price']);
-    final double? oldPrice = json['old_price'] != null ? _parseDouble(json['old_price']) : null;
+    final double? oldPrice =
+        json['old_price'] != null ? _parseDouble(json['old_price']) : null;
 
     // Calculate discount percentage if not provided
     int? discountPct = json['discount_percentage'] as int?;
-    if (discountPct == null && oldPrice != null && oldPrice > price && oldPrice > 0) {
+    if (discountPct == null &&
+        oldPrice != null &&
+        oldPrice > price &&
+        oldPrice > 0) {
       discountPct = ((oldPrice - price) / oldPrice * 100).round();
     }
 
@@ -181,7 +189,9 @@ class Post {
       price: price,
       oldPrice: oldPrice,
       discountPercentage: discountPct,
-      isAvailable: (json['available_status'] ?? json['status'] ?? 'available') == 'available',
+      isAvailable:
+          (json['available_status'] ?? json['status'] ?? 'available') ==
+              'available',
       isNegotiable: json['negotiable'] as bool? ?? false,
       hidePrice: json['hide_price'] as bool? ?? false,
       rating: _parseDouble(json['average_rating'] ?? json['rating'] ?? 0.0),
@@ -189,10 +199,12 @@ class Post {
       isFavorited: json['is_favorited'] as bool? ?? false,
       isHotDeal: (discountPct ?? 0) > 0,
       isFeatured: json['is_featured'] as bool? ?? false,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
       images: images,
       storeLatitude: storeLat,
       storeLongitude: storeLng,
+      storeNearbyVisible: storeNearbyVisible,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
@@ -209,7 +221,11 @@ class Post {
   static List<String> _parseWilayas(dynamic value) {
     if (value == null) return [];
     if (value is String && value.trim().isNotEmpty) {
-      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      return value
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return [];
   }
@@ -226,11 +242,13 @@ class Post {
     final storeName = storesById?[storeId] ?? _resolveStoreName(json);
 
     final user = usersById != null
-        ? usersById[json['owner_id'] ?? storeId] // owner_id is not present; fall back to storeId
+        ? usersById[json['owner_id'] ??
+            storeId] // owner_id is not present; fall back to storeId
         : null;
 
     final categoryId = json['category'] as int?;
-    final categoryName = categoriesById?[categoryId] ?? (categoryId?.toString() ?? 'Uncategorized');
+    final categoryName = categoriesById?[categoryId] ??
+        (categoryId?.toString() ?? 'Uncategorized');
 
     final discountPct = promoPercentageByProduct?[productId];
     final double price = double.tryParse(json['price'].toString()) ?? 0;
@@ -265,22 +283,25 @@ class Post {
       isAvailable: (json['available_status'] ?? 'available') == 'available',
       isNegotiable: json['negotiable'] as bool? ?? false,
       hidePrice: json['hide_price'] as bool? ?? false,
-      rating: double.tryParse((json['average_rating'] ?? json['rating'] ?? 0.0).toString()) ?? 0.0,
+      rating: double.tryParse(
+              (json['average_rating'] ?? json['rating'] ?? 0.0).toString()) ??
+          0.0,
       reviewCount: json['review_count'] as int? ?? 0,
       isFavorited: json['is_favorited'] as bool? ?? false,
       isHotDeal: (discountPct ?? 0) > 0,
       isFeatured: false,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
       images: images,
+      storeNearbyVisible: json['store_nearby_visible'] as bool? ?? true,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
   }
 
   static String _resolveStoreName(Map<String, dynamic> json) {
-    final topLevel = (json['store_name'] ?? json['display_name'] ?? '')
-        .toString()
-        .trim();
+    final topLevel =
+        (json['store_name'] ?? json['display_name'] ?? '').toString().trim();
     if (topLevel.isNotEmpty) return topLevel;
 
     final rawStore = json['store'];
@@ -324,6 +345,7 @@ class Post {
     List<ProductImageData>? images,
     bool? deliveryAvailable,
     List<String>? deliveryWilayas,
+    bool? storeNearbyVisible,
   }) {
     return Post(
       id: id ?? this.id,
@@ -348,6 +370,7 @@ class Post {
       isFeatured: isFeatured ?? this.isFeatured,
       createdAt: createdAt ?? this.createdAt,
       images: images ?? this.images,
+      storeNearbyVisible: storeNearbyVisible ?? this.storeNearbyVisible,
       deliveryAvailable: deliveryAvailable ?? this.deliveryAvailable,
       deliveryWilayas: deliveryWilayas ?? this.deliveryWilayas,
     );
@@ -369,7 +392,10 @@ class Post {
       'rating': rating,
       'is_featured': isFeatured,
       'created_at': createdAt.toIso8601String(),
-      'images': images.map((i) => {'id': i.id, 'image': i.url, 'is_main': i.isMain}).toList(),
+      'images': images
+          .map((i) => {'id': i.id, 'image': i.url, 'is_main': i.isMain})
+          .toList(),
+      'store_nearby_visible': storeNearbyVisible,
       'delivery_available': deliveryAvailable,
       'delivery_wilayas': deliveryWilayas.join(','),
     };

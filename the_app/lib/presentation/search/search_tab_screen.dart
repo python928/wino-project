@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -9,7 +10,6 @@ import '../../core/widgets/app_toggle_button.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
-import '../../core/services/storage_service.dart';
 import '../../core/routing/routes.dart';
 import '../../core/utils/helpers.dart';
 import '../shared_widgets/cards/product_card.dart';
@@ -94,6 +94,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   // User location for distance calculation
   double? _userLat;
   double? _userLng;
+  bool _isNearbyLoading = false;
 
   final List<String> _sortOptions = [
     'Newest',
@@ -106,16 +107,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   @override
   void initState() {
     super.initState();
-    // Load user coordinates for distance display
-    final userData = StorageService.getUserData();
-    if (userData != null) {
-      _userLat = userData['latitude'] != null
-          ? double.tryParse(userData['latitude'].toString())
-          : null;
-      _userLng = userData['longitude'] != null
-          ? double.tryParse(userData['longitude'].toString())
-          : null;
-    }
     // Initialize selected type from widget parameter
     if (widget.initialType != null && widget.initialType!.isNotEmpty) {
       final type = widget.initialType!;
@@ -332,6 +323,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       return;
     }
 
+    setState(() => _isNearbyLoading = true);
     try {
       double? lat;
       double? lng;
@@ -362,8 +354,62 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to get GPS location: $e');
+      final msg = e.toString();
+      if (msg.contains('Location services are disabled')) {
+        await _showLocationActionDialog(
+          title: 'Enable GPS',
+          message:
+              'Location services are disabled. Please enable GPS to use nearby search.',
+          openSettings: Geolocator.openLocationSettings,
+          actionLabel: 'Open Location Settings',
+        );
+      } else if (msg.contains('permanently denied')) {
+        await _showLocationActionDialog(
+          title: 'Permission Required',
+          message:
+              'Location permission is permanently denied. Please allow it from app settings.',
+          openSettings: Geolocator.openAppSettings,
+          actionLabel: 'Open App Settings',
+        );
+      } else if (msg.contains('permission denied')) {
+        Helpers.showSnackBar(context, 'Location permission denied');
+      } else {
+        Helpers.showSnackBar(context, 'Failed to get current GPS location');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isNearbyLoading = false);
+      }
     }
+  }
+
+  Future<void> _showLocationActionDialog({
+    required String title,
+    required String message,
+    required Future<bool> Function() openSettings,
+    required String actionLabel,
+  }) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await openSettings();
+            },
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showFiltersSheet() {
@@ -596,6 +642,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       distanceActive ? '${_distanceKm!.toInt()} km' : 'Nearby',
                   onCityTap: _showLocationPicker,
                   onNearbyTap: _showDistancePicker,
+                  isLoadingNearby: _isNearbyLoading,
                 ),
               ),
             ],
@@ -1381,6 +1428,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       return baseStores;
     }
     return baseStores.where((store) {
+      if (!store.allowNearbyVisibility) return false;
       final dist = Helpers.haversineDistance(
           _userLat, _userLng, store.latitude, store.longitude);
       return dist != null && dist <= _distanceKm!;
@@ -1430,6 +1478,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredProducts = [];
         }
+        if (_distanceKm != null) {
+          filteredProducts =
+              filteredProducts.where((p) => p.storeNearbyVisible).toList();
+        }
 
         filteredProducts = filteredProducts
             .where((p) => _postMatchesSelectedCategories(p, categoriesById))
@@ -1452,6 +1504,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               .toList();
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredOffers = [];
+        }
+        if (_distanceKm != null) {
+          filteredOffers = filteredOffers
+              .where((o) => o.product.storeNearbyVisible)
+              .toList();
         }
 
         filteredOffers = filteredOffers
@@ -1476,6 +1533,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               .toList();
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           filteredPacks = [];
+        }
+        if (_distanceKm != null) {
+          filteredPacks =
+              filteredPacks.where((p) => p.merchantNearbyVisible).toList();
         }
         filteredPacks =
             filteredPacks.where((p) => _packMatchesQuery(p)).toList();
@@ -1816,6 +1877,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           products = [];
         }
+        if (_distanceKm != null) {
+          products = products.where((p) => p.storeNearbyVisible).toList();
+        }
 
         if (_minRating > 0) {
           products = products.where((p) => p.rating >= _minRating).toList();
@@ -1927,6 +1991,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           offers = [];
         }
+        if (_distanceKm != null) {
+          offers = offers.where((o) => o.product.storeNearbyVisible).toList();
+        }
 
         final categoriesById = _categoriesById(context.read<HomeProvider>());
         offers = offers
@@ -2025,6 +2092,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               packs.where((p) => validStoreIds.contains(p.merchantId)).toList();
         } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
           packs = [];
+        }
+        if (_distanceKm != null) {
+          packs = packs.where((p) => p.merchantNearbyVisible).toList();
         }
 
         packs = packs.where((p) => _packMatchesQuery(p)).toList();

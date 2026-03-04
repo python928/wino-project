@@ -70,6 +70,7 @@ class ProductSerializer(serializers.ModelSerializer):
     store_address = serializers.SerializerMethodField()
     store_latitude = serializers.SerializerMethodField()
     store_longitude = serializers.SerializerMethodField()
+    store_nearby_visible = serializers.SerializerMethodField()
     # Effective delivery areas: returns stored wilayas if set, else store.address (dynamic fallback)
     delivery_areas = serializers.SerializerMethodField()
 
@@ -97,6 +98,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'store_address',
             'store_latitude',
             'store_longitude',
+            'store_nearby_visible',
         ]
         read_only_fields = ['id', 'created_at', 'delivery_areas']
 
@@ -126,6 +128,9 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_store_longitude(self, obj):
         lng = getattr(obj.store, 'longitude', None)
         return str(lng) if lng is not None else None
+
+    def get_store_nearby_visible(self, obj):
+        return bool(getattr(obj.store, 'allow_nearby_visibility', True))
 
     def get_delivery_areas(self, obj):
         """Return stored wilayas if set; fall back to store.address dynamically."""
@@ -166,6 +171,7 @@ class PackSerializer(serializers.ModelSerializer):
     merchant_name = serializers.CharField(source='merchant.name', read_only=True)
     merchant_latitude = serializers.SerializerMethodField()
     merchant_longitude = serializers.SerializerMethodField()
+    merchant_nearby_visible = serializers.SerializerMethodField()
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
     # Effective delivery areas (same dynamic fallback as Product)
@@ -174,7 +180,7 @@ class PackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pack
         fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description',
-                  'merchant_latitude', 'merchant_longitude',
+                  'merchant_latitude', 'merchant_longitude', 'merchant_nearby_visible',
                   'discount_price', 'total_price', 'available_status',
                   'delivery_available', 'delivery_wilayas', 'delivery_areas',
                   'created_at', 'pack_products', 'images', 'products']
@@ -196,6 +202,9 @@ class PackSerializer(serializers.ModelSerializer):
     def get_merchant_longitude(self, obj):
         lng = getattr(obj.merchant, 'longitude', None)
         return str(lng) if lng is not None else None
+
+    def get_merchant_nearby_visible(self, obj):
+        return bool(getattr(obj.merchant, 'allow_nearby_visibility', True))
 
     def validate_products(self, value):
         """Ensure packs can only contain the current merchant's own products."""

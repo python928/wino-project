@@ -19,6 +19,7 @@ class User {
   final String address;
   final double? latitude;
   final double? longitude;
+  final bool allowNearbyVisibility;
   final String storeType;
   final bool isVerified;
   final String? city;
@@ -46,13 +47,14 @@ class User {
     this.phone,
     this.profileImage,
     required this.dateJoined,
-  	this.gender,
-  	this.birthday,
+    this.gender,
+    this.birthday,
     this.role, // <-- added
     this.storeDescription = '',
     this.address = '',
     this.latitude,
     this.longitude,
+    this.allowNearbyVisibility = true,
     this.storeType = 'physical',
     this.isVerified = false,
     this.city,
@@ -85,16 +87,22 @@ class User {
       name: json['name'] ?? json['username'] ?? '',
       phone: json['phone'],
       profileImage: json['profile_image'],
-      dateJoined: DateTime.tryParse(json['date_joined'] ?? '') ?? DateTime.now(),
-    gender: json['gender']?.toString(),
-    birthday: json['birthday'] != null
-      ? DateTime.tryParse(json['birthday'].toString())
-      : null,
+      dateJoined:
+          DateTime.tryParse(json['date_joined'] ?? '') ?? DateTime.now(),
+      gender: json['gender']?.toString(),
+      birthday: json['birthday'] != null
+          ? DateTime.tryParse(json['birthday'].toString())
+          : null,
       role: json['role']?.toString(), // <-- added (optional)
       storeDescription: json['store_description'] ?? '',
       address: json['address'] ?? '',
-      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
-      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      latitude: json['latitude'] != null
+          ? double.tryParse(json['latitude'].toString())
+          : null,
+      longitude: json['longitude'] != null
+          ? double.tryParse(json['longitude'].toString())
+          : null,
+      allowNearbyVisibility: json['allow_nearby_visibility'] as bool? ?? true,
       storeType: json['store_type'] ?? 'physical',
       coverImage: json['cover_image'],
       followersCount: json['followers_count'] ?? 0,
@@ -110,13 +118,13 @@ class User {
       locationUpdatedAt: json['location_updated_at'] != null
           ? DateTime.tryParse(json['location_updated_at'].toString())
           : null,
-      distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
+      distance: json['distance'] != null
+          ? (json['distance'] as num).toDouble()
+          : null,
       isOpen: json['is_open'] ?? true,
       productCount: json['product_count'] as int? ?? 0,
       reviewCount: json['review_count'] as int? ?? 0,
-      categories: (json['categories'] as List?)
-              ?.whereType<String>()
-              .toList() ??
+      categories: (json['categories'] as List?)?.whereType<String>().toList() ??
           const [],
     );
   }
@@ -130,13 +138,14 @@ class User {
       'phone': phone,
       'profile_image': profileImage,
       'date_joined': dateJoined.toIso8601String(),
-  		'gender': gender,
-  		'birthday': birthday?.toIso8601String().split('T').first,
+      'gender': gender,
+      'birthday': birthday?.toIso8601String().split('T').first,
       'role': role, // <-- added (optional)
       'store_description': storeDescription,
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
+      'allow_nearby_visibility': allowNearbyVisibility,
       'store_type': storeType,
       'cover_image': coverImage,
       'followers_count': followersCount,

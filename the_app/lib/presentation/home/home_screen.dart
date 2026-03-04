@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
@@ -8,7 +9,6 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/routes.dart';
 import '../../core/utils/helpers.dart';
-import '../../core/services/storage_service.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
@@ -46,13 +46,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _radiusKm; // null = address mode active; non-null = distance mode active
   double? _userLat;
   double? _userLng;
+  bool _isNearbyLoading = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
-      _loadUserLocation();
     });
   }
 
@@ -72,20 +72,6 @@ class _HomeScreenState extends State<HomeScreen> {
     postProvider.loadOffers();
   }
 
-  void _loadUserLocation() {
-    final userData = StorageService.getUserData();
-    if (userData != null) {
-      setState(() {
-        _userLat = userData['latitude'] != null
-            ? double.tryParse(userData['latitude'].toString())
-            : null;
-        _userLng = userData['longitude'] != null
-            ? double.tryParse(userData['longitude'].toString())
-            : null;
-      });
-    }
-  }
-
   Future<void> _activateNearby(double km) async {
     if (km <= 0) {
       setState(() {
@@ -95,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    setState(() => _isNearbyLoading = true);
     try {
       double? lat;
       double? lng;
@@ -122,8 +109,62 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to get GPS location: $e');
+      final msg = e.toString();
+      if (msg.contains('Location services are disabled')) {
+        await _showLocationActionDialog(
+          title: 'Enable GPS',
+          message:
+              'Location services are disabled. Please enable GPS to use nearby search.',
+          openSettings: Geolocator.openLocationSettings,
+          actionLabel: 'Open Location Settings',
+        );
+      } else if (msg.contains('permanently denied')) {
+        await _showLocationActionDialog(
+          title: 'Permission Required',
+          message:
+              'Location permission is permanently denied. Please allow it from app settings.',
+          openSettings: Geolocator.openAppSettings,
+          actionLabel: 'Open App Settings',
+        );
+      } else if (msg.contains('permission denied')) {
+        Helpers.showSnackBar(context, 'Location permission denied');
+      } else {
+        Helpers.showSnackBar(context, 'Failed to get current GPS location');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isNearbyLoading = false);
+      }
     }
+  }
+
+  Future<void> _showLocationActionDialog({
+    required String title,
+    required String message,
+    required Future<bool> Function() openSettings,
+    required String actionLabel,
+  }) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await openSettings();
+            },
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLocationPicker() async {
@@ -150,9 +191,11 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Filter a list of Posts to only those within [_radiusKm] km.
   /// Products without store coordinates are kept (fail-open).
   List<Post> _filterByRadius(List<Post> products) {
-    if (_radiusKm == null || _userLat == null || _userLng == null)
+    if (_radiusKm == null || _userLat == null || _userLng == null) {
       return products;
+    }
     return products.where((p) {
+      if (!p.storeNearbyVisible) return false;
       final dist = Helpers.haversineDistance(
           _userLat, _userLng, p.storeLatitude, p.storeLongitude);
       if (dist == null) return true; // no coords → keep
@@ -163,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Pack> _filterPacksByRadius(List<Pack> packs) {
     if (_radiusKm == null || _userLat == null || _userLng == null) return packs;
     return packs.where((pack) {
+      if (!pack.merchantNearbyVisible) return false;
       final dist = Helpers.haversineDistance(
         _userLat,
         _userLng,
@@ -176,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _gridCardWidth(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = CardConstants.gridCrossAxisCount;
+    const crossAxisCount = CardConstants.gridCrossAxisCount;
     final availableWidth = screenWidth -
         (CardConstants.gridHorizontalPadding * 2) -
         (CardConstants.gridCrossAxisSpacing * (crossAxisCount - 1));
@@ -204,6 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onLocationTap: _showLocationPicker,
                   radiusKm: _radiusKm,
                   onRadiusChanged: _activateNearby,
+                  isNearbyLoading: _isNearbyLoading,
                 ),
 
                 const SizedBox(height: 16),
@@ -945,6 +990,7 @@ class _HomeScreenState extends State<HomeScreen> {
             (_radiusKm == null || _userLat == null || _userLng == null)
                 ? offers
                 : offers.where((o) {
+                    if (!o.product.storeNearbyVisible) return false;
                     final dist = Helpers.haversineDistance(_userLat, _userLng,
                         o.product.storeLatitude, o.product.storeLongitude);
                     if (dist == null) return true;
@@ -1137,7 +1183,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _buildProductSummary(List<dynamic> products) {
     if (products.isEmpty) return 'Empty pack';
 
-    final maxItems = 3;
+    const maxItems = 3;
     final itemsToShow = products.take(maxItems).toList();
 
     final validItems = itemsToShow

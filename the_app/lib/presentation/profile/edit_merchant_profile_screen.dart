@@ -76,6 +76,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   String? _selectedBaladiya;
   double? _latitude;
   double? _longitude;
+  bool _allowNearbyVisibility = true;
 
   @override
   void initState() {
@@ -110,6 +111,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         _longitude = double.tryParse(userData['longitude'].toString());
       }
     }
+    final userData = StorageService.getUserData();
+    _allowNearbyVisibility =
+        userData?['allow_nearby_visibility'] as bool? ?? true;
 
     _loadAddress();
   }
@@ -481,6 +485,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         'whatsapp': _whatsappController.text.trim(),
         'tiktok': _tiktokController.text.trim(),
         'youtube': _youtubeController.text.trim(),
+        'allow_nearby_visibility': _allowNearbyVisibility,
       };
 
       // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
@@ -517,6 +522,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           userData['whatsapp'] = _whatsappController.text.trim();
           userData['tiktok'] = _tiktokController.text.trim();
           userData['youtube'] = _youtubeController.text.trim();
+          userData['allow_nearby_visibility'] = _allowNearbyVisibility;
           if (_latitude != null) userData['latitude'] = _latitude.toString();
           if (_longitude != null) userData['longitude'] = _longitude.toString();
           await StorageService.saveUserData(userData);
@@ -922,6 +928,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
   Widget _buildLocationSection() {
     final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
+    final hasGpsCoordinates = _latitude != null && _longitude != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1008,6 +1015,102 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
         const SizedBox(height: 12),
 
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: hasGpsCoordinates
+                ? AppColors.successGreen.withValues(alpha: 0.08)
+                : AppColors.warningAmber.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasGpsCoordinates
+                  ? AppColors.successGreen.withValues(alpha: 0.35)
+                  : AppColors.warningAmber.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                hasGpsCoordinates ? Icons.check_circle : Icons.info_outline,
+                size: 18,
+                color: hasGpsCoordinates
+                    ? AppColors.successGreen
+                    : AppColors.warningAmber,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasGpsCoordinates
+                      ? 'GPS coordinates selected'
+                      : 'GPS coordinates not selected yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: hasGpsCoordinates
+                        ? AppColors.successGreen
+                        : AppColors.warningAmber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryColor.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.primaryColor.withValues(alpha: 0.22),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nearby search privacy',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'When nearby filter is active, your store can be shown by distance only if this option is on.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        SwitchListTile(
+          value: _allowNearbyVisibility,
+          contentPadding: EdgeInsets.zero,
+          activeColor: AppColors.primaryColor,
+          title: Text(
+            'Show my store in nearby search',
+            style:
+                AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            _allowNearbyVisibility
+                ? 'Enabled'
+                : 'Hidden from nearby distance filter',
+            style: AppTextStyles.bodySmall
+                .copyWith(color: AppColors.textSecondary),
+          ),
+          onChanged: (value) {
+            setState(() => _allowNearbyVisibility = value);
+          },
+        ),
+
+        const SizedBox(height: 8),
+
         // GPS Button
         SizedBox(
           width: double.infinity,
@@ -1020,7 +1123,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.my_location, size: 18),
             label: Text(_latitude != null
-                ? 'Update Grid Coordinates (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})'
+                ? 'GPS location is set'
                 : 'Get Current GPS Location'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),

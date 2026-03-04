@@ -6,12 +6,27 @@ from .models import User, Follower, PhoneOTP, StoreReport
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-	fieldsets = UserAdmin.fieldsets + (
-		('Profile', {'fields': ('phone', 'profile_image')}),
-		('Store Info', {'fields': ('store_description', 'address', 'latitude', 'longitude', 'store_type', 'cover_image')}),
+	fieldsets = (
+		(None, {'fields': ('username', 'password')}),
+		('Personal info', {'fields': ('name', 'email', 'phone', 'profile_image', 'gender', 'birthday')}),
+		('Store Info', {'fields': ('store_description', 'address', 'latitude', 'longitude', 'allow_nearby_visibility', 'location_updated_at', 'store_type', 'cover_image')}),
+		('Social', {'fields': ('facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube')}),
+		('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+		('Important dates', {'fields': ('last_login', 'date_joined')}),
 	)
-	list_display = ('username', 'email', 'name', 'address', 'is_active', 'is_staff')
-	list_filter = ('store_type', 'is_staff', 'is_active')
+	add_fieldsets = (
+		(
+			None,
+			{
+				'classes': ('wide',),
+				'fields': ('username', 'name', 'email', 'password1', 'password2', 'is_staff', 'is_active'),
+			},
+		),
+	)
+	list_display = ('username', 'email', 'name', 'address', 'allow_nearby_visibility', 'is_active', 'is_staff')
+	list_filter = ('store_type', 'allow_nearby_visibility', 'is_staff', 'is_active')
+	search_fields = ('username', 'name', 'email', 'phone', 'address')
+	ordering = ('-date_joined',)
 
 
 @admin.register(Follower)

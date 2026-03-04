@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../../core/theme/app_text_styles.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
@@ -15,31 +15,35 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+  String _statusMessage = 'جاري تهيئة التطبيق...';
 
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
-    
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-    
+
     _controller.forward();
-    
-    // Check authentication after animation
+
     _checkAuthenticationStatus();
   }
 
@@ -48,70 +52,81 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _controller.dispose();
     super.dispose();
   }
-  
+
   Future<void> _checkAuthenticationStatus() async {
-    // Wait for animation to complete
-    await Future.delayed(const Duration(seconds: 2));
-    
+    await Future.delayed(const Duration(milliseconds: 900));
+
     if (!mounted) return;
-    
-    // Check if user is logged in
+
+    _setStatus('التحقق من الجلسة...');
+
     final isLoggedIn = StorageService.isLoggedIn();
     final accessToken = await StorageService.getAccessToken();
-    
+
     if (!isLoggedIn || accessToken == null) {
-      // Not logged in - go to login
+      _setStatus('لا يوجد تسجيل دخول');
       debugPrint('❌ No token found - navigating to login');
       _navigateToLogin();
       return;
     }
-    
+
+    _setStatus('تم العثور على جلسة، جاري التحقق...');
     debugPrint('✅ Token found - validating...');
-    
-    // Check local token expiration first
+
     if (JWTValidator.isExpired(accessToken)) {
+      _setStatus('تحديث الجلسة...');
       debugPrint('⚠️ Access token expired - attempting refresh...');
-      
-      // Try to refresh token
+
       final refreshSuccess = await _attemptTokenRefresh();
-      
+
       if (!refreshSuccess) {
+        _setStatus('انتهت الجلسة');
         debugPrint('❌ Token refresh failed - logging out');
         await StorageService.logout();
         _navigateToLogin();
         return;
       }
-      
+
       debugPrint('✅ Token refreshed successfully');
     }
-    
+
     // Validate token with backend (if online)
     try {
+      _setStatus('التحقق من الخادم...');
       final isValid = await _validateTokenWithBackend();
-      
+
       if (isValid) {
+        _setStatus('جاهز');
         debugPrint('✅ Token validated successfully');
         _navigateToHome();
       } else {
+        _setStatus('جلسة غير صالحة');
         debugPrint('❌ Token validation failed');
         await StorageService.logout();
         _navigateToLogin();
       }
     } catch (e) {
       debugPrint('⚠️ Network error during validation: $e');
-      
+
       // If there is no internet and the token is not expired locally - go offline
       final currentToken = await StorageService.getAccessToken();
       if (currentToken != null && !JWTValidator.isExpired(currentToken)) {
+        _setStatus('وضع بدون إنترنت');
         debugPrint('ℹ️ Entering offline mode');
         _navigateToHomeOffline();
       } else {
+        _setStatus('يتطلب تسجيل دخول');
         debugPrint('❌ No valid token for offline mode');
         _navigateToLogin();
       }
     }
   }
-  
+
+  void _setStatus(String value) {
+    if (!mounted) return;
+    setState(() => _statusMessage = value);
+  }
+
   Future<bool> _attemptTokenRefresh() async {
     try {
       return await ApiService.refreshToken();
@@ -120,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return false;
     }
   }
-  
+
   Future<bool> _validateTokenWithBackend() async {
     try {
       // Call a protected endpoint to validate token
@@ -131,15 +146,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return false;
     }
   }
-  
+
   void _navigateToHomeOffline() {
     if (!mounted) return;
-    
+
     // Show a message to the user that they are offline
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
     );
-    
+
     // Show snackbar after navigation
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -153,14 +168,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       }
     });
   }
-  
+
   void _navigateToLogin() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
-  
+
   void _navigateToHome() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -172,64 +187,203 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFF8C42),
-              Color(0xFFFF6B35),
+              AppColors.primaryLightShade.withValues(alpha: 0.45),
+              Colors.white,
             ],
           ),
         ),
-        child: Center(
+        child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(30),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 10,
-                          spreadRadius: 2,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                child: Column(
+                  children: [
+                    const Spacer(),
+                    Container(
+                      width: 108,
+                      height: 108,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppColors.primaryColor,
+                            AppColors.primaryDark
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                AppColors.primaryColor.withValues(alpha: 0.35),
+                            blurRadius: 18,
+                            offset: const Offset(0, 7),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.storefront_rounded,
+                        size: 54,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.shopping_bag_rounded,
-                      size: 80,
-                      color: Color(0xFFFF8C42),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Topri',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDeep,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'DZ Local',
-                    style: AppTextStyles.h1.copyWith(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    const Text(
+                      'تسوق محلي ذكي مع نتائج أقرب لك',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Shop local, discover new',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
+                    const SizedBox(height: 26),
+                    _FeatureTile(
+                      icon: Icons.near_me_rounded,
+                      title: 'بحث Nearby حي',
+                      subtitle: 'يعتمد على موقعك الحالي وقت البحث',
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    _FeatureTile(
+                      icon: Icons.shield_outlined,
+                      title: 'خصوصية أفضل للمتاجر',
+                      subtitle:
+                          'إخفاء المتجر من نتائج القرب متاح من Edit Profile',
+                    ),
+                    const SizedBox(height: 10),
+                    _FeatureTile(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'منتجات وعروض وباقات',
+                      subtitle: 'تصميم أوضح للأسعار والصور والتفاصيل',
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.primaryColor.withValues(alpha: 0.20),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _statusMessage,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const LinearProgressIndicator(
+                            minHeight: 4,
+                            borderRadius: BorderRadius.all(Radius.circular(3)),
+                            color: AppColors.primaryColor,
+                            backgroundColor: AppColors.neutral200,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FeatureTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _FeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.neutral200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLightShade,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.primaryColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -23,6 +23,10 @@ class User(AbstractUser):
 	address = models.CharField(max_length=255, blank=True)
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+	allow_nearby_visibility = models.BooleanField(
+		default=True,
+		help_text='Whether this store can appear in nearby distance-based search.',
+	)
 	location_updated_at = models.DateTimeField(blank=True, null=True, help_text='Last time GPS coordinates were changed')
 	store_type = models.CharField(max_length=10, choices=[('physical', 'Physical'), ('online', 'Online')], default='physical')
 	cover_image = models.ImageField(upload_to='users/covers/', blank=True, null=True)

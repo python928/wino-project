@@ -9,6 +9,8 @@ class LocationModeSwitcher extends StatelessWidget {
   final VoidCallback onNearbyTap;
   final double height;
   final bool showNearby;
+  final bool isLoadingNearby;
+  final String loadingNearbyLabel;
 
   const LocationModeSwitcher({
     super.key,
@@ -19,6 +21,8 @@ class LocationModeSwitcher extends StatelessWidget {
     required this.onNearbyTap,
     this.height = 44,
     this.showNearby = true,
+    this.isLoadingNearby = false,
+    this.loadingNearbyLabel = 'Locating...',
   });
 
   @override
@@ -78,16 +82,17 @@ class LocationModeSwitcher extends StatelessWidget {
                   selected: citySelected || !showNearby,
                   icon: Icons.location_on_outlined,
                   label: cityLabel,
-                  onTap: onCityTap,
+                  onTap: isLoadingNearby ? () {} : onCityTap,
                 ),
               ),
               if (showNearby)
                 Expanded(
                   child: _ModeButton(
                     selected: !citySelected,
-                    icon: Icons.radar,
-                    label: nearbyLabel,
-                    onTap: onNearbyTap,
+                    icon: isLoadingNearby ? null : Icons.radar,
+                    label: isLoadingNearby ? loadingNearbyLabel : nearbyLabel,
+                    onTap: isLoadingNearby ? () {} : onNearbyTap,
+                    loading: isLoadingNearby,
                   ),
                 ),
             ],
@@ -100,15 +105,17 @@ class LocationModeSwitcher extends StatelessWidget {
 
 class _ModeButton extends StatelessWidget {
   final bool selected;
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final VoidCallback onTap;
+  final bool loading;
 
   const _ModeButton({
     required this.selected,
     required this.icon,
     required this.label,
     required this.onTap,
+    this.loading = false,
   });
 
   @override
@@ -121,11 +128,21 @@ class _ModeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? Colors.white : AppColors.textSecondary,
-            ),
+            if (loading)
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                ),
+              )
+            else if (icon != null)
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? Colors.white : AppColors.textSecondary,
+              ),
             const SizedBox(width: 5),
             Flexible(
               child: Text(

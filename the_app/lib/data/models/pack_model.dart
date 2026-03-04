@@ -15,6 +15,7 @@ class Pack extends Equatable {
   final String merchantName;
   final double? merchantLatitude;
   final double? merchantLongitude;
+  final bool merchantNearbyVisible;
   final bool deliveryAvailable;
   final List<String> deliveryWilayas;
 
@@ -32,6 +33,7 @@ class Pack extends Equatable {
     required this.merchantName,
     this.merchantLatitude,
     this.merchantLongitude,
+    this.merchantNearbyVisible = true,
     this.deliveryAvailable = false,
     this.deliveryWilayas = const [],
   });
@@ -88,6 +90,7 @@ class Pack extends Equatable {
       merchantLongitude: json['merchant_longitude'] != null
           ? double.tryParse(json['merchant_longitude'].toString())
           : null,
+      merchantNearbyVisible: json['merchant_nearby_visible'] as bool? ?? true,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
@@ -127,6 +130,7 @@ class Pack extends Equatable {
       'merchant_name': merchantName,
       'merchant_latitude': merchantLatitude,
       'merchant_longitude': merchantLongitude,
+      'merchant_nearby_visible': merchantNearbyVisible,
       'delivery_available': deliveryAvailable,
       'delivery_wilayas': deliveryWilayas.join(','),
     };
@@ -147,6 +151,7 @@ class Pack extends Equatable {
         merchantName,
         merchantLatitude,
         merchantLongitude,
+        merchantNearbyVisible,
         deliveryAvailable,
         deliveryWilayas,
       ];
