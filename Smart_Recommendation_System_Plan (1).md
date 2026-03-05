@@ -68,7 +68,7 @@
 ### 7) Auto-tracking (Signals/Integration) (49–50)
 49. إضافة `analytics/signals.py` وربط favorite/review من `catalog` (إن كانت موديلاتها مكتملة).
 50. (إن كانت الموديلات غير جاهزة) إضافة logging داخل `catalog` viewsets للأحداث الأساسية (view/search/favorite/contact) كحل أولي.
-
+/..
 ---
 
 ## Algerian Local Smart Marketplace
