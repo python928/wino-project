@@ -7,6 +7,7 @@ from .models import (
 	PackProduct,
 	Product,
 	ProductImage,
+	ProductReport,
 	Review,
 	Favorite,
 )
@@ -94,3 +95,10 @@ class FavoriteAdmin(admin.ModelAdmin):
 	search_fields = ('user__username', 'product__name')
 	list_filter = ('created_at',)
 	readonly_fields = ('created_at',)
+
+
+@admin.register(ProductReport)
+class ProductReportAdmin(admin.ModelAdmin):
+	list_display = ('reporter', 'product', 'reason', 'status', 'created_at')
+	search_fields = ('reporter__username', 'product__name', 'details')
+	list_filter = ('reason', 'status')

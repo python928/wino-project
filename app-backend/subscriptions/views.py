@@ -60,6 +60,11 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 	serializer_class = MerchantSubscriptionSerializer
 	permission_classes = [permissions.IsAuthenticated]
 
+	def get_permissions(self):
+		if self.action in ['list', 'retrieve', 'access_status']:
+			return [permissions.IsAuthenticated()]
+		return [permissions.IsAdminUser()]
+
 	def get_queryset(self):
 		user = self.request.user
 		if user.is_superuser:
@@ -93,6 +98,11 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 	queryset = SubscriptionPaymentRequest.objects.select_related('merchant', 'plan')
 	serializer_class = SubscriptionPaymentRequestSerializer
 	permission_classes = [permissions.IsAuthenticated]
+
+	def get_permissions(self):
+		if self.action in ['list', 'retrieve', 'create']:
+			return [permissions.IsAuthenticated()]
+		return [permissions.IsAdminUser()]
 
 	def get_queryset(self):
 		user = self.request.user

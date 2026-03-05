@@ -28,7 +28,6 @@ import 'category_selection_screen.dart';
 import '../shared_widgets/cards/store_chip.dart';
 import '../shared_widgets/location_mode_switcher.dart';
 import '../../core/services/location_service.dart';
-import '../../core/services/firebase_distance_search_service.dart';
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
@@ -185,13 +184,39 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     _searchStores();
   }
 
+  Future<void> _performSearchRefresh() async {
+    _searchFocus.unfocus();
+    if (!_hasSearched) {
+      setState(() => _hasSearched = true);
+    }
+    _resetVisibleCounts();
+
+    final postProvider = context.read<PostProvider>();
+    final homeProvider = context.read<HomeProvider>();
+
+    await Future.wait([
+      postProvider.loadPosts(
+        search:
+            _searchController.text.isNotEmpty ? _searchController.text : null,
+        categoryId: _selectedCategoryIds.length == 1
+            ? _selectedCategoryIds.first
+            : null,
+      ),
+      postProvider.loadOffers(),
+      homeProvider.loadFeaturedPacks(),
+      _searchStores(),
+    ]);
+  }
+
   Future<void> _refreshSearch() async {
     if (_hasSearched) {
-      _performSearch();
+      await _performSearchRefresh();
       return;
     }
-    await context.read<HomeProvider>().loadHomeData();
-    await _searchStores();
+    await Future.wait([
+      context.read<HomeProvider>().loadHomeData(),
+      _searchStores(),
+    ]);
   }
 
   Widget _buildPreSearchState() {
@@ -353,10 +378,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _selectedLocation = '';
         _resetVisibleCounts();
       });
-
-      // Best-effort sync/log to Firebase on every distance search.
-      // ignore: discarded_futures
-      _syncDistanceSearchToFirebase(km: km, userLat: lat, userLng: lng);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
@@ -385,40 +406,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       if (mounted) {
         setState(() => _isNearbyLoading = false);
       }
-    }
-  }
-
-  Future<void> _syncDistanceSearchToFirebase({
-    required double km,
-    required double userLat,
-    required double userLng,
-  }) async {
-    try {
-      final storesWithCoords = _searchedStores
-          .where((s) => s.latitude != null && s.longitude != null)
-          .map(
-            (s) => <String, dynamic>{
-              'store_id': s.id,
-              'store_name': s.fullName,
-              'latitude': s.latitude,
-              'longitude': s.longitude,
-              'allow_nearby_visibility': s.allowNearbyVisibility,
-            },
-          )
-          .toList();
-
-      await FirebaseDistanceSearchService.syncStoreCoordinates(
-        stores: storesWithCoords,
-      );
-      await FirebaseDistanceSearchService.logDistanceSearch(
-        sourceScreen: 'search',
-        userLatitude: userLat,
-        userLongitude: userLng,
-        radiusKm: km,
-        storesCount: storesWithCoords.length,
-      );
-    } catch (e) {
-      debugPrint('Firebase distance sync failed (search): $e');
     }
   }
 

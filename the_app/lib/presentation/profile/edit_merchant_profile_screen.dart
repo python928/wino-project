@@ -77,6 +77,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   double? _latitude;
   double? _longitude;
   bool _allowNearbyVisibility = true;
+  bool _showPhonePublic = true;
+  bool _showSocialPublic = true;
 
   @override
   void initState() {
@@ -114,6 +116,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final userData = StorageService.getUserData();
     _allowNearbyVisibility =
         userData?['allow_nearby_visibility'] as bool? ?? true;
+    _showPhonePublic = userData?['show_phone_public'] as bool? ?? true;
+    _showSocialPublic = userData?['show_social_public'] as bool? ?? true;
 
     _loadAddress();
   }
@@ -486,6 +490,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         'tiktok': _tiktokController.text.trim(),
         'youtube': _youtubeController.text.trim(),
         'allow_nearby_visibility': _allowNearbyVisibility,
+        'show_phone_public': _showPhonePublic,
+        'show_social_public': _showSocialPublic,
       };
 
       // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
@@ -523,6 +529,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           userData['tiktok'] = _tiktokController.text.trim();
           userData['youtube'] = _youtubeController.text.trim();
           userData['allow_nearby_visibility'] = _allowNearbyVisibility;
+          userData['show_phone_public'] = _showPhonePublic;
+          userData['show_social_public'] = _showSocialPublic;
           if (_latitude != null) userData['latitude'] = _latitude.toString();
           if (_longitude != null) userData['longitude'] = _longitude.toString();
           await StorageService.saveUserData(userData);
@@ -668,6 +676,20 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     textDirection: TextDirection.ltr,
                     style: AppTextFieldStyle.profile,
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _showPhonePublic,
+                    activeColor: AppColors.primaryColor,
+                    title: const Text('Show phone on profile'),
+                    subtitle: Text(
+                      _showPhonePublic
+                          ? 'Visible to other users'
+                          : 'Hidden from other users',
+                    ),
+                    onChanged: (value) {
+                      setState(() => _showPhonePublic = value);
+                    },
+                  ),
 
                   const SizedBox(height: 8),
                   _buildLocationSection(),
@@ -678,6 +700,21 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _showSocialPublic,
+                    activeColor: AppColors.primaryColor,
+                    title: const Text('Show social links on profile'),
+                    subtitle: Text(
+                      _showSocialPublic
+                          ? 'Visible to other users'
+                          : 'Hidden from other users',
+                    ),
+                    onChanged: (value) {
+                      setState(() => _showSocialPublic = value);
+                    },
+                  ),
+                  const SizedBox(height: 6),
 
                   AppTextField(
                     controller: _facebookController,
@@ -1009,6 +1046,26 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                       : AppColors.textSecondary,
                 ),
               ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+          ),
+          child: Text(
+            'Important: Nearby filter needs GPS coordinates. If GPS is not set, your products will not appear in distance search. '
+            'Also, area search (Wilaya/Baladiya) depends on your address. If address is empty, your products will not appear in area filter.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Colors.orange.shade800,
+              height: 1.35,
             ),
           ),
         ),

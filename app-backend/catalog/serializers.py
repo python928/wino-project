@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -305,3 +305,38 @@ class PromotionSerializer(serializers.ModelSerializer):
             'images',
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class ProductReportSerializer(serializers.ModelSerializer):
+    reporter = serializers.ReadOnlyField(source='reporter.id')
+    reporter_name = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductReport
+        fields = [
+            'id',
+            'reporter',
+            'reporter_name',
+            'product',
+            'product_name',
+            'reason',
+            'details',
+            'status',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'reporter', 'reporter_name', 'product_name', 'status', 'created_at']
+
+    def get_reporter_name(self, obj):
+        return obj.reporter.name or obj.reporter.username
+
+    def get_product_name(self, obj):
+        return obj.product.name
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        reporter = getattr(request, 'user', None)
+        product = attrs.get('product')
+        if reporter and product and product.store_id == reporter.id:
+            raise serializers.ValidationError('You cannot report your own product.')
+        return attrs

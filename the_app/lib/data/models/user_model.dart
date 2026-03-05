@@ -32,6 +32,8 @@ class User {
   final String? whatsapp;
   final String? tiktok;
   final String? youtube;
+  final bool showPhonePublic;
+  final bool showSocialPublic;
   final DateTime? locationUpdatedAt;
   final double? distance;
   final bool isOpen;
@@ -67,6 +69,8 @@ class User {
     this.whatsapp,
     this.tiktok,
     this.youtube,
+    this.showPhonePublic = true,
+    this.showSocialPublic = true,
     this.locationUpdatedAt,
     this.distance,
     this.isOpen = true,
@@ -112,6 +116,8 @@ class User {
       whatsapp: json['whatsapp'],
       tiktok: json['tiktok'],
       youtube: json['youtube'],
+      showPhonePublic: json['show_phone_public'] as bool? ?? true,
+      showSocialPublic: json['show_social_public'] as bool? ?? true,
       isVerified: json['is_verified'] ?? false,
       city: json['city']?.toString(),
       country: json['country']?.toString(),
@@ -155,6 +161,8 @@ class User {
       'whatsapp': whatsapp,
       'tiktok': tiktok,
       'youtube': youtube,
+      'show_phone_public': showPhonePublic,
+      'show_social_public': showSocialPublic,
       'is_verified': isVerified,
       'city': city,
       'country': country,

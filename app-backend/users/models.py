@@ -37,6 +37,8 @@ class User(AbstractUser):
 	whatsapp = models.CharField(max_length=50, blank=True, default='')
 	tiktok = models.CharField(max_length=255, blank=True, default='')
 	youtube = models.CharField(max_length=255, blank=True, default='')
+	show_phone_public = models.BooleanField(default=True)
+	show_social_public = models.BooleanField(default=True)
 
 	# Remove inherited fields we don't need
 	first_name = None

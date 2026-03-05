@@ -31,6 +31,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<dynamic> _images = [];
+  final List<int> _removedExistingImageIds = [];
   final _picker = ImagePicker();
   bool _isLoading = false;
   bool _isAvailable = true;
@@ -61,7 +62,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
       _isAvailable = product.isAvailable;
       _showPrice = !product.hidePrice;
-      _images.addAll(product.gallery);
+      _images.addAll(product.images);
       // Restore delivery state
       _deliveryAvailable = product.deliveryAvailable;
       if (product.deliveryWilayas.isNotEmpty) {
@@ -117,6 +118,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Widget _buildImage(dynamic image) {
+    if (image is ProductImageData) {
+      return Image.network(
+        image.url,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey[200],
+            alignment: Alignment.center,
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image, color: Colors.grey),
+          );
+        },
+      );
+    }
     if (image is XFile) {
       return FutureBuilder<Uint8List>(
         future: image.readAsBytes(),
@@ -269,6 +295,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           isAvailable: _isAvailable,
           hidePrice: !_showPrice,
           newImages: newFiles,
+          removeImageIds: _removedExistingImageIds,
           deliveryAvailable: _deliveryAvailable,
           deliveryWilayas: deliveryWilayas,
         );
@@ -895,7 +922,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     top: 4,
                     right: 4,
                     child: GestureDetector(
-                      onTap: () => setState(() => _images.removeAt(index)),
+                      onTap: () => _removeImageAt(index),
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
@@ -914,5 +941,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       ],
     );
+  }
+
+  void _removeImageAt(int index) {
+    final img = _images[index];
+    setState(() {
+      if (img is ProductImageData && img.id > 0) {
+        _removedExistingImageIds.add(img.id);
+      }
+      _images.removeAt(index);
+    });
   }
 }

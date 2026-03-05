@@ -183,6 +183,144 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     ]);
   }
 
+  Future<void> _showReportProductSheet() async {
+    if (!StorageService.isLoggedIn()) {
+      Helpers.showSnackBar(context, 'Log in first to report products',
+          isError: true);
+      return;
+    }
+
+    final detailsController = TextEditingController();
+    String selectedReason = 'spam';
+    const reasons = [
+      {'value': 'spam', 'label': 'Spam'},
+      {'value': 'fake', 'label': 'Fake Product'},
+      {'value': 'fraud', 'label': 'Fraud / Scam'},
+      {'value': 'offensive', 'label': 'Offensive Content'},
+      {'value': 'other', 'label': 'Other'},
+    ];
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Report Product',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: reasons.map((r) {
+                    final selected = selectedReason == r['value'];
+                    return GestureDetector(
+                      onTap: () =>
+                          setModalState(() => selectedReason = r['value']!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected
+                                ? Colors.red.shade300
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          r['label']!,
+                          style: TextStyle(
+                            color:
+                                selected ? Colors.red.shade700 : Colors.black87,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: detailsController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Add details (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade500,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Send Report'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (ok != true) {
+      detailsController.dispose();
+      return;
+    }
+
+    try {
+      await ApiService.post(ApiConfig.productReports, {
+        'product': widget.product.id,
+        'reason': selectedReason,
+        'details': detailsController.text.trim(),
+      });
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+    } finally {
+      detailsController.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -194,6 +332,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'report') _showReportProductSheet();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Text('Report Product'),
+                ),
+              ],
+            ),
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: _refreshDetails,
@@ -237,8 +388,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         onBackgroundImageError: (_storeImageUrl != null &&
                                 _storeImageUrl!.trim().isNotEmpty)
                             ? (_, __) {
-                                if (mounted)
+                                if (mounted) {
                                   setState(() => _storeImageUrl = null);
+                                }
                               }
                             : null,
                         child: (_storeImageUrl == null ||

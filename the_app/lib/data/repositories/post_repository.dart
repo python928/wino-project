@@ -46,11 +46,14 @@ class PostRepository {
       for (final item in list) {
         final promo = item as Map<String, dynamic>;
 
-		// Only apply active promotions to product pricing.
-		final isActiveRaw =
-			promo['is_active'] ?? promo['isActive'] ?? promo['is_available'] ?? promo['active'] ?? true;
-		final bool isActive = isActiveRaw != false;
-		if (!isActive) continue;
+        // Only apply active promotions to product pricing.
+        final isActiveRaw = promo['is_active'] ??
+            promo['isActive'] ??
+            promo['is_available'] ??
+            promo['active'] ??
+            true;
+        final bool isActive = isActiveRaw != false;
+        if (!isActive) continue;
 
         final productId = promo['product'];
         final percentage = int.tryParse(promo['percentage'].toString()) ?? 0;
@@ -67,7 +70,7 @@ class PostRepository {
     int? page,
     int? storeId,
     int? categoryId,
-	bool availableOnly = true,
+    bool availableOnly = true,
   }) async {
     try {
       final queryParams = <String, String>{};
@@ -75,13 +78,14 @@ class PostRepository {
       if (page != null) queryParams['page'] = page.toString();
       if (storeId != null) queryParams['store'] = storeId.toString();
       if (categoryId != null) queryParams['category'] = categoryId.toString();
-		if (availableOnly) queryParams['available_status'] = 'available';
+      if (availableOnly) queryParams['available_status'] = 'available';
 
       final queryString = queryParams.isNotEmpty
           ? '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}'
           : '';
 
-      final productsResp = await ApiService.get('${ApiConfig.products}$queryString');
+      final productsResp =
+          await ApiService.get('${ApiConfig.products}$queryString');
 
       final list = _extractList(productsResp);
       return list
@@ -117,7 +121,8 @@ class PostRepository {
     );
     if (existing.key != -1) return existing.key;
 
-    final created = await ApiService.post(ApiConfig.categories, {'name': categoryName});
+    final created =
+        await ApiService.post(ApiConfig.categories, {'name': categoryName});
     return created['id'];
   }
 
@@ -149,7 +154,8 @@ class PostRepository {
     List<String> deliveryWilayas = const [],
   }) async {
     try {
-      final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
+      final categoryId =
+          await _ensureCategory(category.isEmpty ? 'General' : category);
       final userId = await _ensureStoreForCurrentUser();
 
       final productPayload = {
@@ -166,14 +172,16 @@ class PostRepository {
         'delivery_wilayas': deliveryWilayas.join(','),
       };
 
-      final productResponse = await ApiService.post(ApiConfig.products, productPayload);
+      final productResponse =
+          await ApiService.post(ApiConfig.products, productPayload);
       final productId = productResponse['id'];
 
       // Upload main + secondary images
       for (int i = 0; i < images.length; i++) {
         final isMain = i == 0;
         try {
-          debugPrint('Repository: Uploading image ${i + 1}/${images.length}, isMain: $isMain');
+          debugPrint(
+              'Repository: Uploading image ${i + 1}/${images.length}, isMain: $isMain');
           await ApiService.postMultipart(
             ApiConfig.productImages,
             {
@@ -185,7 +193,8 @@ class PostRepository {
           );
           debugPrint('Repository: Image ${i + 1} uploaded successfully');
         } catch (imageError) {
-          debugPrint('Repository: Failed to upload image ${i + 1}: $imageError');
+          debugPrint(
+              'Repository: Failed to upload image ${i + 1}: $imageError');
           if (i == images.length - 1 && images.length == 1) {
             rethrow;
           }
@@ -200,7 +209,8 @@ class PostRepository {
           'post_title': title,
         });
       } catch (e) {
-        debugPrint('Repository: Warning: Failed to trigger follower notification: $e');
+        debugPrint(
+            'Repository: Warning: Failed to trigger follower notification: $e');
       }
 
       return await getPost(productId);
@@ -219,11 +229,13 @@ class PostRepository {
     required bool isAvailable,
     bool hidePrice = false,
     List<XFile> newImages = const [],
+    List<int> removeImageIds = const [],
     bool deliveryAvailable = false,
     List<String> deliveryWilayas = const [],
   }) async {
     try {
-      final categoryId = await _ensureCategory(category.isEmpty ? 'General' : category);
+      final categoryId =
+          await _ensureCategory(category.isEmpty ? 'General' : category);
       final fields = {
         'name': title,
         'description': description,
@@ -237,10 +249,20 @@ class PostRepository {
 
       await ApiService.patch(ApiConfig.productDetail(id), fields);
 
+      for (final imageId in removeImageIds) {
+        try {
+          await ApiService.delete('${ApiConfig.productImages}$imageId/');
+        } catch (deleteError) {
+          debugPrint(
+              'Repository: Failed to delete image $imageId: $deleteError');
+        }
+      }
+
       for (int i = 0; i < newImages.length; i++) {
         final isMain = i == 0;
         try {
-          debugPrint('Repository: Uploading new image ${i + 1}/${newImages.length}, isMain: $isMain');
+          debugPrint(
+              'Repository: Uploading new image ${i + 1}/${newImages.length}, isMain: $isMain');
           await ApiService.postMultipart(
             ApiConfig.productImages,
             {
@@ -252,7 +274,8 @@ class PostRepository {
           );
           debugPrint('Repository: New image ${i + 1} uploaded successfully');
         } catch (imageError) {
-          debugPrint('Repository: Failed to upload new image ${i + 1}: $imageError');
+          debugPrint(
+              'Repository: Failed to upload new image ${i + 1}: $imageError');
         }
       }
 
@@ -263,7 +286,8 @@ class PostRepository {
     }
   }
 
-  static Future<List<Offer>> getOffers({String? authorId, int? storeId, bool includeInactive = false}) async {
+  static Future<List<Offer>> getOffers(
+      {String? authorId, int? storeId, bool includeInactive = false}) async {
     try {
       final promotionsResp = await ApiService.get(ApiConfig.promotions);
       debugPrint('Repository: Promotions response: $promotionsResp');
@@ -272,7 +296,8 @@ class PostRepository {
       if (promos.isEmpty) return [];
 
       int? parseProductId(Map<String, dynamic> promo) {
-        final raw = promo['product'] ?? promo['product_id'] ?? promo['productId'];
+        final raw =
+            promo['product'] ?? promo['product_id'] ?? promo['productId'];
         if (raw == null) return null;
         if (raw is int) return raw;
         if (raw is String) return int.tryParse(raw);
@@ -292,7 +317,8 @@ class PostRepository {
 
       final Map<int, Post> productCache = {};
 
-      final bool shouldIncludeInactive = includeInactive || (authorId != null && authorId.isNotEmpty);
+      final bool shouldIncludeInactive =
+          includeInactive || (authorId != null && authorId.isNotEmpty);
 
       for (final promo in promos) {
         if (promo is! Map<String, dynamic>) continue;
@@ -314,7 +340,8 @@ class PostRepository {
         }
 
         if (filterStoreId != null) {
-          final rawStore = promo['store'] ?? promo['store_id'] ?? promo['storeId'];
+          final rawStore =
+              promo['store'] ?? promo['store_id'] ?? promo['storeId'];
           int? promoStoreId;
           if (rawStore is int) promoStoreId = rawStore;
           if (rawStore is String) promoStoreId = int.tryParse(rawStore);
@@ -331,7 +358,8 @@ class PostRepository {
         final productId = parseProductId(promo);
         debugPrint('Repository: Promo ${promo['id']} productId=$productId');
         if (productId == null) {
-          debugPrint('Repository: Skipping promo ${promo['id']} - no product ID');
+          debugPrint(
+              'Repository: Skipping promo ${promo['id']} - no product ID');
           continue;
         }
 
@@ -339,15 +367,22 @@ class PostRepository {
         try {
           product = productCache[productId] ?? await getPost(productId);
           productCache[productId] = product;
-          debugPrint('Repository: Loaded product ${product.title} for promo ${promo['id']}');
+          debugPrint(
+              'Repository: Loaded product ${product.title} for promo ${promo['id']}');
         } catch (e) {
           // If a single product fetch fails, skip this promo rather than failing all offers.
-          debugPrint('Repository: Skipping promo ${promo['id']} - failed to load product $productId: $e');
+          debugPrint(
+              'Repository: Skipping promo ${promo['id']} - failed to load product $productId: $e');
           continue;
         }
 
         int percentage = int.tryParse(
-              (promo['percentage'] ?? promo['discount_percentage'] ?? promo['discountPercentage'] ?? promo['discount'] ?? 0).toString(),
+              (promo['percentage'] ??
+                      promo['discount_percentage'] ??
+                      promo['discountPercentage'] ??
+                      promo['discount'] ??
+                      0)
+                  .toString(),
             ) ??
             0;
         debugPrint('Repository: Promo ${promo['id']} percentage=$percentage');
@@ -357,11 +392,13 @@ class PostRepository {
         // Allow 0% discounts to still show (some promotions might have other benefits)
         // But default to at least showing something
         if (percentage == 0) {
-          debugPrint('Repository: Promo ${promo['id']} has 0% discount, setting to 10%');
+          debugPrint(
+              'Repository: Promo ${promo['id']} has 0% discount, setting to 10%');
           percentage = 10; // Default discount if not specified
         }
 
-        final double newPrice = (product.price * (1 - (percentage / 100))).toDouble();
+        final double newPrice =
+            (product.price * (1 - (percentage / 100))).toDouble();
 
         offers.add(
           Offer(
@@ -370,10 +407,14 @@ class PostRepository {
             discountPercentage: percentage,
             newPrice: newPrice,
             isAvailable: isActive,
-            createdAt: DateTime.tryParse((promo['start_date'] ?? promo['created_at'] ?? '').toString()) ?? DateTime.now(),
+            createdAt: DateTime.tryParse(
+                    (promo['start_date'] ?? promo['created_at'] ?? '')
+                        .toString()) ??
+                DateTime.now(),
           ),
         );
-        debugPrint('Repository: Added offer ${promo['id']} for product ${product.title}');
+        debugPrint(
+            'Repository: Added offer ${promo['id']} for product ${product.title}');
       }
 
       debugPrint('Repository: Total offers loaded: ${offers.length}');
@@ -408,7 +449,8 @@ class PostRepository {
 
       // Refresh related product to compute discounted price
       final product = await getPost(productId);
-      final double newPrice = (product.price * (1 - (discountPercentage / 100))).toDouble();
+      final double newPrice =
+          (product.price * (1 - (discountPercentage / 100))).toDouble();
 
       // Trigger notification for the promotion
       final offerId = resp['id'] ?? 0;
@@ -420,7 +462,8 @@ class PostRepository {
           'post_title': title,
         });
       } catch (e) {
-        debugPrint('Repository: Warning: Failed to trigger follower notification: $e');
+        debugPrint(
+            'Repository: Warning: Failed to trigger follower notification: $e');
       }
 
       return Offer(
@@ -429,7 +472,8 @@ class PostRepository {
         discountPercentage: discountPercentage,
         newPrice: newPrice,
         isAvailable: isAvailable,
-        createdAt: DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+        createdAt:
+            DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
       );
     } catch (e) {
       debugPrint('Repository: Error creating offer: $e');
@@ -444,15 +488,22 @@ class PostRepository {
   }) async {
     try {
       final payload = <String, dynamic>{};
-      if (discountPercentage != null) payload['percentage'] = discountPercentage;
+      if (discountPercentage != null) {
+        payload['percentage'] = discountPercentage;
+      }
       if (isAvailable != null) payload['is_active'] = isAvailable;
 
-      final resp = await ApiService.patch('${ApiConfig.promotions}$offerId/', payload);
+      final resp =
+          await ApiService.patch('${ApiConfig.promotions}$offerId/', payload);
 
       final productId = resp['product'] ?? resp['product_id'];
       final product = productId != null ? await getPost(productId) : null;
-      final pct = discountPercentage ?? int.tryParse(resp['percentage'].toString()) ?? 0;
-      final double newPrice = product != null ? (product.price * (1 - (pct / 100))).toDouble() : 0.0;
+      final pct = discountPercentage ??
+          int.tryParse(resp['percentage'].toString()) ??
+          0;
+      final double newPrice = product != null
+          ? (product.price * (1 - (pct / 100))).toDouble()
+          : 0.0;
 
       return Offer(
         id: resp['id'] ?? offerId,
@@ -460,7 +511,8 @@ class PostRepository {
         discountPercentage: pct,
         newPrice: newPrice,
         isAvailable: isAvailable ?? resp['is_active'] ?? true,
-        createdAt: DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+        createdAt:
+            DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
       );
     } catch (e) {
       debugPrint('Repository: Error updating offer: $e');

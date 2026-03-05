@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return '192.168.48.21:8000';
-    if (Platform.isAndroid) return 'http://192.168.48.21:8000';
-    return '192.168.48.21:8000';
+    if (kIsWeb) return 'http://192.168.11.21:8000/';
+    if (Platform.isAndroid) return 'http://192.168.11.21:8000/';
+    return 'http://192.168.11.21:8000/';
   }
 
   // API prefix
@@ -62,6 +62,7 @@ class ApiConfig {
   // Promotions (now in catalog)
   static const String promotions = '$catalog/promotions/';
   static const String promotionImages = '$catalog/promotion-images/';
+  static const String productReports = '$catalog/product-reports/';
 
   // Notifications
   // ✅ Use path-only constants (no baseUrl prefix) — ApiService prepends baseUrl

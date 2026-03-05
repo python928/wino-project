@@ -56,6 +56,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _whatsapp;
   String? _tiktok;
   String? _youtube;
+  bool _showPhonePublic = true;
+  bool _showSocialPublic = true;
 
   double? _latitude;
   double? _longitude;
@@ -247,6 +249,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _whatsapp = u.whatsapp;
         _tiktok = u.tiktok;
         _youtube = u.youtube;
+        _showPhonePublic = u.showPhonePublic;
+        _showSocialPublic = u.showSocialPublic;
       });
     } catch (e) {
       debugPrint('Error fetching unified profile: $e');
@@ -389,11 +393,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         _loadUserData();
 
-        if (mounted)
+        if (mounted) {
           Helpers.showSnackBar(context, 'Profile image updated successfully');
+        }
       } catch (e) {
-        if (mounted)
+        if (mounted) {
           Helpers.showSnackBar(context, 'Failed to update image: $e');
+        }
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
       }
@@ -506,6 +512,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _whatsapp = userData['whatsapp'];
         _tiktok = userData['tiktok'];
         _youtube = userData['youtube'];
+        _showPhonePublic = userData['show_phone_public'] as bool? ?? true;
+        _showSocialPublic = userData['show_social_public'] as bool? ?? true;
 
         if (userData['latitude'] != null) {
           _latitude = double.tryParse(userData['latitude'].toString());
@@ -532,6 +540,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _whatsapp = null;
         _tiktok = null;
         _youtube = null;
+        _showPhonePublic = true;
+        _showSocialPublic = true;
       });
     }
 
@@ -837,7 +847,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ProfileMerchantHeader(
       userName: _userName,
       location: _location,
-      phoneNumber: _phoneNumber,
       storeDescription: _storeDescription,
       avatarUrl: _avatarUrl,
       storeCoverUrl: _storeCoverUrl,
@@ -857,11 +866,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onFavoriteTap: !_isOwnerView ? _handleFavorite : null,
       onReportTap: !_isOwnerView ? _showReportStoreSheet : null,
       primaryGradient: primaryGradient,
-      facebook: _facebook,
-      instagram: _instagram,
-      whatsapp: _whatsapp,
-      tiktok: _tiktok,
-      youtube: _youtube,
+      phoneNumber: (_isOwnerView || _showPhonePublic) ? _phoneNumber : '',
+      facebook: (_isOwnerView || _showSocialPublic) ? _facebook : null,
+      instagram: (_isOwnerView || _showSocialPublic) ? _instagram : null,
+      whatsapp: (_isOwnerView || _showSocialPublic) ? _whatsapp : null,
+      tiktok: (_isOwnerView || _showSocialPublic) ? _tiktok : null,
+      youtube: (_isOwnerView || _showSocialPublic) ? _youtube : null,
     );
   }
 
@@ -966,8 +976,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       await _fetchStoreData();
-      if (mounted)
+      if (mounted) {
         Helpers.showSnackBar(context, 'Review submitted successfully');
+      }
     } catch (e) {
       if (mounted) {
         Helpers.showSnackBar(context, 'Failed to submit review: $e',
@@ -1075,8 +1086,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = AppColors.primaryColor;
-    final Gradient primaryGradient = AppColors.deepGradient;
+    const Color primaryColor = AppColors.primaryColor;
+    const Gradient primaryGradient = AppColors.deepGradient;
 
     return Directionality(
       textDirection: TextDirection.ltr,

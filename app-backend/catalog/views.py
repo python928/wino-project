@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
 from .serializers import (
 	CategorySerializer,
 	PackImageSerializer,
@@ -19,6 +19,7 @@ from .serializers import (
 	FavoriteSerializer,
 	PromotionSerializer,
 	PromotionImageSerializer,
+	ProductReportSerializer,
 )
 from users.models import User
 from subscriptions.services import ensure_can_create_post
@@ -119,7 +120,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 		instance = serializer.save(store=self.request.user)
 		try:
 			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification.delay(
+			async_send_new_post_notification(
 				store_id=self.request.user.id,
 				post_id=instance.id,
 				post_type='product',
@@ -218,7 +219,7 @@ class PackViewSet(viewsets.ModelViewSet):
 		instance = serializer.save(merchant=self.request.user)
 		try:
 			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification.delay(
+			async_send_new_post_notification(
 				store_id=self.request.user.id,
 				post_id=instance.id,
 				post_type='pack',
@@ -486,7 +487,7 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		instance = serializer.save(store=self.request.user)
 		try:
 			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification.delay(
+			async_send_new_post_notification(
 				store_id=self.request.user.id,
 				post_id=instance.id,
 				post_type='promotion',
@@ -506,3 +507,17 @@ class PromotionImageViewSet(viewsets.ModelViewSet):
 		if promotion is None or promotion.store != self.request.user:
 			raise PermissionDenied('You can only add images to your own promotions')
 		serializer.save()
+
+
+class ProductReportViewSet(viewsets.ModelViewSet):
+	serializer_class = ProductReportSerializer
+	permission_classes = [permissions.IsAuthenticated]
+
+	def get_queryset(self):
+		user = self.request.user
+		if user.is_superuser or user.is_staff:
+			return ProductReport.objects.select_related('reporter', 'product', 'product__store').all()
+		return ProductReport.objects.select_related('reporter', 'product', 'product__store').filter(reporter=user)
+
+	def perform_create(self, serializer):
+		serializer.save(reporter=self.request.user)

@@ -35,7 +35,6 @@ class PostProvider with ChangeNotifier {
   String? get postsError => _postsError;
   String? get offersError => _offersError;
 
-
   Future<void> loadOffers() async {
     _isLoadingOffers = true;
     _offersError = null;
@@ -167,7 +166,6 @@ class PostProvider with ChangeNotifier {
     }
   }
 
-
   Future<void> loadPosts({
     String? search,
     int? storeId,
@@ -200,7 +198,8 @@ class PostProvider with ChangeNotifier {
     try {
       // Fetch posts for the current user's store to ensure visibility even if author id in response differs
       final storeId = await PostRepository.getOrCreateMyStoreId();
-	  final posts = await PostRepository.getPosts(storeId: storeId, availableOnly: false);
+      final posts =
+          await PostRepository.getPosts(storeId: storeId, availableOnly: false);
       _myPosts = posts;
     } catch (e) {
       _error = e.toString();
@@ -216,8 +215,9 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-	  // Public store view: show only available items.
-	  _storePosts = await PostRepository.getPosts(storeId: storeId, availableOnly: true);
+      // Public store view: show only available items.
+      _storePosts =
+          await PostRepository.getPosts(storeId: storeId, availableOnly: true);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -233,7 +233,9 @@ class PostProvider with ChangeNotifier {
 
     try {
       final posts = await PostRepository.getPosts();
-      _posts = posts.where((p) => (p.discountPercentage ?? 0) > 0 || p.isHotDeal).toList();
+      _posts = posts
+          .where((p) => (p.discountPercentage ?? 0) > 0 || p.isHotDeal)
+          .toList();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -312,6 +314,7 @@ class PostProvider with ChangeNotifier {
     required bool isAvailable,
     bool hidePrice = false,
     List<XFile> newImages = const [],
+    List<int> removeImageIds = const [],
     bool deliveryAvailable = false,
     List<String> deliveryWilayas = const [],
   }) async {
@@ -330,10 +333,11 @@ class PostProvider with ChangeNotifier {
         isAvailable: isAvailable,
         hidePrice: hidePrice,
         newImages: newImages,
+        removeImageIds: removeImageIds,
         deliveryAvailable: deliveryAvailable,
         deliveryWilayas: deliveryWilayas,
       );
-      
+
       final index = _posts.indexWhere((p) => p.id == id);
       if (index != -1) _posts[index] = updatedPost;
       final myIndex = _myPosts.indexWhere((p) => p.id == id);

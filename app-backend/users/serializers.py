@@ -26,6 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
             'location_updated_at',
             'store_type', 'cover_image', 'followers_count', 'average_rating', 
             'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
+            'show_phone_public', 'show_social_public',
             'product_count', 'review_count', 'categories',
             'date_joined'
         ]

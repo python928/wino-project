@@ -144,3 +144,50 @@ class Favorite(models.Model):
 
 	def __str__(self):
 		return f"{self.user.username} - {self.product.name}"
+
+
+class ProductReport(models.Model):
+	REASON_SPAM = 'spam'
+	REASON_FAKE = 'fake'
+	REASON_FRAUD = 'fraud'
+	REASON_OFFENSIVE = 'offensive'
+	REASON_OTHER = 'other'
+
+	REASON_CHOICES = (
+		(REASON_SPAM, 'Spam'),
+		(REASON_FAKE, 'Fake Product'),
+		(REASON_FRAUD, 'Fraud / Scam'),
+		(REASON_OFFENSIVE, 'Offensive Content'),
+		(REASON_OTHER, 'Other'),
+	)
+
+	STATUS_PENDING = 'pending'
+	STATUS_REVIEWED = 'reviewed'
+	STATUS_REJECTED = 'rejected'
+	STATUS_CHOICES = (
+		(STATUS_PENDING, 'Pending'),
+		(STATUS_REVIEWED, 'Reviewed'),
+		(STATUS_REJECTED, 'Rejected'),
+	)
+
+	reporter = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name='product_reports_sent',
+	)
+	product = models.ForeignKey(
+		Product,
+		on_delete=models.CASCADE,
+		related_name='reports_received',
+	)
+	reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+	details = models.TextField(blank=True, default='')
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['-created_at']
+		unique_together = ('reporter', 'product')
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"{self.reporter_id} -> product:{self.product_id} ({self.reason})"

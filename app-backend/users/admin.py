@@ -10,7 +10,7 @@ class CustomUserAdmin(UserAdmin):
 		(None, {'fields': ('username', 'password')}),
 		('Personal info', {'fields': ('name', 'email', 'phone', 'profile_image', 'gender', 'birthday')}),
 		('Store Info', {'fields': ('store_description', 'address', 'latitude', 'longitude', 'allow_nearby_visibility', 'location_updated_at', 'store_type', 'cover_image')}),
-		('Social', {'fields': ('facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube')}),
+		('Social', {'fields': ('facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube', 'show_phone_public', 'show_social_public')}),
 		('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
 		('Important dates', {'fields': ('last_login', 'date_joined')}),
 	)
