@@ -77,7 +77,7 @@ class NotificationBadgeService {
             android: AndroidNotificationDetails(
               'dz_local_channel',
               'DZ Local Notifications',
-              channelDescription: 'General notifications for Topri app',
+              channelDescription: 'General notifications for Wino app',
               importance: Importance.max,
               priority: Priority.high,
             ),

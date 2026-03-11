@@ -88,38 +88,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isProfileContentLoading = true;
 
   void _showPublishMenu() {
-    // Block publishing if store has no GPS coordinates
-    final userData = StorageService.getUserData();
-    final lat = userData?['latitude'];
-    final lng = userData?['longitude'];
-    if (lat == null || lng == null) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('GPS Required'),
-          content: const Text(
-            'You must set your GPS coordinates before publishing.\n\n'
-            'Go to Edit Profile → Get Current GPS Location.\n\n'
-            'Note: You can only change your coordinates once every 60 days.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _navigateToEditProfile();
-              },
-              child: const Text('Go to Edit Profile'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -592,6 +560,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<StoreProvider>().clear();
     NotificationBadgeService.instance.clear();
     await StorageService.clearAll();
+    await StorageService.setNotFirstTime(); // preserve onboarding flag so launcher screen doesn't re-appear
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const SplashScreen()),
@@ -907,6 +876,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _handlePostMenuSelection(String value) {
     switch (value) {
       case 'product':
+        if (!_hasProfileLocation()) {
+          Helpers.showSnackBar(
+            context,
+            'Set your location area or GPS in Edit Profile before posting.',
+            isError: true,
+          );
+          return;
+        }
         Navigator.push(
             context,
             MaterialPageRoute(
@@ -942,6 +919,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
         break;
       case 'pack':
+        if (!_hasProfileLocation()) {
+          Helpers.showSnackBar(
+            context,
+            'Set your location area or GPS in Edit Profile before posting.',
+            isError: true,
+          );
+          return;
+        }
         Navigator.push(
             context, MaterialPageRoute(builder: (context) => AddPackScreen()));
         break;
@@ -949,6 +934,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // Offer editing now uses AddPromotionScreen in edit mode.
+
+  bool _hasProfileLocation() {
+    final userData = StorageService.getUserData();
+    final address = (userData?['address'] ?? userData?['location'] ?? '')
+        .toString()
+        .trim();
+    final latRaw = userData?['latitude'];
+    final lngRaw = userData?['longitude'];
+    final lat = double.tryParse(latRaw?.toString() ?? '');
+    final lng = double.tryParse(lngRaw?.toString() ?? '');
+    final hasGps = lat != null && lng != null;
+    return address.isNotEmpty || hasGps;
+  }
 
   Future<void> _submitReview() async {
     if (_userId == null || _rating == 0) return;

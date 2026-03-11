@@ -427,8 +427,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                                       fit: BoxFit.cover,
                                       loadingBuilder:
                                           (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return Container(
                                           color: Colors.grey[200],
                                           alignment: Alignment.center,
@@ -573,8 +574,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       if (value == null || value.isEmpty) return 'Required';
                       final n = double.tryParse(value);
                       final original = _selectedProduct!.price;
-                      if (n == null || n <= 0 || n >= original)
+                      if (n == null || n <= 0 || n >= original) {
                         return 'Invalid';
+                      }
                       return null;
                     },
                   ),

@@ -1,0 +1,84 @@
+.
+├── .env
+├── .github
+│   └── copilot-instructions.md
+├── Dockerfile
+├── README.md
+├── analytics
+│   ├── CHECKLIST.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── management
+│   │   └── commands
+│   │       ├── seed_analytics.py
+│   │       └── update_profiles.py
+│   ├── models.py
+│   ├── recommendations.py
+│   ├── scoring.py
+│   ├── serializers.py
+│   ├── signals.py
+│   ├── urls.py
+│   ├── utils.py
+│   └── views.py
+├── backend
+│   ├── asgi.py
+│   ├── celery.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── catalog
+│   ├── admin.py
+│   ├── apps.py
+│   ├── management
+│   │   └── commands
+│   │       └── verify_search.py
+│   ├── models.py
+│   ├── search_engine.py
+│   ├── serializers.py
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+├── config
+│   ├── settings.py
+│   └── urls.py
+├── db.sqbpro
+├── db.sqlite3
+├── docker-compose.yml
+├── firebase-adminsdk.json
+├── manage.py
+├── media
+│   └── users
+│       └── covers
+├── notifications
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── services.py
+│   ├── tasks.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── utils.py
+│   └── views.py
+├── requirements.txt
+├── subscriptions
+│   ├── admin.py
+│   ├── apps.py
+│   ├── constants.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── services.py
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+└── users
+    ├── admin.py
+    ├── apps.py
+    ├── models.py
+    ├── serializers.py
+    ├── services.py
+    ├── tests.py
+    ├── urls.py
+    └── views.py
+
+16 directories, 66 files

@@ -268,7 +268,7 @@ Featured Packs
 ### **AppBar**
 ```dart
 // OLD
-"Toprice" brand | [Search] [Notifications]
+"Wino" brand | [Search] [Notifications]
 
 // NEW
 [📍] Location      | [🔍]

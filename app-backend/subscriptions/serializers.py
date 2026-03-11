@@ -19,6 +19,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'price',
             'duration_days',
             'benefits',
+            'plan_features',
             'is_active',
         ]
         read_only_fields = ['id']

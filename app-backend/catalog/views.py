@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import F
+from django.utils import timezone
 from rest_framework import filters, permissions, viewsets, status, serializers
 import math
 from .search_engine import calculate_adaptive_radius, apply_weighted_ranking
@@ -7,7 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport, PromotionViewer
 from .serializers import (
 	CategorySerializer,
 	PackImageSerializer,
@@ -22,9 +24,23 @@ from .serializers import (
 	ProductReportSerializer,
 )
 from users.models import User
-from subscriptions.services import ensure_can_create_post
+from subscriptions.services import ensure_can_create_post, enforce_promotion_constraints
 
 # NOTE: Store == users.User now (unified profile)
+
+
+def _trigger_new_post_notification(user, instance, post_type):
+	"""Best-effort push notification for followers on new content."""
+	try:
+		from notifications.tasks import async_send_new_post_notification
+		async_send_new_post_notification(
+			store_id=user.id,
+			post_id=instance.id,
+			post_type=post_type,
+			post_title=getattr(instance, 'name', ''),
+		)
+	except Exception as e:
+		print(f"Failed to trigger push task for {post_type}: {e}")
 
 
 class IsStoreOwner(permissions.BasePermission):
@@ -118,53 +134,15 @@ class ProductViewSet(viewsets.ModelViewSet):
 		ensure_can_create_post(self.request.user)
 		# Prevent store spoofing: the authenticated user IS the store
 		instance = serializer.save(store=self.request.user)
-		try:
-			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification(
-				store_id=self.request.user.id,
-				post_id=instance.id,
-				post_type='product',
-				post_title=instance.name
-			)
-		except Exception as e:
-			print(f"Failed to trigger push task for product: {e}")
+		_trigger_new_post_notification(self.request.user, instance, 'product')
 
 	def retrieve(self, request, *args, **kwargs):
 		instance = self.get_object()
-		if request.user.is_authenticated:
-			try:
-				from analytics.utils import log_user_event
-				log_user_event(request.user, 'view', product=instance)
-			except Exception:
-				pass
 		serializer = self.get_serializer(instance)
 		return Response(serializer.data)
 
 	def list(self, request, *args, **kwargs):
-		response = super().list(request, *args, **kwargs)
-		if request.user.is_authenticated:
-			try:
-				from analytics.utils import log_user_event
-				params = request.query_params
-				keyword = params.get('search', '').strip()
-				if keyword:
-					log_user_event(request.user, 'search', metadata={'keyword': keyword.lower()})
-				min_price = params.get('min_price')
-				max_price = params.get('max_price')
-				if min_price or max_price:
-					meta = {}
-					try:
-						if min_price:
-							meta['min'] = float(min_price)
-						if max_price:
-							meta['max'] = float(max_price)
-					except (ValueError, TypeError):
-						pass
-					if meta:
-						log_user_event(request.user, 'filter_price', metadata=meta)
-			except Exception:
-				pass
-		return response
+		return super().list(request, *args, **kwargs)
 
 
 class ProductImageViewSet(viewsets.ModelViewSet):
@@ -217,16 +195,7 @@ class PackViewSet(viewsets.ModelViewSet):
 		ensure_can_create_post(self.request.user)
 		# Prevent merchant_id spoofing
 		instance = serializer.save(merchant=self.request.user)
-		try:
-			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification(
-				store_id=self.request.user.id,
-				post_id=instance.id,
-				post_type='pack',
-				post_title=instance.name
-			)
-		except Exception as e:
-			print(f"Failed to trigger push task for pack: {e}")
+		_trigger_new_post_notification(self.request.user, instance, 'pack')
 
 
 class PackProductViewSet(viewsets.ModelViewSet):
@@ -360,6 +329,25 @@ class ReviewViewSet(viewsets.ModelViewSet):
 				product=None,
 				defaults=defaults,
 			)
+		try:
+			from analytics.utils import log_user_event
+			meta = {
+				'rating': review.rating,
+				'search_query': str(self.request.data.get('search_query') or '').strip().lower(),
+				'discovery_mode': self.request.data.get('discovery_mode'),
+				'distance_km': self.request.data.get('distance_km'),
+				'wilaya_code': self.request.data.get('wilaya_code'),
+				'store_id': store.id if store else None,
+			}
+			log_user_event(
+				self.request.user,
+				'rate',
+				product=product,
+				metadata=meta,
+				session_id=str(self.request.data.get('session_id') or ''),
+			)
+		except Exception:
+			pass
 		serializer.instance = review
 
 	@action(detail=False, methods=['post'], url_path='rate-store')
@@ -385,6 +373,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
 			product=None,
 			defaults={'rating': rating, 'comment': comment}
 		)
+		try:
+			from analytics.utils import log_user_event
+			log_user_event(
+				request.user,
+				'rate',
+				metadata={
+					'rating': review.rating,
+					'store_id': store.id,
+					'discovery_mode': request.data.get('discovery_mode'),
+					'wilaya_code': request.data.get('wilaya_code'),
+					'distance_km': request.data.get('distance_km'),
+				},
+				session_id=str(request.data.get('session_id') or ''),
+			)
+		except Exception:
+			pass
 
 		serializer = self.get_serializer(review)
 		return Response(
@@ -452,6 +456,23 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 			favorite.delete()
 			return Response({'status': 'removed', 'is_favorited': False}, status=status.HTTP_200_OK)
 
+		try:
+			from analytics.utils import log_user_event
+			log_user_event(
+				request.user,
+				'favorite',
+				product=product,
+				metadata={
+					'discovery_mode': request.data.get('discovery_mode'),
+					'distance_km': request.data.get('distance_km'),
+					'wilaya_code': request.data.get('wilaya_code'),
+					'search_query': str(request.data.get('search_query') or '').strip().lower(),
+				},
+				session_id=str(request.data.get('session_id') or ''),
+			)
+		except Exception:
+			pass
+
 		serializer = self.get_serializer(favorite)
 		return Response({'status': 'added', 'is_favorited': True, 'favorite': serializer.data}, status=status.HTTP_201_CREATED)
 
@@ -482,19 +503,114 @@ class PromotionViewSet(viewsets.ModelViewSet):
 			return [permissions.IsAuthenticated(), IsStoreOwnerOrReadOnly()]
 		return [permissions.IsAuthenticated()]
 
+	def get_queryset(self):
+		qs = super().get_queryset()
+		now = timezone.now()
+		if self.action in ['list', 'retrieve']:
+			qs = qs.filter(
+				is_active=True,
+				start_date__lte=now,
+				end_date__gte=now,
+			).filter(
+				models.Q(max_impressions__isnull=True)
+				| models.Q(unique_viewers_count__lt=F('max_impressions'))
+			)
+		store_id = self.request.query_params.get('store')
+		if store_id:
+			qs = qs.filter(store_id=store_id)
+		return qs
+
+	def _resolve_viewer_key(self, request):
+		if getattr(request.user, 'is_authenticated', False):
+			return f"user:{request.user.id}"
+		session_id = str(
+			request.query_params.get('session_id')
+			or request.headers.get('X-Session-Id')
+			or request.COOKIES.get('sessionid')
+			or ''
+		).strip()
+		if session_id:
+			return f"session:{session_id}"
+		ip = str(request.META.get('REMOTE_ADDR') or 'unknown').strip()
+		return f"ip:{ip}"
+
+	def _register_impressions(self, request, promotion_ids):
+		if not promotion_ids:
+			return
+		viewer_key = self._resolve_viewer_key(request)
+		promotions = Promotion.objects.filter(id__in=promotion_ids).only('id', 'store_id', 'max_impressions')
+		for promo in promotions:
+			# Do not count store owner self-views.
+			if getattr(request.user, 'is_authenticated', False) and request.user.id == promo.store_id:
+				continue
+			obj, created = PromotionViewer.objects.get_or_create(
+				promotion_id=promo.id,
+				viewer_key=viewer_key,
+			)
+			if not created:
+				obj.save(update_fields=['last_seen_at'])
+				continue
+			Promotion.objects.filter(id=promo.id).update(unique_viewers_count=F('unique_viewers_count') + 1)
+
+		# Auto-disable promotions that reached audience limit.
+		Promotion.objects.filter(
+			id__in=promotion_ids,
+			max_impressions__isnull=False,
+			unique_viewers_count__gte=F('max_impressions'),
+		).update(is_active=False)
+
+	def list(self, request, *args, **kwargs):
+		response = super().list(request, *args, **kwargs)
+		payload = response.data
+		ids = []
+		if isinstance(payload, dict):
+			items = payload.get('results') if isinstance(payload.get('results'), list) else []
+			ids = [item.get('id') for item in items if isinstance(item, dict) and item.get('id')]
+		elif isinstance(payload, list):
+			ids = [item.get('id') for item in payload if isinstance(item, dict) and item.get('id')]
+		self._register_impressions(request, ids)
+		return response
+
+	def retrieve(self, request, *args, **kwargs):
+		response = super().retrieve(request, *args, **kwargs)
+		promo_id = None
+		if isinstance(response.data, dict):
+			promo_id = response.data.get('id')
+		if promo_id:
+			self._register_impressions(request, [promo_id])
+		return response
+
 	def perform_create(self, serializer):
 		ensure_can_create_post(self.request.user)
-		instance = serializer.save(store=self.request.user)
-		try:
-			from notifications.tasks import async_send_new_post_notification
-			async_send_new_post_notification(
-				store_id=self.request.user.id,
-				post_id=instance.id,
-				post_type='promotion',
-				post_title=instance.name
+		start_date = serializer.validated_data.get('start_date')
+		end_date = serializer.validated_data.get('end_date')
+		features = enforce_promotion_constraints(
+			self.request.user,
+			start_date=start_date,
+			end_date=end_date,
+		)
+		max_impressions = serializer.validated_data.get('max_impressions')
+		if max_impressions in (None, ''):
+			max_impressions = features.get('promotion_max_impressions')
+		instance = serializer.save(store=self.request.user, max_impressions=max_impressions)
+		_trigger_new_post_notification(self.request.user, instance, 'promotion')
+
+	def perform_update(self, serializer):
+		start_date = serializer.validated_data.get('start_date', serializer.instance.start_date)
+		end_date = serializer.validated_data.get('end_date', serializer.instance.end_date)
+		features = enforce_promotion_constraints(
+			self.request.user,
+			start_date=start_date,
+			end_date=end_date,
+			promotion_id=serializer.instance.id,
+		)
+		max_impressions = serializer.validated_data.get('max_impressions', serializer.instance.max_impressions)
+		plan_limit = features.get('promotion_max_impressions')
+		if plan_limit and max_impressions and int(max_impressions) > int(plan_limit):
+			raise serializers.ValidationError(
+				{'max_impressions': f'Max impressions exceeds your plan limit ({plan_limit}).'}
 			)
-		except Exception as e:
-			print(f"Failed to trigger push task for promotion: {e}")
+		serializer.save()
 
 
 class PromotionImageViewSet(viewsets.ModelViewSet):

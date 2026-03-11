@@ -87,8 +87,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               storeName: storeName,
               productName: productName,
               message: body.isNotEmpty ? body : title,
-              time: json['time_ago']?.toString() ?? _formatDate(json['created_at']),
-              postId: json['product_id']?.toString() ?? json['pack_id']?.toString() ?? extraData['post_id']?.toString(),
+              time: json['time_ago']?.toString() ??
+                  _formatDate(json['created_at']),
+              postId: json['product_id']?.toString() ??
+                  json['pack_id']?.toString() ??
+                  extraData['post_id']?.toString(),
               postType: postTypeStr,
               storeAvatar: avatar,
               isNew: !(json['is_read'] ?? true),
@@ -122,7 +125,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   NotificationType _parseType(String? typeStr) {
-    if (typeStr == 'new_promotion' || typeStr == 'promotion' || typeStr == 'flash_sale') {
+    if (typeStr == 'new_promotion' ||
+        typeStr == 'promotion' ||
+        typeStr == 'flash_sale') {
       return NotificationType.discount;
     }
     if (typeStr == 'follow' || typeStr == 'follower') {
@@ -366,14 +371,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (notification.postType == 'product' ||
                   notification.postType == 'promotion') {
                 final post = await PostRepository.getPost(id);
-                if (mounted)
+                if (mounted) {
                   Navigator.pushNamed(context, Routes.productDetails,
                       arguments: post);
+                }
               } else if (notification.postType == 'pack') {
                 final pack = await PackApiService().getPack(id);
-                if (mounted)
+                if (mounted) {
                   Navigator.pushNamed(context, Routes.packDetails,
                       arguments: pack);
+                }
               }
             } catch (e) {
               debugPrint("Error fetching item for notification: $e");
@@ -435,8 +442,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontWeight:
-                          notification.isNew ? FontWeight.w700 : FontWeight.w600,
+                      fontWeight: notification.isNew
+                          ? FontWeight.w700
+                          : FontWeight.w600,
                       fontSize: 14,
                       color: AppColors.textPrimary,
                     ),

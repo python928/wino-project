@@ -1,6 +1,9 @@
 import logging
+import random
 from collections import defaultdict
+from datetime import timedelta
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Avg, Q
 from django.utils import timezone
@@ -12,14 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 SCORE_WEIGHTS = {
-	'category': 0.30,
-	'price': 0.15,
-	'quality': 0.15,
-	'recency': 0.10,
-	'popularity': 0.10,
-	'seller_trust': 0.10,
-	'negotiable': 0.05,
-	'promotion': 0.05,
+	'category': 0.24,
+	'price': 0.12,
+	'quality': 0.12,
+	'recency': 0.08,
+	'popularity': 0.08,
+	'seller_trust': 0.08,
+	'seller_affinity': 0.10,
+	'personal_engagement': 0.10,
+	'novelty': 0.04,
+	'negotiable': 0.02,
+	'promotion': 0.02,
 }
 
 
@@ -32,8 +38,7 @@ def get_recommended_products(user, limit=20, category_filter=None):
 		return _get_popular_products(limit)
 
 	top_categories = profile.get_top_categories(limit=7)
-	if not top_categories:
-		return _get_popular_products(limit)
+	preferred_sellers = [int(s) for s in (profile.preferred_sellers or []) if str(s).isdigit()]
 
 	qs = Product.objects.filter().select_related('store', 'category').prefetch_related('images', 'reviews', 'promotions')
 
@@ -41,18 +46,73 @@ def get_recommended_products(user, limit=20, category_filter=None):
 	if hasattr(Product, 'AVAILABLE') and hasattr(Product, 'available_status'):
 		qs = qs.filter(available_status=Product.AVAILABLE)
 
+	if getattr(user, 'id', None):
+		qs = qs.exclude(store_id=user.id)
+
 	if category_filter:
 		qs = qs.filter(category_id=category_filter)
-	else:
-		qs = qs.filter(Q(category_id__in=top_categories) | Q(category__parent_id__in=top_categories))
+	elif top_categories:
+		qs = qs.filter(
+			Q(category_id__in=top_categories)
+			| Q(category__parent_id__in=top_categories)
+			| Q(store_id__in=preferred_sellers)
+		)
 
-	candidates = list(qs[:150])
+	candidates = list(qs[:350])
 	if not candidates:
 		return _get_popular_products(limit)
 
+	now = timezone.now()
+	candidate_ids = [p.id for p in candidates]
+
+	popularity_rows = (
+		InteractionLog.objects.filter(
+			product_id__in=candidate_ids,
+			timestamp__gte=now - timedelta(days=14),
+		)
+		.values('product_id')
+		.annotate(count=models.Count('id'))
+	)
+	popularity_map = {int(r['product_id']): int(r['count']) for r in popularity_rows}
+	max_popularity = max(popularity_map.values()) if popularity_map else 1
+
+	user_rows = (
+		InteractionLog.objects.filter(
+			user=user,
+			product_id__in=candidate_ids,
+			timestamp__gte=now - timedelta(days=60),
+		)
+		.values('product_id', 'action')
+		.annotate(count=models.Count('id'))
+	)
+	action_strength = {
+		'view': 1.0,
+		'click': 1.2,
+		'favorite': 4.0,
+		'rate': 4.5,
+		'contact': 5.0,
+		'negotiate': 4.5,
+		'share': 2.0,
+		'compare': 2.2,
+	}
+	user_product_engagement = defaultdict(float)
+	for row in user_rows:
+		pid = int(row['product_id'])
+		action = row['action']
+		count = int(row['count'] or 0)
+		user_product_engagement[pid] += action_strength.get(action, 1.0) * count
+	max_user_engagement = max(user_product_engagement.values()) if user_product_engagement else 1
+
 	scored = []
 	for product in candidates:
-		breakdown = _calculate_product_score(product, profile)
+		breakdown = _calculate_product_score(
+			product,
+			profile,
+			popularity_count=popularity_map.get(product.id, 0),
+			max_popularity=max_popularity,
+			user_engagement=user_product_engagement.get(product.id, 0),
+			max_user_engagement=max_user_engagement,
+		)
 		final_score = 0.0
 		for key, weight in SCORE_WEIGHTS.items():
 			final_score += float(breakdown.get(key, 0)) * float(weight)
@@ -67,13 +127,14 @@ def get_recommended_products(user, limit=20, category_filter=None):
 		InteractionLog.objects.filter(
 			user=user,
 			action='view',
-			timestamp__gte=timezone.now() - timezone.timedelta(hours=6),
+			timestamp__gte=timezone.now() - timezone.timedelta(hours=8),
 		).values_list('product_id', flat=True)
 	)
 
 	scored = [sp for sp in scored if sp['product'].id not in recently_viewed]
 	scored.sort(key=lambda x: x['score'], reverse=True)
-	return _diversify_results(scored, max_per_seller=4)[:limit]
+	scored = _apply_smart_exploration(scored, user=user, limit=limit)
+	return _diversify_results(scored, max_per_seller=3)[:limit]
 
 
 def get_similar_products(product, limit=10):
@@ -95,7 +156,14 @@ def get_similar_products(product, limit=10):
 	return qs.order_by('-id')[:limit]
 
 
-def _calculate_product_score(product, profile):
+def _calculate_product_score(
+	product,
+	profile,
+	popularity_count=0,
+	max_popularity=1,
+	user_engagement=0,
+	max_user_engagement=1,
+):
 	scores = {}
 
 	cat_id = str(getattr(product, 'category_id', '') or '')
@@ -155,11 +223,7 @@ def _calculate_product_score(product, profile):
 	else:
 		scores['recency'] = 50
 
-	interaction_count = InteractionLog.objects.filter(
-		product=product,
-		timestamp__gte=timezone.now() - timezone.timedelta(days=7),
-	).count()
-	scores['popularity'] = min(interaction_count * 5, 100)
+	scores['popularity'] = min((float(popularity_count) / float(max(1, max_popularity))) * 100.0, 100.0)
 
 	seller = getattr(product, 'store', None)
 	seller_trust = 40
@@ -184,6 +248,24 @@ def _calculate_product_score(product, profile):
 			seller_trust = min(seller_trust * 1.3, 100)
 
 	scores['seller_trust'] = seller_trust
+	preferred = profile.preferred_sellers or []
+	scores['seller_affinity'] = 100 if getattr(seller, 'id', None) in preferred else 25
+
+	# If user already engaged heavily with this product, avoid repeating it at top.
+	if max_user_engagement > 0:
+		engagement_ratio = float(user_engagement) / float(max_user_engagement)
+		scores['personal_engagement'] = max(0, 100 - (engagement_ratio * 100))
+	else:
+		scores['personal_engagement'] = 80
+
+	created_at = getattr(product, 'created_at', None) or getattr(product, 'created', None)
+	if created_at:
+		age_hours = max(0.0, (timezone.now() - created_at).total_seconds() / 3600.0)
+		# Exploration novelty: high in first 48h then fades.
+		scores['novelty'] = max(0.0, min(100.0, 100.0 - (age_hours / 48.0) * 100.0))
+	else:
+		scores['novelty'] = 20
+
 	is_negotiable = bool(getattr(product, 'negotiable', False))
 	scores['negotiable'] = 100 if is_negotiable else 30
 
@@ -231,6 +313,10 @@ def _get_match_reasons(breakdown):
 		reasons.append('Just listed')
 	if breakdown.get('seller_trust', 0) >= 80:
 		reasons.append('Trusted seller')
+	if breakdown.get('seller_affinity', 0) >= 80:
+		reasons.append('From stores you like')
+	if breakdown.get('novelty', 0) >= 70:
+		reasons.append('Fresh recommendation')
 	return reasons
 
 
@@ -246,6 +332,45 @@ def _diversify_results(scored_products, max_per_seller=4):
 			diversified.append(sp)
 			seller_counts[seller_id] += 1
 	return diversified
+
+
+def _apply_smart_exploration(scored_products, user, limit):
+	"""
+	Add controlled randomness (exploration) so results don't look identical each time.
+	High-quality items still dominate, but newer/less-exposed items get a fair chance.
+	"""
+	if len(scored_products) <= 4:
+		return scored_products
+
+	base_rate = float(getattr(settings, 'RECOMMENDATION_EXPLORATION_RATE', 0.10))
+	recent_strong = InteractionLog.objects.filter(
+		user=user,
+		action__in=['view', 'favorite', 'rate', 'contact', 'negotiate'],
+		timestamp__gte=timezone.now() - timedelta(days=30),
+	).count()
+	# New/low-history users need more exploration.
+	dynamic_rate = min(0.25, base_rate + (0.08 if recent_strong < 20 else 0.0))
+
+	top_anchor = scored_products[:2]
+	window_size = min(len(scored_products), max(18, int(limit) * 3))
+	pool = scored_products[2:window_size]
+	rest = scored_products[window_size:]
+
+	for item in pool:
+		novelty = float(item.get('breakdown', {}).get('novelty', 0.0))
+		promotion = float(item.get('breakdown', {}).get('promotion', 0.0))
+		quality = float(item.get('breakdown', {}).get('quality', 0.0))
+		base = float(item.get('score', 0.0))
+
+		# Keep quality dominant and add limited exploration jitter.
+		jitter = random.uniform(-1.0, 1.0) * dynamic_rate * max(4.0, base * 0.09)
+		exploration_bonus = (novelty * 0.02) + (promotion * 0.01) + (quality * 0.005)
+		item['_explore_score'] = base + jitter + exploration_bonus
+
+	pool.sort(key=lambda x: x.get('_explore_score', x.get('score', 0.0)), reverse=True)
+	for item in pool:
+		item.pop('_explore_score', None)
+	return top_anchor + pool + rest
 
 
 def _get_popular_products(limit=20):

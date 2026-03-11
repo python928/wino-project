@@ -44,10 +44,7 @@ class StoreRepository {
       final resp = await ApiService.get(url);
       final list = _extractList(resp);
 
-      return list
-          .where((item) => item is Map<String, dynamic>)
-          .map((item) => User.fromJson(item as Map<String, dynamic>))
-          .toList();
+      return list.whereType<Map<String, dynamic>>().map(User.fromJson).toList();
     } catch (_) {
       return [];
     }
@@ -71,8 +68,9 @@ class StoreRepository {
         if (item is! Map<String, dynamic>) continue;
 
         // Some backends return a full object, others return an id.
-        final dynamic followed =
-            item['followed_user_detail'] ?? item['followed_user'] ?? item['store'];
+        final dynamic followed = item['followed_user_detail'] ??
+            item['followed_user'] ??
+            item['store'];
 
         if (followed is Map<String, dynamic>) {
           final store = User.fromJson(followed);
@@ -112,13 +110,11 @@ class StoreRepository {
   /// NO filtering by post count - includes ALL stores
   static Future<List<User>> getRecommendedStores({int limit = 8}) async {
     try {
-      final resp = await ApiService.get('${ApiConfig.users}recommended-stores/?has_posts=true');
+      final resp = await ApiService.get(
+          '${ApiConfig.users}recommended-stores/?has_posts=true');
       final list = _extractList(resp);
 
-      return list
-          .where((item) => item is Map<String, dynamic>)
-          .map((item) => User.fromJson(item as Map<String, dynamic>))
-          .toList();
+      return list.whereType<Map<String, dynamic>>().map(User.fromJson).toList();
     } catch (e) {
       // Fallback to all stores if recommended endpoint fails
       return await searchStores();

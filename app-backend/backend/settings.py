@@ -230,6 +230,9 @@ JAZZMIN_SETTINGS = {
     ],
 }
 
+# Recommendation system: controlled exploration (0.0 .. 0.30 recommended).
+RECOMMENDATION_EXPLORATION_RATE = float(os.environ.get('RECOMMENDATION_EXPLORATION_RATE', '0.10'))
+
 # Celery Settings
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')

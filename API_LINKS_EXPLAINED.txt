@@ -1,0 +1,239 @@
+API LINKS EXPLAINED
+===================
+Project:
+- Backend: /home/anti-problems/toprice/app-backend
+- App config source: /home/anti-problems/toprice/the_app/lib/core/config/api_config.dart
+
+Base URL (from app config)
+--------------------------
+- http://192.168.11.21:8000/
+
+Notes
+-----
+- Links below are relative API paths (prepend base URL).
+- {id}, {storeId}, {productId} are dynamic values.
+- ViewSet links usually support: GET list, POST create on collection; GET/PUT/PATCH/DELETE on detail.
+
+
+1) AUTH
+-------
+- /api/auth/token/
+  What it does: login and return JWT access/refresh tokens.
+  Method: POST
+
+- /api/auth/token/refresh/
+  What it does: refresh access token using refresh token.
+  Method: POST
+
+
+2) USERS / PROFILE
+------------------
+- /api/users/register/
+  What it does: register new user and return tokens + user profile.
+  Method: POST
+
+- /api/users/auth/phone/send-otp/
+  What it does: send OTP code to phone (WhatsApp/SMS flow).
+  Method: POST
+
+- /api/users/auth/phone/verify-otp/
+  What it does: verify OTP and login/create user, returns tokens.
+  Method: POST
+
+- /api/users/me/
+  What it does: get or update current authenticated user profile.
+  Methods: GET, PUT, PATCH
+
+- /api/users/change-password/
+  What it does: change current user password.
+  Method: POST
+
+- /api/users/logout/
+  What it does: logout and blacklist refresh token.
+  Method: POST
+
+- /api/users/preferences/categories/
+  What it does: save preferred category IDs for recommendations.
+  Method: POST
+
+- /api/users/users/
+  What it does: list users/stores (supports search/filter by query params).
+  Methods: GET, POST (ModelViewSet) and list endpoint usage in app is GET.
+
+- /api/users/users/{id}/
+  What it does: get or update one user/store profile.
+  Methods: GET, PUT, PATCH, DELETE (subject to permissions)
+
+- /api/users/followers/
+  What it does: list stores followed by current user.
+  Method: GET
+
+- /api/users/followers/toggle/
+  What it does: follow/unfollow a store.
+  Method: POST
+
+- /api/users/followers/?user={id}
+  What it does: follower list query form used by app checks.
+  Method: GET
+
+- /api/users/store-reports/
+  What it does: report a store and manage report records.
+  Methods: GET, POST, (admin may update/delete)
+
+
+3) CATALOG
+----------
+- /api/catalog/categories/
+  What it does: list/create product categories.
+  Methods: GET, POST
+
+- /api/catalog/categories/{id}/
+  What it does: retrieve/update/delete category.
+  Methods: GET, PUT, PATCH, DELETE
+
+- /api/catalog/products/
+  What it does: list/create products (supports filters like store/category/search/order).
+  Methods: GET, POST
+
+- /api/catalog/products/{id}/
+  What it does: retrieve/update/delete product.
+  Methods: GET, PUT, PATCH, DELETE
+
+- /api/catalog/product-images/
+  What it does: manage product images.
+  Methods: GET, POST
+
+- /api/catalog/packs/
+  What it does: list/create packs.
+  Methods: GET, POST
+
+- /api/catalog/packs/{id}/
+  What it does: retrieve/update/delete pack.
+  Methods: GET, PUT, PATCH, DELETE
+
+- /api/catalog/pack-products/
+  What it does: manage products inside packs.
+  Methods: GET, POST
+
+- /api/catalog/pack-images/
+  What it does: manage pack images.
+  Methods: GET, POST
+
+- /api/catalog/reviews/
+  What it does: list/create reviews for stores/products.
+  Methods: GET, POST
+
+- /api/catalog/reviews/rate-store/
+  What it does: create/update direct store rating.
+  Method: POST
+
+- /api/catalog/reviews/my-store-rating/{storeId}/
+  What it does: intended to get current user's rating for a store.
+  Note: present in app config, but route exposure should be verified in backend routing.
+
+- /api/catalog/favorites/
+  What it does: list/create favorite products for current user.
+  Methods: GET, POST
+
+- /api/catalog/favorites/toggle/
+  What it does: add/remove favorite for a product.
+  Method: POST
+
+- /api/catalog/favorites/check/{productId}/
+  What it does: check if product is favorited by current user.
+  Method: GET
+
+- /api/catalog/promotions/
+  What it does: list/create promotions.
+  Methods: GET, POST
+
+- /api/catalog/promotion-images/
+  What it does: manage promotion images.
+  Methods: GET, POST
+
+- /api/catalog/product-reports/
+  What it does: report products.
+  Methods: GET, POST
+
+
+4) ANALYTICS
+------------
+- /api/analytics/recommendations/
+  What it does: get personalized recommended products.
+  Method: GET
+
+- /api/analytics/events/
+  What it does: send user interaction analytics events (single or batch).
+  Method: POST
+
+
+5) NOTIFICATIONS
+----------------
+- /api/notifications/notifications/
+  What it does: list user notifications.
+  Method: GET
+
+- /api/notifications/notifications/{id}/
+  What it does: get one notification.
+  Method: GET
+
+- /api/notifications/notifications/unread-count/
+  What it does: return unread notification count.
+  Method: GET
+
+- /api/notifications/notifications/mark-all-read/
+  What it does: mark all notifications as read.
+  Method: POST
+
+- /api/notifications/notifications/{id}/mark-read/
+  What it does: mark one notification as read.
+  Method: POST
+
+- /api/notifications/notifications/trigger/
+  What it does: app-side configured trigger endpoint for notification dispatch.
+  Method: POST
+
+- /api/notifications/devices/
+  What it does: register/manage FCM device tokens via notifications router.
+  Methods: GET, POST (and detail ops depending on FCMDevice viewset)
+
+
+6) SUBSCRIPTIONS
+----------------
+- /api/subscriptions/plans/
+  What it does: list subscription plans (active plans for public).
+  Methods: GET, POST (admin for write)
+
+- /api/subscriptions/plans/public-data/
+  What it does: return plans + payment config (RIB + instructions).
+  Method: GET
+
+- /api/subscriptions/merchant-subscriptions/
+  What it does: list merchant subscription records.
+  Methods: GET, POST (write mostly admin-controlled)
+
+- /api/subscriptions/merchant-subscriptions/access-status/
+  What it does: return current subscription access/limits/features for user.
+  Method: GET
+
+- /api/subscriptions/payment-requests/
+  What it does: submit/list subscription payment requests.
+  Methods: GET, POST
+
+
+7) DEVICE REGISTRATION (EXTRA ROOT)
+------------------------------------
+- /api/devices/
+  What it does: separate devices router root included in backend URLs.
+  Method: usually GET (router root)
+
+- /api/devices/devices/
+  What it does: actual device endpoint under that extra root (FCMDevice viewset).
+  Methods: GET, POST
+
+
+8) MEDIA
+--------
+- /media/{path}
+  What it does: serves uploaded media files in DEBUG mode.
+  Method: GET

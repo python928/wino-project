@@ -159,39 +159,10 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primaryColor, AppColors.primaryDark],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryColor.withValues(alpha: 0.35),
-                          blurRadius: 18,
-                          offset: const Offset(0, 7),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.storefront_rounded,
-                      color: Colors.white,
-                      size: 56,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Topri',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDeep,
-                      letterSpacing: 0.4,
-                    ),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    width: 200,
+                    height: 200,
                   ),
                 ],
               ),

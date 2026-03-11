@@ -9,6 +9,7 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/category_model.dart';
@@ -37,7 +38,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   bool _isAvailable = true;
   bool _showPrice = true;
 
-  // Category selection state — supports multiple
+  // Category selection state (single category only)
   Set<int> _selectedCategoryIds = {};
   List<Category> _categories = [];
   bool _loadingCategories = true;
@@ -108,13 +109,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
         builder: (_) => CategorySelectionScreen(
           categories: _categories,
           initialSelectedCategoryIds: _selectedCategoryIds,
+          singleSelection: true,
         ),
       ),
     );
 
     if (result != null) {
-      setState(() => _selectedCategoryIds = result);
+      _setSelectedCategoryIds(result);
     }
+  }
+
+  void _setSelectedCategoryIds(Set<int> ids) {
+    final selectedId = ids.isEmpty ? null : ids.first;
+    setState(() {
+      _selectedCategoryIds = selectedId == null ? {} : {selectedId};
+    });
   }
 
   Widget _buildImage(dynamic image) {
@@ -235,9 +244,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (picked.isNotEmpty) {
         setState(() {
           final remainingSlots = 5 - _images.length;
-          _images.addAll(
-            picked.take(remainingSlots),
-          );
+          _images.addAll(picked.take(remainingSlots));
         });
       }
     } catch (e) {
@@ -249,6 +256,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_hasProfileLocation()) {
+      Helpers.showSnackBar(
+        context,
+        'Set your location area or GPS in Edit Profile before posting.',
+        isError: true,
+      );
+      return;
+    }
     if (_images.isEmpty) {
       Helpers.showSnackBar(context, 'Please add at least one image');
       return;
@@ -260,19 +275,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     setState(() => _isLoading = true);
 
-    // Resolve names for selected category IDs (API takes first/primary one)
-    final selectedNames = _selectedCategoryIds
-        .map((id) {
-          try {
-            return _categories.firstWhere((c) => c.id == id).name;
-          } catch (_) {
-            return '';
-          }
-        })
-        .where((n) => n.isNotEmpty)
-        .toList();
-    final primaryCategoryName =
-        selectedNames.isNotEmpty ? selectedNames.first : '';
+    // Resolve selected category name
+    final selectedId = _selectedCategoryIds.isEmpty
+        ? null
+        : _selectedCategoryIds.first;
+    final selectedNames = selectedId == null
+        ? <String>[]
+        : [
+            () {
+              try {
+                return _categories.firstWhere((c) => c.id == selectedId).name;
+              } catch (_) {
+                return '';
+              }
+            }()
+          ].where((n) => n.isNotEmpty).toList();
+    final primaryCategoryName = selectedNames.isNotEmpty
+        ? selectedNames.first
+        : '';
 
     try {
       final provider = Provider.of<PostProvider>(context, listen: false);
@@ -281,8 +301,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ).toDouble();
 
       // Compute effective delivery wilayas (empty = use store.address fallback on backend)
-      final List<String> deliveryWilayas =
-          _deliveryAvailable ? (_deliveryAreas?.selectedWilayas ?? []) : [];
+      final List<String> deliveryWilayas = _deliveryAvailable
+          ? (_deliveryAreas?.selectedWilayas ?? [])
+          : [];
 
       if (_isEditMode) {
         final newFiles = _images.whereType<XFile>().toList();
@@ -347,6 +368,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _priceController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  bool _hasProfileLocation() {
+    final userData = StorageService.getUserData();
+    final address = (userData?['address'] ?? userData?['location'] ?? '')
+        .toString()
+        .trim();
+    final latRaw = userData?['latitude'];
+    final lngRaw = userData?['longitude'];
+    final lat = double.tryParse(latRaw?.toString() ?? '');
+    final lng = double.tryParse(lngRaw?.toString() ?? '');
+    final hasGps = lat != null && lng != null;
+    return address.isNotEmpty || hasGps;
   }
 
   @override
@@ -459,8 +493,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Show Price'),
-                        subtitle:
-                            const Text('Show price to customers in listings'),
+                        subtitle: const Text(
+                          'Show price to customers in listings',
+                        ),
                         value: _showPrice,
                         onChanged: (value) {
                           setState(() => _showPrice = value);
@@ -470,8 +505,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Available'),
-                        subtitle:
-                            const Text('Is the product available for sale?'),
+                        subtitle: const Text(
+                          'Is the product available for sale?',
+                        ),
                         value: _isAvailable,
                         onChanged: (value) {
                           setState(() => _isAvailable = value);
@@ -591,7 +627,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ? 'Select areas you deliver to'
                             : 'Customers can come pick up',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -632,7 +670,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         onTap: _openDeliveryAreaPicker,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primaryColor,
                             borderRadius: BorderRadius.circular(20),
@@ -741,44 +781,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     )
                   : hasCategories
-                      ? Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: selectedNames.map((name) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryColor.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: AppColors.primaryColor
-                                        .withOpacity(0.3)),
-                              ),
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryColor,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        )
-                      : Text(
-                          'Select category',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 14,
+                  ? Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: selectedNames.map((name) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
                           ),
-                        ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primaryColor.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  : Text(
+                      'Select category',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                    ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey[400],
-              size: 20,
-            ),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
           ],
         ),
       ),
@@ -795,29 +830,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+            border: Border.all(
+              color: Colors.grey[300]!,
+              style: BorderStyle.solid,
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.camera_alt_outlined,
-                  size: 32, color: Colors.grey[500]),
+              Icon(
+                Icons.camera_alt_outlined,
+                size: 32,
+                color: Colors.grey[500],
+              ),
               const SizedBox(height: 8),
               Text(
                 'Add Images',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
                 'Tap to upload',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
             ],
           ),
@@ -843,8 +877,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 top: 10,
                 right: 10,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.45),
                     borderRadius: BorderRadius.circular(20),
@@ -886,8 +922,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         Icon(Icons.add, size: 24, color: Colors.grey[500]),
                         Text(
                           'Add',
-                          style:
-                              TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -929,8 +967,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           color: Colors.red,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close,
-                            size: 14, color: Colors.white),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

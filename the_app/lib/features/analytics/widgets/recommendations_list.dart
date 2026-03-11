@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/providers/post_provider.dart';
 import '../../../core/providers/home_provider.dart';
+import '../../../data/models/offer_model.dart';
+import '../../../data/models/post_model.dart';
 import '../../../presentation/common/constants/card_constants.dart';
 import '../../../presentation/shared_widgets/cards/product_card.dart';
 import '../../../presentation/shared_widgets/cards/promotion_card.dart';
@@ -16,7 +18,14 @@ import '../../../presentation/shared_widgets/cards/store_chip.dart';
 /// Sub-section 1: horizontal mix of ProductCards, PromotionCards, PackCards.
 /// Sub-section 2: horizontal compact store chips (category style).
 class RecommendationsList extends StatelessWidget {
-  const RecommendationsList({super.key});
+  final void Function(Post)? onProductTap;
+  final void Function(Offer)? onOfferTap;
+
+  const RecommendationsList({
+    super.key,
+    this.onProductTap,
+    this.onOfferTap,
+  });
 
   double _cardWidth(BuildContext context) {
     final sw = MediaQuery.sizeOf(context).width;
@@ -63,7 +72,7 @@ class RecommendationsList extends StatelessWidget {
 
         // Build interleaved card list: cycle through products → discounts → packs
         final List<Widget> mixedCards = [];
-        final maxEach = 6;
+        const maxEach = 6;
         final ps = products.take(maxEach).toList();
         final os = offers.take(maxEach).toList();
         final ks = packs.take(maxEach).toList();
@@ -74,16 +83,22 @@ class RecommendationsList extends StatelessWidget {
             final p = ps[i];
             mixedCards.add(ProductCard(
               product: p,
-              onTap: () => Navigator.pushNamed(
-                context,
-                Routes.productDetails,
-                arguments: p,
-              ),
+              onTap: onProductTap != null
+                  ? () => onProductTap!(p)
+                  : () => Navigator.pushNamed(
+                        context,
+                        Routes.productDetails,
+                        arguments: p,
+                      ),
               onFavoriteTap: () {},
             ));
           }
           if (i < os.length) {
-            mixedCards.add(PromotionCard(offer: os[i]));
+            final o = os[i];
+            mixedCards.add(PromotionCard(
+              offer: o,
+              onTap: onOfferTap != null ? () => onOfferTap!(o) : null,
+            ));
           }
           if (i < ks.length) {
             mixedCards.add(PackCard(pack: ks[i]));
@@ -133,8 +148,8 @@ class RecommendationsList extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: CardConstants.gridHorizontalPadding),
                   itemCount: mixedCards.length,
-                  separatorBuilder: (_, __) => const SizedBox(
-                      width: CardConstants.gridCrossAxisSpacing),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: CardConstants.gridCrossAxisSpacing),
                   itemBuilder: (_, i) =>
                       SizedBox(width: cardWidth, child: mixedCards[i]),
                 ),

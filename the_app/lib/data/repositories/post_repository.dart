@@ -411,6 +411,13 @@ class PostRepository {
                     (promo['start_date'] ?? promo['created_at'] ?? '')
                         .toString()) ??
                 DateTime.now(),
+            endDate: DateTime.tryParse((promo['end_date'] ?? '').toString()),
+            maxImpressions:
+                int.tryParse((promo['max_impressions'] ?? '').toString()),
+            uniqueViewersCount:
+                int.tryParse((promo['unique_viewers_count'] ?? '').toString()),
+            remainingImpressions:
+                int.tryParse((promo['remaining_impressions'] ?? '').toString()),
           ),
         );
         debugPrint(
@@ -474,6 +481,13 @@ class PostRepository {
         isAvailable: isAvailable,
         createdAt:
             DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+        endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
+        maxImpressions:
+            int.tryParse((resp['max_impressions'] ?? '').toString()),
+        uniqueViewersCount:
+            int.tryParse((resp['unique_viewers_count'] ?? '').toString()),
+        remainingImpressions:
+            int.tryParse((resp['remaining_impressions'] ?? '').toString()),
       );
     } catch (e) {
       debugPrint('Repository: Error creating offer: $e');
@@ -513,6 +527,13 @@ class PostRepository {
         isAvailable: isAvailable ?? resp['is_active'] ?? true,
         createdAt:
             DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+        endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
+        maxImpressions:
+            int.tryParse((resp['max_impressions'] ?? '').toString()),
+        uniqueViewersCount:
+            int.tryParse((resp['unique_viewers_count'] ?? '').toString()),
+        remainingImpressions:
+            int.tryParse((resp['remaining_impressions'] ?? '').toString()),
       );
     } catch (e) {
       debugPrint('Repository: Error updating offer: $e');

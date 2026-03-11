@@ -23,7 +23,7 @@ class AppToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unselectedBg = showBorder ? Colors.white : AppColors.blackColor5;
-    final selectedBg = AppColors.primaryColor;
+    const selectedBg = AppColors.primaryColor;
 
     return GestureDetector(
       onTap: onTap,

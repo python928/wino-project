@@ -28,7 +28,12 @@ class User(AbstractUser):
 		help_text='Whether this store can appear in nearby distance-based search.',
 	)
 	location_updated_at = models.DateTimeField(blank=True, null=True, help_text='Last time GPS coordinates were changed')
-	store_type = models.CharField(max_length=10, choices=[('physical', 'Physical'), ('online', 'Online')], default='physical')
+	store_type = models.CharField(
+		max_length=10,
+		choices=[('', 'Not specified'), ('physical', 'Physical'), ('online', 'Online')],
+		blank=True,
+		default='',
+	)
 	cover_image = models.ImageField(upload_to='users/covers/', blank=True, null=True)
 
 	# Social Accounts

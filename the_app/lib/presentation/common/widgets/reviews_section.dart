@@ -25,13 +25,15 @@ class ReviewItem {
   static ReviewItem? fromJson(dynamic json) {
     if (json is! Map) return null;
 
-    final int? id = json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}');
+    final int? id =
+        json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}');
     final int? rating = json['rating'] is int
         ? json['rating'] as int
         : int.tryParse('${json['rating']}');
     final String comment = (json['comment'] ?? '').toString();
 
-    final String userName = (json['user_name'] ?? json['username'] ?? 'User').toString();
+    final String userName =
+        (json['user_name'] ?? json['username'] ?? 'User').toString();
 
     DateTime? createdAt;
     final rawCreated = json['created_at'];
@@ -54,15 +56,18 @@ class ReviewItem {
 class ReviewsSection extends StatefulWidget {
   final int? productId;
   final int? storeId;
+  final Map<String, dynamic>? analyticsContext;
 
   const ReviewsSection.product({
     super.key,
     required this.productId,
+    this.analyticsContext,
   }) : storeId = null;
 
   const ReviewsSection.store({
     super.key,
     required this.storeId,
+    this.analyticsContext,
   }) : productId = null;
 
   @override
@@ -164,22 +169,30 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     try {
       if (_isStoreReview) {
         // Use rate-store endpoint for store reviews
-        await ApiService.post(ApiConfig.reviewsRateStore, {
+        final payload = <String, dynamic>{
           'store': widget.storeId,
           'rating': rating,
           'comment': comment,
-        });
+        };
+        if (widget.analyticsContext != null) {
+          payload.addAll(widget.analyticsContext!);
+        }
+        await ApiService.post(ApiConfig.reviewsRateStore, payload);
       } else {
         // For product reviews, always use POST - backend will handle update logic
-        await ApiService.post(ApiConfig.reviews, {
+        final payload = <String, dynamic>{
           'product': widget.productId,
           'rating': rating,
           'comment': comment,
-        });
+        };
+        if (widget.analyticsContext != null) {
+          payload.addAll(widget.analyticsContext!);
+        }
+        await ApiService.post(ApiConfig.reviews, payload);
       }
 
       if (!mounted) return;
-      
+
       // Reset UI state
       setState(() {
         _isEditingMode = false;
@@ -188,12 +201,14 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       _commentController.clear();
 
       Helpers.showSnackBar(context, 'Review submitted successfully');
-      
+
       // Reload reviews to show updated state
       await _loadReviews();
     } catch (error) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to submit review: ${error.toString()}', isError: true);
+      Helpers.showSnackBar(
+          context, 'Failed to submit review: ${error.toString()}',
+          isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -224,7 +239,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        
+
         // User's existing review or input section
         if (_userExistingReview != null && !_isEditingMode) ...[
           // Show existing review with edit button
@@ -233,7 +248,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
             decoration: BoxDecoration(
               color: AppColors.primaryLightShade,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
+              border:
+                  Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +258,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                   children: [
                     const Text(
                       'Your Review',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     const Spacer(),
                     TextButton.icon(
@@ -250,7 +267,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                       icon: const Icon(Icons.edit, size: 16),
                       label: const Text('Edit'),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -365,7 +383,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                       if (dateText.isNotEmpty)
                         Text(
                           dateText,
-                          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600]),
                         ),
                     ],
                   ),

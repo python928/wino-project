@@ -3,6 +3,11 @@ from django.db import models
 from .constants import DEFAULT_SUBSCRIPTION_INSTRUCTIONS, DEFAULT_SUBSCRIPTION_RIB
 
 
+def default_plan_features():
+	from .constants import DEFAULT_PLAN_FEATURES
+	return dict(DEFAULT_PLAN_FEATURES)
+
+
 class SubscriptionPlan(models.Model):
 	name = models.CharField(max_length=255)
 	slug = models.SlugField(max_length=60, unique=True, default='')
@@ -10,6 +15,7 @@ class SubscriptionPlan(models.Model):
 	price = models.DecimalField(max_digits=10, decimal_places=2)
 	duration_days = models.IntegerField()
 	benefits = models.TextField(blank=True, default='')
+	plan_features = models.JSONField(default=default_plan_features, blank=True)
 	is_active = models.BooleanField(default=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr

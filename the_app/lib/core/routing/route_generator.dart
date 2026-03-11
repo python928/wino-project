@@ -66,13 +66,27 @@ class RouteGenerator {
 
       // ===== PRODUCT ROUTES =====
       case Routes.productDetails:
-        final product = settings.arguments;
-        if (product is! Post) {
+        final args = settings.arguments;
+        if (args is ProductDetailsArgs) {
+          return _slideTransition(
+            settings: settings,
+            child: ProductDetailScreen(
+              product: args.product,
+              sourceSurface: args.sourceSurface,
+              discoveryMode: args.discoveryMode,
+              distanceKm: args.distanceKm,
+              wilayaCode: args.wilayaCode,
+              searchQuery: args.searchQuery,
+              searchContext: args.searchContext,
+            ),
+          );
+        }
+        if (args is! Post) {
           return _invalidArgsRoute(settings);
         }
         return _slideTransition(
           settings: settings,
-          child: ProductDetailScreen(product: product),
+          child: ProductDetailScreen(product: args),
         );
 
       case Routes.promotionDetails:

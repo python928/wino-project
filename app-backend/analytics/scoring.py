@@ -7,10 +7,41 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from analytics.models import InteractionLog, UserInterestProfile
-from analytics.utils import INTERACTION_WEIGHTS, calculate_time_decay, get_price_range
+from analytics.utils import (
+	ACTION_CONTRIBUTIONS,
+	calculate_time_decay,
+	get_price_range,
+	normalize_discovery_mode,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+ENGAGEMENT_ACTIONS = {
+	'view',
+	'click',
+	'favorite',
+	'compare',
+	'contact',
+	'negotiate',
+	'share',
+	'rate',
+	'follow_store',
+}
+
+
+def _safe_float(value):
+	try:
+		return float(value)
+	except Exception:
+		return None
+
+
+def _safe_int(value):
+	try:
+		return int(value)
+	except Exception:
+		return None
 
 
 def update_user_profile(user):
@@ -28,24 +59,77 @@ def update_user_profile(user):
 		return profile
 
 	category_scores = defaultdict(float)
+	store_category_scores = defaultdict(float)
+	nearby_distances = []
+	wilaya_scores = defaultdict(float)
+	search_keywords = defaultdict(float)
+	seller_scores = defaultdict(float)
+
 	for interaction in interactions:
+		if interaction.action not in ENGAGEMENT_ACTIONS:
+			continue
+
+		meta = interaction.metadata or {}
 		cat_id = None
 		if interaction.category_id:
 			cat_id = str(interaction.category_id)
 		elif interaction.product_id and interaction.product and interaction.product.category_id:
 			cat_id = str(interaction.product.category_id)
 
-		if not cat_id:
-			continue
+		action_profile = ACTION_CONTRIBUTIONS.get(interaction.action, ACTION_CONTRIBUTIONS['view']).copy()
+		if interaction.action == 'view':
+			view_duration_sec = _safe_float(meta.get('view_duration_sec'))
+			if view_duration_sec is not None and view_duration_sec > 0:
+				# 0s->1.0x, 120s+->2.0x (capped), rewarding meaningful dwell time.
+				duration_factor = 1.0 + min(view_duration_sec, 120.0) / 120.0
+				for k in list(action_profile.keys()):
+					action_profile[k] *= duration_factor
+		if interaction.action == 'rate':
+			rating_value = _safe_float(meta.get('rating'))
+			if rating_value is None:
+				rating_value = _safe_float(getattr(interaction, 'rating', None))
+			if rating_value is None:
+				rating_value = 3.0
+			rating_value = max(1.0, min(5.0, rating_value))
+			action_profile['category'] *= rating_value
+			action_profile['store_category'] *= rating_value
+			action_profile['seller'] *= rating_value
+			action_profile['mode'] *= rating_value
 
-		weight = INTERACTION_WEIGHTS.get(interaction.action, 1)
 		decay = calculate_time_decay(interaction.timestamp)
-		category_scores[cat_id] += weight * decay
+
+		if cat_id:
+			category_scores[cat_id] += action_profile.get('category', 0.0) * decay
+
+		store_id = None
+		if interaction.product_id and interaction.product:
+			store_id = getattr(interaction.product, 'store_id', None)
+		if store_id is None:
+			store_id = _safe_int(meta.get('store_id'))
+		if store_id:
+			seller_scores[int(store_id)] += action_profile.get('seller', 0.0) * decay
+			if cat_id:
+				store_category_scores[(int(store_id), cat_id)] += action_profile.get('store_category', 0.0) * decay
+
+		discovery_mode = normalize_discovery_mode(meta.get('discovery_mode'))
+		mode_weight = action_profile.get('mode', 0.0) * decay
+		if discovery_mode == 'nearby' and mode_weight > 0:
+			distance_km = _safe_float(meta.get('distance_km'))
+			if distance_km is not None and distance_km >= 0:
+				nearby_distances.append((distance_km, mode_weight))
+		elif discovery_mode == 'location' and mode_weight > 0:
+			wilaya_code = str(meta.get('wilaya_code') or meta.get('wilaya') or '').strip()
+			if wilaya_code:
+				wilaya_scores[wilaya_code] += mode_weight
+
+		keyword = str(meta.get('search_query') or meta.get('keyword') or '').strip().lower()
+		if keyword:
+			search_keywords[keyword] += max(1.0, action_profile.get('category', 0.0)) * decay
 
 	profile.category_scores = dict(category_scores)
 
 	price_affinity = defaultdict(float)
-	price_relevant_actions = ['view', 'click', 'contact', 'favorite', 'negotiate', 'compare']
+	price_relevant_actions = ['view', 'click', 'contact', 'favorite', 'negotiate', 'compare', 'rate']
 
 	for interaction in interactions:
 		if interaction.action in price_relevant_actions and interaction.product and interaction.product.price:
@@ -53,74 +137,39 @@ def update_user_profile(user):
 				price = float(interaction.product.price)
 				if price > 0 and not getattr(interaction.product, 'hide_price', False):
 					range_name = get_price_range(price)
-					weight = INTERACTION_WEIGHTS.get(interaction.action, 1)
+					weight = ACTION_CONTRIBUTIONS.get(interaction.action, ACTION_CONTRIBUTIONS['view']).get('category', 1.0)
+					if interaction.action == 'rate':
+						rating_value = _safe_float((interaction.metadata or {}).get('rating'))
+						if rating_value is not None:
+							weight *= max(1.0, min(5.0, rating_value))
 					decay = calculate_time_decay(interaction.timestamp)
 					price_affinity[range_name] += weight * decay
 			except Exception:
 				pass
 
-		if interaction.action == 'filter_price':
-			meta = interaction.metadata or {}
-			if 'min' in meta and 'max' in meta:
-				try:
-					avg_price = (float(meta['min']) + float(meta['max'])) / 2
-					range_name = get_price_range(avg_price)
-					price_affinity[range_name] += 3 * calculate_time_decay(interaction.timestamp)
-				except Exception:
-					pass
-
 	profile.price_affinity = dict(price_affinity)
 
-	dist_filter_count = interactions.filter(action='filter_dist').count()
-	profile.distance_sensitivity = 1.0 + (dist_filter_count * 0.1)
+	if nearby_distances:
+		total_weight = sum(w for _, w in nearby_distances)
+		if total_weight > 0:
+			profile.preferred_max_distance_km = sum(d * w for d, w in nearby_distances) / total_weight
+		profile.distance_sensitivity = min(5.0, 1.0 + (total_weight / 12.0))
+	else:
+		profile.distance_sensitivity = 1.0
 
-	dist_interactions = interactions.filter(action='filter_dist')
-	if dist_interactions.exists():
-		distances = []
-		for inter in dist_interactions:
-			km = (inter.metadata or {}).get('km')
-			if km is None:
-				continue
-			try:
-				distances.append(float(km))
-			except Exception:
-				continue
-		if distances:
-			profile.preferred_max_distance_km = sum(distances) / len(distances)
-
-	rating_filter_count = interactions.filter(action='filter_rating').count()
-	profile.quality_sensitivity = 1.0 + (rating_filter_count * 0.15)
-
-	wilaya_interactions = interactions.filter(action='filter_wilaya')
-	wilaya_counts = defaultdict(int)
-	for inter in wilaya_interactions:
-		code = (inter.metadata or {}).get('wilaya_code')
-		if code:
-			wilaya_counts[str(code)] += 1
-	if wilaya_counts:
-		sorted_wilayas = sorted(wilaya_counts.items(), key=lambda x: x[1], reverse=True)
+	if wilaya_scores:
+		sorted_wilayas = sorted(wilaya_scores.items(), key=lambda x: x[1], reverse=True)
 		profile.preferred_wilayas = [w[0] for w in sorted_wilayas[:10]]
 
-	search_interactions = interactions.filter(action='search')
-	keywords = defaultdict(int)
-	for inter in search_interactions:
-		kw = (inter.metadata or {}).get('keyword', '')
-		kw = str(kw).strip().lower()
-		if kw:
-			keywords[kw] += 1
-	if keywords:
-		sorted_kw = sorted(keywords.items(), key=lambda x: x[1], reverse=True)
+	if search_keywords:
+		sorted_kw = sorted(search_keywords.items(), key=lambda x: x[1], reverse=True)
 		profile.search_keywords = dict(sorted_kw[:20])
 
-	seller_scores = defaultdict(float)
-	strong_actions = ['contact', 'negotiate', 'favorite']
-	for interaction in interactions:
-		if interaction.action in strong_actions and interaction.product_id and interaction.product:
-			seller_id = getattr(interaction.product, 'store_id', None)
-			if seller_id:
-				weight = INTERACTION_WEIGHTS.get(interaction.action, 1)
-				seller_scores[int(seller_id)] += weight
+	rating_events = interactions.filter(action='rate').count()
+	profile.quality_sensitivity = min(5.0, 1.0 + (rating_events * 0.1))
 
+	for (seller_id, cat_id), score in store_category_scores.items():
+		seller_scores[seller_id] += score * 0.2
 	if seller_scores:
 		sorted_sellers = sorted(seller_scores.items(), key=lambda x: x[1], reverse=True)
 		profile.preferred_sellers = [s[0] for s in sorted_sellers[:10]]

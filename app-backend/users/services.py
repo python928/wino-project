@@ -78,7 +78,7 @@ def send_otp_whatsapp(phone: str, code: str) -> None:
 				content_variables=json.dumps({'1': code}),
 			)
 		else:
-			body = f"Topri verification code: {code}. It expires in 5 minutes."
+			body = f"Wino verification code: {code}. It expires in 5 minutes."
 			client.messages.create(
 				body=body,
 				from_=whatsapp_from,
@@ -109,7 +109,7 @@ def send_otp_sms(phone: str, code: str) -> None:
 		raise RuntimeError('Twilio SDK is not installed on server') from exc
 
 	client = Client(account_sid, auth_token)
-	body = f"Topri verification code: {code}. It expires in 5 minutes."
+	body = f"Wino verification code: {code}. It expires in 5 minutes."
 	try:
 		client.messages.create(
 			body=body,

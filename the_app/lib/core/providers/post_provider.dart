@@ -35,6 +35,17 @@ class PostProvider with ChangeNotifier {
   String? get postsError => _postsError;
   String? get offersError => _offersError;
 
+  Future<void> refreshMarketplaceFeed({
+    String? search,
+    int? storeId,
+    int? categoryId,
+  }) async {
+    await Future.wait([
+      loadPosts(search: search, storeId: storeId, categoryId: categoryId),
+      loadOffers(),
+    ]);
+  }
+
   Future<void> loadOffers() async {
     _isLoadingOffers = true;
     _offersError = null;

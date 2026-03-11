@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 INTERACTION_WEIGHTS = {
 	'view': 1,
 	'click': 2,
-	'search': 3,
+	'search': 0,
 	'filter_price': 3,
 	'filter_dist': 3,
 	'filter_wilaya': 3,
@@ -20,6 +20,22 @@ INTERACTION_WEIGHTS = {
 	'compare': 6,
 	'negotiate': 8,
 	'contact': 10,
+	'rate': 6,
+	'follow_store': 5,
+}
+
+# Per-action contribution profile used by scoring.update_user_profile().
+# Values are base contributions before recency decay.
+ACTION_CONTRIBUTIONS = {
+	'view': {'category': 1.0, 'mode': 1.0, 'store_category': 1.0, 'seller': 0.8},
+	'click': {'category': 1.5, 'mode': 1.0, 'store_category': 1.2, 'seller': 1.0},
+	'favorite': {'category': 4.0, 'mode': 2.0, 'store_category': 3.0, 'seller': 3.5},
+	'compare': {'category': 2.5, 'mode': 1.5, 'store_category': 2.0, 'seller': 1.5},
+	'contact': {'category': 6.0, 'mode': 3.0, 'store_category': 5.0, 'seller': 6.0},
+	'negotiate': {'category': 5.5, 'mode': 3.0, 'store_category': 4.5, 'seller': 5.0},
+	'share': {'category': 2.0, 'mode': 1.2, 'store_category': 1.5, 'seller': 1.5},
+	'rate': {'category': 1.0, 'mode': 0.6, 'store_category': 1.0, 'seller': 0.8},
+	'follow_store': {'category': 0.0, 'mode': 0.0, 'store_category': 2.0, 'seller': 5.0},
 }
 
 PRICE_RANGES = {
@@ -62,7 +78,13 @@ def log_user_event(user, action, product=None, metadata=None, session_id=''):
 		from analytics.models import InteractionLog
 
 		category = None
-		if product and getattr(product, 'category_id', None):
+		if metadata and metadata.get('category_id'):
+			try:
+				from catalog.models import Category
+				category = Category.objects.filter(id=metadata.get('category_id')).first()
+			except Exception:
+				category = None
+		elif product and getattr(product, 'category_id', None):
 			category = product.category
 
 		log_entry = InteractionLog.objects.create(
@@ -77,3 +99,13 @@ def log_user_event(user, action, product=None, metadata=None, session_id=''):
 	except Exception as e:
 		logger.error(f"Failed to log user event: {e}")
 		return None
+
+
+def normalize_discovery_mode(value):
+	"""Normalize location discovery mode sent by the app."""
+	raw = str(value or '').strip().lower()
+	if raw in {'nearby', 'distance'}:
+		return 'nearby'
+	if raw in {'location', 'area', 'wilaya'}:
+		return 'location'
+	return 'none'

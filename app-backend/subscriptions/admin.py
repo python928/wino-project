@@ -12,7 +12,14 @@ from .services import activate_subscription_for_payment_request
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'price', 'duration_days', 'max_products', 'is_active')
+    list_display = ('name', 'slug', 'price', 'duration_days', 'max_products', 'promo_limit', 'is_active')
+
+    @admin.display(description='Promo Audience')
+    def promo_limit(self, obj):
+        try:
+            return (obj.plan_features or {}).get('promotion_max_impressions')
+        except Exception:
+            return '-'
 
 
 @admin.register(MerchantSubscription)

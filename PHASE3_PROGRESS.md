@@ -28,7 +28,7 @@ The following updates are now live and will be visible when you run the app:
 **File:** `main_navigation_screen.dart`
 
 **Changes:**
-- ✅ **Purple Brand Name:** "Toprice" in purple color
+- ✅ **Purple Brand Name:** "Wino" in purple color
 - ✅ **Search Icon:** Modern outline search icon in AppBar
 - ✅ **Notifications Icon:** Modern outline notification icon in AppBar
 - ✅ **White Background:** Clean white AppBar with elevation 0 (flat)
@@ -141,7 +141,7 @@ The following updates are now live and will be visible when you run the app:
 
 2. **You'll immediately see:**
    - Purple bottom navigation bar with 5 items
-   - Purple "Toprice" brand name in AppBar
+   - Purple "Wino" brand name in AppBar
    - Search and notification icons in AppBar
    - Product cards with purple prices and 12px radius
    - Purple filter button in search bar

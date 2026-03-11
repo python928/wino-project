@@ -9,8 +9,6 @@ import '../../../core/utils/helpers.dart';
 class ProductCard extends BaseItemCard {
   final Post product;
   final VoidCallback? onFavoriteTap;
-  final bool showUnavailableOverlay;
-  final bool showStoreName;
   final double? userLat;
   final double? userLng;
 
@@ -20,8 +18,8 @@ class ProductCard extends BaseItemCard {
     VoidCallback? onTap,
     this.onFavoriteTap,
     VoidCallback? onEditTap,
-    this.showUnavailableOverlay = false,
-    this.showStoreName = true,
+    bool showUnavailableOverlay = false,
+    bool showStoreName = true,
     this.userLat,
     this.userLng,
   }) : super(
@@ -33,7 +31,8 @@ class ProductCard extends BaseItemCard {
           discountPercentage: _calculateDiscountPercent(product),
           rating: product.rating,
           reviewCount: product.reviewCount,
-          bottomLeftText: _buildBottomText(product, userLat, userLng),
+          bottomLeftText:
+              _buildBottomText(product, showStoreName, userLat, userLng),
           bottomLeftIcon: Icons.location_on_outlined,
           isUnavailable: !product.isAvailable,
           showUnavailableOverlay: showUnavailableOverlay,
@@ -41,11 +40,15 @@ class ProductCard extends BaseItemCard {
           onEditTap: onEditTap,
         );
 
-  static String? _buildBottomText(Post product, double? userLat, double? userLng) {
+  static String? _buildBottomText(
+      Post product, bool showStoreName, double? userLat, double? userLng) {
+    if (!showStoreName) return null;
     // Prefer showing distance if we have both user and store coordinates
     final dist = Helpers.haversineDistance(
-      userLat, userLng,
-      product.storeLatitude, product.storeLongitude,
+      userLat,
+      userLng,
+      product.storeLatitude,
+      product.storeLongitude,
     );
     if (dist != null) {
       return Helpers.formatDistance(dist);

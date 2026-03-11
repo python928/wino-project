@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../core/config/api_config.dart';
@@ -12,8 +13,12 @@ import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
+import '../../core/services/storage_service.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/models/offer_model.dart';
+import '../../data/models/user_model.dart';
+import '../product/product_detail_screen.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import 'widgets/category_item.dart';
 import '../shared_widgets/cards/product_card.dart';
@@ -51,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _initLocationFromProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -66,11 +72,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     final homeProvider = context.read<HomeProvider>();
     final postProvider = context.read<PostProvider>();
+    final analyticsProvider = context.read<AnalyticsProvider>();
     await Future.wait([
       homeProvider.loadHomeData(),
-      postProvider.loadPosts(),
-      postProvider.loadOffers(),
+      postProvider.refreshMarketplaceFeed(),
+      analyticsProvider.fetchRecommendations(limit: 80),
     ]);
+  }
+
+  void _initLocationFromProfile() {
+    final userData = StorageService.getUserData();
+    final rawAddress =
+        (userData?['address'] ?? userData?['location'] ?? '').toString().trim();
+    if (rawAddress.isEmpty) return;
+
+    final parts = rawAddress
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return;
+
+    if (parts.length >= 2) {
+      _selectedBaladiya = parts.first;
+      _selectedWilaya = parts.last;
+    } else {
+      _selectedWilaya = parts.first;
+      _selectedBaladiya = null;
+    }
+    _selectedLocation = rawAddress;
   }
 
   Future<void> _activateNearby(double km) async {
@@ -204,6 +234,89 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  bool get _isCityFilterActive =>
+      _radiusKm == null &&
+      _selectedWilaya != null &&
+      _selectedWilaya!.trim().isNotEmpty;
+
+  bool _addressMatchesSelectedLocation(String address) {
+    if (!_isCityFilterActive) return true;
+    if (address.trim().isEmpty) return false;
+    final addressLower = address.toLowerCase();
+    final wilayaLower = _selectedWilaya!.toLowerCase();
+    if (!addressLower.contains(wilayaLower)) return false;
+    if (_selectedBaladiya != null &&
+        _selectedBaladiya!.trim().isNotEmpty &&
+        !addressLower.contains(_selectedBaladiya!.toLowerCase())) {
+      return false;
+    }
+    return true;
+  }
+
+  List<Post> _filterPostsForActiveLocation(List<Post> products) {
+    if (_radiusKm != null) return _filterByRadius(products);
+    if (_isCityFilterActive) {
+      return products
+          .where((p) => _addressMatchesSelectedLocation(p.storeAddress))
+          .toList();
+    }
+    return products;
+  }
+
+  List<Offer> _filterOffersForActiveLocation(List<Offer> offers) {
+    if (_radiusKm == null && !_isCityFilterActive) return offers;
+    if (_radiusKm != null && _userLat != null && _userLng != null) {
+      return offers.where((o) {
+        if (!o.product.storeNearbyVisible) return false;
+        final dist = Helpers.haversineDistance(
+            _userLat, _userLng, o.product.storeLatitude, o.product.storeLongitude);
+        if (dist == null) return false;
+        return dist <= _radiusKm!;
+      }).toList();
+    }
+    if (_isCityFilterActive) {
+      return offers
+          .where((o) => _addressMatchesSelectedLocation(o.product.storeAddress))
+          .toList();
+    }
+    return offers;
+  }
+
+  List<Pack> _filterPacksForActiveLocation(List<Pack> packs) {
+    if (_radiusKm != null) return _filterPacksByRadius(packs);
+    if (_isCityFilterActive) {
+      return packs
+          .where((p) => p.deliveryWilayas
+              .map((w) => w.toLowerCase())
+              .contains(_selectedWilaya!.toLowerCase()))
+          .toList();
+    }
+    return packs;
+  }
+
+  List<User> _filterStoresForActiveLocation(List<User> stores) {
+    if (_radiusKm != null) {
+      return stores.where((s) {
+        if (!s.allowNearbyVisibility) return false;
+        final dist = Helpers.haversineDistance(
+          _userLat,
+          _userLng,
+          s.latitude,
+          s.longitude,
+        );
+        if (dist == null) return false;
+        return dist <= _radiusKm!;
+      }).toList();
+    }
+    if (_isCityFilterActive) {
+      return stores.where((s) {
+        final address = s.address.isNotEmpty ? s.address : (s.city ?? '');
+        return _addressMatchesSelectedLocation(address);
+      }).toList();
+    }
+    return stores;
+  }
+
   List<Pack> _filterPacksByRadius(List<Pack> packs) {
     if (_radiusKm == null || _userLat == null || _userLng == null) return packs;
     return packs.where((pack) {
@@ -255,7 +368,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
 
                 // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
-                const RecommendationsList(),
+                RecommendationsList(
+                  onProductTap: _navigateToProductDetails,
+                  onOfferTap: _navigateToPromotionDetails,
+                ),
                 const SizedBox(height: AppTheme.spacing24),
 
                 // Discounts
@@ -430,6 +546,49 @@ class _HomeScreenState extends State<HomeScreen> {
     return colors[index % colors.length];
   }
 
+  Widget _buildCompactErrorState({
+    required double height,
+    required IconData icon,
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 40, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            AppTextButton(
+              text: 'Retry',
+              onPressed: onRetry,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactEmptyState({
+    required double height,
+    required String message,
+  }) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ),
+    );
+  }
+
   // ==================== Featured Stores Section ====================
 
   Widget _buildFeaturedStoresSection() {
@@ -442,38 +601,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (homeProvider.storesError != null &&
             homeProvider.featuredStores.isEmpty) {
-          return SizedBox(
+          return _buildCompactErrorState(
             height: 160,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.store_outlined, size: 40, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load stores',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  AppTextButton(
-                    text: 'Retry',
-                    onPressed: () => homeProvider.loadFeaturedStores(),
-                  ),
-                ],
-              ),
-            ),
+            icon: Icons.store_outlined,
+            message: 'Failed to load stores',
+            onRetry: () => homeProvider.loadFeaturedStores(),
           );
         }
 
-        final stores = homeProvider.featuredStores; // List<User>
+        final stores =
+            _filterStoresForActiveLocation(homeProvider.featuredStores);
         if (stores.isEmpty) {
-          return SizedBox(
+          return _buildCompactEmptyState(
             height: 160,
-            child: Center(
-              child: Text(
-                'No featured stores at the moment',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
+            message: _radiusKm != null
+                ? 'No stores found within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No stores found in this location'
+                    : 'No featured stores at the moment'),
           );
         }
 
@@ -584,18 +729,15 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildProductsShimmer();
         }
 
-        final hotDeals = _filterByRadius(homeProvider.hotDeals);
+        final hotDeals = _filterPostsForActiveLocation(homeProvider.hotDeals);
         if (hotDeals.isEmpty) {
-          return SizedBox(
+          return _buildCompactEmptyState(
             height: 220,
-            child: Center(
-              child: Text(
-                _radiusKm != null
-                    ? 'No hot deals found within ${_radiusKm!.toInt()} km'
-                    : 'No hot deals at the moment',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
+            message: _radiusKm != null
+                ? 'No hot deals found within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No hot deals found in this location'
+                    : 'No hot deals at the moment'),
           );
         }
 
@@ -636,41 +778,23 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         if (homeProvider.packsError != null && homeProvider.packs.isEmpty) {
-          return SizedBox(
+          return _buildCompactErrorState(
             height: 200,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.inventory_2_outlined,
-                      size: 40, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load packs',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  AppTextButton(
-                    text: 'Retry',
-                    onPressed: () => homeProvider.loadFeaturedPacks(),
-                  ),
-                ],
-              ),
-            ),
+            icon: Icons.inventory_2_outlined,
+            message: 'Failed to load packs',
+            onRetry: () => homeProvider.loadFeaturedPacks(),
           );
         }
 
-        final packs = _filterPacksByRadius(homeProvider.packs);
+        final packs = _filterPacksForActiveLocation(homeProvider.packs);
         if (packs.isEmpty) {
-          return SizedBox(
+          return _buildCompactEmptyState(
             height: 200,
-            child: Center(
-              child: Text(
-                _radiusKm != null
-                    ? 'No packs found within ${_radiusKm!.toInt()} km'
-                    : 'No packs available at the moment',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
+            message: _radiusKm != null
+                ? 'No packs found within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No packs found in this location'
+                    : 'No packs available at the moment'),
           );
         }
 
@@ -864,41 +988,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (homeProvider.productsError != null &&
             homeProvider.recentProducts.isEmpty) {
-          return SizedBox(
+          return _buildCompactErrorState(
             height: 280,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.shopping_bag_outlined,
-                      size: 40, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load products',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  AppTextButton(
-                    text: 'Retry',
-                    onPressed: () => homeProvider.loadRecentProducts(),
-                  ),
-                ],
-              ),
-            ),
+            icon: Icons.shopping_bag_outlined,
+            message: 'Failed to load products',
+            onRetry: () => homeProvider.loadRecentProducts(),
           );
         }
 
-        final products = _filterByRadius(homeProvider.recentProducts);
+        final products =
+            _filterPostsForActiveLocation(homeProvider.recentProducts);
         if (products.isEmpty) {
-          return SizedBox(
+          return _buildCompactEmptyState(
             height: 220,
-            child: Center(
-              child: Text(
-                _radiusKm != null
-                    ? 'No products found within ${_radiusKm!.toInt()} km'
-                    : 'No products available at the moment',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
+            message: _radiusKm != null
+                ? 'No products found within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No products found in this location'
+                    : 'No products available at the moment'),
           );
         }
 
@@ -954,8 +1061,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Offers Section ====================
 
   Widget _buildOffersSection() {
-    return Consumer<PostProvider>(
-      builder: (context, postProvider, child) {
+    return Consumer2<PostProvider, AnalyticsProvider>(
+      builder: (context, postProvider, analyticsProvider, child) {
         final offers = postProvider.offers;
 
         if (postProvider.isLoadingOffers && offers.isEmpty) {
@@ -963,78 +1070,167 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         if (postProvider.offersError != null && offers.isEmpty) {
-          return SizedBox(
+          return _buildCompactErrorState(
             height: 280,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.local_offer_outlined,
-                      size: 40, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load discounts',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  AppTextButton(
-                    text: 'Retry',
-                    onPressed: () => postProvider.loadOffers(),
-                  ),
-                ],
-              ),
-            ),
+            icon: Icons.local_offer_outlined,
+            message: 'Failed to load discounts',
+            onRetry: () => postProvider.loadOffers(),
           );
         }
 
         // Apply radius filter on the embedded product's store location
-        final filteredOffers =
-            (_radiusKm == null || _userLat == null || _userLng == null)
-                ? offers
-                : offers.where((o) {
-                    if (!o.product.storeNearbyVisible) return false;
-                    final dist = Helpers.haversineDistance(_userLat, _userLng,
-                        o.product.storeLatitude, o.product.storeLongitude);
-                    if (dist == null) return false;
-                    return dist <= _radiusKm!;
-                  }).toList();
+        final filteredOffers = _filterOffersForActiveLocation(offers);
 
-        if (filteredOffers.isEmpty) {
-          return SizedBox(
+        final rankedOffers = _rankOffersByUserSignals(
+          filteredOffers,
+          analyticsProvider.recommendations,
+        );
+
+        if (rankedOffers.isEmpty) {
+          return _buildCompactEmptyState(
             height: 220,
-            child: Center(
-              child: Text(
-                _radiusKm != null
-                    ? 'No discounts found within ${_radiusKm!.toInt()} km'
-                    : 'No discounts available at the moment',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
+            message: _radiusKm != null
+                ? 'No discounts found within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No discounts found in this location'
+                    : 'No discounts available at the moment'),
           );
         }
 
-        return SizedBox(
-          height: 280,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(
-                horizontal: CardConstants.gridHorizontalPadding),
-            scrollDirection: Axis.horizontal,
-            itemCount: filteredOffers.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: CardConstants.gridCrossAxisSpacing),
-            itemBuilder: (context, index) {
-              final offer = filteredOffers[index];
-              return SizedBox(
-                width: _gridCardWidth(context),
-                child: PromotionCard(
-                  offer: offer,
-                  userLat: _userLat,
-                  userLng: _userLng,
-                ),
-              );
-            },
-          ),
+        final topDiscount = rankedOffers.fold<int>(
+          0,
+          (prev, element) => element.discountPercentage > prev
+              ? element.discountPercentage
+              : prev,
+        );
+        final limitedOffers =
+            rankedOffers.where((o) => o.remainingImpressions != null).length;
+        final endingSoon = rankedOffers.where((o) => o.isNearEnding).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildOffersOverview(
+              topDiscount: topDiscount,
+              limitedOffers: limitedOffers,
+              endingSoon: endingSoon,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 280,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: CardConstants.gridHorizontalPadding),
+                scrollDirection: Axis.horizontal,
+                itemCount: rankedOffers.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: CardConstants.gridCrossAxisSpacing),
+                itemBuilder: (context, index) {
+                  final offer = rankedOffers[index];
+                  return SizedBox(
+                    width: _gridCardWidth(context),
+                    child: PromotionCard(
+                      offer: offer,
+                      userLat: _userLat,
+                      userLng: _userLng,
+                      onTap: () => _navigateToPromotionDetails(offer),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+
+  List<Offer> _rankOffersByUserSignals(
+    List<Offer> offers,
+    List<dynamic> recommendations,
+  ) {
+    if (offers.isEmpty) return offers;
+    final recScoreByProductId = <int, double>{};
+    for (var i = 0; i < recommendations.length; i++) {
+      final item = recommendations[i];
+      if (item is! Map<String, dynamic>) continue;
+      final product = item['product'];
+      int? productId;
+      if (product is Map<String, dynamic>) {
+        productId = int.tryParse('${product['id'] ?? ''}');
+      }
+      if (productId == null) continue;
+      final score = double.tryParse('${item['score'] ?? ''}') ?? 0.0;
+      recScoreByProductId[productId] = score +
+          ((recommendations.length - i).clamp(0, recommendations.length) * 1.2);
+    }
+
+    final ranked = List<Offer>.from(offers);
+    ranked.sort((a, b) {
+      final aRec = recScoreByProductId[a.product.id] ?? 0.0;
+      final bRec = recScoreByProductId[b.product.id] ?? 0.0;
+      final aFresh = a.isNearEnding ? 8.0 : 0.0;
+      final bFresh = b.isNearEnding ? 8.0 : 0.0;
+      final aScore = (aRec * 0.65) + (a.discountPercentage * 0.25) + aFresh;
+      final bScore = (bRec * 0.65) + (b.discountPercentage * 0.25) + bFresh;
+      return bScore.compareTo(aScore);
+    });
+    return ranked;
+  }
+
+  Widget _buildOffersOverview({
+    required int topDiscount,
+    required int limitedOffers,
+    required int endingSoon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryColor.withValues(alpha: 0.14),
+            const Color(0xFFFF7A00).withValues(alpha: 0.14),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _offerInfoChip(Icons.local_offer_outlined, 'Top -$topDiscount%'),
+          _offerInfoChip(Icons.groups_outlined, '$limitedOffers limited'),
+          _offerInfoChip(Icons.schedule_outlined, '$endingSoon ending soon'),
+        ],
+      ),
+    );
+  }
+
+  Widget _offerInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primaryColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1075,11 +1271,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToProductDetails(Post product) {
+    final discoveryMode = _radiusKm != null
+        ? 'nearby'
+        : ((_selectedWilaya != null && _selectedWilaya!.isNotEmpty)
+            ? 'location'
+            : 'none');
+    if (kDebugMode) {
+      debugPrint(
+        'Home->ProductDetails: mode=$discoveryMode radius=$_radiusKm wilaya=$_selectedWilaya baladiya=$_selectedBaladiya',
+      );
+    }
     Navigator.pushNamed(
       context,
       Routes.productDetails,
-      arguments: product,
+      arguments: ProductDetailsArgs(
+        product: product,
+        sourceSurface: 'home',
+        discoveryMode: discoveryMode,
+        distanceKm: _radiusKm,
+        wilayaCode: _isCityFilterActive ? _selectedWilaya : null,
+        searchQuery: null,
+      ),
     );
+  }
+
+  void _navigateToPromotionDetails(Offer offer) {
+    final productWithPromotion = offer.product.copyWith(
+      price: offer.newPrice,
+      oldPrice: offer.product.price,
+      discountPercentage: offer.discountPercentage,
+    );
+    _navigateToProductDetails(productWithPromotion);
   }
 
   void _toggleFavorite(Post product) {

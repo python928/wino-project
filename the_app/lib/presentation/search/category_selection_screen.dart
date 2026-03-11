@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/providers/home_provider.dart';
 import '../../data/models/category_model.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
@@ -10,11 +9,13 @@ import '../../core/theme/app_text_styles.dart';
 class CategorySelectionScreen extends StatefulWidget {
   final List<Category> categories;
   final Set<int> initialSelectedCategoryIds;
+  final bool singleSelection;
 
   const CategorySelectionScreen({
     super.key,
     required this.categories,
     required this.initialSelectedCategoryIds,
+    this.singleSelection = false,
   });
 
   @override
@@ -22,8 +23,7 @@ class CategorySelectionScreen extends StatefulWidget {
       _CategorySelectionScreenState();
 }
 
-class _CategorySelectionScreenState
-    extends State<CategorySelectionScreen> {
+class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   late Set<int> _selectedIds;
@@ -54,7 +54,11 @@ class _CategorySelectionScreenState
       if (_selectedIds.contains(id)) {
         _selectedIds.remove(id);
       } else {
-        _selectedIds.add(id);
+        if (widget.singleSelection) {
+          _selectedIds = {id};
+        } else {
+          _selectedIds.add(id);
+        }
       }
     });
   }
@@ -83,7 +87,7 @@ class _CategorySelectionScreenState
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          'Categories',
+          widget.singleSelection ? 'Select Category' : 'Categories',
           style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
         ),
         leading: IconButton(
@@ -121,8 +125,9 @@ class _CategorySelectionScreenState
                 ? Center(
                     child: Text(
                       'No categories found',
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.textSecondary),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   )
                 : SingleChildScrollView(
@@ -155,8 +160,7 @@ class _CategorySelectionScreenState
               child: AppPrimaryButton(
                 text: 'Confirm',
                 icon: Icons.check_circle_outline_rounded,
-                onPressed: () =>
-                    Navigator.pop<Set<int>>(context, _selectedIds),
+                onPressed: () => Navigator.pop<Set<int>>(context, _selectedIds),
               ),
             ),
           ),
@@ -202,11 +206,7 @@ class _CategorySelectionScreenState
                 color: color.withOpacity(isSelected ? 0.18 : 0.10),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                category.iconData,
-                size: 15,
-                color: color,
-              ),
+              child: Icon(category.iconData, size: 15, color: color),
             ),
             const SizedBox(width: 8),
             // Name

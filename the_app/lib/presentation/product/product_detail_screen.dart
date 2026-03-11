@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../data/models/post_model.dart';
 import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -6,20 +7,61 @@ import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/services/analytics_api_service.dart';
 import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
 
+class ProductDetailsArgs {
+  final Post product;
+  final String sourceSurface; // home | search | other
+  final String discoveryMode;
+  final double? distanceKm;
+  final String? wilayaCode;
+  final String? searchQuery;
+  final Map<String, dynamic>? searchContext;
+
+  const ProductDetailsArgs({
+    required this.product,
+    this.sourceSurface = 'other',
+    this.discoveryMode = 'none',
+    this.distanceKm,
+    this.wilayaCode,
+    this.searchQuery,
+    this.searchContext,
+  });
+}
+
 class ProductDetailScreen extends StatefulWidget {
   final Post product;
-  const ProductDetailScreen({super.key, required this.product});
+  final String sourceSurface;
+  final String discoveryMode;
+  final double? distanceKm;
+  final String? wilayaCode;
+  final String? searchQuery;
+  final Map<String, dynamic>? searchContext;
+
+  const ProductDetailScreen({
+    super.key,
+    required this.product,
+    this.sourceSurface = 'other',
+    this.discoveryMode = 'none',
+    this.distanceKm,
+    this.wilayaCode,
+    this.searchQuery,
+    this.searchContext,
+  });
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  final AnalyticsApiService _analyticsApiService = AnalyticsApiService();
+  late final String _analyticsSessionId;
+  late final DateTime _enteredAt;
+  bool _viewEventSent = false;
   late bool _isFavorited;
   bool _isTogglingFavorite = false;
   bool _isTogglingFollow = false;
@@ -55,9 +97,91 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _enteredAt = DateTime.now();
+    _analyticsSessionId =
+        'pd_${widget.product.id}_${DateTime.now().millisecondsSinceEpoch}';
+    if (kDebugMode) {
+      debugPrint(
+        'ProductDetail init: source=${widget.sourceSurface} mode=${widget.discoveryMode} distance=${widget.distanceKm} wilaya=${widget.wilayaCode} search=${widget.searchQuery}',
+      );
+    }
     _isFavorited = widget.product.isFavorited;
     _loadFollowState();
     _loadStoreImage();
+  }
+
+  Map<String, dynamic> _analyticsMetadata() {
+    final metadata = <String, dynamic>{
+      'source_surface': widget.sourceSurface,
+      'discovery_mode': widget.discoveryMode,
+    };
+    if (widget.distanceKm != null) {
+      metadata['distance_km'] = widget.distanceKm;
+    }
+    if (widget.wilayaCode != null && widget.wilayaCode!.trim().isNotEmpty) {
+      metadata['wilaya_code'] = widget.wilayaCode!.trim();
+    }
+    if (widget.sourceSurface == 'search' &&
+        widget.searchQuery != null &&
+        widget.searchQuery!.trim().isNotEmpty) {
+      metadata['search_query'] = widget.searchQuery!.trim().toLowerCase();
+    }
+    if (widget.sourceSurface == 'search' &&
+        widget.searchContext != null &&
+        widget.searchContext!.isNotEmpty) {
+      metadata['search_context'] = widget.searchContext;
+    }
+    return metadata;
+  }
+
+  Map<String, dynamic> _buildDiscoveryFields({
+    bool includeSearchContext = false,
+  }) {
+    final payload = <String, dynamic>{
+      'discovery_mode': widget.discoveryMode,
+    };
+    if (widget.distanceKm != null) {
+      payload['distance_km'] = widget.distanceKm;
+    }
+    if (widget.wilayaCode != null && widget.wilayaCode!.trim().isNotEmpty) {
+      payload['wilaya_code'] = widget.wilayaCode!.trim();
+    }
+    if (widget.sourceSurface == 'search' &&
+        widget.searchQuery != null &&
+        widget.searchQuery!.trim().isNotEmpty) {
+      payload['search_query'] = widget.searchQuery!.trim().toLowerCase();
+    }
+    if (includeSearchContext &&
+        widget.sourceSurface == 'search' &&
+        widget.searchContext != null &&
+        widget.searchContext!.isNotEmpty) {
+      payload['search_context'] = widget.searchContext;
+    }
+    return payload;
+  }
+
+  Future<void> _flushViewEvent() async {
+    if (_viewEventSent) return;
+    _viewEventSent = true;
+    if (!StorageService.isLoggedIn()) return;
+    final durationSec = DateTime.now().difference(_enteredAt).inSeconds;
+    final metadata = _analyticsMetadata();
+    metadata['view_duration_sec'] = durationSec < 0 ? 0 : durationSec;
+    await _analyticsApiService.logInteraction(
+      action: 'view',
+      productId: widget.product.id,
+      storeId: widget.product.storeId > 0 ? widget.product.storeId : null,
+      categoryId: widget.product.categoryId,
+      metadata: metadata,
+      sessionId: _analyticsSessionId,
+      flushNow: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _flushViewEvent();
+    super.dispose();
   }
 
   Future<void> _loadStoreImage() async {
@@ -128,9 +252,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     setState(() => _isTogglingFavorite = true);
     try {
-      final resp = await ApiService.post(ApiConfig.favoritesToggle, {
+      final payload = <String, dynamic>{
         'product': widget.product.id,
-      });
+        'session_id': _analyticsSessionId,
+      };
+      payload.addAll(_buildDiscoveryFields());
+      final resp = await ApiService.post(ApiConfig.favoritesToggle, payload);
 
       final isFavorited = (resp is Map && resp['is_favorited'] == true);
       if (!mounted) return;
@@ -157,9 +284,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     setState(() => _isTogglingFollow = true);
     try {
-      final resp = await ApiService.post(ApiConfig.followersToggle, {
+      final payload = <String, dynamic>{
         'store': widget.product.storeId,
-      });
+        'category_id': widget.product.categoryId,
+        'session_id': _analyticsSessionId,
+      };
+      payload.addAll(_buildDiscoveryFields());
+      final resp = await ApiService.post(ApiConfig.followersToggle, payload);
       final isFollowing = (resp is Map && resp['is_following'] == true);
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
@@ -487,7 +618,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
-                  ReviewsSection.product(productId: widget.product.id),
+                  ReviewsSection.product(
+                    productId: widget.product.id,
+                    analyticsContext: {
+                      'source_surface': widget.sourceSurface,
+                      'session_id': _analyticsSessionId,
+                      ..._buildDiscoveryFields(
+                        includeSearchContext: true,
+                      ),
+                    },
+                  ),
                 ],
               ),
             ),

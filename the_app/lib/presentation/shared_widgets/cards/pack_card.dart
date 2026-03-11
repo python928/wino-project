@@ -9,16 +9,14 @@ import '../../common/widgets/stacked_product_images.dart';
 /// Displays packs with custom image widget and specialized content
 class PackCard extends BaseItemCard {
   final Pack pack;
-  final bool isUnavailable;
-  final bool showUnavailableOverlay;
 
   PackCard({
     super.key,
     required this.pack,
     VoidCallback? onTap,
     VoidCallback? onEditTap,
-    this.isUnavailable = false,
-    this.showUnavailableOverlay = false,
+    bool isUnavailable = false,
+    bool showUnavailableOverlay = false,
   }) : super(
           title: pack.name,
           imageUrl: _pickImage(pack),

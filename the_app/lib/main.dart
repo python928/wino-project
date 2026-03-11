@@ -31,7 +31,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
   'dz_local_channel',
   'DZ Local Notifications',
-  description: 'General notifications for Topri app',
+  description: 'General notifications for Wino app',
   importance: Importance.high,
 );
 

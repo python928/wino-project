@@ -1,7 +1,7 @@
 # Design System Migration - Implementation Summary
 
 **Date:** January 30, 2026
-**Project:** Toprice (lib) → Dzlocal Shop (the_app)
+**Project:** Wino (lib) → Dzlocal Shop (the_app)
 **Status:** Phase 1 & 2 Complete ✅
 
 ---

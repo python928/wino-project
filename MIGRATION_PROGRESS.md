@@ -1,7 +1,7 @@
 # Design System Migration Progress
 
 **Date Started:** January 30, 2026
-**Migration:** lib → the_app (Toprice to Dzlocal Shop)
+**Migration:** lib → the_app (Wino to Dzlocal Shop)
 **Primary Goal:** Purple design system (#7B61FF) + Plus Jakarta Sans font
 
 ---

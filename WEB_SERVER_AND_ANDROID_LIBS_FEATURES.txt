@@ -1,0 +1,131 @@
+WEB SERVER (app-backend)
+========================
+Path: /home/anti-problems/toprice/app-backend
+
+1) Libraries (Python requirements)
+- Django==5.0.6
+- djangorestframework==3.15.2
+- djangorestframework-simplejwt==5.3.1
+- django-filter==24.2
+- django-cors-headers==4.4.0
+- Pillow==10.3.0
+- django-jazzmin==2.6.0
+- fcm-django==2.3.1
+- psycopg2-binary==2.9.9
+- celery==5.4.0
+- redis==5.0.3
+- firebase-admin==6.5.0
+- pillow-heif==0.16.0
+- twilio==9.3.7
+
+2) Installed app modules (features)
+- users
+- catalog
+- notifications
+- subscriptions
+- analytics
+
+3) API feature routes (from backend/urls.py)
+- /api/users/
+- /api/catalog/
+- /api/notifications/
+- /api/subscriptions/
+- /api/analytics/
+- /api/devices/
+- /api/auth/token/
+- /api/auth/token/refresh/
+
+4) Extra server capabilities configured
+- JWT authentication (SimpleJWT)
+- Filtering/search/ordering (django-filter + DRF filters)
+- FCM device registration (fcm-django)
+- Celery + Redis background tasks
+- Firebase Admin SDK integration
+- Twilio OTP channel support (WhatsApp/SMS)
+
+
+ANDROID APP (the_app)
+=====================
+Path: /home/anti-problems/toprice/the_app
+
+1) Flutter/Dart libraries (pubspec dependencies)
+- flutter (sdk)
+- flutter_localizations (sdk)
+- cupertino_icons
+- equatable
+- shared_preferences
+- http
+- flutter_secure_storage
+- jwt_decoder
+- provider
+- image_picker
+- geolocator
+- google_fonts
+- font_awesome_flutter
+- flutter_animate
+- cached_network_image
+- shimmer
+- glassmorphism
+- lottie
+- animated_text_kit
+- flutter_staggered_animations
+- spring
+- dropdown_button2
+- flutter_glow
+- flutter_neumorphic_plus
+- flutter_gradient_colors
+- flutter_carousel_widget
+- smooth_page_indicator
+- flutter_rating_bar
+- pull_to_refresh
+- flutter_slidable
+- flutter_staggered_grid_view
+- sticky_headers
+- extended_image
+- photo_view
+- flutter_blurhash
+- haptic_feedback
+- visibility_detector
+- flutter_cache_manager
+- go_router
+- share_plus
+- url_launcher
+- local_auth
+- firebase_core
+- firebase_messaging
+- flutter_local_notifications
+- intl
+- flutter_otp_text_field
+
+2) Android-native/Gradle libraries and plugins
+- Plugin: com.google.gms.google-services (v4.4.4)
+- Firebase BoM: com.google.firebase:firebase-bom:34.9.0
+- Firebase Analytics: com.google.firebase:firebase-analytics
+- Desugaring: com.android.tools:desugar_jdk_libs:2.0.4
+
+3) App feature modules (lib/features)
+- analytics
+- notifications
+- catalog (folder exists, currently empty screens)
+- product (folder exists, currently empty)
+
+4) App presentation feature areas (lib/presentation)
+- auth
+- common
+- favorites
+- home
+- notifications
+- pack
+- product
+- profile
+- promotion
+- search
+- store
+- subscription
+- shared_widgets (reusable UI components)
+
+5) Core app libraries/modules (lib)
+- core
+- data
+- features
+- presentation

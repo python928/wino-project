@@ -44,17 +44,18 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
 
   // Build screens dynamically (4 screens for 4-item bottom nav)
   List<Widget> get _screens => [
-    const HomeScreen(),           // 0 - Home
-    const FavoritesScreen(),      // 1 - Favorites
-    const StoresListScreen(),     // 2 - My Stores (Followed)
-    const ProfileScreen(),        // 3 - Profile (was 4)
-  ];
+        const HomeScreen(), // 0 - Home
+        const FavoritesScreen(), // 1 - Favorites
+        const StoresListScreen(), // 2 - My Stores (Followed)
+        const ProfileScreen(), // 3 - Profile (was 4)
+      ];
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex; // Use initial index from widget
-    _searchQuery = widget.initialSearchQuery; // Use initial search query if provided
+    _searchQuery =
+        widget.initialSearchQuery; // Use initial search query if provided
     WidgetsBinding.instance.addObserver(this);
     _refreshTokenIfNeeded();
     _badgeListener = () {
@@ -64,16 +65,18 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
       });
     };
     NotificationBadgeService.instance.unreadCount.addListener(_badgeListener);
-    
+
     // Fetch badge count immediately and set up periodic refresh
     _fetchUnreadBadgeCount();
-    _badgeTimer = Timer.periodic(const Duration(minutes: 2), (_) => _fetchUnreadBadgeCount());
+    _badgeTimer = Timer.periodic(
+        const Duration(minutes: 2), (_) => _fetchUnreadBadgeCount());
   }
 
   @override
   void dispose() {
     _badgeTimer?.cancel();
-    NotificationBadgeService.instance.unreadCount.removeListener(_badgeListener);
+    NotificationBadgeService.instance.unreadCount
+        .removeListener(_badgeListener);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -95,11 +98,12 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
       debugPrint('Token refresh check failed: $e');
     }
   }
-  
+
   Future<void> _fetchUnreadBadgeCount() async {
     try {
       final response = await ApiService.get(ApiConfig.notificationsUnreadCount);
-      if (response is Map<String, dynamic> && response.containsKey('unread_count')) {
+      if (response is Map<String, dynamic> &&
+          response.containsKey('unread_count')) {
         if (mounted) {
           final next = response['unread_count'] as int;
           setState(() => _unreadCount = next);
@@ -119,8 +123,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     // Reload data when home is selected
     if (index == 0) {
       final postProvider = context.read<PostProvider>();
-      postProvider.loadPosts();
-      postProvider.loadOffers();
+      postProvider.refreshMarketplaceFeed();
     }
   }
 
@@ -129,10 +132,10 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     final liveUnread = NotificationBadgeService.instance.unreadCount.value;
     final badge = liveUnread > 0 ? liveUnread : _unreadCount;
     return Directionality(
-      textDirection: TextDirection.ltr,  // Changed to LTR
+      textDirection: TextDirection.ltr, // Changed to LTR
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        appBar: null,  // No AppBar as screens have their own headers
+        appBar: null, // No AppBar as screens have their own headers
         body: IndexedStack(
           index: _selectedIndex,
           children: _screens,

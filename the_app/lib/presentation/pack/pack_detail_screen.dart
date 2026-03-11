@@ -473,8 +473,9 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                         onBackgroundImageError: (_storeImageUrl != null &&
                                 _storeImageUrl!.trim().isNotEmpty)
                             ? (_, __) {
-                                if (mounted)
+                                if (mounted) {
                                   setState(() => _storeImageUrl = null);
+                                }
                               }
                             : null,
                         child: (_storeImageUrl == null ||

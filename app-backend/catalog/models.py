@@ -57,10 +57,26 @@ class Promotion(models.Model):
 	is_active = models.BooleanField(default=True)
 	start_date = models.DateTimeField()
 	end_date = models.DateTimeField()
+	max_impressions = models.PositiveIntegerField(
+		null=True,
+		blank=True,
+		help_text='Maximum unique viewers allowed for this promotion (null = unlimited).',
+	)
+	unique_viewers_count = models.PositiveIntegerField(default=0)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
 		return self.name
+
+
+class PromotionViewer(models.Model):
+	promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name='viewer_hits')
+	viewer_key = models.CharField(max_length=128, db_index=True)
+	first_seen_at = models.DateTimeField(auto_now_add=True)
+	last_seen_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		unique_together = ('promotion', 'viewer_key')
 
 
 class PromotionImage(models.Model):

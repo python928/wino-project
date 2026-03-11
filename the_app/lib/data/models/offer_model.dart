@@ -8,6 +8,10 @@ class Offer {
   final double newPrice;
   final bool isAvailable;
   final DateTime createdAt;
+  final DateTime? endDate;
+  final int? maxImpressions;
+  final int? uniqueViewersCount;
+  final int? remainingImpressions;
 
   Offer({
     required this.id,
@@ -16,17 +20,32 @@ class Offer {
     required this.newPrice,
     required this.isAvailable,
     required this.createdAt,
+    this.endDate,
+    this.maxImpressions,
+    this.uniqueViewersCount,
+    this.remainingImpressions,
   });
 
-  factory Offer.fromJson(Map<String, dynamic> json, {Map<String, String>? storeNames}) {
+  bool get hasImpressionLimit => maxImpressions != null;
+
+  bool get isNearEnding {
+    if (endDate == null) return false;
+    final now = DateTime.now();
+    if (endDate!.isBefore(now)) return false;
+    return endDate!.difference(now).inHours <= 48;
+  }
+
+  factory Offer.fromJson(Map<String, dynamic> json,
+      {Map<String, String>? storeNames}) {
     // Ensure product is a Post
     late Post product;
-    
+
     final productData = json['product'];
     if (productData is Post) {
       product = productData;
     } else if (productData is Map<String, dynamic>) {
-      product = Post.fromBackend(productData, storesById: const {}, categoriesById: const {});
+      product = Post.fromBackend(productData,
+          storesById: const {}, categoriesById: const {});
     } else if (productData is int) {
       // If product is just an ID, create a minimal Post
       product = Post(
@@ -85,8 +104,12 @@ class Offer {
       );
     }
 
-    final pct = int.tryParse((json['discount_percentage'] ?? json['percentage'] ?? 0).toString()) ?? 0;
-    final newPrice = double.tryParse(json['new_price']?.toString() ?? '') ?? (product.price * (1 - pct / 100));
+    final pct = int.tryParse(
+            (json['discount_percentage'] ?? json['percentage'] ?? 0)
+                .toString()) ??
+        0;
+    final newPrice = double.tryParse(json['new_price']?.toString() ?? '') ??
+        (product.price * (1 - pct / 100));
 
     return Offer(
       id: json['id'] ?? 0,
@@ -94,7 +117,14 @@ class Offer {
       discountPercentage: pct,
       newPrice: newPrice,
       isAvailable: json['is_available'] ?? json['is_active'] ?? true,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      endDate: DateTime.tryParse((json['end_date'] ?? '').toString()),
+      maxImpressions: int.tryParse((json['max_impressions'] ?? '').toString()),
+      uniqueViewersCount:
+          int.tryParse((json['unique_viewers_count'] ?? '').toString()),
+      remainingImpressions:
+          int.tryParse((json['remaining_impressions'] ?? '').toString()),
     );
   }
 }

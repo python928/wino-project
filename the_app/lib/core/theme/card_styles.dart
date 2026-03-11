@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
 /// Travo-style card styling — white, 16px corners, soft shadow, no border
 class CardStyles {

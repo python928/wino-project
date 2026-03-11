@@ -1,0 +1,181 @@
+.
+├── core
+│   ├── components
+│   │   ├── blur_container.dart
+│   │   ├── check_mark.dart
+│   │   ├── custom_modal_bottom_sheet.dart
+│   │   ├── dot_indicators.dart
+│   │   ├── network_image_with_loader.dart
+│   │   ├── product
+│   │   │   ├── primary_product_card.dart
+│   │   │   └── secondary_product_card.dart
+│   │   └── skeleton_loader.dart
+│   ├── config
+│   │   ├── api_config.dart
+│   │   └── app_config.dart
+│   ├── constants
+│   │   ├── algeria_wilayas_baladiat.dart
+│   │   ├── app_constants.dart
+│   │   └── assets_paths.dart
+│   ├── providers
+│   │   ├── analytics_provider.dart
+│   │   ├── auth_provider.dart
+│   │   ├── home_provider.dart
+│   │   ├── pack_provider.dart
+│   │   ├── post_provider.dart
+│   │   └── store_provider.dart
+│   ├── routing
+│   │   ├── route_generator.dart
+│   │   └── routes.dart
+│   ├── services
+│   │   ├── analytics_api_service.dart
+│   │   ├── api_service.dart
+│   │   ├── auth_service.dart
+│   │   ├── favorites_change_notifier.dart
+│   │   ├── follow_change_notifier.dart
+│   │   ├── location_service.dart
+│   │   ├── notification_badge_service.dart
+│   │   ├── pack_api_service.dart
+│   │   ├── product_api_service.dart
+│   │   ├── storage_service.dart
+│   │   ├── store_api_service.dart
+│   │   └── subscription_service.dart
+│   ├── theme
+│   │   ├── app_colors.dart
+│   │   ├── app_constants.dart
+│   │   ├── app_decorations.dart
+│   │   ├── app_input_decorations.dart
+│   │   ├── app_text_styles.dart
+│   │   ├── app_theme.dart
+│   │   ├── button_styles.dart
+│   │   ├── card_dimensions.dart
+│   │   └── card_styles.dart
+│   ├── utils
+│   │   ├── geolocation_stub.dart
+│   │   ├── geolocation_web.dart
+│   │   ├── helpers.dart
+│   │   ├── jwt_validator.dart
+│   │   └── version_notifier.dart
+│   └── widgets
+│       ├── app_button.dart
+│       ├── app_text_field.dart
+│       ├── app_toggle_button.dart
+│       ├── cards
+│       │   └── base_item_card.dart
+│       └── premium_ui_components.dart
+├── data
+│   ├── dummy
+│   │   ├── dummy_stores.dart
+│   │   └── store_model.dart
+│   ├── models
+│   │   ├── category_model.dart
+│   │   ├── offer_model.dart
+│   │   ├── pack_model.dart
+│   │   ├── post_model.dart
+│   │   ├── product_model.dart
+│   │   ├── review_model.dart
+│   │   ├── subscription_plan_model.dart
+│   │   └── user_model.dart
+│   └── repositories
+│       ├── auth_repository.dart
+│       ├── post_repository.dart
+│       └── store_repository.dart
+├── example_overflow_fix.dart
+├── features
+│   ├── analytics
+│   │   ├── analytics_export.dart
+│   │   ├── models
+│   │   │   └── recommendation_item.dart
+│   │   └── widgets
+│   │       ├── recommendations_list.dart
+│   │       ├── search_tracker.dart
+│   │       └── view_tracker.dart
+│   ├── catalog
+│   │   └── screens
+│   ├── notifications
+│   │   └── notification_screen.dart
+│   └── product
+│       └── product_details_screen.dart
+├── main.dart
+└── presentation
+    ├── auth
+    │   ├── launch_screen.dart
+    │   ├── login_screen.dart
+    │   ├── otp_verification_screen.dart
+    │   ├── phone_profile_setup_screen.dart
+    │   ├── register_screen.dart
+    │   └── splash_screen.dart
+    ├── common
+    │   ├── constants
+    │   │   └── card_constants.dart
+    │   ├── location_filter_picker.dart
+    │   ├── location_picker_screen.dart
+    │   ├── radius_picker_sheet.dart
+    │   └── widgets
+    │       ├── reviews_section.dart
+    │       ├── stacked_product_images.dart
+    │       └── unified_item_card.dart
+    ├── favorites
+    │   └── favorites_screen.dart
+    ├── home
+    │   ├── home_screen.dart
+    │   ├── main_navigation_screen.dart
+    │   └── widgets
+    │       ├── category_item.dart
+    │       ├── featured_store_card.dart
+    │       ├── header_location_widget.dart
+    │       ├── hot_deal_card.dart
+    │       ├── promo_banner.dart
+    │       ├── search_bar_widget.dart
+    │       ├── store_card.dart
+    │       └── store_product_card.dart
+    ├── notifications
+    │   └── notifications_screen.dart
+    ├── pack
+    │   └── pack_detail_screen.dart
+    ├── product
+    │   └── product_detail_screen.dart
+    ├── profile
+    │   ├── add_pack_screen.dart
+    │   ├── add_product_screen.dart
+    │   ├── add_promotion_screen.dart
+    │   ├── edit_customer_profile_screen.dart
+    │   ├── edit_merchant_profile_screen.dart
+    │   ├── profile_screen.dart
+    │   └── widgets
+    │       ├── product_picker_sheet.dart
+    │       ├── profile_action_buttons.dart
+    │       ├── profile_merchant_header.dart
+    │       ├── profile_post_filter.dart
+    │       ├── profile_stats_card.dart
+    │       └── profile_user_header.dart
+    ├── promotion
+    │   └── promotion_detail_screen.dart
+    ├── search
+    │   ├── category_selection_screen.dart
+    │   ├── search_tab_screen.dart
+    │   └── widgets
+    │       └── store_result_card.dart
+    ├── shared_widgets
+    │   ├── cards
+    │   │   ├── pack_card.dart
+    │   │   ├── product_card.dart
+    │   │   ├── promotion_card.dart
+    │   │   └── store_chip.dart
+    │   ├── custom_app_bar.dart
+    │   ├── custom_bottom_nav.dart
+    │   ├── empty_state_widget.dart
+    │   ├── error_state_widget.dart
+    │   ├── gradient_button.dart
+    │   ├── header.dart
+    │   ├── loading_indicator.dart
+    │   ├── location_mode_switcher.dart
+    │   ├── shimmer_loading.dart
+    │   └── unified_app_bar.dart
+    ├── store
+    │   └── stores_list_screen.dart
+    └── subscription
+        ├── subscription_gate.dart
+        └── subscription_plans_screen.dart
+
+45 directories, 134 files

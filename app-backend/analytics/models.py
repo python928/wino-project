@@ -54,12 +54,14 @@ class InteractionLog(models.Model):
 		('filter_dist', 'Filter by Distance'),
 		('filter_wilaya', 'Filter by Wilaya'),
 		('filter_rating', 'Filter by Rating'),
-		('contact', 'Contact Seller'),
-		('favorite', 'Add to Favorites'),
-		('negotiate', 'Request Negotiation'),
-		('share', 'Share Product'),
-		('compare', 'Compare Product'),
-	)
+			('contact', 'Contact Seller'),
+			('favorite', 'Add to Favorites'),
+			('negotiate', 'Request Negotiation'),
+			('share', 'Share Product'),
+			('compare', 'Compare Product'),
+			('rate', 'Rate Product/Store'),
+			('follow_store', 'Follow Store'),
+		)
 
 	user = models.ForeignKey(
 		settings.AUTH_USER_MODEL,

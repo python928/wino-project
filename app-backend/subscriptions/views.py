@@ -16,6 +16,7 @@ from .serializers import (
 	SubscriptionPlanSerializer,
 )
 from .services import FREE_POST_LIMIT, get_active_subscription, get_current_posts_count, get_post_limit
+from .services import bootstrap_default_subscription_plans, get_merchant_plan_features
 
 
 class SubscriptionPlanViewSet(viewsets.ModelViewSet):
@@ -35,6 +36,7 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
 
 	@action(detail=False, methods=['get'], url_path='public-data')
 	def public_data(self, request):
+		bootstrap_default_subscription_plans()
 		plans = self.get_queryset()
 		config = (
 			SubscriptionPaymentConfig.objects.filter(is_active=True)
@@ -80,6 +82,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 		active = get_active_subscription(request.user)
 		limit = get_post_limit(request.user)
 		used = get_current_posts_count(request.user)
+		plan_features = get_merchant_plan_features(request.user)
 		return Response(
 			{
 				'has_active_subscription': active is not None,
@@ -87,6 +90,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 				'post_limit': limit,
 				'used_posts': used,
 				'remaining_posts': max(limit - used, 0),
+				'plan_features': plan_features,
 				'active_subscription': MerchantSubscriptionSerializer(active).data
 				if active is not None
 				else None,

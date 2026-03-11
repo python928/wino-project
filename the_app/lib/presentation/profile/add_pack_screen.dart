@@ -9,6 +9,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
@@ -281,6 +282,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
   Future<void> _submit() async {
     final provider = context.read<PackProvider>();
     setState(() => _formError = null);
+    if (!_hasProfileLocation()) {
+      setState(() => _formError =
+          'Set your location area or GPS in Edit Profile before posting.');
+      return;
+    }
     if (provider.selectedProducts.isEmpty) {
       setState(() => _formError = 'Select pack products first');
       return;
@@ -762,5 +768,18 @@ class _AddPackScreenState extends State<AddPackScreen> {
         ),
       ),
     );
+  }
+
+  bool _hasProfileLocation() {
+    final userData = StorageService.getUserData();
+    final address = (userData?['address'] ?? userData?['location'] ?? '')
+        .toString()
+        .trim();
+    final latRaw = userData?['latitude'];
+    final lngRaw = userData?['longitude'];
+    final lat = double.tryParse(latRaw?.toString() ?? '');
+    final lng = double.tryParse(lngRaw?.toString() ?? '');
+    final hasGps = lat != null && lng != null;
+    return address.isNotEmpty || hasGps;
   }
 }

@@ -32,6 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at',
                             'product_count', 'review_count', 'categories']
+        extra_kwargs = {
+            'store_type': {'required': False, 'allow_blank': True},
+        }
 
     def validate(self, attrs):
         """Enforce 60-day coordinate lock."""

@@ -288,6 +288,7 @@ class PromotionImageSerializer(serializers.ModelSerializer):
 class PromotionSerializer(serializers.ModelSerializer):
     images = PromotionImageSerializer(many=True, read_only=True)
     store = serializers.PrimaryKeyRelatedField(read_only=True)
+    remaining_impressions = serializers.SerializerMethodField()
 
     class Meta:
         model = Promotion
@@ -301,10 +302,19 @@ class PromotionSerializer(serializers.ModelSerializer):
             'is_active',
             'start_date',
             'end_date',
+            'max_impressions',
+            'unique_viewers_count',
+            'remaining_impressions',
             'created_at',
             'images',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'unique_viewers_count', 'remaining_impressions']
+
+    def get_remaining_impressions(self, obj):
+        if obj.max_impressions is None:
+            return None
+        remaining = int(obj.max_impressions) - int(obj.unique_viewers_count or 0)
+        return max(remaining, 0)
 
 
 class ProductReportSerializer(serializers.ModelSerializer):

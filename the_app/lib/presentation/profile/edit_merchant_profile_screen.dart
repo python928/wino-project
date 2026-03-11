@@ -473,7 +473,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot identify user ID');
 
-      // Build address
+      // Build address (location is optional)
       final address = (_selectedWilaya != null && _selectedBaladiya != null)
           ? '$_selectedBaladiya, $_selectedWilaya'
           : (userData?['address'] ?? '');
@@ -1129,13 +1129,13 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nearby search privacy',
+                'Nearby search visibility',
                 style: AppTextStyles.bodyMedium
                     .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                'When nearby filter is active, your store can be shown by distance only if this option is on.',
+                'Nearby results use your GPS. Turn this on to show your store by distance. You can turn it off anytime.',
                 style: AppTextStyles.bodySmall
                     .copyWith(color: AppColors.textSecondary),
               ),
@@ -1150,14 +1150,14 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           contentPadding: EdgeInsets.zero,
           activeColor: AppColors.primaryColor,
           title: Text(
-            'Show my store in nearby search',
+            'Show my store in nearby results',
             style:
                 AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
             _allowNearbyVisibility
-                ? 'Enabled'
-                : 'Hidden from nearby distance filter',
+                ? 'Visible in nearby results'
+                : 'Hidden from nearby results',
             style: AppTextStyles.bodySmall
                 .copyWith(color: AppColors.textSecondary),
           ),
@@ -1180,8 +1180,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.my_location, size: 18),
             label: Text(_latitude != null
-                ? 'GPS location is set'
-                : 'Get Current GPS Location'),
+                ? 'GPS location is saved'
+                : 'Set GPS location'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               side: BorderSide(

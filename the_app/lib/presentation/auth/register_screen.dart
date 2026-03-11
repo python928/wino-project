@@ -10,7 +10,6 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
-import '../../core/providers/home_provider.dart';
 import '../../data/models/category_model.dart';
 import '../search/category_selection_screen.dart';
 
@@ -105,9 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _openAllCategoriesPicker() async {
-    final cats = _categories
-        .map((e) => Category.fromJson(e))
-        .toList();
+    final cats = _categories.map((e) => Category.fromJson(e)).toList();
     if (cats.isEmpty) return;
     final result = await Navigator.push<Set<int>>(
       context,
@@ -147,7 +144,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _currentStep++);
     } else {
       String msg = 'Please fill in all required fields';
-      if (_currentStep == 0 && !_birthdayValid &&
+      if (_currentStep == 0 &&
+          !_birthdayValid &&
           _dayController.text.isNotEmpty) {
         msg = 'Please enter a valid date of birth (must be 13+)';
       } else if (_currentStep == 1 &&
@@ -228,13 +226,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           'Personal Information',
-          style: AppTextStyles.h2
-              .copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
           "Let's start with your basic information",
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+          style:
+              AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 28),
 
@@ -246,8 +245,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _firstNameController,
                 label: 'First Name',
                 hint: 'First name',
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Required' : null,
+                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
               ),
             ),
             const SizedBox(width: 14),
@@ -256,8 +254,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _lastNameController,
                 label: 'Last Name',
                 hint: 'Last name',
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Required' : null,
+                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
               ),
             ),
           ],
@@ -340,20 +337,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     'Please enter a valid date',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.red.shade400),
+                    style: TextStyle(fontSize: 12, color: Colors.red.shade400),
                   ),
                 );
               }
-              final minAge = DateTime.now()
-                  .subtract(const Duration(days: 365 * 13));
+              final minAge =
+                  DateTime.now().subtract(const Duration(days: 365 * 13));
               if (!b.isBefore(minAge)) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     'You must be at least 13 years old',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.red.shade400),
+                    style: TextStyle(fontSize: 12, color: Colors.red.shade400),
                   ),
                 );
               }
@@ -399,13 +394,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           'Account Information',
-          style: AppTextStyles.h2
-              .copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
           'Enter your contact details and create a secure password',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+          style:
+              AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 28),
         AppTextField(
@@ -467,13 +463,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           'Your Interests',
-          style: AppTextStyles.h2
-              .copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
           'Pick categories you care about — choose up to 6',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+          style:
+              AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 24),
         if (_loadingCategories)
@@ -522,7 +519,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Text(
                       name,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.textPrimary,
+                        color:
+                            isSelected ? Colors.white : AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -609,8 +607,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: double.infinity,
               child: AppPrimaryButton(
                 text: 'Create Account',
-                onPressed:
-                    authProvider.isLoading ? null : _handleRegister,
+                onPressed: authProvider.isLoading ? null : _handleRegister,
                 isLoading: authProvider.isLoading,
               ),
             ),
@@ -653,8 +650,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Container(
                     height: 140,
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                        gradient: AppColors.purpleGradient),
+                    decoration:
+                        const BoxDecoration(gradient: AppColors.purpleGradient),
                   ),
                   // Concentric circles
                   Positioned(
@@ -666,9 +663,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       right: -10,
                       child: _CircleDecoration(120, 0.10)),
                   Positioned(
-                      top: 30,
-                      right: 30,
-                      child: _CircleDecoration(60, 0.13)),
+                      top: 30, right: 30, child: _CircleDecoration(60, 0.13)),
                   // Back + step indicator
                   Positioned.fill(
                     child: SafeArea(
@@ -720,8 +715,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           children: [
                             Text(
                               'Already have an account? ',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.textSecondary),
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.textSecondary),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(context)
@@ -796,9 +791,7 @@ class _GenderCard extends StatelessWidget {
           color: selected ? null : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected
-                ? AppColors.primaryColor
-                : const Color(0xFFE5E7EB),
+            color: selected ? AppColors.primaryColor : const Color(0xFFE5E7EB),
             width: 1.5,
           ),
           boxShadow: selected
@@ -902,21 +895,20 @@ class _DatePartField extends StatelessWidget {
               counterText: '',
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                    color: Color(0xFFE5E7EB), width: 1.5),
+                borderSide:
+                    const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                    color: AppColors.primaryColor, width: 1.5),
+                borderSide:
+                    const BorderSide(color: AppColors.primaryColor, width: 1.5),
               ),
             ),
-            style: const TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(

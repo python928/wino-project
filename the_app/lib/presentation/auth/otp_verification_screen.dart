@@ -26,6 +26,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   late final List<FocusNode> _otpFocusNodes;
   Timer? _cooldownTimer;
   DateTime? _resendAvailableAt;
+  static const String _prototypeOtp = '123456';
 
   String get _otpCode => _otpControllers.map((e) => e.text).join();
   int get _remainingSeconds {
@@ -133,6 +134,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _skipWithPrototypeCode() async {
+    if (_isLoading) return;
+    for (int i = 0; i < _otpControllers.length && i < _prototypeOtp.length; i++) {
+      _otpControllers[i].text = _prototypeOtp[i];
+    }
+    _otpFocusNodes.last.requestFocus();
+    await _verifyOtp();
   }
 
   @override
@@ -250,6 +260,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       : 'Resend code',
                   onPressed:
                       (_remainingSeconds > 0 || _isLoading) ? null : _resendCode,
+                ),
+                const SizedBox(height: 6),
+                AppTextButton(
+                  text: 'Skip (Prototype)',
+                  onPressed: _isLoading ? null : _skipWithPrototypeCode,
                 ),
               ],
             ),

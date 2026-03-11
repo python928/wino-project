@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
@@ -21,6 +22,7 @@ import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/pack_model.dart';
+import '../product/product_detail_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../common/radius_picker_sheet.dart';
 import '../../core/widgets/app_button.dart';
@@ -436,6 +438,69 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         ],
       ),
     );
+  }
+
+  ProductDetailsArgs _buildProductDetailsArgs(Post product) {
+    final homeProvider = context.read<HomeProvider>();
+    final categoriesById = _categoriesById(homeProvider);
+    final candidateProducts = context
+        .read<PostProvider>()
+        .posts
+        .where((p) => _postMatchesSelectedCategories(p, categoriesById))
+        .where((p) => _postMatchesQuery(p))
+        .take(10)
+        .toList();
+    final candidateCategoryIds = candidateProducts
+        .map((p) => p.categoryId)
+        .whereType<int>()
+        .toSet()
+        .toList();
+    final candidateStoreIds = candidateProducts
+        .map((p) => p.storeId)
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
+
+    final discoveryMode = _distanceKm != null
+        ? 'nearby'
+        : ((_selectedWilaya != null && _selectedWilaya!.isNotEmpty)
+            ? 'location'
+            : 'none');
+    if (kDebugMode) {
+      debugPrint(
+        'Search->ProductDetails: mode=$discoveryMode distance=$_distanceKm wilaya=$_selectedWilaya baladiya=$_selectedBaladiya',
+      );
+    }
+    return ProductDetailsArgs(
+      product: product,
+      sourceSurface: 'search',
+      discoveryMode: discoveryMode,
+      distanceKm: _distanceKm,
+      wilayaCode: _selectedWilaya,
+      searchQuery: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
+      searchContext: {
+        'search_performed': _hasSearched,
+        'search_query': _searchController.text.trim().toLowerCase(),
+        'selected_category_ids': _selectedCategoryIds.toList(),
+        'selected_sort': _selectedSort,
+        'price_min': _priceRange.start,
+        'price_max': _priceRange.end,
+        'min_rating': _minRating,
+        'candidate_category_ids': candidateCategoryIds,
+        'candidate_store_ids': candidateStoreIds,
+      },
+    );
+  }
+
+  ProductDetailsArgs _buildOfferDetailsArgs(Offer offer) {
+    final productWithPromotion = offer.product.copyWith(
+      price: offer.newPrice,
+      oldPrice: offer.product.price,
+      discountPercentage: offer.discountPercentage,
+    );
+    return _buildProductDetailsArgs(productWithPromotion);
   }
 
   void _showFiltersSheet() {
@@ -1638,13 +1703,22 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Navigator.pushNamed(
                   context,
                   Routes.productDetails,
-                  arguments: p,
+                  arguments: _buildProductDetailsArgs(p),
                 );
               },
               onFavoriteTap: () {},
             ),
           ),
-          ...filteredOffers.map((o) => PromotionCard(offer: o)),
+          ...filteredOffers.map((o) => PromotionCard(
+                offer: o,
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    Routes.productDetails,
+                    arguments: _buildOfferDetailsArgs(o),
+                  );
+                },
+              )),
           ...filteredPacks.map((p) => PackCard(pack: p)),
         ];
         final visibleCards = combinedCards.take(_allVisibleCount).toList();
@@ -1977,7 +2051,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       Navigator.pushNamed(
                         context,
                         Routes.productDetails,
-                        arguments: visible[index],
+                        arguments: _buildProductDetailsArgs(visible[index]),
                       );
                     },
                     onFavoriteTap: () {},
@@ -2084,7 +2158,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 ),
                 itemCount: visible.length,
                 itemBuilder: (context, index) {
-                  return PromotionCard(offer: visible[index]);
+                  final offer = visible[index];
+                  return PromotionCard(
+                    offer: offer,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.productDetails,
+                        arguments: _buildOfferDetailsArgs(offer),
+                      );
+                    },
+                  );
                 },
               ),
               if (offers.length > visible.length)

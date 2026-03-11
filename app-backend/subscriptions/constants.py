@@ -3,32 +3,61 @@ DEFAULT_SUBSCRIPTION_INSTRUCTIONS = (
 	'Send money to this RIB and submit payment confirmation.'
 )
 
+DEFAULT_PLAN_FEATURES = {
+	'promotion_enabled': True,
+	'promotion_max_active': 1,
+	'promotion_max_duration_days': 10,
+	'promotion_max_impressions': 800,
+	'recommendation_priority_boost': 0,
+}
+
 DEFAULT_SUBSCRIPTION_PLANS = [
 	{
-		'name': 'Starter Plan',
-		'slug': 'starter',
-		'max_products': 25,
-		'price': '10000.00',
+		'name': 'Dz Starter',
+		'slug': 'dz-starter',
+		'max_products': 30,
+		'price': '1500.00',
 		'duration_days': 30,
-		'benefits': 'Up to 25 posts per month\nPriority review for approval\nBasic support',
+		'benefits': 'حتى 30 منشور شهريا\nعرض ترويجي واحد نشط\nدعم أساسي',
 		'is_active': True,
+		'plan_features': {
+			'promotion_enabled': True,
+			'promotion_max_active': 1,
+			'promotion_max_duration_days': 10,
+			'promotion_max_impressions': 1000,
+			'recommendation_priority_boost': 5,
+		},
 	},
 	{
-		'name': 'Business Plan',
-		'slug': 'business',
-		'max_products': 80,
-		'price': '10000.00',
+		'name': 'Dz Growth',
+		'slug': 'dz-growth',
+		'max_products': 90,
+		'price': '3500.00',
 		'duration_days': 30,
-		'benefits': 'Up to 80 posts per month\nPriority listing boost\nFaster support',
+		'benefits': 'حتى 90 منشور شهريا\n3 عروض ترويجية نشطة\nتحسين ظهور أفضل',
 		'is_active': True,
+		'plan_features': {
+			'promotion_enabled': True,
+			'promotion_max_active': 3,
+			'promotion_max_duration_days': 20,
+			'promotion_max_impressions': 8000,
+			'recommendation_priority_boost': 10,
+		},
 	},
 	{
-		'name': 'Pro Plan',
-		'slug': 'pro',
-		'max_products': 200,
-		'price': '10000.00',
+		'name': 'Dz Pro',
+		'slug': 'dz-pro',
+		'max_products': 220,
+		'price': '7000.00',
 		'duration_days': 30,
-		'benefits': 'Up to 200 posts per month\nTop exposure slots\nVIP support',
+		'benefits': 'حتى 220 منشور شهريا\n10 عروض ترويجية نشطة\nأولوية قصوى ودعم سريع',
 		'is_active': True,
+		'plan_features': {
+			'promotion_enabled': True,
+			'promotion_max_active': 10,
+			'promotion_max_duration_days': 30,
+			'promotion_max_impressions': 50000,
+			'recommendation_priority_boost': 20,
+		},
 	},
 ]
