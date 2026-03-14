@@ -4,6 +4,7 @@ import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/jwt_validator.dart';
+import '../../core/utils/app_logger.dart';
 import '../models/offer_model.dart';
 import '../models/post_model.dart';
 
@@ -180,7 +181,7 @@ class PostRepository {
       for (int i = 0; i < images.length; i++) {
         final isMain = i == 0;
         try {
-          debugPrint(
+          AppLogger.info(
               'Repository: Uploading image ${i + 1}/${images.length}, isMain: $isMain');
           await ApiService.postMultipart(
             ApiConfig.productImages,
@@ -191,9 +192,9 @@ class PostRepository {
             images[i],
             'image',
           );
-          debugPrint('Repository: Image ${i + 1} uploaded successfully');
+          AppLogger.info('Repository: Image ${i + 1} uploaded successfully');
         } catch (imageError) {
-          debugPrint(
+          AppLogger.info(
               'Repository: Failed to upload image ${i + 1}: $imageError');
           if (i == images.length - 1 && images.length == 1) {
             rethrow;
@@ -209,13 +210,13 @@ class PostRepository {
           'post_title': title,
         });
       } catch (e) {
-        debugPrint(
+        AppLogger.info(
             'Repository: Warning: Failed to trigger follower notification: $e');
       }
 
       return await getPost(productId);
     } catch (e) {
-      debugPrint('Repository: Error creating product: $e');
+      AppLogger.error('Repository: Error creating product', error: e);
       throw Exception('Failed to create product: $e');
     }
   }
@@ -253,7 +254,7 @@ class PostRepository {
         try {
           await ApiService.delete('${ApiConfig.productImages}$imageId/');
         } catch (deleteError) {
-          debugPrint(
+          AppLogger.info(
               'Repository: Failed to delete image $imageId: $deleteError');
         }
       }
@@ -261,7 +262,7 @@ class PostRepository {
       for (int i = 0; i < newImages.length; i++) {
         final isMain = i == 0;
         try {
-          debugPrint(
+          AppLogger.info(
               'Repository: Uploading new image ${i + 1}/${newImages.length}, isMain: $isMain');
           await ApiService.postMultipart(
             ApiConfig.productImages,
@@ -272,27 +273,44 @@ class PostRepository {
             newImages[i],
             'image',
           );
-          debugPrint('Repository: New image ${i + 1} uploaded successfully');
+          AppLogger.info('Repository: New image ${i + 1} uploaded successfully');
         } catch (imageError) {
-          debugPrint(
+          AppLogger.info(
               'Repository: Failed to upload new image ${i + 1}: $imageError');
         }
       }
 
       return await getPost(id);
     } catch (e) {
-      debugPrint('Repository: Error updating product: $e');
+      AppLogger.error('Repository: Error updating product', error: e);
       throw Exception('Failed to update product: $e');
     }
   }
 
-  static Future<List<Offer>> getOffers(
-      {String? authorId, int? storeId, bool includeInactive = false}) async {
+  static Future<List<Offer>> getOffers({
+    String? authorId,
+    int? storeId,
+    bool includeInactive = false,
+    String? kind,
+    String? placement,
+    String? wilayaCode,
+  }) async {
     try {
-      final promotionsResp = await ApiService.get(ApiConfig.promotions);
-      debugPrint('Repository: Promotions response: $promotionsResp');
+      final query = <String, String>{};
+      if (kind != null && kind.isNotEmpty) query['kind'] = kind;
+      if (placement != null && placement.isNotEmpty) {
+        query['placement'] = placement;
+      }
+      if (wilayaCode != null && wilayaCode.isNotEmpty) {
+        query['wilaya_code'] = wilayaCode;
+      }
+      final url = query.isEmpty
+          ? ApiConfig.promotions
+          : '${ApiConfig.promotions}?${Uri(queryParameters: query).query}';
+      final promotionsResp = await ApiService.get(url);
+      AppLogger.info('Repository: Promotions response: $promotionsResp');
       final promos = _extractList(promotionsResp);
-      debugPrint('Repository: Found ${promos.length} promotions');
+      AppLogger.info('Repository: Found ${promos.length} promotions');
       if (promos.isEmpty) return [];
 
       int? parseProductId(Map<String, dynamic> promo) {
@@ -322,7 +340,7 @@ class PostRepository {
 
       for (final promo in promos) {
         if (promo is! Map<String, dynamic>) continue;
-        debugPrint('Repository: Processing promo: $promo');
+        AppLogger.info('Repository: Processing promo: $promo');
 
         // Check if promo is active - be more lenient
         final isActiveRaw = promo['is_active'] ??
@@ -331,11 +349,12 @@ class PostRepository {
             promo['active'] ??
             true;
         final bool isActive = isActiveRaw != false;
-        debugPrint('Repository: Promo ${promo['id']} isActive=$isActive');
+        AppLogger.info('Repository: Promo ${promo['id']} isActive=$isActive');
 
         // Public offers feed: hide inactive promos
         if (!shouldIncludeInactive && !isActive) {
-          debugPrint('Repository: Skipping promo ${promo['id']} - not active');
+          AppLogger.info(
+              'Repository: Skipping promo ${promo['id']} - not active');
           continue;
         }
 
@@ -356,9 +375,9 @@ class PostRepository {
         }
 
         final productId = parseProductId(promo);
-        debugPrint('Repository: Promo ${promo['id']} productId=$productId');
+        AppLogger.info('Repository: Promo ${promo['id']} productId=$productId');
         if (productId == null) {
-          debugPrint(
+          AppLogger.info(
               'Repository: Skipping promo ${promo['id']} - no product ID');
           continue;
         }
@@ -367,11 +386,11 @@ class PostRepository {
         try {
           product = productCache[productId] ?? await getPost(productId);
           productCache[productId] = product;
-          debugPrint(
+          AppLogger.info(
               'Repository: Loaded product ${product.title} for promo ${promo['id']}');
         } catch (e) {
           // If a single product fetch fails, skip this promo rather than failing all offers.
-          debugPrint(
+          AppLogger.info(
               'Repository: Skipping promo ${promo['id']} - failed to load product $productId: $e');
           continue;
         }
@@ -385,14 +404,15 @@ class PostRepository {
                   .toString(),
             ) ??
             0;
-        debugPrint('Repository: Promo ${promo['id']} percentage=$percentage');
+        AppLogger.info('Repository: Promo ${promo['id']} percentage=$percentage');
+        final promoKind = (promo['kind'] ?? 'promotion').toString();
         if (percentage < 0) percentage = 0;
         if (percentage > 100) percentage = 100;
 
         // Allow 0% discounts to still show (some promotions might have other benefits)
         // But default to at least showing something
-        if (percentage == 0) {
-          debugPrint(
+        if (percentage == 0 && promoKind != 'advertising') {
+          AppLogger.info(
               'Repository: Promo ${promo['id']} has 0% discount, setting to 10%');
           percentage = 10; // Default discount if not specified
         }
@@ -420,48 +440,75 @@ class PostRepository {
                 int.tryParse((promo['remaining_impressions'] ?? '').toString()),
           ),
         );
-        debugPrint(
+        AppLogger.info(
             'Repository: Added offer ${promo['id']} for product ${product.title}');
       }
 
-      debugPrint('Repository: Total offers loaded: ${offers.length}');
+      AppLogger.info('Repository: Total offers loaded: ${offers.length}');
       offers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return offers;
     } catch (e) {
-      debugPrint('Repository: Error fetching offers: $e');
+      AppLogger.error('Repository: Error fetching offers', error: e);
       throw Exception('Failed to load offers: $e');
     }
   }
 
   static Future<Offer> createOffer({
-    required int productId,
+    int? productId,
     required int discountPercentage,
     bool isAvailable = true,
+    String kind = 'promotion',
+    String placement = 'home_top',
+    String audienceMode = 'all',
+    List<String> targetWilayas = const [],
+    List<String> targetCategories = const [],
+    List<int> targetUserIds = const [],
+    int? priorityBoost,
+    int? maxImpressions,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
+      if (productId == null) {
+        throw Exception('productId is required for promotions');
+      }
       final storeId = await _ensureStoreForCurrentUser();
       final now = DateTime.now();
-      final endDate = now.add(const Duration(days: 30)); // Default 30 days
+      final start = startDate ?? now;
+      final end = endDate ?? now.add(const Duration(days: 30)); // Default 30 days
 
       final payload = {
         'store': storeId,
-        'product': productId,
-        'name': 'Promotion for Product $productId', // Required by backend
+        if (productId != null) 'product': productId,
+        'name': kind == 'advertising'
+            ? 'Ad for Product $productId'
+            : 'Promotion for Product $productId', // Required by backend
         'percentage': discountPercentage,
+        'kind': kind,
+        'placement': placement,
+        'audience_mode': audienceMode,
+        'target_wilayas': targetWilayas,
+        'target_categories': targetCategories,
+        'target_user_ids': targetUserIds,
+        if (priorityBoost != null) 'priority_boost': priorityBoost,
+        if (maxImpressions != null) 'max_impressions': maxImpressions,
         'is_active': isAvailable,
-        'start_date': now.toIso8601String().split('T')[0], // YYYY-MM-DD
-        'end_date': endDate.toIso8601String().split('T')[0],
+        'start_date': start.toIso8601String().split('T')[0], // YYYY-MM-DD
+        'end_date': end.toIso8601String().split('T')[0],
       };
       final resp = await ApiService.post(ApiConfig.promotions, payload);
 
       // Refresh related product to compute discounted price
-      final product = await getPost(productId);
-      final double newPrice =
-          (product.price * (1 - (discountPercentage / 100))).toDouble();
+      final product = productId != null ? await getPost(productId) : null;
+      final double newPrice = product != null
+          ? (product.price * (1 - (discountPercentage / 100))).toDouble()
+          : 0.0;
 
       // Trigger notification for the promotion
       final offerId = resp['id'] ?? 0;
-      final title = '$discountPercentage% OFF on ${product.title}';
+      final title = product != null
+          ? '$discountPercentage% OFF on ${product.title}'
+          : 'New promotion';
       try {
         await ApiService.post(ApiConfig.notificationsTrigger, {
           'post_id': offerId,
@@ -469,13 +516,13 @@ class PostRepository {
           'post_title': title,
         });
       } catch (e) {
-        debugPrint(
+        AppLogger.info(
             'Repository: Warning: Failed to trigger follower notification: $e');
       }
 
       return Offer(
         id: offerId,
-        product: product,
+        product: product ?? await getPost(productId ?? 0),
         discountPercentage: discountPercentage,
         newPrice: newPrice,
         isAvailable: isAvailable,
@@ -488,9 +535,18 @@ class PostRepository {
             int.tryParse((resp['unique_viewers_count'] ?? '').toString()),
         remainingImpressions:
             int.tryParse((resp['remaining_impressions'] ?? '').toString()),
+        kind: (resp['kind'] ?? kind).toString(),
+        placement: (resp['placement'] ?? placement).toString(),
+        audienceMode: (resp['audience_mode'] ?? audienceMode).toString(),
+        priorityBoost:
+            int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
+        impressionsCount:
+            int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
+        clicksCount:
+            int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
       );
     } catch (e) {
-      debugPrint('Repository: Error creating offer: $e');
+      AppLogger.error('Repository: Error creating offer', error: e);
       throw Exception('Failed to create offer: $e');
     }
   }
@@ -499,6 +555,16 @@ class PostRepository {
     required int offerId,
     int? discountPercentage,
     bool? isAvailable,
+    String? kind,
+    String? placement,
+    String? audienceMode,
+    List<String>? targetWilayas,
+    List<String>? targetCategories,
+    List<int>? targetUserIds,
+    int? priorityBoost,
+    int? maxImpressions,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final payload = <String, dynamic>{};
@@ -506,6 +572,22 @@ class PostRepository {
         payload['percentage'] = discountPercentage;
       }
       if (isAvailable != null) payload['is_active'] = isAvailable;
+      if (kind != null) payload['kind'] = kind;
+      if (placement != null) payload['placement'] = placement;
+      if (audienceMode != null) payload['audience_mode'] = audienceMode;
+      if (targetWilayas != null) payload['target_wilayas'] = targetWilayas;
+      if (targetCategories != null) {
+        payload['target_categories'] = targetCategories;
+      }
+      if (targetUserIds != null) payload['target_user_ids'] = targetUserIds;
+      if (priorityBoost != null) payload['priority_boost'] = priorityBoost;
+      if (maxImpressions != null) payload['max_impressions'] = maxImpressions;
+      if (startDate != null) {
+        payload['start_date'] = startDate.toIso8601String().split('T')[0];
+      }
+      if (endDate != null) {
+        payload['end_date'] = endDate.toIso8601String().split('T')[0];
+      }
 
       final resp =
           await ApiService.patch('${ApiConfig.promotions}$offerId/', payload);
@@ -534,9 +616,18 @@ class PostRepository {
             int.tryParse((resp['unique_viewers_count'] ?? '').toString()),
         remainingImpressions:
             int.tryParse((resp['remaining_impressions'] ?? '').toString()),
+        kind: (resp['kind'] ?? 'promotion').toString(),
+        placement: (resp['placement'] ?? 'home_top').toString(),
+        audienceMode: (resp['audience_mode'] ?? 'all').toString(),
+        priorityBoost:
+            int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
+        impressionsCount:
+            int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
+        clicksCount:
+            int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
       );
     } catch (e) {
-      debugPrint('Repository: Error updating offer: $e');
+      AppLogger.error('Repository: Error updating offer', error: e);
       throw Exception('Failed to update offer: $e');
     }
   }
@@ -545,8 +636,17 @@ class PostRepository {
     try {
       await ApiService.delete('${ApiConfig.promotions}$offerId/');
     } catch (e) {
-      debugPrint('Repository: Error deleting offer: $e');
+      AppLogger.error('Repository: Error deleting offer', error: e);
       throw Exception('Failed to delete offer: $e');
+    }
+  }
+
+  static Future<void> registerPromotionClick(int promotionId) async {
+    try {
+      await ApiService.post(
+          '${ApiConfig.promotions}$promotionId/register-click/', {});
+    } catch (e) {
+      AppLogger.error('Repository: Failed to register promo click', error: e);
     }
   }
 }

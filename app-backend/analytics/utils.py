@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 INTERACTION_WEIGHTS = {
 	'view': 1,
 	'click': 2,
+	'promotion_click': 2,
 	'search': 0,
 	'filter_price': 3,
 	'filter_dist': 3,
@@ -29,6 +30,12 @@ INTERACTION_WEIGHTS = {
 ACTION_CONTRIBUTIONS = {
 	'view': {'category': 1.0, 'mode': 1.0, 'store_category': 1.0, 'seller': 0.8},
 	'click': {'category': 1.5, 'mode': 1.0, 'store_category': 1.2, 'seller': 1.0},
+	'promotion_click': {'category': 1.4, 'mode': 1.0, 'store_category': 1.1, 'seller': 1.0},
+	'search': {'category': 0.4, 'mode': 0.2, 'store_category': 0.0, 'seller': 0.0},
+	'filter_price': {'category': 0.3, 'mode': 0.0, 'store_category': 0.0, 'seller': 0.0},
+	'filter_dist': {'category': 0.1, 'mode': 1.2, 'store_category': 0.0, 'seller': 0.0},
+	'filter_wilaya': {'category': 0.1, 'mode': 1.0, 'store_category': 0.0, 'seller': 0.0},
+	'filter_rating': {'category': 0.2, 'mode': 0.0, 'store_category': 0.0, 'seller': 0.0},
 	'favorite': {'category': 4.0, 'mode': 2.0, 'store_category': 3.0, 'seller': 3.5},
 	'compare': {'category': 2.5, 'mode': 1.5, 'store_category': 2.0, 'seller': 1.5},
 	'contact': {'category': 6.0, 'mode': 3.0, 'store_category': 5.0, 'seller': 6.0},

@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.194.21:8000/';
-    if (Platform.isAndroid) return 'http://192.168.194.21:8000/';
-    return 'http://192.168.194.21:8000/';
+    if (kIsWeb) return 'http://192.168.164.21:8000/';
+    if (Platform.isAndroid) return 'http://192.168.164.21:8000/';
+    return 'http://192.168.164.21:8000/';
   }
 
   // API prefix
@@ -65,6 +65,7 @@ class ApiConfig {
   static const String productReports = '$catalog/product-reports/';
 
   // Analytics
+  static const String analyticsRecommendations = '$api/analytics/recommendations/';
   static const String analyticsEvents = '$api/analytics/events/';
 
   // Notifications
@@ -88,6 +89,8 @@ class ApiConfig {
       '$api/subscriptions/payment-requests/';
   static const String subscriptionAccessStatus =
       '$merchantSubscriptions/access-status/';
+  static const String subscriptionMerchantDashboard =
+      '$merchantSubscriptions/merchant-dashboard/';
 
   // Media URL
   static String get mediaUrl => '$baseUrl/media';

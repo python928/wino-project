@@ -72,7 +72,7 @@ def bootstrap_default_subscription_plans():
 			plan.save()
 
 
-def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None):
+def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None, kind='promotion'):
 	"""
 	Enforce promotion capabilities from active subscription plan.
 	Rules:
@@ -81,11 +81,18 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None)
 	- max concurrent active promotions
 	"""
 	features = get_merchant_plan_features(user)
-	if not features.get('promotion_enabled', True):
+	is_ad = str(kind or '').lower() == 'advertising'
+	prefix = 'ad_' if is_ad else 'promotion_'
+	enabled_key = f'{prefix}enabled'
+	max_duration_key = f'{prefix}max_duration_days'
+	max_active_key = f'{prefix}max_active'
+	max_impressions_key = f'{prefix}max_impressions'
+
+	if not features.get(enabled_key, True):
 		raise serializers.ValidationError(
 			{
 				'code': 'promotion_not_allowed_by_plan',
-				'message': 'Your current plan does not include promotional offers.',
+				'message': 'Your current plan does not include this type of promotional offer.',
 				'plan_features': features,
 			}
 		)
@@ -95,7 +102,10 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None)
 
 	if start_date and end_date:
 		duration_days = max(1, int((end_date - start_date).total_seconds() // 86400) + 1)
-		max_duration = _to_int(features.get('promotion_max_duration_days'), DEFAULT_PLAN_FEATURES['promotion_max_duration_days'])
+		max_duration = _to_int(
+			features.get(max_duration_key),
+			DEFAULT_PLAN_FEATURES[max_duration_key],
+		)
 		if duration_days > max_duration:
 			raise serializers.ValidationError(
 				{
@@ -114,10 +124,17 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None)
 		start_date__lte=now,
 		end_date__gte=now,
 	)
+	if is_ad:
+		active_qs = active_qs.filter(kind='advertising')
+	else:
+		active_qs = active_qs.exclude(kind='advertising')
 	if promotion_id:
 		active_qs = active_qs.exclude(id=promotion_id)
 
-	max_active = _to_int(features.get('promotion_max_active'), DEFAULT_PLAN_FEATURES['promotion_max_active'])
+	max_active = _to_int(
+		features.get(max_active_key),
+		DEFAULT_PLAN_FEATURES[max_active_key],
+	)
 	if active_qs.count() >= max_active:
 		raise serializers.ValidationError(
 			{

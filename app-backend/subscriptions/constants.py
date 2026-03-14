@@ -9,6 +9,11 @@ DEFAULT_PLAN_FEATURES = {
 	'promotion_max_duration_days': 10,
 	'promotion_max_impressions': 800,
 	'recommendation_priority_boost': 0,
+	'ad_enabled': True,
+	'ad_max_active': 1,
+	'ad_max_duration_days': 7,
+	'ad_max_impressions': 600,
+	'ad_priority_boost': 5,
 }
 
 DEFAULT_SUBSCRIPTION_PLANS = [
@@ -26,6 +31,11 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'promotion_max_duration_days': 10,
 			'promotion_max_impressions': 1000,
 			'recommendation_priority_boost': 5,
+			'ad_enabled': True,
+			'ad_max_active': 1,
+			'ad_max_duration_days': 7,
+			'ad_max_impressions': 800,
+			'ad_priority_boost': 8,
 		},
 	},
 	{
@@ -42,6 +52,11 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'promotion_max_duration_days': 20,
 			'promotion_max_impressions': 8000,
 			'recommendation_priority_boost': 10,
+			'ad_enabled': True,
+			'ad_max_active': 3,
+			'ad_max_duration_days': 15,
+			'ad_max_impressions': 5000,
+			'ad_priority_boost': 12,
 		},
 	},
 	{
@@ -58,6 +73,11 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'promotion_max_duration_days': 30,
 			'promotion_max_impressions': 50000,
 			'recommendation_priority_boost': 20,
+			'ad_enabled': True,
+			'ad_max_active': 8,
+			'ad_max_duration_days': 30,
+			'ad_max_impressions': 30000,
+			'ad_priority_boost': 18,
 		},
 	},
 ]

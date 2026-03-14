@@ -22,6 +22,7 @@ import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/repositories/post_repository.dart';
 import '../product/product_detail_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../common/radius_picker_sheet.dart';
@@ -30,6 +31,7 @@ import 'category_selection_screen.dart';
 import '../shared_widgets/cards/store_chip.dart';
 import '../shared_widgets/location_mode_switcher.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/analytics_api_service.dart';
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
 
@@ -97,6 +99,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   double? _userLat;
   double? _userLng;
   bool _isNearbyLoading = false;
+  final AnalyticsApiService _analyticsApiService = AnalyticsApiService();
 
   final List<String> _sortOptions = [
     'Newest',
@@ -184,6 +187,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     postProvider.loadOffers();
     context.read<HomeProvider>().loadFeaturedPacks();
     _searchStores();
+    _logSearchEvent();
   }
 
   Future<void> _performSearchRefresh() async {
@@ -208,6 +212,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       homeProvider.loadFeaturedPacks(),
       _searchStores(),
     ]);
+    _logSearchEvent();
   }
 
   Future<void> _refreshSearch() async {
@@ -331,6 +336,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _distanceKm = null; // location mode active → clear distance
         _resetVisibleCounts();
       });
+      _logFilterWilaya(result.wilaya, result.baladiya);
     }
   }
 
@@ -380,6 +386,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _selectedLocation = '';
         _resetVisibleCounts();
       });
+      _logFilterDistance(km);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
@@ -501,6 +508,105 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       discountPercentage: offer.discountPercentage,
     );
     return _buildProductDetailsArgs(productWithPromotion);
+  }
+
+  void _logPromotionClick(Offer offer, {String placement = 'search_top'}) {
+    final meta = _buildDiscoveryMetadata();
+    _analyticsApiService.logPromotionClick(
+      promotionId: offer.id,
+      productId: offer.product.id,
+      storeId: offer.product.storeId > 0 ? offer.product.storeId : null,
+      placement: placement,
+      discoveryMode: (meta['discovery_mode'] as String?) ?? 'none',
+      distanceKm: (meta['distance_km'] as num?)?.toDouble(),
+      wilayaCode: meta['wilaya_code'] as String?,
+      searchQuery: meta['search_query'] as String?,
+    );
+    PostRepository.registerPromotionClick(offer.id);
+  }
+
+  Map<String, dynamic> _buildDiscoveryMetadata() {
+    final discoveryMode = _distanceKm != null
+        ? 'nearby'
+        : ((_selectedWilaya != null && _selectedWilaya!.isNotEmpty)
+            ? 'location'
+            : 'none');
+    final meta = <String, dynamic>{
+      'discovery_mode': discoveryMode,
+    };
+    if (_distanceKm != null) meta['distance_km'] = _distanceKm;
+    if (_selectedWilaya != null && _selectedWilaya!.isNotEmpty) {
+      meta['wilaya_code'] = _selectedWilaya;
+    }
+    if (_selectedBaladiya != null && _selectedBaladiya!.isNotEmpty) {
+      meta['baladiya'] = _selectedBaladiya;
+    }
+    final q = _normalizedQuery;
+    if (q.isNotEmpty) meta['search_query'] = q;
+    return meta;
+  }
+
+  void _logClick(Post product) {
+    final meta = _buildDiscoveryMetadata();
+    _analyticsApiService.logDiscoveryClick(
+      productId: product.id,
+      storeId: product.storeId > 0 ? product.storeId : null,
+      categoryId: product.categoryId,
+      discoveryMode: (meta['discovery_mode'] as String?) ?? 'none',
+      distanceKm: (meta['distance_km'] as num?)?.toDouble(),
+      wilayaCode: meta['wilaya_code'] as String?,
+      searchQuery: meta['search_query'] as String?,
+    );
+  }
+
+  void _logSearchEvent() {
+    final q = _normalizedQuery;
+    if (q.isEmpty) return;
+    final meta = _buildDiscoveryMetadata();
+    _analyticsApiService.logSearchQuery(
+      query: q,
+      discoveryMode: (meta['discovery_mode'] as String?) ?? 'none',
+      distanceKm: (meta['distance_km'] as num?)?.toDouble(),
+      wilayaCode: meta['wilaya_code'] as String?,
+    );
+  }
+
+  void _logFilterWilaya(String wilaya, String baladiya) {
+    _analyticsApiService.logWilayaFilter(
+      wilayaCode: wilaya,
+      baladiya: baladiya,
+      query: _normalizedQuery,
+    );
+  }
+
+  void _logFilterDistance(double km) {
+    _analyticsApiService.logDistanceFilter(
+      distanceKm: km,
+      query: _normalizedQuery,
+    );
+  }
+
+  void _logFilterEvents({
+    required RangeValues priceRange,
+    required double minRating,
+  }) {
+    if (priceRange.start > 0 || priceRange.end < 100000) {
+      _analyticsApiService.logPriceFilter(
+        min: priceRange.start,
+        max: priceRange.end,
+        discoveryMode:
+            (_buildDiscoveryMetadata()['discovery_mode'] as String?) ?? 'none',
+        query: _normalizedQuery,
+      );
+    }
+    if (minRating > 0) {
+      _analyticsApiService.logRatingFilter(
+        minRating: minRating,
+        discoveryMode:
+            (_buildDiscoveryMetadata()['discovery_mode'] as String?) ?? 'none',
+        query: _normalizedQuery,
+      );
+    }
   }
 
   void _showFiltersSheet() {
@@ -1448,6 +1554,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         _minRating = draftMinRating;
                         _resetVisibleCounts();
                       });
+                      _logFilterEvents(
+                        priceRange: draftPriceRange,
+                        minRating: draftMinRating,
+                      );
                       Navigator.pop(context);
                     },
                   ),
@@ -1700,6 +1810,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               userLat: _userLat,
               userLng: _userLng,
               onTap: () {
+                _logClick(p);
                 Navigator.pushNamed(
                   context,
                   Routes.productDetails,
@@ -1712,6 +1823,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ...filteredOffers.map((o) => PromotionCard(
                 offer: o,
                 onTap: () {
+                  _logPromotionClick(o, placement: 'search_top');
                   Navigator.pushNamed(
                     context,
                     Routes.productDetails,
@@ -2048,6 +2160,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     userLat: _userLat,
                     userLng: _userLng,
                     onTap: () {
+                      _logClick(visible[index]);
                       Navigator.pushNamed(
                         context,
                         Routes.productDetails,
@@ -2162,6 +2275,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   return PromotionCard(
                     offer: offer,
                     onTap: () {
+                      _logPromotionClick(offer, placement: 'search_top');
                       Navigator.pushNamed(
                         context,
                         Routes.productDetails,

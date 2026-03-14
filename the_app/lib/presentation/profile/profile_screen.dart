@@ -27,6 +27,7 @@ import 'add_promotion_screen.dart';
 import 'add_pack_screen.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
+import '../subscription/ads_dashboard_screen.dart';
 
 import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
@@ -167,6 +168,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     _handlePostMenuSelection('pack');
+                  },
+                ),
+                const Divider(height: 20),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.analytics_outlined,
+                        color: AppColors.primaryColor, size: 20),
+                  ),
+                  title: const Text('Ads & Promotions',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdsDashboardScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -1106,6 +1132,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 actions: [
+                  IconButton(
+                    tooltip: 'Ads Dashboard',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdsDashboardScreen(),
+                        ),
+                      );
+                    },
+                    icon: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EEFF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.campaign_outlined,
+                        color: AppColors.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                  ),
                   ValueListenableBuilder<int>(
                     valueListenable:
                         NotificationBadgeService.instance.unreadCount,

@@ -5,6 +5,7 @@ import '../config/api_config.dart';
 import '../utils/jwt_validator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'storage_service.dart';
+import '../utils/app_logger.dart';
 
 class ApiService {
   static DateTime? _lastRefreshAttempt;
@@ -181,7 +182,7 @@ class ApiService {
             .timeout(ApiConfig.connectionTimeout);
       }
     } catch (e) {
-      debugPrint('Logout API call failed: $e');
+      AppLogger.error('Logout API call failed', error: e);
       // Continue with local logout even if API fails
     } finally {
       await StorageService.logout();
@@ -221,9 +222,9 @@ class ApiService {
             }),
           )
           .timeout(ApiConfig.connectionTimeout);
-      debugPrint('FCM token sent to backend');
+      AppLogger.success('FCM token sent to backend');
     } catch (e) {
-      debugPrint('Failed to send FCM token to backend: $e');
+      AppLogger.error('Failed to send FCM token to backend', error: e);
     }
   }
 
@@ -266,13 +267,13 @@ class ApiService {
           refreshToken: refreshToken, // Keep same refresh token
         );
 
-        debugPrint('✅ Token refreshed successfully');
+        AppLogger.success('Token refreshed successfully');
         _refreshTokenInvalid = false;
         _consecutiveRefreshServerErrors = 0;
         return true;
       }
 
-      debugPrint('❌ Token refresh failed: ${response.statusCode}');
+      AppLogger.error('Token refresh failed', error: response.statusCode);
 
       // If backend is erroring (e.g. migrations not applied yet), don't spam refresh.
       if (response.statusCode >= 500) {
@@ -291,7 +292,7 @@ class ApiService {
       }
       return false;
     } catch (e) {
-      debugPrint('❌ Token refresh error: $e');
+      AppLogger.error('Token refresh error', error: e);
       return false;
     }
   }
@@ -304,7 +305,7 @@ class ApiService {
     // Check if token expires in next 5 minutes
     if (JWTValidator.expiresSoon(accessToken,
         buffer: const Duration(minutes: 5))) {
-      debugPrint('⚠️ Access token expires soon, proactively refreshing...');
+      AppLogger.info('Access token expires soon, proactively refreshing...');
       await refreshToken();
     }
   }
@@ -323,18 +324,18 @@ class ApiService {
       if (e.toString().contains('401') ||
           e.toString().contains('Session expired') ||
           e.toString().contains('Unauthorized')) {
-        debugPrint('⚠️ Token expired, attempting refresh...');
+        AppLogger.info('Token expired, attempting refresh...');
 
         // Try to refresh token
         final refreshed = await refreshToken();
 
         if (refreshed) {
           // Retry request with new token
-          debugPrint('✅ Retrying request with new token...');
+          AppLogger.success('Retrying request with new token...');
           return await request();
         } else {
           // Refresh failed - logout
-          debugPrint('❌ Token refresh failed, logging out...');
+          AppLogger.error('Token refresh failed, logging out');
           await StorageService.logout();
           throw Exception('Session expired. Please login again.');
         }
@@ -499,17 +500,17 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      debugPrint('ApiService: POST Multipart to $uri');
+      AppLogger.info('ApiService: POST Multipart to $uri');
 
       var request = http.MultipartRequest('POST', uri);
       request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
-      debugPrint('ApiService: Headers: ${request.headers}');
+      AppLogger.info('ApiService: Headers: ${request.headers}');
 
       request.fields.addAll(fields);
-      debugPrint('ApiService: Fields: $fields');
+      AppLogger.info('ApiService: Fields: $fields');
 
       if (imageFile != null && imageFieldName != null) {
-        debugPrint('ApiService: Adding image file: ${imageFile.name}');
+        AppLogger.info('ApiService: Adding image file: ${imageFile.name}');
         final bytes = await imageFile.readAsBytes();
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -520,16 +521,16 @@ class ApiService {
         );
       }
 
-      debugPrint('ApiService: Sending request...');
+      AppLogger.info('ApiService: Sending request...');
       final streamedResponse =
           await request.send().timeout(ApiConfig.connectionTimeout);
       final response = await http.Response.fromStream(streamedResponse);
-      debugPrint('ApiService: Response status: ${response.statusCode}');
-      debugPrint('ApiService: Response body: ${response.body}');
+      AppLogger.info('ApiService: Response status: ${response.statusCode}');
+      AppLogger.info('ApiService: Response body: ${response.body}');
 
       return _handleResponse(response);
     } catch (e) {
-      debugPrint('ApiService: Error: $e');
+      AppLogger.error('ApiService: Error', error: e);
       throw _handleError(e);
     }
   }
@@ -556,7 +557,7 @@ class ApiService {
     try {
       final token = await StorageService.getAccessToken();
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      debugPrint('ApiService: $method Multipart to $uri');
+      AppLogger.info('ApiService: $method Multipart to $uri');
 
       var request = http.MultipartRequest(method, uri);
       request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
@@ -647,7 +648,7 @@ class ApiService {
   }
 
   static Exception _handleError(dynamic error) {
-    debugPrint('❌ ApiService error: $error');
+    AppLogger.error('ApiService error', error: error);
     final msg = error.toString();
     if (msg.contains('SocketException') ||
         msg.contains('Failed host lookup') ||

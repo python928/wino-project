@@ -20,6 +20,12 @@ User = get_user_model()
 ENGAGEMENT_ACTIONS = {
 	'view',
 	'click',
+	'promotion_click',
+	'search',
+	'filter_price',
+	'filter_dist',
+	'filter_wilaya',
+	'filter_rating',
 	'favorite',
 	'compare',
 	'contact',
@@ -64,6 +70,7 @@ def update_user_profile(user):
 	wilaya_scores = defaultdict(float)
 	search_keywords = defaultdict(float)
 	seller_scores = defaultdict(float)
+	price_filter_ranges = []
 
 	for interaction in interactions:
 		if interaction.action not in ENGAGEMENT_ACTIONS:
@@ -97,6 +104,29 @@ def update_user_profile(user):
 			action_profile['mode'] *= rating_value
 
 		decay = calculate_time_decay(interaction.timestamp)
+
+		# Filter events without product context
+		if interaction.action == 'filter_dist':
+			distance_km = _safe_float(meta.get('distance_km'))
+			if distance_km is not None and distance_km >= 0:
+				nearby_distances.append((distance_km, action_profile.get('mode', 0.0) * decay))
+		if interaction.action == 'filter_wilaya':
+			wilaya_code = str(meta.get('wilaya_code') or meta.get('wilaya') or '').strip()
+			if wilaya_code:
+				wilaya_scores[wilaya_code] += action_profile.get('mode', 0.0) * decay
+		if interaction.action == 'filter_price':
+			price_range = str(meta.get('price_range') or '').strip()
+			if not price_range:
+				min_p = _safe_float(meta.get('price_min'))
+				max_p = _safe_float(meta.get('price_max'))
+				if min_p is not None or max_p is not None:
+					anchor = min_p if min_p is not None else max_p
+					try:
+						price_range = get_price_range(anchor)
+					except Exception:
+						price_range = ''
+			if price_range:
+				price_filter_ranges.append((price_range, action_profile.get('category', 0.0) * decay))
 
 		if cat_id:
 			category_scores[cat_id] += action_profile.get('category', 0.0) * decay
@@ -146,6 +176,9 @@ def update_user_profile(user):
 					price_affinity[range_name] += weight * decay
 			except Exception:
 				pass
+
+	for range_name, weight in price_filter_ranges:
+		price_affinity[range_name] += weight
 
 	profile.price_affinity = dict(price_affinity)
 

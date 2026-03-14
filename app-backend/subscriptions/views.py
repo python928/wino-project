@@ -1,6 +1,8 @@
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Count, Q
+from django.utils import timezone
 
 from .constants import DEFAULT_SUBSCRIPTION_INSTRUCTIONS, DEFAULT_SUBSCRIPTION_RIB
 from .models import (
@@ -15,8 +17,15 @@ from .serializers import (
 	SubscriptionPaymentRequestSerializer,
 	SubscriptionPlanSerializer,
 )
-from .services import FREE_POST_LIMIT, get_active_subscription, get_current_posts_count, get_post_limit
-from .services import bootstrap_default_subscription_plans, get_merchant_plan_features
+from catalog.serializers import PromotionSerializer
+from .services import (
+	FREE_POST_LIMIT,
+	get_active_subscription,
+	get_current_posts_count,
+	get_post_limit,
+	bootstrap_default_subscription_plans,
+	get_merchant_plan_features,
+)
 
 
 class SubscriptionPlanViewSet(viewsets.ModelViewSet):
@@ -94,6 +103,48 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 				'active_subscription': MerchantSubscriptionSerializer(active).data
 				if active is not None
 				else None,
+			}
+		)
+
+	@action(detail=False, methods=['get'], url_path='merchant-dashboard')
+	def merchant_dashboard(self, request):
+		"""
+		Dashboard data for merchants: subscription status + ad/promotion analytics.
+		"""
+		from catalog.models import Product, Promotion
+		from analytics.models import InteractionLog
+
+		active = get_active_subscription(request.user)
+		plan_features = get_merchant_plan_features(request.user)
+
+		days_remaining = None
+		if active is not None:
+			days_remaining = max(0, (active.end_date - timezone.now()).days)
+
+		promotions_qs = Promotion.objects.filter(store=request.user).order_by('-created_at')
+		promotions_data = PromotionSerializer(promotions_qs, many=True).data
+
+		product_stats = (
+			InteractionLog.objects.filter(product__store=request.user)
+			.values('product_id', 'product__name')
+			.annotate(
+				views=Count('id', filter=Q(action='view')),
+				clicks=Count('id', filter=Q(action='click')),
+				favorites=Count('id', filter=Q(action='favorite')),
+				promotion_clicks=Count('id', filter=Q(action='promotion_click')),
+			)
+			.order_by('-views', '-clicks')
+		)
+
+		return Response(
+			{
+				'active_subscription': MerchantSubscriptionSerializer(active).data
+				if active is not None
+				else None,
+				'days_remaining': days_remaining,
+				'plan_features': plan_features,
+				'promotions': promotions_data,
+				'product_stats': list(product_stats),
 			}
 		)
 

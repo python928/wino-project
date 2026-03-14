@@ -26,9 +26,18 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _newPriceController = TextEditingController();
   final _discountPercentageController = TextEditingController();
+  final _maxImpressionsController = TextEditingController();
+  final _priorityBoostController = TextEditingController();
+  final _targetWilayasController = TextEditingController();
+  final _targetUsersController = TextEditingController();
   bool _isLoading = false;
   bool _isEditMode = false;
   bool _isAvailable = true;
+  String _kind = 'promotion';
+  String _placement = 'home_top';
+  String _audienceMode = 'all';
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -42,6 +51,14 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _isAvailable = offer.isAvailable;
       _discountPercentageController.text = offer.discountPercentage.toString();
       _newPriceController.text = offer.newPrice.toStringAsFixed(2);
+      _kind = offer.kind;
+      _placement = offer.placement;
+      _audienceMode = offer.audienceMode;
+      _maxImpressionsController.text =
+          offer.maxImpressions?.toString() ?? '';
+      _priorityBoostController.text = offer.priorityBoost.toString();
+      _targetWilayasController.text = offer.targetWilayas.join(', ');
+      _targetUsersController.text = offer.targetUserIds.join(', ');
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,6 +76,10 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   void dispose() {
     _newPriceController.dispose();
     _discountPercentageController.dispose();
+    _maxImpressionsController.dispose();
+    _priorityBoostController.dispose();
+    _targetWilayasController.dispose();
+    _targetUsersController.dispose();
     super.dispose();
   }
 
@@ -294,6 +315,29 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     }
   }
 
+  Future<void> _pickDate({required bool isStart}) async {
+    final initial = isStart
+        ? (_startDate ?? DateTime.now())
+        : (_endDate ?? (_startDate ?? DateTime.now()).add(const Duration(days: 7)));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = picked.add(const Duration(days: 7));
+        }
+      } else {
+        _endDate = picked;
+      }
+    });
+  }
+
   void _onPercentageChanged(String value) {
     if (_selectedProduct == null || value.isEmpty) return;
 
@@ -318,6 +362,20 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
     try {
       final percentage = int.parse(_discountPercentageController.text);
+      final maxImpressions =
+          int.tryParse(_maxImpressionsController.text.trim());
+      final priorityBoost =
+          int.tryParse(_priorityBoostController.text.trim());
+      final targetWilayas = _targetWilayasController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      final targetUsers = _targetUsersController.text
+          .split(',')
+          .map((e) => int.tryParse(e.trim()))
+          .whereType<int>()
+          .toList();
       final provider = Provider.of<PostProvider>(context, listen: false);
 
       if (_isEditMode && _existingOffer != null) {
@@ -326,6 +384,15 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           offerId: _existingOffer!.id,
           discountPercentage: percentage,
           isAvailable: _isAvailable,
+          kind: _kind,
+          placement: _placement,
+          audienceMode: _audienceMode,
+          targetWilayas: targetWilayas,
+          targetUserIds: targetUsers,
+          priorityBoost: priorityBoost,
+          maxImpressions: maxImpressions,
+          startDate: _startDate,
+          endDate: _endDate,
         );
 
         if (mounted) {
@@ -338,6 +405,15 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           productId: _selectedProduct!.id,
           discountPercentage: percentage,
           isAvailable: _isAvailable,
+          kind: _kind,
+          placement: _placement,
+          audienceMode: _audienceMode,
+          targetWilayas: targetWilayas,
+          targetUserIds: targetUsers,
+          priorityBoost: priorityBoost,
+          maxImpressions: maxImpressions,
+          startDate: _startDate,
+          endDate: _endDate,
         );
 
         if (mounted) {
@@ -581,7 +657,128 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Sponsored Ad'),
+                    subtitle: const Text('Boost this offer in recommendations'),
+                    value: _kind == 'advertising',
+                    onChanged: _isLoading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _kind = value ? 'advertising' : 'promotion';
+                            });
+                          },
+                  ),
+
+                  if (_kind == 'advertising') ...[
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _placement,
+                      decoration: const InputDecoration(
+                        labelText: 'Placement',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'home_top', child: Text('Home Top')),
+                        DropdownMenuItem(
+                            value: 'home_feed', child: Text('Home Feed')),
+                        DropdownMenuItem(
+                            value: 'search_top', child: Text('Search Top')),
+                      ],
+                      onChanged: (val) {
+                        if (val == null) return;
+                        setState(() => _placement = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _audienceMode,
+                      decoration: const InputDecoration(
+                        labelText: 'Audience',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All')),
+                        DropdownMenuItem(
+                            value: 'followers', child: Text('Followers')),
+                        DropdownMenuItem(
+                            value: 'nearby', child: Text('Nearby')),
+                        DropdownMenuItem(
+                            value: 'wilaya', child: Text('Wilaya')),
+                        DropdownMenuItem(
+                            value: 'custom', child: Text('Custom Users')),
+                      ],
+                      onChanged: (val) {
+                        if (val == null) return;
+                        setState(() => _audienceMode = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _maxImpressionsController,
+                      label: 'Max Impressions',
+                      hint: 'e.g. 5000',
+                      icon: Icons.visibility_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _priorityBoostController,
+                      label: 'Priority Boost',
+                      hint: '0',
+                      icon: Icons.trending_up,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _targetWilayasController,
+                      label: 'Target Wilayas',
+                      hint: 'e.g. 16, 09, 31',
+                      icon: Icons.map_outlined,
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _targetUsersController,
+                      label: 'Target Users (IDs)',
+                      hint: 'e.g. 12, 55, 103',
+                      icon: Icons.person_pin_circle_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _pickDate(isStart: true),
+                            icon: const Icon(Icons.calendar_today_outlined),
+                            label: Text(_startDate == null
+                                ? 'Start Date'
+                                : _startDate!.toIso8601String().split('T')[0]),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _pickDate(isStart: false),
+                            icon: const Icon(Icons.event_outlined),
+                            label: Text(_endDate == null
+                                ? 'End Date'
+                                : _endDate!.toIso8601String().split('T')[0]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
 
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,

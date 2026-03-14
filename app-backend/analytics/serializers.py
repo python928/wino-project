@@ -31,7 +31,7 @@ class InteractionEventSerializer(serializers.Serializer):
 		store = attrs.get('store')
 		category = attrs.get('category')
 
-		if action in {'view', 'click', 'favorite', 'compare', 'contact', 'negotiate', 'share', 'rate'} and product is None:
+		if action in {'view', 'click', 'promotion_click', 'favorite', 'compare', 'contact', 'negotiate', 'share', 'rate'} and product is None:
 			raise serializers.ValidationError({'product': 'This action requires product'})
 		if action == 'follow_store' and store is None:
 			raise serializers.ValidationError({'store': 'This action requires store'})

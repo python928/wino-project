@@ -299,16 +299,32 @@ class PromotionSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'percentage',
+            'kind',
+            'placement',
+            'audience_mode',
+            'target_wilayas',
+            'target_categories',
+            'target_user_ids',
+            'priority_boost',
             'is_active',
             'start_date',
             'end_date',
             'max_impressions',
             'unique_viewers_count',
+            'impressions_count',
+            'clicks_count',
             'remaining_impressions',
             'created_at',
             'images',
         ]
-        read_only_fields = ['id', 'created_at', 'unique_viewers_count', 'remaining_impressions']
+        read_only_fields = [
+            'id',
+            'created_at',
+            'unique_viewers_count',
+            'impressions_count',
+            'clicks_count',
+            'remaining_impressions',
+        ]
 
     def get_remaining_impressions(self, obj):
         if obj.max_impressions is None:

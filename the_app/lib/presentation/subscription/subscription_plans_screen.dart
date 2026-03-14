@@ -72,12 +72,18 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: _plans.length,
+                    itemCount: _plans.length + 1,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final p = _plans[index];
+                      if (index == 0) {
+                        return _buildHeader();
+                      }
+                      final p = _plans[index - 1];
+                      final highlight = _plans.isNotEmpty &&
+                          p.id == _plans.last.id;
                       return _PlanCard(
                         plan: p,
+                        isHighlighted: highlight,
                         onSelect: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -94,22 +100,61 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                 ),
     );
   }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEEF1FF), Color(0xFFDCE2FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            'Boost your store visibility',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Unlock ads, more posts, and higher recommendation priority.',
+            style: TextStyle(color: Colors.black54, height: 1.3),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PlanCard extends StatelessWidget {
   final SubscriptionPlanModel plan;
   final VoidCallback onSelect;
+  final bool isHighlighted;
 
-  const _PlanCard({required this.plan, required this.onSelect});
+  const _PlanCard({
+    required this.plan,
+    required this.onSelect,
+    required this.isHighlighted,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isHighlighted ? const Color(0xFFFFF8ED) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primaryColor.withOpacity(0.25)),
+        border: Border.all(
+          color: isHighlighted
+              ? const Color(0xFFFFC684)
+              : AppColors.primaryColor.withOpacity(0.25),
+          width: isHighlighted ? 1.4 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,16 +168,35 @@ class _PlanCard extends StatelessWidget {
                       fontWeight: FontWeight.w700, fontSize: 16),
                 ),
               ),
-              Text(
-                '${plan.price.toStringAsFixed(0)} DZD',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  color: AppColors.primaryColor,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${plan.price.toStringAsFixed(0)} DZD',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: AppColors.primaryColor,
+                  ),
                 ),
               ),
             ],
           ),
+          if (isHighlighted)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Most popular',
+                style: TextStyle(
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Text('Up to ${plan.maxProducts} posts • ${plan.durationDays} days'),
           const SizedBox(height: 8),
@@ -142,6 +206,20 @@ class _PlanCard extends StatelessWidget {
                 : 'Priority publishing and better exposure.',
             style: TextStyle(color: Colors.grey.shade700, height: 1.35),
           ),
+          const SizedBox(height: 10),
+          if (plan.planFeatures.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _featureChip(
+                    'Ads: ${plan.planFeatures['ad_max_active'] ?? '-'}'),
+                _featureChip(
+                    'Ad Impr: ${plan.planFeatures['ad_max_impressions'] ?? '-'}'),
+                _featureChip(
+                    'Boost: ${plan.planFeatures['ad_priority_boost'] ?? '-'}'),
+              ],
+            ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -155,6 +233,24 @@ class _PlanCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _featureChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -200,8 +296,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to send request: $e',
-          isError: true);
+      Helpers.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

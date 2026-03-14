@@ -82,7 +82,21 @@ class InteractionEventAPIView(APIView):
 				metadata=metadata,
 				session_id=data.get('session_id', ''),
 			)
-			if data['action'] in {'view', 'favorite', 'rate', 'follow_store', 'contact', 'negotiate'}:
+			if data['action'] in {
+				'view',
+				'click',
+				'promotion_click',
+				'search',
+				'filter_price',
+				'filter_dist',
+				'filter_wilaya',
+				'filter_rating',
+				'favorite',
+				'rate',
+				'follow_store',
+				'contact',
+				'negotiate',
+			}:
 				strong_seen = True
 
 		if strong_seen:

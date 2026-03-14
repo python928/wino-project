@@ -12,6 +12,15 @@ class Offer {
   final int? maxImpressions;
   final int? uniqueViewersCount;
   final int? remainingImpressions;
+  final String kind;
+  final String placement;
+  final String audienceMode;
+  final int priorityBoost;
+  final int impressionsCount;
+  final int clicksCount;
+  final List<String> targetWilayas;
+  final List<String> targetCategories;
+  final List<int> targetUserIds;
 
   Offer({
     required this.id,
@@ -24,6 +33,15 @@ class Offer {
     this.maxImpressions,
     this.uniqueViewersCount,
     this.remainingImpressions,
+    this.kind = 'promotion',
+    this.placement = 'home_top',
+    this.audienceMode = 'all',
+    this.priorityBoost = 0,
+    this.impressionsCount = 0,
+    this.clicksCount = 0,
+    this.targetWilayas = const [],
+    this.targetCategories = const [],
+    this.targetUserIds = const [],
   });
 
   bool get hasImpressionLimit => maxImpressions != null;
@@ -125,6 +143,28 @@ class Offer {
           int.tryParse((json['unique_viewers_count'] ?? '').toString()),
       remainingImpressions:
           int.tryParse((json['remaining_impressions'] ?? '').toString()),
+      kind: (json['kind'] ?? 'promotion').toString(),
+      placement: (json['placement'] ?? 'home_top').toString(),
+      audienceMode: (json['audience_mode'] ?? 'all').toString(),
+      priorityBoost:
+          int.tryParse((json['priority_boost'] ?? '').toString()) ?? 0,
+      impressionsCount:
+          int.tryParse((json['impressions_count'] ?? '').toString()) ?? 0,
+      clicksCount:
+          int.tryParse((json['clicks_count'] ?? '').toString()) ?? 0,
+      targetWilayas: (json['target_wilayas'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      targetCategories: (json['target_categories'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      targetUserIds: (json['target_user_ids'] as List?)
+              ?.map((e) => int.tryParse(e.toString()) ?? 0)
+              .where((e) => e > 0)
+              .toList() ??
+          const [],
     );
   }
 }

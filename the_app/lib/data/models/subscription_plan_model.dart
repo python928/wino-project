@@ -6,6 +6,7 @@ class SubscriptionPlanModel {
   final double price;
   final int durationDays;
   final String benefits;
+  final Map<String, dynamic> planFeatures;
 
   const SubscriptionPlanModel({
     required this.id,
@@ -15,6 +16,7 @@ class SubscriptionPlanModel {
     required this.price,
     required this.durationDays,
     required this.benefits,
+    required this.planFeatures,
   });
 
   factory SubscriptionPlanModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,8 @@ class SubscriptionPlanModel {
       price: double.tryParse((json['price'] ?? '0').toString()) ?? 0,
       durationDays: (json['duration_days'] as num?)?.toInt() ?? 30,
       benefits: (json['benefits'] ?? '').toString(),
+      planFeatures: (json['plan_features'] as Map?)?.cast<String, dynamic>() ??
+          const {},
     );
   }
 }

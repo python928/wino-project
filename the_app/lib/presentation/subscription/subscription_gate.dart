@@ -7,10 +7,25 @@ Future<void> showSubscriptionRequiredWindow(BuildContext context) async {
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: const Text('Subscription Required'),
+      title: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.lock_outline,
+                color: AppColors.primaryColor, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text('Subscription Required'),
+        ],
+      ),
       content: const Text(
         'You reached the free limit (5 posts).\n\n'
-        'Subscribe to publish more posts, get better visibility, and priority support.',
+        'Subscribe to publish more posts, run ads, and unlock priority exposure.',
       ),
       actions: [
         TextButton(

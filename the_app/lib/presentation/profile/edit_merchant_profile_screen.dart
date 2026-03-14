@@ -473,10 +473,18 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot identify user ID');
 
-      // Build address (location is optional)
+      // Build address
       final address = (_selectedWilaya != null && _selectedBaladiya != null)
           ? '$_selectedBaladiya, $_selectedWilaya'
           : (userData?['address'] ?? '');
+      if (address.trim().isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'Place is required. Please select Wilaya and Baladiya first.',
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
 
       // Single PATCH — store == user in this backend
       final payload = <String, dynamic>{

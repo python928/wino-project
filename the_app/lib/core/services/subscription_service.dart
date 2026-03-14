@@ -46,4 +46,10 @@ class SubscriptionService {
         text.contains('free post limit') ||
         text.contains('subscribe to continue');
   }
+
+  static Future<Map<String, dynamic>> fetchMerchantDashboard() async {
+    final resp = await ApiService.get(ApiConfig.subscriptionMerchantDashboard);
+    if (resp is Map<String, dynamic>) return resp;
+    return <String, dynamic>{};
+  }
 }

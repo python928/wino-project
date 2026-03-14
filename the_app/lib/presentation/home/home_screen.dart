@@ -14,10 +14,12 @@ import '../../core/widgets/app_button.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/analytics_api_service.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/user_model.dart';
+import '../../data/repositories/post_repository.dart';
 import '../product/product_detail_screen.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import 'widgets/category_item.dart';
@@ -44,6 +46,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final AnalyticsApiService _analyticsApiService = AnalyticsApiService();
   String _selectedLocation = 'Algiers, Algeria';
   String? _selectedWilaya;
   String? _selectedBaladiya;
@@ -75,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final analyticsProvider = context.read<AnalyticsProvider>();
     await Future.wait([
       homeProvider.loadHomeData(),
-      postProvider.refreshMarketplaceFeed(),
+      postProvider.refreshMarketplaceFeed(wilayaCode: _selectedWilaya),
       analyticsProvider.fetchRecommendations(limit: 80),
     ]);
   }
@@ -138,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _radiusKm = km;
         _selectedLocation = '/';
       });
+      _logFilterDistance(km);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
@@ -216,6 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _selectedLocation = result.address;
         _radiusKm = null; // address mode active → clear distance
       });
+      _logFilterWilaya(result.wilaya, result.baladiya);
     }
   }
 
@@ -370,8 +375,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
                 RecommendationsList(
                   onProductTap: _navigateToProductDetails,
-                  onOfferTap: _navigateToPromotionDetails,
+                  onOfferTap: (offer) =>
+                      _navigateToPromotionDetails(offer, placement: 'home_feed'),
                 ),
+                const SizedBox(height: AppTheme.spacing24),
+
+                _buildAdBannerSection(),
                 const SizedBox(height: AppTheme.spacing24),
 
                 // Discounts
@@ -1058,6 +1067,135 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ==================== Ad Banner Section ====================
+
+  Widget _buildAdBannerSection() {
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
+        final ads = _filterOffersForActiveLocation(postProvider.adOffers);
+        if (postProvider.isLoadingOffers && ads.isEmpty) {
+          return const SizedBox(height: 140);
+        }
+        if (ads.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return SizedBox(
+          height: 160,
+          child: PageView.builder(
+            controller: PageController(viewportFraction: 0.92),
+            itemCount: ads.length,
+            itemBuilder: (context, index) {
+              final ad = ads[index];
+              return GestureDetector(
+                onTap: () =>
+                    _navigateToPromotionDetails(ad, placement: 'home_top'),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFE6C7), Color(0xFFFFB98E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.75),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Text(
+                            'Ad',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 140,
+                        bottom: 20,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ad.product.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF2E1C0A),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${ad.discountPercentage}% OFF • ${Helpers.formatPrice(ad.newPrice)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF8A3C00),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        right: 12,
+                        bottom: 0,
+                        top: 0,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox(
+                            width: 120,
+                            child: ad.product.image != null &&
+                                    ad.product.image!.isNotEmpty
+                                ? Image.network(
+                                    ad.product.image!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    color: Colors.white.withOpacity(0.5),
+                                    child: const Icon(
+                                      Icons.campaign_outlined,
+                                      size: 40,
+                                      color: Color(0xFF8A3C00),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   // ==================== Offers Section ====================
 
   Widget _buildOffersSection() {
@@ -1133,7 +1271,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       offer: offer,
                       userLat: _userLat,
                       userLng: _userLng,
-                      onTap: () => _navigateToPromotionDetails(offer),
+                      onTap: () => _navigateToPromotionDetails(
+                        offer,
+                        placement: 'home_feed',
+                      ),
                     ),
                   );
                 },
@@ -1281,6 +1422,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'Home->ProductDetails: mode=$discoveryMode radius=$_radiusKm wilaya=$_selectedWilaya baladiya=$_selectedBaladiya',
       );
     }
+    _logClick(product);
     Navigator.pushNamed(
       context,
       Routes.productDetails,
@@ -1295,13 +1437,71 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToPromotionDetails(Offer offer) {
+  void _navigateToPromotionDetails(Offer offer, {String placement = 'home_feed'}) {
+    _logPromotionClick(offer, placement: placement);
     final productWithPromotion = offer.product.copyWith(
       price: offer.newPrice,
       oldPrice: offer.product.price,
       discountPercentage: offer.discountPercentage,
     );
     _navigateToProductDetails(productWithPromotion);
+  }
+
+  Map<String, dynamic> _buildDiscoveryMetadata() {
+    final discoveryMode = _radiusKm != null
+        ? 'nearby'
+        : (_isCityFilterActive ? 'location' : 'none');
+    final meta = <String, dynamic>{
+      'discovery_mode': discoveryMode,
+    };
+    if (_radiusKm != null) meta['distance_km'] = _radiusKm;
+    if (_isCityFilterActive && _selectedWilaya != null) {
+      meta['wilaya_code'] = _selectedWilaya;
+    }
+    if (_selectedBaladiya != null && _selectedBaladiya!.isNotEmpty) {
+      meta['baladiya'] = _selectedBaladiya;
+    }
+    return meta;
+  }
+
+  void _logClick(Post product) {
+    final meta = _buildDiscoveryMetadata();
+    _analyticsApiService.logDiscoveryClick(
+      productId: product.id,
+      storeId: product.storeId > 0 ? product.storeId : null,
+      categoryId: product.categoryId,
+      discoveryMode: (meta['discovery_mode'] as String?) ?? 'none',
+      distanceKm: (meta['distance_km'] as num?)?.toDouble(),
+      wilayaCode: meta['wilaya_code'] as String?,
+    );
+  }
+
+  void _logPromotionClick(Offer offer, {String placement = 'home_feed'}) {
+    final meta = _buildDiscoveryMetadata();
+    _analyticsApiService.logPromotionClick(
+      promotionId: offer.id,
+      productId: offer.product.id,
+      storeId: offer.product.storeId > 0 ? offer.product.storeId : null,
+      placement: placement,
+      discoveryMode: (meta['discovery_mode'] as String?) ?? 'none',
+      distanceKm: (meta['distance_km'] as num?)?.toDouble(),
+      wilayaCode: meta['wilaya_code'] as String?,
+      searchQuery: null,
+    );
+    PostRepository.registerPromotionClick(offer.id);
+  }
+
+  void _logFilterWilaya(String wilaya, String baladiya) {
+    _analyticsApiService.logWilayaFilter(
+      wilayaCode: wilaya,
+      baladiya: baladiya,
+    );
+  }
+
+  void _logFilterDistance(double km) {
+    _analyticsApiService.logDistanceFilter(
+      distanceKm: km,
+    );
   }
 
   void _toggleFavorite(Post product) {

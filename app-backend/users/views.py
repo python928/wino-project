@@ -332,34 +332,34 @@ class FollowerToggleView(generics.CreateAPIView):
 		if followed_user == request.user:
 			return Response({'error': 'Cannot follow yourself'}, status=status.HTTP_400_BAD_REQUEST)
 
-			follower, created = Follower.objects.get_or_create(
-				user=request.user,
-				followed_user=followed_user,
+		follower, created = Follower.objects.get_or_create(
+			user=request.user,
+			followed_user=followed_user,
+		)
+
+		if not created:
+			follower.delete()
+			return Response({'is_following': False})
+
+		try:
+			from analytics.utils import log_user_event
+			log_user_event(
+				request.user,
+				'follow_store',
+				metadata={
+					'store_id': followed_user.id,
+					'category_id': request.data.get('category_id'),
+					'discovery_mode': request.data.get('discovery_mode'),
+					'wilaya_code': request.data.get('wilaya_code'),
+					'distance_km': request.data.get('distance_km'),
+					'search_query': str(request.data.get('search_query') or '').strip().lower(),
+				},
+				session_id=str(request.data.get('session_id') or ''),
 			)
+		except Exception:
+			pass
 
-			if not created:
-				follower.delete()
-				return Response({'is_following': False})
-
-			try:
-				from analytics.utils import log_user_event
-				log_user_event(
-					request.user,
-					'follow_store',
-					metadata={
-						'store_id': followed_user.id,
-						'category_id': request.data.get('category_id'),
-						'discovery_mode': request.data.get('discovery_mode'),
-						'wilaya_code': request.data.get('wilaya_code'),
-						'distance_km': request.data.get('distance_km'),
-						'search_query': str(request.data.get('search_query') or '').strip().lower(),
-					},
-					session_id=str(request.data.get('session_id') or ''),
-				)
-			except Exception:
-				pass
-
-			return Response({'is_following': True})
+		return Response({'is_following': True})
 
 
 class StoreReportViewSet(viewsets.ModelViewSet):

@@ -11,6 +11,7 @@ class PostProvider with ChangeNotifier {
   List<Post> _myPosts = [];
   List<Post> _storePosts = [];
   List<Offer> _offers = [];
+  List<Offer> _adOffers = [];
   List<Offer> _myOffers = [];
   List<Offer> _storeOffers = [];
   bool _isLoading = false;
@@ -25,6 +26,7 @@ class PostProvider with ChangeNotifier {
   List<Post> get myPosts => _myPosts;
   List<Post> get storePosts => _storePosts;
   List<Offer> get offers => _offers;
+  List<Offer> get adOffers => _adOffers;
   List<Offer> get myOffers => _myOffers;
   List<Offer> get storeOffers => _storeOffers;
   bool get isLoading => _isLoading || _isLoadingPosts || _isLoadingOffers;
@@ -39,10 +41,12 @@ class PostProvider with ChangeNotifier {
     String? search,
     int? storeId,
     int? categoryId,
+    String? wilayaCode,
   }) async {
     await Future.wait([
       loadPosts(search: search, storeId: storeId, categoryId: categoryId),
       loadOffers(),
+      loadAdOffers(wilayaCode: wilayaCode),
     ]);
   }
 
@@ -53,6 +57,26 @@ class PostProvider with ChangeNotifier {
 
     try {
       _offers = await PostRepository.getOffers();
+    } catch (e) {
+      _offersError = e.toString();
+      _error = _offersError;
+    } finally {
+      _isLoadingOffers = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAdOffers({String? wilayaCode}) async {
+    _isLoadingOffers = true;
+    _offersError = null;
+    notifyListeners();
+
+    try {
+      _adOffers = await PostRepository.getOffers(
+        kind: 'advertising',
+        placement: 'home_top',
+        wilayaCode: wilayaCode,
+      );
     } catch (e) {
       _offersError = e.toString();
       _error = _offersError;
@@ -111,6 +135,16 @@ class PostProvider with ChangeNotifier {
     required int productId,
     required int discountPercentage,
     bool isAvailable = true,
+    String kind = 'promotion',
+    String placement = 'home_top',
+    String audienceMode = 'all',
+    List<String> targetWilayas = const [],
+    List<String> targetCategories = const [],
+    List<int> targetUserIds = const [],
+    int? priorityBoost,
+    int? maxImpressions,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     _isLoading = true;
     _error = null;
@@ -121,6 +155,16 @@ class PostProvider with ChangeNotifier {
         productId: productId,
         discountPercentage: discountPercentage,
         isAvailable: isAvailable,
+        kind: kind,
+        placement: placement,
+        audienceMode: audienceMode,
+        targetWilayas: targetWilayas,
+        targetCategories: targetCategories,
+        targetUserIds: targetUserIds,
+        priorityBoost: priorityBoost,
+        maxImpressions: maxImpressions,
+        startDate: startDate,
+        endDate: endDate,
       );
       _myOffers.insert(0, newOffer);
     } catch (e) {
@@ -136,6 +180,16 @@ class PostProvider with ChangeNotifier {
     required int offerId,
     int? discountPercentage,
     bool? isAvailable,
+    String? kind,
+    String? placement,
+    String? audienceMode,
+    List<String>? targetWilayas,
+    List<String>? targetCategories,
+    List<int>? targetUserIds,
+    int? priorityBoost,
+    int? maxImpressions,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     _isLoading = true;
     _error = null;
@@ -146,6 +200,16 @@ class PostProvider with ChangeNotifier {
         offerId: offerId,
         discountPercentage: discountPercentage,
         isAvailable: isAvailable,
+        kind: kind,
+        placement: placement,
+        audienceMode: audienceMode,
+        targetWilayas: targetWilayas,
+        targetCategories: targetCategories,
+        targetUserIds: targetUserIds,
+        priorityBoost: priorityBoost,
+        maxImpressions: maxImpressions,
+        startDate: startDate,
+        endDate: endDate,
       );
       final idx = _myOffers.indexWhere((o) => o.id == offerId);
       if (idx != -1) {

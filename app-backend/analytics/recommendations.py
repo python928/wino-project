@@ -2,6 +2,7 @@ import logging
 import random
 from collections import defaultdict
 from datetime import timedelta
+from math import asin, cos, radians, sin, sqrt
 
 from django.conf import settings
 from django.db import models
@@ -15,17 +16,21 @@ logger = logging.getLogger(__name__)
 
 
 SCORE_WEIGHTS = {
-	'category': 0.24,
-	'price': 0.12,
-	'quality': 0.12,
+	'category': 0.22,
+	'price': 0.11,
+	'quality': 0.11,
 	'recency': 0.08,
-	'popularity': 0.08,
-	'seller_trust': 0.08,
-	'seller_affinity': 0.10,
-	'personal_engagement': 0.10,
+	'popularity': 0.07,
+	'seller_trust': 0.07,
+	'seller_affinity': 0.09,
+	'personal_engagement': 0.09,
+	'session_intent': 0.06,
+	'location_pref': 0.05,
+	'keyword_match': 0.05,
 	'novelty': 0.04,
-	'negotiable': 0.02,
-	'promotion': 0.02,
+	'negotiable': 0.03,
+	'promotion': 0.03,
+	'ad_boost': 0.06,
 }
 
 
@@ -35,10 +40,17 @@ def get_recommended_products(user, limit=20, category_filter=None):
 	try:
 		profile = UserInterestProfile.objects.get(user=user)
 	except UserInterestProfile.DoesNotExist:
-		return _get_popular_products(limit)
+		return _get_popular_products(
+			limit,
+			preferred_wilayas=_get_user_wilayas(user),
+			user=user,
+		)
 
 	top_categories = profile.get_top_categories(limit=7)
 	preferred_sellers = [int(s) for s in (profile.preferred_sellers or []) if str(s).isdigit()]
+	preferred_wilayas = profile.preferred_wilayas or []
+	search_keywords = list((profile.search_keywords or {}).keys())
+	session_context = _get_session_context(user)
 
 	qs = Product.objects.filter().select_related('store', 'category').prefetch_related('images', 'reviews', 'promotions')
 
@@ -60,7 +72,7 @@ def get_recommended_products(user, limit=20, category_filter=None):
 
 	candidates = list(qs[:350])
 	if not candidates:
-		return _get_popular_products(limit)
+		return _get_popular_products(limit, preferred_wilayas=preferred_wilayas, user=user)
 
 	now = timezone.now()
 	candidate_ids = [p.id for p in candidates]
@@ -94,6 +106,7 @@ def get_recommended_products(user, limit=20, category_filter=None):
 		'negotiate': 4.5,
 		'share': 2.0,
 		'compare': 2.2,
+		'follow_store': 3.0,
 	}
 	user_product_engagement = defaultdict(float)
 	for row in user_rows:
@@ -112,6 +125,10 @@ def get_recommended_products(user, limit=20, category_filter=None):
 			max_popularity=max_popularity,
 			user_engagement=user_product_engagement.get(product.id, 0),
 			max_user_engagement=max_user_engagement,
+			preferred_wilayas=preferred_wilayas,
+			keywords=search_keywords,
+			session_context=session_context,
+			user=user,
 		)
 		final_score = 0.0
 		for key, weight in SCORE_WEIGHTS.items():
@@ -131,10 +148,37 @@ def get_recommended_products(user, limit=20, category_filter=None):
 		).values_list('product_id', flat=True)
 	)
 
-	scored = [sp for sp in scored if sp['product'].id not in recently_viewed]
+	filtered_scored = [sp for sp in scored if sp['product'].id not in recently_viewed]
+	# In tiny catalogs, strict recency filtering can empty the feed.
+	# Fall back to original scored list instead of returning nothing.
+	if filtered_scored:
+		scored = filtered_scored
+
 	scored.sort(key=lambda x: x['score'], reverse=True)
 	scored = _apply_smart_exploration(scored, user=user, limit=limit)
-	return _diversify_results(scored, max_per_seller=3)[:limit]
+	results = _diversify_results(scored, max_per_seller=3, max_per_category=4)[:limit]
+
+	# Keep the feed populated even when personalization has few candidates.
+	if len(results) < limit:
+		seen_ids = {item['product'].id for item in results if item.get('product')}
+		for candidate in _get_popular_products(
+			limit=max(limit * 2, 20),
+			preferred_wilayas=preferred_wilayas,
+			user=user,
+		):
+			product = candidate.get('product')
+			if not product:
+				continue
+			if getattr(user, 'id', None) and product.store_id == user.id:
+				continue
+			if product.id in seen_ids:
+				continue
+			results.append(candidate)
+			seen_ids.add(product.id)
+			if len(results) >= limit:
+				break
+
+	return results[:limit]
 
 
 def get_similar_products(product, limit=10):
@@ -163,8 +207,15 @@ def _calculate_product_score(
 	max_popularity=1,
 	user_engagement=0,
 	max_user_engagement=1,
+	preferred_wilayas=None,
+	keywords=None,
+	session_context=None,
+	user=None,
 ):
 	scores = {}
+	preferred_wilayas = preferred_wilayas or []
+	keywords = keywords or []
+	session_context = session_context or {}
 
 	cat_id = str(getattr(product, 'category_id', '') or '')
 	if cat_id and cat_id in (profile.category_scores or {}):
@@ -251,6 +302,53 @@ def _calculate_product_score(
 	preferred = profile.preferred_sellers or []
 	scores['seller_affinity'] = 100 if getattr(seller, 'id', None) in preferred else 25
 
+	# Session intent: short-term boost for recent clicks/favorites.
+	session_intent = 0
+	session_cats = session_context.get('categories') or set()
+	session_sellers = session_context.get('sellers') or set()
+	session_products = session_context.get('products') or set()
+	if getattr(product, 'id', None) in session_products:
+		session_intent += 45
+	if getattr(product, 'category_id', None) in session_cats:
+		session_intent += 60
+	if getattr(product, 'store_id', None) in session_sellers:
+		session_intent += 40
+	scores['session_intent'] = min(session_intent, 100)
+
+	# Location preference: combine preferred wilayas + preferred max distance.
+	location_pref = 0.0
+	if preferred_wilayas:
+		store = getattr(product, 'store', None)
+		address = ''
+		if store is not None:
+			address = (getattr(store, 'address', '') or getattr(store, 'city', '') or '').lower()
+		for w in preferred_wilayas:
+			if w and str(w).lower() in address:
+				location_pref = 80
+				break
+
+	location_pref = max(
+		location_pref,
+		_distance_preference_score(profile=profile, user=user, store=getattr(product, 'store', None)),
+	)
+	scores['location_pref'] = location_pref
+
+	# Query-aware keyword match from profile/search history.
+	keyword_score = 0
+	all_keywords = list(keywords)
+	session_queries = session_context.get('queries') or []
+	all_keywords.extend(session_queries)
+	if all_keywords:
+		name = (getattr(product, 'name', '') or '').lower()
+		desc = (getattr(product, 'description', '') or '').lower()
+		hits = 0
+		for kw in all_keywords[:16]:
+			if kw and (kw in name or kw in desc):
+				hits += 1
+		if hits > 0:
+			keyword_score = min(100, hits * 40)
+	scores['keyword_match'] = keyword_score
+
 	# If user already engaged heavily with this product, avoid repeating it at top.
 	if max_user_engagement > 0:
 		engagement_ratio = float(user_engagement) / float(max_user_engagement)
@@ -270,19 +368,32 @@ def _calculate_product_score(
 	scores['negotiable'] = 100 if is_negotiable else 30
 
 	promotion_score = 0
+	ad_boost = 0
 	if hasattr(product, 'promotions'):
 		try:
 			active = product.promotions.filter(
 				is_active=True,
 				start_date__lte=timezone.now(),
 				end_date__gte=timezone.now(),
+			).filter(
+				Q(max_impressions__isnull=True)
+				| Q(unique_viewers_count__lt=models.F('max_impressions'))
 			)
 			if active.exists():
 				best = max(float(p.percentage) for p in active)
 				promotion_score = min(best * 2, 100)
+			ad_promos = active.filter(kind='advertising')
+			if ad_promos.exists():
+				best_boost = 0
+				for promo in ad_promos:
+					val = int(getattr(promo, 'priority_boost', 0) or 0)
+					if val > best_boost:
+						best_boost = val
+				ad_boost = min(100, 40 + (best_boost * 3))
 		except Exception:
 			promotion_score = 0
 	scores['promotion'] = promotion_score
+	scores['ad_boost'] = ad_boost
 
 	return scores
 
@@ -309,28 +420,42 @@ def _get_match_reasons(breakdown):
 		reasons.append('Price negotiable')
 	if breakdown.get('promotion', 0) >= 50:
 		reasons.append('On sale!')
+	if breakdown.get('ad_boost', 0) >= 60:
+		reasons.append('Sponsored offer')
 	if breakdown.get('recency', 0) >= 80:
 		reasons.append('Just listed')
 	if breakdown.get('seller_trust', 0) >= 80:
 		reasons.append('Trusted seller')
 	if breakdown.get('seller_affinity', 0) >= 80:
 		reasons.append('From stores you like')
+	if breakdown.get('session_intent', 0) >= 60:
+		reasons.append('Based on recent activity')
+	if breakdown.get('location_pref', 0) >= 80:
+		reasons.append('Popular in your area')
+	if breakdown.get('keyword_match', 0) >= 80:
+		reasons.append('Matches your recent searches')
 	if breakdown.get('novelty', 0) >= 70:
 		reasons.append('Fresh recommendation')
 	return reasons
 
 
-def _diversify_results(scored_products, max_per_seller=4):
+def _diversify_results(scored_products, max_per_seller=4, max_per_category=4):
 	seller_counts = defaultdict(int)
+	category_counts = defaultdict(int)
 	diversified = []
 	for sp in scored_products:
 		seller_id = getattr(sp['product'], 'store_id', None)
+		category_id = getattr(sp['product'], 'category_id', None)
+		if category_id is not None and category_counts[category_id] >= max_per_category:
+			continue
 		if seller_id is None:
 			diversified.append(sp)
 			continue
 		if seller_counts[seller_id] < max_per_seller:
 			diversified.append(sp)
 			seller_counts[seller_id] += 1
+			if category_id is not None:
+				category_counts[category_id] += 1
 	return diversified
 
 
@@ -342,14 +467,14 @@ def _apply_smart_exploration(scored_products, user, limit):
 	if len(scored_products) <= 4:
 		return scored_products
 
-	base_rate = float(getattr(settings, 'RECOMMENDATION_EXPLORATION_RATE', 0.10))
+	base_rate = float(getattr(settings, 'RECOMMENDATION_EXPLORATION_RATE', 0.08))
 	recent_strong = InteractionLog.objects.filter(
 		user=user,
 		action__in=['view', 'favorite', 'rate', 'contact', 'negotiate'],
 		timestamp__gte=timezone.now() - timedelta(days=30),
 	).count()
 	# New/low-history users need more exploration.
-	dynamic_rate = min(0.25, base_rate + (0.08 if recent_strong < 20 else 0.0))
+	dynamic_rate = min(0.15, base_rate + (0.05 if recent_strong < 20 else 0.0))
 
 	top_anchor = scored_products[:2]
 	window_size = min(len(scored_products), max(18, int(limit) * 3))
@@ -373,8 +498,9 @@ def _apply_smart_exploration(scored_products, user, limit):
 	return top_anchor + pool + rest
 
 
-def _get_popular_products(limit=20):
+def _get_popular_products(limit=20, preferred_wilayas=None, user=None):
 	from catalog.models import Product
+	preferred_wilayas = preferred_wilayas or []
 
 	popular_ids = InteractionLog.objects.filter(
 		timestamp__gte=timezone.now() - timezone.timedelta(days=7),
@@ -389,8 +515,154 @@ def _get_popular_products(limit=20):
 		products = qs.order_by('-id')[:limit]
 		return [{'product': p, 'score': 0, 'breakdown': {}, 'match_reasons': ['New listing']} for p in products]
 
-	products = qs.filter(id__in=list(popular_ids))
-	return [{'product': p, 'score': 50, 'breakdown': {}, 'match_reasons': ['Trending this week']} for p in products]
+	products_by_id = {}
+
+	trending_global = list(qs.filter(id__in=list(popular_ids))[: max(limit * 2, 20)])
+	for p in trending_global:
+		products_by_id[p.id] = {
+			'product': p,
+			'score': 55,
+			'breakdown': {},
+			'match_reasons': ['Trending this week'],
+		}
+
+	if preferred_wilayas:
+		pref = [str(w).strip().lower() for w in preferred_wilayas if str(w).strip()]
+		if pref:
+			regional_q = Q()
+			for token in pref:
+				regional_q |= Q(store__address__icontains=token) | Q(store__city__icontains=token)
+			regional_ids = (
+				InteractionLog.objects.filter(
+					timestamp__gte=timezone.now() - timezone.timedelta(days=7),
+					product__isnull=False,
+					product__store__isnull=False,
+				)
+				.filter(regional_q)
+				.values('product_id')
+				.annotate(count=models.Count('id'))
+				.order_by('-count')
+				.values_list('product_id', flat=True)[: max(limit * 2, 20)]
+			)
+			regional_products = list(qs.filter(id__in=list(regional_ids))[: max(limit * 2, 20)])
+			for p in regional_products:
+				products_by_id[p.id] = {
+					'product': p,
+					'score': 60,
+					'breakdown': {},
+					'match_reasons': ['Trending in your region'],
+				}
+
+	# New items budget for cold-start exploration.
+	new_items = list(qs.order_by('-created_at')[: max(limit * 2, 20)])
+	for p in new_items:
+		products_by_id.setdefault(
+			p.id,
+			{
+				'product': p,
+				'score': 45,
+				'breakdown': {},
+				'match_reasons': ['New listing'],
+			},
+		)
+
+	# Keep user-owned products out from fallback recommendations.
+	if getattr(user, 'id', None):
+		products_by_id = {
+			pid: item
+			for pid, item in products_by_id.items()
+			if getattr(item.get('product'), 'store_id', None) != user.id
+		}
+
+	blended = list(products_by_id.values())
+	blended.sort(key=lambda x: (x.get('score', 0), getattr(x.get('product'), 'created_at', timezone.now())), reverse=True)
+	return blended[:limit]
+
+
+def _get_user_wilayas(user):
+	try:
+		address = (getattr(user, 'address', '') or getattr(user, 'location', '') or '').lower()
+		if not address:
+			return []
+		parts = [p.strip() for p in address.split(',') if p.strip()]
+		return parts[-1:] if parts else []
+	except Exception:
+		return []
+
+
+def _get_session_context(user):
+	# Session intent from last N interactions, prioritizing recent clicks/favorites.
+	window = int(getattr(settings, 'ANALYTICS_SESSION_INTENT_EVENTS', 25))
+	recent = InteractionLog.objects.filter(
+		user=user,
+		action__in=['click', 'favorite', 'view', 'rate', 'contact', 'negotiate'],
+		timestamp__gte=timezone.now() - timedelta(days=2),
+	).select_related('product')[:window]
+
+	recent_searches = list(
+		InteractionLog.objects.filter(
+			user=user,
+			action='search',
+			timestamp__gte=timezone.now() - timedelta(days=2),
+		)
+		.values_list('metadata', flat=True)[:12]
+	)
+
+	categories = set()
+	sellers = set()
+	products = set()
+	queries = []
+	for i in recent:
+		if i.product_id and i.product:
+			products.add(i.product_id)
+			if i.product.category_id:
+				categories.add(i.product.category_id)
+			if getattr(i.product, 'store_id', None):
+				sellers.add(i.product.store_id)
+
+	for meta in recent_searches:
+		meta = meta or {}
+		q = str(meta.get('search_query') or meta.get('keyword') or '').strip().lower()
+		if q:
+			queries.append(q)
+
+	return {'categories': categories, 'sellers': sellers, 'products': products, 'queries': queries}
+
+
+def _haversine_km(lat1, lon1, lat2, lon2):
+	# Great-circle distance in KM.
+	r = 6371.0
+	dlat = radians(lat2 - lat1)
+	dlon = radians(lon2 - lon1)
+	a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+	c = 2 * asin(sqrt(a))
+	return r * c
+
+
+def _distance_preference_score(profile, user, store):
+	if profile is None or user is None or store is None:
+		return 0.0
+
+	try:
+		user_lat = float(getattr(user, 'latitude', None))
+		user_lon = float(getattr(user, 'longitude', None))
+		store_lat = float(getattr(store, 'latitude', None))
+		store_lon = float(getattr(store, 'longitude', None))
+	except Exception:
+		return 0.0
+
+	max_km = float(getattr(profile, 'preferred_max_distance_km', 0.0) or 0.0)
+	if max_km <= 0:
+		return 0.0
+
+	distance_km = _haversine_km(user_lat, user_lon, store_lat, store_lon)
+	if distance_km <= max_km:
+		return 100.0
+	if distance_km <= max_km * 2:
+		return 60.0
+	if distance_km <= max_km * 3:
+		return 25.0
+	return 0.0
 
 
 def get_recommended_stores(user, limit=8):

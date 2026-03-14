@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'app_logger.dart';
 
 class Helpers {
   /// Haversine distance between two lat/lng points in kilometres.
@@ -82,6 +83,19 @@ class Helpers {
     );
   }
 
+  static String formatError(Object error) {
+    final text = error.toString();
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '').trim();
+    }
+    return text;
+  }
+
+  static void showErrorSnackBar(BuildContext context, Object error) {
+    final msg = formatError(error);
+    showSnackBar(context, msg, isError: true);
+  }
+
   // Format time remaining (for hot deals)
   static Map<String, String> formatTimeRemaining(Duration duration) {
     final hours = duration.inHours.toString().padLeft(2, '0');
@@ -103,7 +117,7 @@ class Helpers {
         throw Exception('Could not launch $url');
       }
     } catch (e) {
-      debugPrint('Helpers.launchURL error: $e');
+      AppLogger.error('Helpers.launchURL error', error: e);
       throw Exception('Unable to open link');
     }
   }

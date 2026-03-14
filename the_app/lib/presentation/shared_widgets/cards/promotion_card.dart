@@ -24,7 +24,9 @@ class PromotionCard extends BaseItemCard {
           price: offer.newPrice,
           oldPrice: offer.product.price,
           discountPercentage: offer.discountPercentage,
-          customBadge: offer.isNearEnding ? 'Ending Soon' : null,
+          customBadge: offer.kind == 'advertising'
+              ? 'Ad'
+              : (offer.isNearEnding ? 'Ending Soon' : null),
           rating: offer.product.rating,
           reviewCount: offer.product.reviewCount,
           bottomLeftText:
