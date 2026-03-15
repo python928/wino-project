@@ -17,6 +17,8 @@ import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/shimmer_loading.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/loading_indicator.dart';
 import '../../data/repositories/store_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/post_model.dart';
@@ -2020,52 +2022,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.search_off_rounded,
-                size: 48,
-                color: AppColors.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Results Found',
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your search or filters\nto find what you\'re looking for',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_hasActiveFilters)
-              TextButton.icon(
-                onPressed: _clearAllFilters,
-                icon: Icon(Icons.filter_alt_off_rounded, size: 18),
-                label: Text('Clear Filters'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryColor,
-                ),
-              ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.search_off_rounded,
+      title: 'No Results Found',
+      message:
+          'Try adjusting your search or filters to find what you\'re looking for',
+      actionText: _hasActiveFilters ? 'Clear Filters' : null,
+      onActionPressed: _hasActiveFilters ? _clearAllFilters : null,
     );
   }
 
@@ -2390,9 +2353,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   Widget _buildStoresContent() {
     if (_isLoadingStores) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primaryColor),
-      );
+      return const LoadingIndicator();
     }
 
     final filteredStores = _getActiveFilteredStores();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_text_styles.dart';
 import '../../core/routing/routes.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
@@ -10,7 +9,9 @@ import '../../core/utils/helpers.dart';
 import '../../core/services/favorites_change_notifier.dart';
 import '../../data/models/post_model.dart';
 import '../shared_widgets/cards/product_card.dart';
-import '../../core/widgets/app_button.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/error_state_widget.dart';
+import '../shared_widgets/loading_indicator.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
 
@@ -130,7 +131,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingIndicator();
     }
 
     if (_error == 'login_required') {
@@ -138,20 +139,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(_error!, style: AppTextStyles.bodyMedium),
-            const SizedBox(height: 16),
-            AppPrimaryButton(
-              text: 'Retry',
-              onPressed: _loadFavorites,
-            ),
-          ],
-        ),
+      return ErrorStateWidget(
+        message: 'Failed to load favorites',
+        details: _error,
+        onRetry: _loadFavorites,
       );
     }
 
@@ -228,100 +219,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildLoginRequired() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primaryPurple.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.login,
-                size: 64,
-                color: AppColors.primaryPurple,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Log in to view your favorites',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Log in to save your favorite products',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            AppPrimaryButton(
-              text: 'Log In',
-              onPressed: () => Navigator.pushNamed(context, Routes.login),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.login,
+      title: 'Log in to view your favorites',
+      message: 'Log in to save your favorite products',
+      actionText: 'Log In',
+      onActionPressed: () => Navigator.pushNamed(context, Routes.login),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primaryPurple.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.favorite_border,
-                size: 64,
-                color: AppColors.primaryPurple,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'No favorite products',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Add products to your favorites to find them here easily',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            AppPrimaryButton(
-              text: 'Explore Products',
-              onPressed: () => Navigator.pushNamed(context, Routes.searchTab),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.favorite_border,
+      title: 'No favorite products',
+      message: 'Add products to your favorites to find them here easily',
+      actionText: 'Explore Products',
+      onActionPressed: () => Navigator.pushNamed(context, Routes.searchTab),
     );
   }
 }

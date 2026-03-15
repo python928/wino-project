@@ -26,6 +26,7 @@ import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/store_chip.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/empty_state_widget.dart';
 import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
@@ -673,14 +674,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCompactEmptyState({
     required double height,
     required String message,
+    IconData icon = Icons.search_off_rounded,
+    String title = 'No Results',
   }) {
     return SizedBox(
       height: height,
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(color: Colors.grey[600]),
-        ),
+      child: EmptyStateWidget(
+        compact: true,
+        icon: icon,
+        title: title,
+        message: message,
       ),
     );
   }

@@ -4,8 +4,9 @@ import '../../core/theme/app_constants.dart';
 import '../../core/routing/routes.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/store_repository.dart';
-import '../shared_widgets/shimmer_loading.dart';
-import '../../core/widgets/app_button.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/error_state_widget.dart';
+import '../shared_widgets/loading_indicator.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../../core/services/follow_change_notifier.dart';
 
@@ -249,79 +250,22 @@ class _StoresListScreenState extends State<StoresListScreen> {
   }
 
   Widget _buildLoadingState() {
-    return ShimmerLoading(
-      child: ListView.separated(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        itemCount: 6,
-        separatorBuilder: (context, index) => const SizedBox(
-          height: AppConstants.spacing16,
-        ),
-        itemBuilder: (context, index) {
-          return Container(
-            height: 92,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
-            ),
-          );
-        },
-      ),
-    );
+    return const LoadingIndicator();
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppColors.errorRed,
-          ),
-          const SizedBox(height: AppConstants.spacing16),
-          Text(
-            'Failed to load stores',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppConstants.spacing8),
-          Text(
-            _error ?? 'Unknown error',
-            style: Theme.of(context).textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppConstants.spacing24),
-          AppPrimaryButton(
-            text: 'Retry',
-            onPressed: _loadStores,
-          ),
-        ],
-      ),
+    return ErrorStateWidget(
+      message: 'Failed to load stores',
+      details: _error ?? 'Unknown error',
+      onRetry: _loadStores,
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.store_outlined,
-            size: 64,
-            color: AppColors.textHint,
-          ),
-          const SizedBox(height: AppConstants.spacing16),
-          Text(
-            'No followed stores',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppConstants.spacing8),
-          Text(
-            'Follow a store to see it here',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.store_outlined,
+      title: 'No followed stores',
+      message: 'Follow a store to see it here',
     );
   }
 }

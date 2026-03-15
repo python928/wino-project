@@ -10,6 +10,7 @@ class EmptyStateWidget extends StatelessWidget {
   final String message;
   final String? actionText;
   final VoidCallback? onActionPressed;
+  final bool compact;
 
   const EmptyStateWidget({
     super.key,
@@ -18,41 +19,50 @@ class EmptyStateWidget extends StatelessWidget {
     required this.message,
     this.actionText,
     this.onActionPressed,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final padding = compact ? AppTheme.spacing16 : AppTheme.spacing32;
+    final iconContainerSize = compact ? 80.0 : 120.0;
+    final iconSize = compact ? 40.0 : 60.0;
+    final titleStyle = compact ? AppTextStyles.h3 : AppTextStyles.h2;
+    final titleSpacing = compact ? AppTheme.spacing16 : AppTheme.spacing24;
+    final messageSpacing = compact ? AppTheme.spacing8 : AppTheme.spacing12;
+    final actionSpacing = compact ? AppTheme.spacing16 : AppTheme.spacing24;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing32),
+        padding: EdgeInsets.all(padding),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Icon Container
             Container(
-              width: 120,
-              height: 120,
+              width: iconContainerSize,
+              height: iconContainerSize,
               decoration: BoxDecoration(
                 color: AppColors.primaryPurple.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 60,
+                size: iconSize,
                 color: AppColors.primaryPurple.withValues(alpha: 0.5),
               ),
             ),
-            
-            const SizedBox(height: AppTheme.spacing24),
+
+            SizedBox(height: titleSpacing),
             
             // Title
             Text(
               title,
-              style: AppTextStyles.h2,
+              style: titleStyle,
               textAlign: TextAlign.center,
             ),
-            
-            const SizedBox(height: AppTheme.spacing12),
+
+            SizedBox(height: messageSpacing),
             
             // Message
             Text(
@@ -65,7 +75,7 @@ class EmptyStateWidget extends StatelessWidget {
             
             // Action Button
             if (actionText != null && onActionPressed != null) ...[
-              const SizedBox(height: AppTheme.spacing24),
+              SizedBox(height: actionSpacing),
               AppPrimaryButton(
                 text: actionText!,
                 onPressed: onActionPressed,
