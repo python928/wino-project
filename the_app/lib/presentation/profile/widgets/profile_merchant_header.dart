@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
+import '../../shared_widgets/contact_action_row.dart';
 
 /// Profile header with cover, avatar, store info, and actions
 class ProfileMerchantHeader extends StatelessWidget {
@@ -340,48 +340,12 @@ class ProfileMerchantHeader extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              if (!isOwnerView &&
-                  (hasPhone || (whatsapp?.isNotEmpty == true))) ...[
+              if (!isOwnerView) ...[
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (hasPhone)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => Helpers.launchURL('tel:$phoneNumber'),
-                          icon: const Icon(Icons.phone_outlined, size: 18),
-                          label: const Text('Call'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (hasPhone && (whatsapp?.isNotEmpty == true))
-                      const SizedBox(width: 10),
-                    if (whatsapp?.isNotEmpty == true)
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Helpers.launchURL(
-                            'https://wa.me/${_normalizeWhatsApp(whatsapp!)}',
-                          ),
-                          icon: const Icon(Icons.chat_outlined, size: 18),
-                          label: const Text('WhatsApp'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.green.shade700,
-                            side: BorderSide(color: Colors.green.shade400),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                ContactActionRow(
+                  phone: hasPhone ? phoneNumber : null,
+                  whatsapp: whatsapp,
+                  buttonVerticalPadding: 10,
                 ),
               ],
 
@@ -438,19 +402,11 @@ class ProfileMerchantHeader extends StatelessWidget {
     return compact;
   }
 
-  String _normalizeWhatsApp(String raw) {
-    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
-    if (digits.startsWith('+213')) return digits.substring(1);
-    if (digits.startsWith('213')) return digits;
-    if (digits.startsWith('0')) return '213${digits.substring(1)}';
-    return digits;
-  }
-
   Widget _buildSocialIcon(IconData icon, String url, Color color) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: InkWell(
-        onTap: () => _launchURL(url),
+        onTap: () => Helpers.launchURL(url),
         borderRadius: BorderRadius.circular(50),
         child: Container(
           padding: const EdgeInsets.all(8),
@@ -486,12 +442,5 @@ class ProfileMerchantHeader extends StatelessWidget {
         child: Icon(icon, size: iconSize, color: Colors.white),
       ),
     );
-  }
-
-  Future<void> _launchURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      debugPrint('Could not launch $url');
-    }
   }
 }

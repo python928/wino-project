@@ -10,6 +10,7 @@ import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
+import '../shared_widgets/contact_action_row.dart';
 import '../shared_widgets/image_carousel.dart';
 
 class PromotionDetailScreen extends StatefulWidget {
@@ -202,70 +203,14 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
     ]);
   }
 
-  String _normalizeWhatsApp(String raw) {
-    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
-    if (digits.startsWith('+213')) return digits.substring(1);
-    if (digits.startsWith('213')) return digits;
-    if (digits.startsWith('0')) return '213${digits.substring(1)}';
-    return digits;
-  }
-
   Widget _buildContactButtons() {
     final phone = (_storeShowPhone ? _storePhone : null) ?? '';
     final whatsapp = (_storeShowSocial ? _storeWhatsapp : null) ?? '';
-    if (phone.trim().isEmpty && whatsapp.trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Contact Store',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            if (phone.trim().isNotEmpty)
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Helpers.launchURL('tel:$phone'),
-                  icon: const Icon(Icons.phone_outlined, size: 18),
-                  label: const Text('Call'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            if (phone.trim().isNotEmpty && whatsapp.trim().isNotEmpty)
-              const SizedBox(width: 10),
-            if (whatsapp.trim().isNotEmpty)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Helpers.launchURL(
-                    'https://wa.me/${_normalizeWhatsApp(whatsapp)}',
-                  ),
-                  icon: const Icon(Icons.chat_outlined, size: 18),
-                  label: const Text('WhatsApp'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.green.shade700,
-                    side: BorderSide(color: Colors.green.shade400),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
+    return ContactActionRow(
+      phone: phone,
+      whatsapp: whatsapp,
+      showTitle: true,
+      buttonVerticalPadding: 12,
     );
   }
 
