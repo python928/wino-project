@@ -17,7 +17,7 @@
   - `Product.store` and `Pack.merchant` both point to `users.User`, matching the "store == user" convention.
 - Analytics & recommendations:
   - User preference state lives in [UserInterestProfile](app-backend/analytics/models.py#L1-L39); interaction events in [InteractionLog](app-backend/analytics/models.py#L41-L92).
-  - The app **does not** send explicit analytics events; instead, views in `catalog` log events server‑side on product list/retrieve, favorites, reviews, etc. See [ANALYTICS_IMPLEMENTATION.md](ANALYTICS_IMPLEMENTATION.md) for the rationale.
+  - The app **does not** send explicit analytics events; instead, views in `catalog` log events server‑side on product list/retrieve, favorites, reviews, etc.
   - Recommendations are exposed under `/api/analytics/recommendations/` (wired in [app-backend/backend/urls.py](app-backend/backend/urls.py#L30-L40) and [app-backend/analytics/urls.py](app-backend/analytics/urls.py)).
 - Notifications & subscriptions:
   - FCM-based notifications live in [app-backend/notifications](app-backend/notifications); register devices at `/api/notifications/devices/` (see [app-backend/README.md](app-backend/README.md#L22-L30)).
@@ -27,7 +27,7 @@
   - DRF pagination is sometimes enabled; many list endpoints return either a `{results: [...]}` payload or a bare list. The Flutter side already handles both, so keep new endpoints consistent.
 - Environment & deployment:
   - Local DB defaults to SQLite ([app-backend/db.sqlite3](app-backend/db.sqlite3)); setting `POSTGRES_*` env vars switches to Postgres (see [app-backend/backend/settings.py](app-backend/backend/settings.py)).
-  - [app-backend/docker-compose.yml](app-backend/docker-compose.yml) wires Postgres and Redis; Redis is present but currently unused by Django settings.
+  - [app-backend/docker-compose.yml](app-backend/docker-compose.yml) wires Postgres and Redis; Redis is optional and only needed if Celery is enabled.
   - Media is served at `/media/` only when `DEBUG=True` via [django.conf.urls.static](app-backend/backend/urls.py#L42-L47).
 
 ## Flutter App (DzLocal / the_app)
@@ -35,7 +35,7 @@
   - Main entrypoint [the_app/lib/main.dart](the_app/lib/main.dart#L1-L60) initializes `StorageService.init()` then runs `DzLocalApp`.
   - `MultiProvider` wires `AuthProvider`, `PostProvider`, `HomeProvider`, `StoreProvider`, `PackProvider`, and `AnalyticsProvider`.
 - Routing:
-  - Uses a central `onGenerateRoute` implementation in [the_app/lib/core/routing/route_generator.dart](the_app/lib/core/routing/route_generator.dart), wrapped by [the_app/lib/core/navigation/route_generator.dart](the_app/lib/core/navigation/route_generator.dart).
+  - Uses a central `onGenerateRoute` implementation in [the_app/lib/core/routing/route_generator.dart](the_app/lib/core/routing/route_generator.dart).
   - Route name constants live in [the_app/lib/core/routing/routes.dart](the_app/lib/core/routing/routes.dart).
   - Argument conventions (preserve these when adding screens):
     - `Routes.store` → `int storeId` or `{storeId: int}` in `arguments`.
@@ -45,16 +45,15 @@
   - `go_router` is in dependencies but **not** used; do not switch routing style unless explicitly requested.
 - API integration:
   - Base URLs and paths are centralized in [the_app/lib/core/config/api_config.dart](the_app/lib/core/config/api_config.dart#L1-L90):
-    - `ApiConfig.baseUrl` selects `localhost`, `10.0.2.2`, or `127.0.0.1` depending on platform.
+    - `ApiConfig.baseUrl` currently returns `http://192.168.94.21:8000/` for all platforms (update there for local dev).
     - Path segments match Django routers, e.g. `stores` is just `users`, notifications under `/api/notifications/`, and analytics under `/api/analytics/`.
   - HTTP wrapper [the_app/lib/core/services/api_service.dart](the_app/lib/core/services/api_service.dart) uses `package:http`, adds auth headers from `StorageService`, and auto‑retries once on 401 by refreshing tokens.
   - Tokens & local state are handled by [the_app/lib/core/services/storage_service.dart](the_app/lib/core/services/storage_service.dart) (`flutter_secure_storage` for JWTs, `SharedPreferences` for other flags).
 - Design system & UI:
-  - The app uses a custom purple design system documented in [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md).
   - Theme and typography live in [the_app/lib/core/theme](the_app/lib/core/theme); use `AppTheme.lightTheme`, `AppColors`, `AppTextStyles`, and `AppConstants` instead of raw literals.
   - Reusable components (skeleton loaders, product cards, bottom sheets, etc.) live in [the_app/lib/core/components](the_app/lib/core/components). Prefer composing these over creating ad‑hoc UI.
 - Analytics UI:
-  - Client-side tracking widgets (e.g. `view_tracker.dart`, `search_tracker.dart`) are now mostly no-ops; recommendations are fetched via `AnalyticsProvider.fetchRecommendations()` and rendered on the home screen (see [ANALYTICS_IMPLEMENTATION.md](ANALYTICS_IMPLEMENTATION.md)).
+  - Client-side tracking widgets (e.g. `view_tracker.dart`, `search_tracker.dart`) are mostly no-ops; recommendations are fetched via `AnalyticsProvider.fetchRecommendations()` and rendered on the home screen.
 
 ## Developer Workflows
 - Backend (local Python), run from [app-backend](app-backend):

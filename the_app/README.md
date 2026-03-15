@@ -1,25 +1,32 @@
-# the_app
+# the_app (DzLocal)
 
-A new Flutter project.
+Flutter client for the Toprice backend.
 
 ## Routing
 
 This app uses named routes via `RouteGenerator.generateRoute`.
 
-- `Routes.store` expects an `int` (or numeric `String`) `storeId` in `arguments`.
-	- Example: `Navigator.pushNamed(context, Routes.store, arguments: 12)`
+- `Routes.store` expects an `int` (or `{storeId: int}`) in `arguments`.
 - `Routes.productDetails` expects a `Post` instance in `arguments`.
-	- Example: `Navigator.pushNamed(context, Routes.productDetails, arguments: post)`
+- `Routes.packDetails` expects a `Pack` instance in `arguments`.
+- `Routes.searchTab` expects a `{query, type, autoSearch}` map in `arguments`.
+
+## API base URL
+
+Base URLs and paths are centralized in `lib/core/config/api_config.dart`.
+`ApiConfig.baseUrl` currently points to `http://192.168.94.21:8000/` for all
+platforms. Update it there for local dev/testing.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+Quality checks:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter analyze
+flutter test
+```

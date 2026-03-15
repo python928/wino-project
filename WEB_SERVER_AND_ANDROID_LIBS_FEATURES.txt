@@ -106,8 +106,6 @@ Path: /home/anti-problems/toprice/the_app
 3) App feature modules (lib/features)
 - analytics
 - notifications
-- catalog (folder exists, currently empty screens)
-- product (folder exists, currently empty)
 
 4) App presentation feature areas (lib/presentation)
 - auth

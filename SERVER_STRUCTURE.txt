@@ -1,5 +1,6 @@
 .
 ├── .env
+├── .env.example
 ├── .github
 │   └── copilot-instructions.md
 ├── Dockerfile
@@ -43,7 +44,7 @@
 │   └── urls.py
 ├── db.sqlite3
 ├── docker-compose.yml
-├── firebase-adminsdk.json
+├── firebase-adminsdk.json (local, ignored)
 ├── manage.py
 ├── media
 │   ├── products

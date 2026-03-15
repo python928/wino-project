@@ -159,14 +159,17 @@
     │   │   ├── product_card.dart
     │   │   ├── promotion_card.dart
     │   │   └── store_chip.dart
+    │   ├── contact_action_row.dart
     │   ├── custom_app_bar.dart
     │   ├── custom_bottom_nav.dart
     │   ├── empty_state_widget.dart
     │   ├── error_state_widget.dart
     │   ├── gradient_button.dart
     │   ├── header.dart
+    │   ├── image_carousel.dart
     │   ├── loading_indicator.dart
     │   ├── location_mode_switcher.dart
+    │   ├── report_bottom_sheet.dart
     │   ├── shimmer_loading.dart
     │   └── unified_app_bar.dart
     ├── store

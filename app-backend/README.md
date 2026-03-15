@@ -4,7 +4,6 @@
 1. Install dependencies (system Python):
    ```bash
    pip3 install -r requirements.txt --break-system-packages --default-timeout 300
-   pip3 install django-cors-headers --break-system-packages
    ```
 2. Apply migrations:
    ```bash
@@ -29,10 +28,13 @@
  Notifications use FCM (fcm-django). Register devices via `/api/notifications/devices/` and ensure `FCM_SERVER_KEY` is set.
 
 ## Media & static
- Set `FCM_SERVER_KEY` to your Firebase server key for push notifications.
+ Media is served at `/media/` when `DEBUG=True`.
+
 ## Environment
+- Copy `./.env.example` to `./.env` and fill in values as needed.
 - Defaults to SQLite; set `POSTGRES_*` env vars for Postgres (see `docker-compose.yml`).
-- Redis is not required.
+- Redis/Celery are optional and only required if background jobs are enabled.
+- `GOOGLE_APPLICATION_CREDENTIALS` should point to your Firebase Admin SDK JSON (kept out of git).
 
 ## Notes
 - Remember to configure admin user: `/usr/bin/python3 manage.py createsuperuser`.
