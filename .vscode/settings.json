@@ -1,0 +1,21 @@
+{
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.rulers": [100]
+  },
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.rulers": [100]
+  },
+  "[yaml]": {
+    "editor.rulers": [100]
+  },
+  "[json]": {
+    "editor.rulers": [100]
+  }
+}
