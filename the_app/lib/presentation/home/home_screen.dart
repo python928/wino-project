@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
-import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -31,6 +30,7 @@ import 'main_navigation_screen.dart';
 import '../common/location_picker_screen.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
+import '../common/widgets/stacked_product_images.dart';
 import '../../features/analytics/analytics_export.dart';
 import '../../core/services/location_service.dart';
 import '../../core/utils/geolocation_stub.dart'
@@ -962,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Pack Images/Icon
                   Center(
-                    child: _buildStackedProductImages(pack.products),
+                    child: StackedProductImages(products: pack.products),
                   ),
                   // Discount badge
                   if (discountPercent > 0)
@@ -1707,101 +1707,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _toggleFavorite(Post product) {
     Helpers.showSnackBar(context, 'Added to favorites');
-  }
-
-  Widget _buildStackedProductImages(List<dynamic> products) {
-    if (products.isEmpty) {
-      return Icon(
-        Icons.inventory_2_rounded,
-        size: 50,
-        color: Colors.white.withValues(alpha: 0.9),
-      );
-    }
-
-    // Show up to 3 product images stacked
-    final imagesToShow = products.take(3).toList();
-    final imageCount = imagesToShow.length;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final availableHeight = constraints.maxHeight;
-
-        // Image size adapts to container
-        final imageSize = (availableHeight * 0.65).clamp(45.0, 70.0);
-        final overlap = imageSize * 0.4;
-        final totalWidth = imageSize + (imageCount - 1) * (imageSize - overlap);
-        final startX = (availableWidth - totalWidth) / 2;
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            for (int i = 0; i < imageCount; i++)
-              Positioned(
-                left: startX + i * (imageSize - overlap),
-                child: Container(
-                  width: imageSize,
-                  height: imageSize,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _getProductImage(imagesToShow[i]),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _getProductImage(dynamic product) {
-    String? imageUrl;
-
-    // Handle PackProduct object
-    if (product is PackProduct) {
-      imageUrl = product.productImage;
-    } else if (product is Map<String, dynamic>) {
-      imageUrl = product['product_image'] as String?;
-    }
-
-    // Get the full image URL using ApiConfig
-    final fullImageUrl = ApiConfig.getImageUrl(imageUrl);
-
-    if (fullImageUrl.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        child: const Icon(
-          Icons.inventory_2,
-          size: 18,
-          color: Colors.grey,
-        ),
-      );
-    }
-
-    return Image.network(
-      fullImageUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey[200],
-        child: const Icon(
-          Icons.inventory_2,
-          size: 18,
-          color: Colors.grey,
-        ),
-      ),
-    );
   }
 
   String _buildProductSummary(List<dynamic> products) {
