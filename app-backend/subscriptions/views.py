@@ -1,8 +1,8 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Count, Q
-from django.utils import timezone
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from .constants import DEFAULT_SUBSCRIPTION_INSTRUCTIONS, DEFAULT_SUBSCRIPTION_RIB
 from .models import (
@@ -10,6 +10,7 @@ from .models import (
 	SubscriptionPaymentConfig,
 	SubscriptionPaymentRequest,
 	SubscriptionPlan,
+	SubscriptionPaymentProof,
 )
 from .serializers import (
 	MerchantSubscriptionSerializer,
@@ -17,14 +18,15 @@ from .serializers import (
 	SubscriptionPaymentRequestSerializer,
 	SubscriptionPlanSerializer,
 )
-from catalog.serializers import PromotionSerializer
 from .services import (
 	FREE_POST_LIMIT,
+	build_merchant_dashboard,
 	get_active_subscription,
 	get_current_posts_count,
 	get_post_limit,
 	bootstrap_default_subscription_plans,
 	get_merchant_plan_features,
+	parse_dashboard_date_filters,
 )
 
 
@@ -72,7 +74,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 	permission_classes = [permissions.IsAuthenticated]
 
 	def get_permissions(self):
-		if self.action in ['list', 'retrieve', 'access_status']:
+		if self.action in ['list', 'retrieve', 'access_status', 'merchant_dashboard']:
 			return [permissions.IsAuthenticated()]
 		return [permissions.IsAdminUser()]
 
@@ -111,41 +113,22 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 		"""
 		Dashboard data for merchants: subscription status + ad/promotion analytics.
 		"""
-		from catalog.models import Product, Promotion
-		from analytics.models import InteractionLog
-
-		active = get_active_subscription(request.user)
-		plan_features = get_merchant_plan_features(request.user)
-
-		days_remaining = None
-		if active is not None:
-			days_remaining = max(0, (active.end_date - timezone.now()).days)
-
-		promotions_qs = Promotion.objects.filter(store=request.user).order_by('-created_at')
-		promotions_data = PromotionSerializer(promotions_qs, many=True).data
-
-		product_stats = (
-			InteractionLog.objects.filter(product__store=request.user)
-			.values('product_id', 'product__name')
-			.annotate(
-				views=Count('id', filter=Q(action='view')),
-				clicks=Count('id', filter=Q(action='click')),
-				favorites=Count('id', filter=Q(action='favorite')),
-				promotion_clicks=Count('id', filter=Q(action='promotion_click')),
-			)
-			.order_by('-views', '-clicks')
-		)
+		date_from = request.query_params.get('date_from')
+		date_to = request.query_params.get('date_to')
+		try:
+			parsed_from, parsed_to = parse_dashboard_date_filters(date_from, date_to)
+		except serializers.ValidationError as exc:
+			return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
 
 		return Response(
-			{
-				'active_subscription': MerchantSubscriptionSerializer(active).data
-				if active is not None
-				else None,
-				'days_remaining': days_remaining,
-				'plan_features': plan_features,
-				'promotions': promotions_data,
-				'product_stats': list(product_stats),
-			}
+			build_merchant_dashboard(
+				request.user,
+				request,
+				date_from=date_from,
+				date_to=date_to,
+				parsed_from=parsed_from,
+				parsed_to=parsed_to,
+			)
 		)
 
 
@@ -153,6 +136,7 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 	queryset = SubscriptionPaymentRequest.objects.select_related('merchant', 'plan')
 	serializer_class = SubscriptionPaymentRequestSerializer
 	permission_classes = [permissions.IsAuthenticated]
+	parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve', 'create']:
@@ -167,5 +151,36 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		serializer.save(merchant=self.request.user)
+
+	def create(self, request, *args, **kwargs):
+		plan_id = request.data.get('plan')
+		payment_note = request.data.get('payment_note', '')
+		images = request.FILES.getlist('images')
+		if not plan_id:
+			return Response({'plan': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+		if not images:
+			return Response(
+				{'images': 'Please upload at least 1 image as payment proof.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if len(images) > 3:
+			return Response(
+				{'images': 'You can upload up to 3 images.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		serializer = self.get_serializer(data={'plan': plan_id, 'payment_note': payment_note})
+		serializer.is_valid(raise_exception=True)
+		payment_request = serializer.save(merchant=request.user)
+
+		for idx, image in enumerate(images):
+			SubscriptionPaymentProof.objects.create(
+				payment_request=payment_request,
+				image=image,
+			)
+
+		headers = self.get_success_headers(serializer.data)
+		out = self.get_serializer(payment_request).data
+		return Response(out, status=status.HTTP_201_CREATED, headers=headers)
 
 # Create your views here.

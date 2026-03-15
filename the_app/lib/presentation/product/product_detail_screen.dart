@@ -71,6 +71,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isLoadingFollowState = false;
 
   String? _storeImageUrl;
+  String? _storePhone;
+  String? _storeWhatsapp;
+  bool _storeShowPhone = true;
+  bool _storeShowSocial = true;
 
   List<String> get _galleryImages {
     final urls = widget.product.images
@@ -107,7 +111,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     _isFavorited = widget.product.isFavorited;
     _loadFollowState();
-    _loadStoreImage();
+    _loadStoreDetails();
   }
 
   Map<String, dynamic> _analyticsMetadata() {
@@ -184,27 +188,47 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _loadStoreImage() async {
+  Future<void> _loadStoreDetails() async {
     final storeId = widget.product.storeId;
     if (storeId <= 0) return;
 
+    String? imageUrl;
+    String? phone = widget.product.author.phone;
+    String? whatsapp = widget.product.author.whatsapp;
+    bool showPhone = widget.product.author.showPhonePublic;
+    bool showSocial = widget.product.author.showSocialPublic;
+
     final raw = widget.product.author.profileImage;
     if (raw != null && raw.trim().isNotEmpty) {
-      if (!mounted) return;
-      setState(() => _storeImageUrl = ApiConfig.getImageUrl(raw));
-      return;
+      imageUrl = ApiConfig.getImageUrl(raw);
     }
 
     try {
       final store = await StoreRepository.getStore(storeId);
-      final url = store?.profileImage ?? '';
-      if (!mounted) return;
-      if (url.trim().isNotEmpty) {
-        setState(() => _storeImageUrl = url);
+      if (store != null) {
+        final url = store.profileImage ?? '';
+        if (url.trim().isNotEmpty) imageUrl = url;
+        if (store.phone != null && store.phone!.trim().isNotEmpty) {
+          phone = store.phone;
+        }
+        if (store.whatsapp != null && store.whatsapp!.trim().isNotEmpty) {
+          whatsapp = store.whatsapp;
+        }
+        showPhone = store.showPhonePublic;
+        showSocial = store.showSocialPublic;
       }
     } catch (_) {
       // ignore
     }
+
+    if (!mounted) return;
+    setState(() {
+      _storeImageUrl = imageUrl;
+      _storePhone = phone;
+      _storeWhatsapp = whatsapp;
+      _storeShowPhone = showPhone;
+      _storeShowSocial = showSocial;
+    });
   }
 
   Future<void> _loadFollowState() async {
@@ -310,8 +334,75 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _refreshDetails() async {
     await Future.wait([
       _loadFollowState(),
-      _loadStoreImage(),
+      _loadStoreDetails(),
     ]);
+  }
+
+  String _normalizeWhatsApp(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.startsWith('+213')) return digits.substring(1);
+    if (digits.startsWith('213')) return digits;
+    if (digits.startsWith('0')) return '213${digits.substring(1)}';
+    return digits;
+  }
+
+  Widget _buildContactButtons() {
+    final phone = (_storeShowPhone ? _storePhone : null) ?? '';
+    final whatsapp = (_storeShowSocial ? _storeWhatsapp : null) ?? '';
+    if (phone.trim().isEmpty && whatsapp.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Contact Store',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            if (phone.trim().isNotEmpty)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Helpers.launchURL('tel:$phone'),
+                  icon: const Icon(Icons.phone_outlined, size: 18),
+                  label: const Text('Call'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            if (phone.trim().isNotEmpty && whatsapp.trim().isNotEmpty)
+              const SizedBox(width: 10),
+            if (whatsapp.trim().isNotEmpty)
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Helpers.launchURL(
+                    'https://wa.me/${_normalizeWhatsApp(whatsapp)}',
+                  ),
+                  icon: const Icon(Icons.chat_outlined, size: 18),
+                  label: const Text('WhatsApp'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green.shade700,
+                    side: BorderSide(color: Colors.green.shade400),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
   }
 
   Future<void> _showReportProductSheet() async {
@@ -324,11 +415,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final detailsController = TextEditingController();
     String selectedReason = 'spam';
     const reasons = [
-      {'value': 'spam', 'label': 'Spam'},
-      {'value': 'fake', 'label': 'Fake Product'},
-      {'value': 'fraud', 'label': 'Fraud / Scam'},
-      {'value': 'offensive', 'label': 'Offensive Content'},
-      {'value': 'other', 'label': 'Other'},
+      {'value': 'spam', 'label': 'Duplicate / spam listing'},
+      {'value': 'fake', 'label': 'Fake / counterfeit product'},
+      {'value': 'fraud', 'label': 'Scam / asked for prepayment'},
+      {'value': 'offensive', 'label': 'Offensive / prohibited content'},
+      {'value': 'other', 'label': 'Other (price mismatch, wrong info)'},
     ];
 
     final ok = await showModalBottomSheet<bool>(
@@ -600,6 +691,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ],
                   ),
+
+                  SizedBox(height: 24),
+
+                  _buildContactButtons(),
 
                   SizedBox(height: 24),
 

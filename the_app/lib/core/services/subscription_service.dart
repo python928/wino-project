@@ -1,6 +1,7 @@
 import '../config/api_config.dart';
 import 'api_service.dart';
 import '../../data/models/subscription_plan_model.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SubscriptionCatalogData {
   final List<SubscriptionPlanModel> plans;
@@ -33,7 +34,20 @@ class SubscriptionService {
   static Future<void> submitPaymentRequest({
     required int planId,
     required String paymentNote,
+    List<XFile> images = const [],
   }) async {
+    if (images.isNotEmpty) {
+      await ApiService.postMultipartMany(
+        ApiConfig.subscriptionPaymentRequests,
+        {
+          'plan': planId.toString(),
+          'payment_note': paymentNote,
+        },
+        images,
+        fieldName: 'images',
+      );
+      return;
+    }
     await ApiService.post(ApiConfig.subscriptionPaymentRequests, {
       'plan': planId,
       'payment_note': paymentNote,
@@ -47,8 +61,23 @@ class SubscriptionService {
         text.contains('subscribe to continue');
   }
 
-  static Future<Map<String, dynamic>> fetchMerchantDashboard() async {
-    final resp = await ApiService.get(ApiConfig.subscriptionMerchantDashboard);
+  static Future<Map<String, dynamic>> fetchMerchantDashboard({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    var endpoint = ApiConfig.subscriptionMerchantDashboard;
+    final query = <String, String>{};
+    if (dateFrom != null) {
+      query['date_from'] = dateFrom.toIso8601String().split('T').first;
+    }
+    if (dateTo != null) {
+      query['date_to'] = dateTo.toIso8601String().split('T').first;
+    }
+    if (query.isNotEmpty) {
+      endpoint = '$endpoint?${Uri(queryParameters: query).query}';
+    }
+
+    final resp = await ApiService.get(endpoint);
     if (resp is Map<String, dynamic>) return resp;
     return <String, dynamic>{};
   }

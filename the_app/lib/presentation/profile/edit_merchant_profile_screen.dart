@@ -54,7 +54,6 @@ class EditMerchantProfileScreen extends StatefulWidget {
 
 class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   late TextEditingController _nameController;
-  late TextEditingController _phoneController;
   late TextEditingController _descriptionController;
 
 // ... existing imports
@@ -84,7 +83,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-    _phoneController = TextEditingController(text: widget.initialPhone);
     _descriptionController =
         TextEditingController(text: widget.initialStoreDescription ?? '');
 
@@ -233,7 +231,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     _descriptionController.dispose();
     _facebookController.dispose();
     _instagramController.dispose();
@@ -473,25 +470,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       final userId = userData?['id'];
       if (userId == null) throw Exception('Cannot identify user ID');
 
-      // Build address
+      // Build address (optional for profile save)
       final address = (_selectedWilaya != null && _selectedBaladiya != null)
           ? '$_selectedBaladiya, $_selectedWilaya'
           : (userData?['address'] ?? '');
-      if (address.trim().isEmpty) {
-        Helpers.showSnackBar(
-          context,
-          'Place is required. Please select Wilaya and Baladiya first.',
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
 
       // Single PATCH — store == user in this backend
       final payload = <String, dynamic>{
         'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
         'store_description': _descriptionController.text.trim(),
-        'address': address,
+        if (address.trim().isNotEmpty) 'address': address,
         'facebook': _facebookController.text.trim(),
         'instagram': _instagramController.text.trim(),
         'whatsapp': _whatsappController.text.trim(),
@@ -527,7 +515,6 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         // Fallback: update locally
         if (userData != null) {
           userData['name'] = _nameController.text.trim();
-          userData['phone'] = _phoneController.text.trim();
           userData['store_description'] = _descriptionController.text.trim();
           userData['address'] = address;
           userData['location'] = address;
@@ -675,24 +662,15 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     style: AppTextFieldStyle.profile,
                   ),
                   const SizedBox(height: 20),
-                  AppTextField(
-                    controller: _phoneController,
-                    label: 'Phone Number',
-                    hint: '+213 XXX XXX XXX',
-                    icon: Icons.phone_rounded,
-                    keyboardType: TextInputType.phone,
-                    textDirection: TextDirection.ltr,
-                    style: AppTextFieldStyle.profile,
-                  ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _showPhonePublic,
                     activeColor: AppColors.primaryColor,
-                    title: const Text('Show phone on profile'),
+                    title: const Text('Show call button'),
                     subtitle: Text(
                       _showPhonePublic
-                          ? 'Visible to other users'
-                          : 'Hidden from other users',
+                          ? 'Customers can call you'
+                          : 'Call button will be hidden',
                     ),
                     onChanged: (value) {
                       setState(() => _showPhonePublic = value);
@@ -712,11 +690,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     contentPadding: EdgeInsets.zero,
                     value: _showSocialPublic,
                     activeColor: AppColors.primaryColor,
-                    title: const Text('Show social links on profile'),
+                    title: const Text('Show WhatsApp/social buttons'),
                     subtitle: Text(
                       _showSocialPublic
-                          ? 'Visible to other users'
-                          : 'Hidden from other users',
+                          ? 'Customers can contact you'
+                          : 'Buttons will be hidden',
                     ),
                     onChanged: (value) {
                       setState(() => _showSocialPublic = value);

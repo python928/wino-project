@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone
+from django.db.models import Count, Q, Sum
 from rest_framework import serializers
 
 from .constants import DEFAULT_PLAN_FEATURES, DEFAULT_SUBSCRIPTION_PLANS
@@ -239,3 +240,185 @@ def activate_subscription_for_payment_request(payment_request):
 		end_date=now + timedelta(days=payment_request.plan.duration_days),
 		status='active',
 	)
+
+
+def parse_dashboard_date_filters(date_from, date_to):
+	parsed_from = None
+	parsed_to = None
+	try:
+		if date_from:
+			parsed_from = datetime.fromisoformat(date_from)
+			if timezone.is_naive(parsed_from):
+				parsed_from = timezone.make_aware(parsed_from)
+		if date_to:
+			parsed_to = datetime.fromisoformat(date_to)
+			if timezone.is_naive(parsed_to):
+				parsed_to = timezone.make_aware(parsed_to)
+			parsed_to = parsed_to.replace(hour=23, minute=59, second=59, microsecond=999999)
+	except ValueError:
+		raise serializers.ValidationError({'detail': 'Invalid date format. Use YYYY-MM-DD.'})
+	return parsed_from, parsed_to
+
+
+def _apply_range_filter(queryset, field_name, parsed_from=None, parsed_to=None):
+	if parsed_from is not None:
+		queryset = queryset.filter(**{f'{field_name}__gte': parsed_from})
+	if parsed_to is not None:
+		queryset = queryset.filter(**{f'{field_name}__lte': parsed_to})
+	return queryset
+
+
+def _safe_image_url(request, image_field):
+	if not image_field:
+		return ''
+	try:
+		return request.build_absolute_uri(image_field.url)
+	except Exception:
+		return ''
+
+
+def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, parsed_from=None, parsed_to=None):
+	from analytics.models import InteractionLog
+	from catalog.models import Product, Promotion
+	from catalog.serializers import PromotionSerializer
+	from .serializers import MerchantSubscriptionSerializer, SubscriptionPaymentRequestSerializer
+
+	active = get_active_subscription(user)
+	plan_features = get_merchant_plan_features(user)
+	now = timezone.now()
+	days_remaining = max(0, (active.end_date - now).days) if active is not None else None
+
+	promotions_qs = Promotion.objects.filter(store=user).order_by('-created_at')
+	promotions_qs = _apply_range_filter(
+		promotions_qs,
+		'created_at',
+		parsed_from=parsed_from,
+		parsed_to=parsed_to,
+	)
+	promotions_data = PromotionSerializer(promotions_qs, many=True).data
+
+	interaction_qs = InteractionLog.objects.filter(product__store=user)
+	interaction_qs = _apply_range_filter(
+		interaction_qs,
+		'timestamp',
+		parsed_from=parsed_from,
+		parsed_to=parsed_to,
+	)
+	interaction_rows = interaction_qs.values('product_id', 'product__name').annotate(
+		views=Count('id', filter=Q(action='view')),
+		clicks=Count('id', filter=Q(action='click')),
+		favorites=Count('id', filter=Q(action='favorite')),
+		promotion_click_events=Count('id', filter=Q(action='promotion_click')),
+	)
+	interaction_map = {
+		int(row['product_id']): row
+		for row in interaction_rows
+		if row.get('product_id')
+	}
+
+	promotion_rows = promotions_qs.values('product_id', 'product__name').annotate(
+		ad_count=Count('id', filter=Q(kind='advertising')),
+		promotion_count=Count('id', filter=Q(kind='promotion')),
+		promotion_impressions=Sum('impressions_count'),
+		promotion_clicks=Sum('clicks_count'),
+		promotion_unique_viewers=Sum('unique_viewers_count'),
+	)
+	promotion_map = {
+		int(row['product_id']): row
+		for row in promotion_rows
+		if row.get('product_id')
+	}
+
+	product_ids = set(interaction_map.keys()) | set(promotion_map.keys())
+	product_stats = []
+	for product_id in product_ids:
+		interaction_row = interaction_map.get(product_id, {})
+		promotion_row = promotion_map.get(product_id, {})
+		ad_impressions = int(promotion_row.get('promotion_impressions') or 0)
+		ad_clicks = int(promotion_row.get('promotion_clicks') or 0)
+		product_stats.append(
+			{
+				'product_id': product_id,
+				'product_name': (
+					interaction_row.get('product__name')
+					or promotion_row.get('product__name')
+					or ''
+				),
+				'views': int(interaction_row.get('views') or 0),
+				'clicks': int(interaction_row.get('clicks') or 0),
+				'favorites': int(interaction_row.get('favorites') or 0),
+				'promotion_click_events': int(interaction_row.get('promotion_click_events') or 0),
+				'ad_count': int(promotion_row.get('ad_count') or 0),
+				'promotion_count': int(promotion_row.get('promotion_count') or 0),
+				'ad_impressions': ad_impressions,
+				'ad_clicks': ad_clicks,
+				'ad_unique_viewers': int(promotion_row.get('promotion_unique_viewers') or 0),
+				'ad_ctr': round((ad_clicks / ad_impressions) * 100, 2) if ad_impressions > 0 else 0.0,
+			}
+		)
+	product_stats.sort(
+		key=lambda row: (row['ad_impressions'], row['ad_clicks'], row['views'], row['clicks']),
+		reverse=True,
+	)
+
+	active_ads_qs = promotions_qs.filter(
+		kind='advertising',
+		is_active=True,
+		start_date__lte=now,
+		end_date__gte=now,
+	)
+	active_ad_counts = {
+		int(row['product_id']): int(row['active_ad_count'] or 0)
+		for row in active_ads_qs.values('product_id').annotate(active_ad_count=Count('id'))
+		if row.get('product_id')
+	}
+	ad_max_active = int(plan_features.get('ad_max_active') or 0)
+	ad_inventory = {
+		'ad_enabled': bool(plan_features.get('ad_enabled', True)),
+		'ad_max_active': ad_max_active,
+		'ad_active_count': int(sum(active_ad_counts.values())),
+		'remaining_ad_slots': max(ad_max_active - int(sum(active_ad_counts.values())), 0),
+		'ad_max_impressions': int(plan_features.get('ad_max_impressions') or 0),
+		'ad_priority_boost': int(plan_features.get('ad_priority_boost') or 0),
+	}
+
+	products_qs = Product.objects.filter(store=user).prefetch_related('images').order_by('-created_at')
+	eligible_products = []
+	for product in products_qs:
+		product_image = next(iter(product.images.all()), None)
+		eligible_products.append(
+			{
+				'id': product.id,
+				'name': product.name,
+				'price': str(product.price),
+				'image': _safe_image_url(request, getattr(product_image, 'image', None)),
+				'has_active_ad': active_ad_counts.get(product.id, 0) > 0,
+				'active_ad_count': active_ad_counts.get(product.id, 0),
+			}
+		)
+
+	latest_request = (
+		SubscriptionPaymentRequest.objects.select_related('plan')
+		.filter(merchant=user)
+		.order_by('-created_at')
+		.first()
+	)
+
+	return {
+		'active_subscription': MerchantSubscriptionSerializer(active).data if active is not None else None,
+		'days_remaining': days_remaining,
+		'plan_features': plan_features,
+		'ad_inventory': ad_inventory,
+		'filters': {
+			'date_from': date_from,
+			'date_to': date_to,
+		},
+		'latest_payment_request': (
+			SubscriptionPaymentRequestSerializer(latest_request).data
+			if latest_request is not None
+			else None
+		),
+		'promotions': promotions_data,
+		'product_stats': product_stats,
+		'eligible_products': eligible_products,
+	}

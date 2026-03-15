@@ -67,6 +67,19 @@ class SubscriptionPaymentRequest(models.Model):
 		return f"{self.merchant_id} -> {self.plan_id} ({self.status})"
 
 
+class SubscriptionPaymentProof(models.Model):
+	payment_request = models.ForeignKey(
+		SubscriptionPaymentRequest,
+		on_delete=models.CASCADE,
+		related_name='proofs',
+	)
+	image = models.ImageField(upload_to='subscriptions/payment_proofs/')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self) -> str:  # pragma: no cover - simple repr
+		return f"Proof {self.id} for request {self.payment_request_id}"
+
+
 class SubscriptionPaymentConfig(models.Model):
 	rib = models.CharField(max_length=64, default=DEFAULT_SUBSCRIPTION_RIB)
 	instructions = models.TextField(

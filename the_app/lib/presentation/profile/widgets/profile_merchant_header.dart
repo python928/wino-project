@@ -245,6 +245,22 @@ class ProfileMerchantHeader extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 18, color: AppColors.primaryColor),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      location,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               if (storeDescription.isNotEmpty)
                 Text(
@@ -324,36 +340,47 @@ class ProfileMerchantHeader extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 18, color: AppColors.primaryColor),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      location,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              if (hasPhone) ...[
-                const SizedBox(height: 8),
+              if (!isOwnerView &&
+                  (hasPhone || (whatsapp?.isNotEmpty == true))) ...[
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.phone_outlined,
-                        size: 18, color: AppColors.primaryColor),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        displayPhone,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    if (hasPhone)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => Helpers.launchURL('tel:$phoneNumber'),
+                          icon: const Icon(Icons.phone_outlined, size: 18),
+                          label: const Text('Call'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    if (hasPhone && (whatsapp?.isNotEmpty == true))
+                      const SizedBox(width: 10),
+                    if (whatsapp?.isNotEmpty == true)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Helpers.launchURL(
+                            'https://wa.me/${_normalizeWhatsApp(whatsapp!)}',
+                          ),
+                          icon: const Icon(Icons.chat_outlined, size: 18),
+                          label: const Text('WhatsApp'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.green.shade700,
+                            side: BorderSide(color: Colors.green.shade400),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -371,9 +398,6 @@ class ProfileMerchantHeader extends StatelessWidget {
                       if (instagram?.isNotEmpty == true)
                         _buildSocialIcon(FontAwesomeIcons.instagram, instagram!,
                             Colors.pink),
-                      if (whatsapp?.isNotEmpty == true)
-                        _buildSocialIcon(FontAwesomeIcons.whatsapp,
-                            'https://wa.me/$whatsapp', Colors.green),
                       if (tiktok?.isNotEmpty == true)
                         _buildSocialIcon(
                             FontAwesomeIcons.tiktok, tiktok!, Colors.black),
@@ -395,7 +419,6 @@ class ProfileMerchantHeader extends StatelessWidget {
   bool get _hasAnySocial =>
       (facebook?.isNotEmpty == true) ||
       (instagram?.isNotEmpty == true) ||
-      (whatsapp?.isNotEmpty == true) ||
       (tiktok?.isNotEmpty == true) ||
       (youtube?.isNotEmpty == true);
 
@@ -413,6 +436,14 @@ class ProfileMerchantHeader extends StatelessWidget {
       return local.startsWith('0') ? local : '0$local';
     }
     return compact;
+  }
+
+  String _normalizeWhatsApp(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.startsWith('+213')) return digits.substring(1);
+    if (digits.startsWith('213')) return digits;
+    if (digits.startsWith('0')) return '213${digits.substring(1)}';
+    return digits;
   }
 
   Widget _buildSocialIcon(IconData icon, String url, Color color) {

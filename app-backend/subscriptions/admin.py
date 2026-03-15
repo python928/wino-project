@@ -5,6 +5,7 @@ from .models import (
     MerchantSubscription,
     SubscriptionPaymentConfig,
     SubscriptionPaymentRequest,
+    SubscriptionPaymentProof,
     SubscriptionPlan,
 )
 from .services import activate_subscription_for_payment_request
@@ -38,6 +39,23 @@ class MerchantSubscriptionAdmin(admin.ModelAdmin):
 class SubscriptionPaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('merchant', 'plan', 'status_icon', 'status', 'created_at')
     list_filter = ('status', 'plan')
+    readonly_fields = ('proof_gallery',)
+    fieldsets = (
+        ('Details', {
+            'fields': ('merchant', 'plan', 'status'),
+            'classes': ('tab', 'tab-details'),
+        }),
+        ('Payment Proofs', {
+            'fields': ('payment_note', 'proof_gallery'),
+            'classes': ('tab', 'tab-proofs'),
+        }),
+    )
+
+    class Media:
+        css = {
+            'all': ('subscriptions/admin_tabs.css',)
+        }
+        js = ('subscriptions/admin_tabs.js',)
 
     @admin.display(description='State')
     def status_icon(self, obj):
@@ -62,6 +80,25 @@ class SubscriptionPaymentRequestAdmin(admin.ModelAdmin):
         # Transition to approved => activate subscription.
         if obj.status == SubscriptionPaymentRequest.STATUS_APPROVED and previous_status != obj.status:
             activate_subscription_for_payment_request(obj)
+
+    @admin.display(description='Images')
+    def proof_gallery(self, obj):
+        proofs = list(obj.proofs.all())
+        if not proofs:
+            return '-'
+        images = []
+        for proof in proofs:
+            if proof.image:
+                images.append(
+                    format_html(
+                        '<a href="{0}" target="_blank" rel="noopener">'
+                        '<img src="{0}" style="height: 160px; width: 160px; object-fit: cover; margin: 6px; border-radius: 10px; border: 1px solid #eee;" />'
+                        '</a>',
+                        proof.image.url,
+                    )
+                )
+        return format_html(''.join(str(i) for i in images))
+
 
 
 @admin.register(SubscriptionPaymentConfig)

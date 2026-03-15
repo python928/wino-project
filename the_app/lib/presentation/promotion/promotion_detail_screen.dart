@@ -30,6 +30,10 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
   bool _isLoadingFollowState = false;
 
   String? _storeImageUrl;
+  String? _storePhone;
+  String? _storeWhatsapp;
+  bool _storeShowPhone = true;
+  bool _storeShowSocial = true;
 
   List<String> get _galleryImages {
     final urls = widget.promotion.product.images
@@ -51,30 +55,50 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
     super.initState();
     _isFavorited = widget.promotion.product.isFavorited;
     _loadFollowState();
-    _loadStoreImage();
+    _loadStoreDetails();
   }
 
-  Future<void> _loadStoreImage() async {
+  Future<void> _loadStoreDetails() async {
     final storeId = widget.promotion.product.storeId;
     if (storeId <= 0) return;
 
+    String? imageUrl;
+    String? phone = widget.promotion.product.author.phone;
+    String? whatsapp = widget.promotion.product.author.whatsapp;
+    bool showPhone = widget.promotion.product.author.showPhonePublic;
+    bool showSocial = widget.promotion.product.author.showSocialPublic;
+
     final raw = widget.promotion.product.author.profileImage;
     if (raw != null && raw.trim().isNotEmpty) {
-      if (!mounted) return;
-      setState(() => _storeImageUrl = ApiConfig.getImageUrl(raw));
-      return;
+      imageUrl = ApiConfig.getImageUrl(raw);
     }
 
     try {
       final store = await StoreRepository.getStore(storeId);
-      final url = store?.profileImage ?? '';
-      if (!mounted) return;
-      if (url.trim().isNotEmpty) {
-        setState(() => _storeImageUrl = url);
+      if (store != null) {
+        final url = store.profileImage ?? '';
+        if (url.trim().isNotEmpty) imageUrl = url;
+        if (store.phone != null && store.phone!.trim().isNotEmpty) {
+          phone = store.phone;
+        }
+        if (store.whatsapp != null && store.whatsapp!.trim().isNotEmpty) {
+          whatsapp = store.whatsapp;
+        }
+        showPhone = store.showPhonePublic;
+        showSocial = store.showSocialPublic;
       }
     } catch (_) {
       // ignore
     }
+
+    if (!mounted) return;
+    setState(() {
+      _storeImageUrl = imageUrl;
+      _storePhone = phone;
+      _storeWhatsapp = whatsapp;
+      _storeShowPhone = showPhone;
+      _storeShowSocial = showSocial;
+    });
   }
 
   Future<void> _loadFollowState() async {
@@ -174,8 +198,213 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
   Future<void> _refreshDetails() async {
     await Future.wait([
       _loadFollowState(),
-      _loadStoreImage(),
+      _loadStoreDetails(),
     ]);
+  }
+
+  String _normalizeWhatsApp(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.startsWith('+213')) return digits.substring(1);
+    if (digits.startsWith('213')) return digits;
+    if (digits.startsWith('0')) return '213${digits.substring(1)}';
+    return digits;
+  }
+
+  Widget _buildContactButtons() {
+    final phone = (_storeShowPhone ? _storePhone : null) ?? '';
+    final whatsapp = (_storeShowSocial ? _storeWhatsapp : null) ?? '';
+    if (phone.trim().isEmpty && whatsapp.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Contact Store',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            if (phone.trim().isNotEmpty)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Helpers.launchURL('tel:$phone'),
+                  icon: const Icon(Icons.phone_outlined, size: 18),
+                  label: const Text('Call'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            if (phone.trim().isNotEmpty && whatsapp.trim().isNotEmpty)
+              const SizedBox(width: 10),
+            if (whatsapp.trim().isNotEmpty)
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Helpers.launchURL(
+                    'https://wa.me/${_normalizeWhatsApp(whatsapp)}',
+                  ),
+                  icon: const Icon(Icons.chat_outlined, size: 18),
+                  label: const Text('WhatsApp'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green.shade700,
+                    side: BorderSide(color: Colors.green.shade400),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showReportPromotionSheet() async {
+    if (!StorageService.isLoggedIn()) {
+      Helpers.showSnackBar(context, 'Log in first to report offers',
+          isError: true);
+      return;
+    }
+
+    final detailsController = TextEditingController();
+    String selectedReason = 'spam';
+    const reasons = [
+      {'value': 'spam', 'label': 'Duplicate / spam listing'},
+      {'value': 'fake', 'label': 'Fake / counterfeit product'},
+      {'value': 'fraud', 'label': 'Scam / asked for prepayment'},
+      {'value': 'offensive', 'label': 'Offensive / prohibited content'},
+      {'value': 'other', 'label': 'Other (price mismatch, wrong info)'},
+    ];
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Report Offer',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: reasons.map((r) {
+                    final selected = selectedReason == r['value'];
+                    return GestureDetector(
+                      onTap: () =>
+                          setModalState(() => selectedReason = r['value']!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected
+                                ? Colors.red.shade300
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          r['label']!,
+                          style: TextStyle(
+                            color:
+                                selected ? Colors.red.shade700 : Colors.black87,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: detailsController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Add details (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade500,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Send Report'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (ok != true) {
+      detailsController.dispose();
+      return;
+    }
+
+    try {
+      await ApiService.post(ApiConfig.productReports, {
+        'product': widget.promotion.product.id,
+        'reason': selectedReason,
+        'details': detailsController.text.trim(),
+      });
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+    } finally {
+      detailsController.dispose();
+    }
   }
 
   @override
@@ -189,6 +418,19 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'report') _showReportPromotionSheet();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Text('Report Offer'),
+                ),
+              ],
+            ),
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: _refreshDetails,
@@ -313,6 +555,10 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       ),
                     ],
                   ),
+
+                  SizedBox(height: 16),
+
+                  _buildContactButtons(),
 
                   SizedBox(height: 24),
 

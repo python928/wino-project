@@ -1,0 +1,32 @@
+.subscription-admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 14px 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.subscription-admin-tabs li {
+  margin: 0;
+}
+
+.subscription-admin-tabs button {
+  appearance: none;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subscription-admin-tabs button.active {
+  background: #ffffff;
+  border-color: #d1d5db;
+}
+
+.subscription-admin-fieldset-hidden {
+  display: none;
+}

@@ -380,58 +380,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacing24),
 
-                _buildAdBannerSection(),
-                const SizedBox(height: AppTheme.spacing24),
-
-                // Discounts
-                _buildSectionHeader('Discounts', 'See All', () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.searchTab,
-                    arguments: {'type': 'Discounts', 'autoSearch': true},
-                  );
-                }),
-                const SizedBox(height: AppTheme.spacing16),
-                _buildOffersSection(),
-
-                const SizedBox(height: AppTheme.spacing24),
-
-                // Latest Products
-                _buildSectionHeader('Latest Products', 'View All', () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.searchTab,
-                    arguments: {'type': 'Products', 'autoSearch': true},
-                  );
-                }),
-                const SizedBox(height: AppTheme.spacing16),
-                _buildRecentProductsSection(),
-
-                const SizedBox(height: AppTheme.spacing24),
-
-                // Featured Packs
-                _buildSectionHeader('Featured Packs', 'View All', () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.searchTab,
-                    arguments: {'type': 'Packs', 'autoSearch': true},
-                  );
-                }),
-                const SizedBox(height: AppTheme.spacing16),
-                _buildPacksSection(),
-
-                const SizedBox(height: AppTheme.spacing24),
-
-                // Featured Stores
-                _buildSectionHeader('Featured Stores', 'View All', () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.searchTab,
-                    arguments: {'type': 'Stores', 'autoSearch': true},
-                  );
-                }),
-                const SizedBox(height: AppTheme.spacing16),
-                _buildFeaturedStoresSection(),
+                _buildAdBannerBlock(),
+                _buildOffersBlock(),
+                _buildRecentProductsBlock(),
+                _buildPacksBlock(),
+                _buildFeaturedStoresBlock(),
 
                 const SizedBox(height: 100),
               ],
@@ -478,6 +431,140 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdBannerBlock() {
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
+        final ads = _filterOffersForActiveLocation(postProvider.adOffers);
+        final hasAds = ads.isNotEmpty;
+        final isLoading = postProvider.isLoadingOffers;
+        if (!hasAds && !isLoading) return const SizedBox.shrink();
+        return Column(
+          children: [
+            _buildAdBannerSection(),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildOffersBlock() {
+    return Consumer2<PostProvider, AnalyticsProvider>(
+      builder: (context, postProvider, analyticsProvider, child) {
+        final offers = _filterOffersForActiveLocation(postProvider.offers);
+        final hasOffers = offers.isNotEmpty;
+        final isLoading = postProvider.isLoadingOffers;
+        final hasError = postProvider.offersError != null;
+        if (!hasOffers && !isLoading && !hasError) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Discounts', 'See All', () {
+              Navigator.pushNamed(
+                context,
+                Routes.searchTab,
+                arguments: {'type': 'Discounts', 'autoSearch': true},
+              );
+            }),
+            const SizedBox(height: AppTheme.spacing16),
+            _buildOffersSection(),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentProductsBlock() {
+    return Consumer<HomeProvider>(
+      builder: (context, homeProvider, child) {
+        final products =
+            _filterPostsForActiveLocation(homeProvider.recentProducts);
+        final hasProducts = products.isNotEmpty;
+        final isLoading = homeProvider.isLoadingProducts;
+        final hasError = homeProvider.productsError != null;
+        if (!hasProducts && !isLoading && !hasError) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Latest Products', 'View All', () {
+              Navigator.pushNamed(
+                context,
+                Routes.searchTab,
+                arguments: {'type': 'Products', 'autoSearch': true},
+              );
+            }),
+            const SizedBox(height: AppTheme.spacing16),
+            _buildRecentProductsSection(),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPacksBlock() {
+    return Consumer<HomeProvider>(
+      builder: (context, homeProvider, child) {
+        final packs = _filterPacksForActiveLocation(homeProvider.packs);
+        final hasPacks = packs.isNotEmpty;
+        final isLoading = homeProvider.isLoadingPacks;
+        final hasError = homeProvider.packsError != null;
+        if (!hasPacks && !isLoading && !hasError) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Featured Packs', 'View All', () {
+              Navigator.pushNamed(
+                context,
+                Routes.searchTab,
+                arguments: {'type': 'Packs', 'autoSearch': true},
+              );
+            }),
+            const SizedBox(height: AppTheme.spacing16),
+            _buildPacksSection(),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFeaturedStoresBlock() {
+    return Consumer<HomeProvider>(
+      builder: (context, homeProvider, child) {
+        final stores =
+            _filterStoresForActiveLocation(homeProvider.featuredStores);
+        final hasStores = stores.isNotEmpty;
+        final isLoading = homeProvider.isLoadingStores;
+        final hasError = homeProvider.storesError != null;
+        if (!hasStores && !isLoading && !hasError) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Featured Stores', 'View All', () {
+              Navigator.pushNamed(
+                context,
+                Routes.searchTab,
+                arguments: {'type': 'Stores', 'autoSearch': true},
+              );
+            }),
+            const SizedBox(height: AppTheme.spacing16),
+            _buildFeaturedStoresSection(),
+          ],
+        );
+      },
     );
   }
 
@@ -1074,115 +1161,229 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, postProvider, child) {
         final ads = _filterOffersForActiveLocation(postProvider.adOffers);
         if (postProvider.isLoadingOffers && ads.isEmpty) {
-          return const SizedBox(height: 140);
+          return const SizedBox(height: 220);
         }
         if (ads.isEmpty) {
           return const SizedBox.shrink();
         }
 
         return SizedBox(
-          height: 160,
+          height: 228,
           child: PageView.builder(
-            controller: PageController(viewportFraction: 0.92),
+            controller: PageController(viewportFraction: 0.9),
             itemCount: ads.length,
             itemBuilder: (context, index) {
               final ad = ads[index];
+              final metrics = <String>[
+                if (ad.impressionsCount > 0) '${ad.impressionsCount} views',
+                if (ad.clicksCount > 0) '${ad.clicksCount} clicks',
+                if (ad.remainingImpressions != null)
+                  '${ad.remainingImpressions} left',
+              ];
+
               return GestureDetector(
                 onTap: () =>
                     _navigateToPromotionDetails(ad, placement: 'home_top'),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3A2107).withOpacity(0.14),
+                        blurRadius: 24,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFFE6C7), Color(0xFFFFB98E)],
+                      colors: [Color(0xFFFFF1D6), Color(0xFFFFD39B), Color(0xFFFFB26B)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
                   ),
                   child: Stack(
                     children: [
                       Positioned(
-                        top: 16,
-                        left: 16,
+                        right: -30,
+                        top: -20,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
+                          width: 180,
+                          height: 180,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.75),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text(
-                            'Ad',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            color: Colors.white.withOpacity(0.18),
+                            shape: BoxShape.circle,
                           ),
                         ),
                       ),
-                      Positioned(
-                        left: 16,
-                        right: 140,
-                        bottom: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Positioned.fill(
+                        child: Row(
                           children: [
-                            Text(
-                              ad.product.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF2E1C0A),
+                            Expanded(
+                              flex: 6,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(22, 20, 14, 20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2C1808),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: const Text(
+                                            'Sponsored',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            ad.product.storeName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF7A3F12),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      ad.product.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        height: 1.05,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF2E1C0A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      '${ad.discountPercentage}% OFF',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFB44708),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      Helpers.formatPrice(ad.newPrice),
+                                      style: const TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF1D140D),
+                                      ),
+                                    ),
+                                    if (metrics.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: metrics.map((metric) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.62),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: Text(
+                                              metric,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF5E3211),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2D1908),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'View deal',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${ad.discountPercentage}% OFF • ${Helpers.formatPrice(ad.newPrice)}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF8A3C00),
+                            Expanded(
+                              flex: 4,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
+                                child: Hero(
+                                  tag: 'home-ad-${ad.id}',
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(22),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.35),
+                                      ),
+                                      child: ad.product.image != null &&
+                                              ad.product.image!.isNotEmpty
+                                          ? Image.network(
+                                              ad.product.image!,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Container(
+                                              color: Colors.white.withOpacity(0.5),
+                                              child: const Icon(
+                                                Icons.campaign_rounded,
+                                                size: 56,
+                                                color: Color(0xFF8A3C00),
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      Positioned(
-                        right: 12,
-                        bottom: 0,
-                        top: 0,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: SizedBox(
-                            width: 120,
-                            child: ad.product.image != null &&
-                                    ad.product.image!.isNotEmpty
-                                ? Image.network(
-                                    ad.product.image!,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    color: Colors.white.withOpacity(0.5),
-                                    child: const Icon(
-                                      Icons.campaign_outlined,
-                                      size: 40,
-                                      color: Color(0xFF8A3C00),
-                                    ),
-                                  ),
-                          ),
                         ),
                       ),
                     ],

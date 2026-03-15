@@ -711,11 +711,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _showReportStoreSheet() async {
     if (_storeId == null) return;
     const reasons = <Map<String, String>>[
-      {'value': 'spam', 'label': 'Spam'},
-      {'value': 'fake', 'label': 'Fake store'},
-      {'value': 'fraud', 'label': 'Fraud / scam'},
-      {'value': 'offensive', 'label': 'Offensive content'},
-      {'value': 'other', 'label': 'Other'},
+      {'value': 'spam', 'label': 'Duplicate / spam store'},
+      {'value': 'fake', 'label': 'Fake store / no real location'},
+      {'value': 'fraud', 'label': 'Scam / asked for prepayment'},
+      {'value': 'offensive', 'label': 'Offensive / prohibited content'},
+      {'value': 'other', 'label': 'Other (wrong info, bad service)'},
     ];
     String selectedReason = 'spam';
     final detailsController = TextEditingController();

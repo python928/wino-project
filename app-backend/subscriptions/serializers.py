@@ -4,6 +4,7 @@ from .models import (
     MerchantSubscription,
     SubscriptionPaymentConfig,
     SubscriptionPaymentRequest,
+    SubscriptionPaymentProof,
     SubscriptionPlan,
 )
 
@@ -37,6 +38,17 @@ class MerchantSubscriptionSerializer(serializers.ModelSerializer):
 class SubscriptionPaymentRequestSerializer(serializers.ModelSerializer):
     merchant = serializers.ReadOnlyField(source='merchant.id')
     plan_detail = SubscriptionPlanSerializer(source='plan', read_only=True)
+    proofs = serializers.SerializerMethodField()
+
+    def get_proofs(self, obj):
+        return [
+            {
+                'id': proof.id,
+                'image': proof.image.url if proof.image else '',
+                'created_at': proof.created_at,
+            }
+            for proof in obj.proofs.all()
+        ]
 
     class Meta:
         model = SubscriptionPaymentRequest
@@ -48,6 +60,7 @@ class SubscriptionPaymentRequestSerializer(serializers.ModelSerializer):
             'status',
             'payment_note',
             'created_at',
+            'proofs',
         ]
         read_only_fields = ['id', 'merchant', 'status', 'created_at', 'plan_detail']
 

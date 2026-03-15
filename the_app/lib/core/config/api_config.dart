@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.164.21:8000/';
-    if (Platform.isAndroid) return 'http://192.168.164.21:8000/';
-    return 'http://192.168.164.21:8000/';
+    if (kIsWeb) return 'http://192.168.94.21:8000/';
+    if (Platform.isAndroid) return 'http://192.168.94.21:8000/';
+    return 'http://192.168.94.21:8000/';
   }
 
   // API prefix
@@ -88,9 +88,9 @@ class ApiConfig {
   static const String subscriptionPaymentRequests =
       '$api/subscriptions/payment-requests/';
   static const String subscriptionAccessStatus =
-      '$merchantSubscriptions/access-status/';
+      '${merchantSubscriptions}access-status/';
   static const String subscriptionMerchantDashboard =
-      '$merchantSubscriptions/merchant-dashboard/';
+      '${merchantSubscriptions}merchant-dashboard/';
 
   // Media URL
   static String get mediaUrl => '$baseUrl/media';

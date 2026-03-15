@@ -48,7 +48,7 @@ class ApiService {
   static Future<Map<String, dynamic>> register(
       Map<String, dynamic> data) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.register}');
+      final uri = _buildUri(ApiConfig.register);
 
       final response = await http
           .post(
@@ -74,7 +74,7 @@ class ApiService {
         'password': password,
       };
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authToken}');
+      final uri = _buildUri(ApiConfig.authToken);
 
       final response = await http
           .post(
@@ -92,8 +92,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
     try {
-      final uri =
-          Uri.parse('${ApiConfig.baseUrl}/api/users/auth/phone/send-otp/');
+      final uri = _buildUri('/api/users/auth/phone/send-otp/');
       final response = await http
           .post(
             uri,
@@ -113,8 +112,7 @@ class ApiService {
     String? name,
   }) async {
     try {
-      final uri =
-          Uri.parse('${ApiConfig.baseUrl}/api/users/auth/phone/verify-otp/');
+      final uri = _buildUri('/api/users/auth/phone/verify-otp/');
       final payload = <String, dynamic>{
         'phone': phone,
         'code': code,
@@ -143,8 +141,7 @@ class ApiService {
   }) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri =
-          Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authChangePassword}');
+      final uri = _buildUri(ApiConfig.authChangePassword);
 
       final response = await http
           .post(
@@ -171,7 +168,7 @@ class ApiService {
       final refreshToken = await StorageService.getRefreshToken();
 
       if (token != null && refreshToken != null) {
-        final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authLogout}');
+        final uri = _buildUri(ApiConfig.authLogout);
 
         await http
             .post(
@@ -204,7 +201,7 @@ class ApiService {
   /// Send FCM token to backend
   static Future<void> updateFcmToken(String token) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/devices/');
+      final uri = _buildUri('/api/devices/');
       final accessToken = await StorageService.getAccessToken();
       if (accessToken == null) return;
 
@@ -249,7 +246,7 @@ class ApiService {
         return false;
       }
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authRefresh}');
+      final uri = _buildUri(ApiConfig.authRefresh);
       final response = await http
           .post(
             uri,
@@ -349,7 +346,7 @@ class ApiService {
   static Future<dynamic> _get(String endpoint) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       final response = await http
           .get(
@@ -370,7 +367,7 @@ class ApiService {
   ) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       final response = await http
           .post(
@@ -392,7 +389,7 @@ class ApiService {
   ) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       final response = await http
           .put(
@@ -414,7 +411,7 @@ class ApiService {
   ) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       final response = await http
           .patch(
@@ -433,7 +430,7 @@ class ApiService {
   static Future<dynamic> _delete(String endpoint) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       final response = await http
           .delete(
@@ -458,6 +455,16 @@ class ApiService {
         () => _postMultipart(endpoint, fields, imageFile, imageFieldName));
   }
 
+  static Future<dynamic> postMultipartMany(
+    String endpoint,
+    Map<String, String> fields,
+    List<XFile> imageFiles, {
+    String fieldName = 'images',
+  }) async {
+    return await _requestWithRetry(
+        () => _postMultipartMany(endpoint, fields, imageFiles, fieldName));
+  }
+
   // ==================== UPLOAD IMAGE ====================
 
   static Future<dynamic> uploadImage(
@@ -467,7 +474,7 @@ class ApiService {
   ) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
 
       var request = http.MultipartRequest('POST', uri);
       request.headers.addAll(ApiConfig.getHeaders(token: token));
@@ -499,7 +506,7 @@ class ApiService {
   ) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
       AppLogger.info('ApiService: POST Multipart to $uri');
 
       var request = http.MultipartRequest('POST', uri);
@@ -535,6 +542,42 @@ class ApiService {
     }
   }
 
+  static Future<dynamic> _postMultipartMany(
+    String endpoint,
+    Map<String, String> fields,
+    List<XFile> imageFiles,
+    String fieldName,
+  ) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      final uri = _buildUri(endpoint);
+      AppLogger.info('ApiService: POST MultipartMany to $uri');
+
+      var request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(ApiConfig.getMultipartHeaders(token: token));
+      request.fields.addAll(fields);
+
+      for (final imageFile in imageFiles) {
+        final bytes = await imageFile.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            fieldName,
+            bytes,
+            filename: imageFile.name,
+          ),
+        );
+      }
+
+      final streamedResponse =
+          await request.send().timeout(ApiConfig.connectionTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+      return _handleResponse(response);
+    } catch (e) {
+      AppLogger.error('ApiService: MultipartMany Error', error: e);
+      throw _handleError(e);
+    }
+  }
+
   static Future<dynamic> updateMultipart(
     String endpoint,
     Map<String, String> fields,
@@ -556,7 +599,7 @@ class ApiService {
   }) async {
     try {
       final token = await StorageService.getAccessToken();
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+      final uri = _buildUri(endpoint);
       AppLogger.info('ApiService: $method Multipart to $uri');
 
       var request = http.MultipartRequest(method, uri);
@@ -662,5 +705,16 @@ class ApiService {
     // Re-wrap anything else so it's always an Exception
     if (error is Exception) return error;
     return Exception(msg);
+  }
+
+  static Uri _buildUri(String endpoint) {
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+      return Uri.parse(endpoint);
+    }
+    final base = ApiConfig.baseUrl;
+    final baseTrim = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final endpointTrim =
+        endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    return Uri.parse('$baseTrim/$endpointTrim');
   }
 }
