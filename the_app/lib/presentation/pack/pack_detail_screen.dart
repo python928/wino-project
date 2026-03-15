@@ -10,6 +10,7 @@ import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
+import '../shared_widgets/image_carousel.dart';
 
 class PackDetailScreen extends StatefulWidget {
   final Pack pack;
@@ -24,7 +25,6 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
   bool _isLoadingFavoriteState = false;
   bool _isTogglingFavorite = false;
   bool _isTogglingFollow = false;
-  int _currentImageIndex = 0;
 
   bool _isFollowingStore = false;
   bool _isLoadingFollowState = false;
@@ -822,98 +822,38 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   Widget _buildPackImagesCarousel() {
     final images = _packMainImages;
-    final hasImages = images.first.isNotEmpty;
-    final showIndicators = images.length > 1 && hasImages;
 
-    return SizedBox(
+    return ImageCarousel(
+      images: images,
       height: 200,
-      width: double.infinity,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: hasImages
-                  ? PageView.builder(
-                      itemCount: images.length,
-                      onPageChanged: (index) =>
-                          setState(() => _currentImageIndex = index),
-                      itemBuilder: (context, index) => Image.network(
-                        images[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[200],
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.image),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.grey[200],
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.image),
-                    ),
-            ),
-          ),
-          if (showIndicators)
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  images.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: _currentImageIndex == index ? 18 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _currentImageIndex == index
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
+      borderRadius: 12,
+      topRightOverlay: GestureDetector(
+        onTap: _togglePackFavorites,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: GestureDetector(
-              onTap: _togglePackFavorites,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: (_isLoadingFavoriteState || _isTogglingFavorite)
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        _isAllFavorited
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-              ),
-            ),
+            ],
           ),
-        ],
+          child: (_isLoadingFavoriteState || _isTogglingFavorite)
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  _isAllFavorited ? Icons.favorite : Icons.favorite_border,
+                  color: Colors.red,
+                  size: 20,
+                ),
+        ),
       ),
     );
   }
