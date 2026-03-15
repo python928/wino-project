@@ -11,85 +11,80 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  
-  cupertino_icons: ^1.0.2
 
-  equatable: ^2.0.5
+  # Core
+  cupertino_icons: 1.0.8
+  equatable: 2.0.7
+  intl: 0.20.2
 
-  shared_preferences: ^2.2.2
-  http: ^1.1.2
-  flutter_secure_storage: ^9.0.0
-  jwt_decoder: ^2.0.1
-  provider: ^6.1.1
-  image_picker: ^1.2.1
-  geolocator: ^13.0.0
+  # State & storage
+  provider: 6.1.5+1
+  shared_preferences: 2.5.4
+  flutter_secure_storage: 9.2.4
 
-  # Advanced UI/UX Framework - Premium Experience
-  google_fonts: ^6.2.1
-  font_awesome_flutter: ^10.6.0
-  flutter_animate: ^4.5.0
-  cached_network_image: ^3.4.1
-  shimmer: ^3.0.0
-  glassmorphism: ^3.0.0
-  
-  # Premium Animations & Interactions
-  lottie: ^3.1.2                    # Hollywood-grade animations
+  # Networking & auth
+  http: 1.6.0
+  jwt_decoder: 2.0.1
+
+  # Device & platform
+  image_picker: 1.2.1
+  geolocator: 13.0.4
+  local_auth: 2.3.0
+  url_launcher: 6.3.2
+  share_plus: 10.1.4
+  haptic_feedback: 0.5.1+2
+
+  # UI / design system
+  google_fonts: 6.3.3
+  font_awesome_flutter: 10.12.0
+  flutter_animate: 4.5.2
+  cached_network_image: 3.4.1
+  shimmer: 3.0.0
+  glassmorphism: 3.0.0
+  flutter_glow: 0.3.2
+  flutter_neumorphic_plus: 3.5.0
+  flutter_gradient_colors: 2.1.1
+
+  # Animations & effects
+  lottie: 3.3.2
   # rive: ^0.13.1                   # Disabled - NDK issues
-  animated_text_kit: ^4.2.2        # Dynamic text animations
-  flutter_staggered_animations: ^1.1.1  # Sophisticated list animations
-  spring: ^2.0.1                    # Natural physics-based animations
-  dropdown_button2: ^2.3.9
-  
-  # Advanced Visual Effects
-  flutter_glow: ^0.3.0             # Premium glow/neon effects
-  flutter_neumorphic_plus: ^3.3.0  # Soft UI design system
-  flutter_gradient_colors: ^2.1.1   # Curated gradient palettes
-  
-  # Enhanced Components
-  # carousel_slider: ^4.2.1        # Disabled - conflicts with Flutter's CarouselController
-  flutter_carousel_widget: ^3.0.1  # Alternative carousel without conflicts  
-  smooth_page_indicator: ^1.1.0    # Elegant page indicators
-  flutter_rating_bar: ^4.0.1       # Interactive rating system
-  pull_to_refresh: ^2.0.0          # iOS-style refresh
-  flutter_slidable: ^3.1.1         # Swipe actions
-  
-  # Advanced Layout Systems
-  flutter_staggered_grid_view: ^0.7.0  # Pinterest-style grids
-  sticky_headers: ^0.3.0+2         # Floating section headers
-  
-  # Enhanced Media & Content
-  extended_image: ^8.2.0           # Advanced image handling
-  photo_view: ^0.15.0              # Zoom & pan for images
-  flutter_blurhash: ^0.8.2         # Progressive image loading
-  
-  # Interactive Feedback
-  haptic_feedback: ^0.5.0          # Tactile responses
-  
-  # Performance & State
-  visibility_detector: ^0.4.0+2    # Viewport detection
-  flutter_cache_manager: ^3.3.1    # Intelligent caching
-  
-  # Premium Navigation
-  go_router: ^14.2.7               # Next-gen routing
-  
-  # Commerce Specific
-  share_plus: ^10.0.2              # Social sharing
-  url_launcher: ^6.3.0             # External links
-  local_auth: ^2.3.0               # Biometric auth
-  firebase_core: ^4.4.0
-  firebase_messaging: ^16.1.1
-  flutter_local_notifications: ^18.0.1
-  intl: ^0.20.2
-  flutter_otp_text_field: ^1.5.1+1
-  
+  animated_text_kit: 4.3.0
+  flutter_staggered_animations: 1.1.1
+  spring: 2.0.2
 
+  # Lists, grids & interaction
+  dropdown_button2: 2.3.9
+  # carousel_slider: ^4.2.1        # Disabled - conflicts with Flutter's CarouselController
+  flutter_carousel_widget: 3.1.0
+  smooth_page_indicator: 1.2.1
+  flutter_rating_bar: 4.0.1
+  pull_to_refresh: 2.0.0
+  flutter_slidable: 3.1.2
+  flutter_staggered_grid_view: 0.7.0
+  sticky_headers: 0.3.0+2
+  visibility_detector: 0.4.0+2
+  flutter_cache_manager: 3.4.1
+
+  # Media & images
+  extended_image: 8.3.1
+  photo_view: 0.15.0
+  flutter_blurhash: 0.8.2
+
+  # Navigation
+  go_router: 14.8.1
+
+  # Firebase / notifications
+  firebase_core: 4.4.0
+  firebase_messaging: 16.1.1
+  flutter_local_notifications: 18.0.1
+
+  # Commerce / UI helpers
+  flutter_otp_text_field: 1.5.1+1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-
-  
+  flutter_lints: 2.0.3
 
 flutter:
   uses-material-design: true
@@ -98,7 +93,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
-  
+
   # Fonts - تم تعطيلها مؤقتاً (يمكن إضافتها لاحقاً إذا كانت متوفرة)
   fonts:
     - family: MaterialIconsRegular

@@ -1,14 +1,29 @@
+# Core framework
 Django==5.0.6
+
+# REST + auth
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
+
+# Filtering & CORS
 django-filter==24.2
 django-cors-headers==4.4.0
-Pillow==10.3.0
+
+# Admin UI
 django-jazzmin==2.6.0
-fcm-django==2.3.1
-psycopg2-binary==2.9.9
+
+# Media & images
+Pillow==10.3.0
+pillow-heif==0.16.0
+
+# Background jobs & cache
 celery==5.4.0
 redis==5.0.3
+
+# Notifications & messaging
+fcm-django==2.3.1
 firebase-admin==6.5.0
-pillow-heif==0.16.0
 twilio==9.3.7
+
+# Database driver
+psycopg2-binary==2.9.9
