@@ -28,6 +28,7 @@ import 'add_pack_screen.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../subscription/ads_dashboard_screen.dart';
+import '../shared_widgets/report_bottom_sheet.dart';
 
 import '../common/constants/card_constants.dart';
 import 'widgets/profile_merchant_header.dart';
@@ -710,131 +711,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _showReportStoreSheet() async {
     if (_storeId == null) return;
-    const reasons = <Map<String, String>>[
-      {'value': 'spam', 'label': 'Duplicate / spam store'},
-      {'value': 'fake', 'label': 'Fake store / no real location'},
-      {'value': 'fraud', 'label': 'Scam / asked for prepayment'},
-      {'value': 'offensive', 'label': 'Offensive / prohibited content'},
-      {'value': 'other', 'label': 'Other (wrong info, bad service)'},
+    const reasons = [
+      ReportReason('spam', 'Duplicate / spam store'),
+      ReportReason('fake', 'Fake store / no real location'),
+      ReportReason('fraud', 'Scam / asked for prepayment'),
+      ReportReason('offensive', 'Offensive / prohibited content'),
+      ReportReason('other', 'Other (wrong info, bad service)'),
     ];
-    String selectedReason = 'spam';
-    final detailsController = TextEditingController();
 
-    final ok = await showModalBottomSheet<bool>(
+    final result = await ReportBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Report Store',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: reasons.map((r) {
-                    final selected = selectedReason == r['value'];
-                    return GestureDetector(
-                      onTap: () =>
-                          setModalState(() => selectedReason = r['value']!),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: selected
-                                ? Colors.red.shade300
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Text(
-                          r['label']!,
-                          style: TextStyle(
-                            color:
-                                selected ? Colors.red.shade700 : Colors.black87,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: detailsController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Add details (optional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade500,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Send Report'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      title: 'Report Store',
+      reasons: reasons,
     );
-    if (ok != true) {
-      detailsController.dispose();
+
+    if (result == null) {
       return;
     }
     try {
       await ApiService.post(ApiConfig.storeReports, {
         'store': _storeId,
-        'reason': selectedReason,
-        'details': detailsController.text.trim(),
+        'reason': result.reason,
+        'details': result.details,
       });
       if (!mounted) return;
       Helpers.showSnackBar(context, 'Report submitted. Thank you.');
     } catch (e) {
       if (!mounted) return;
       Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
-    } finally {
-      detailsController.dispose();
     }
   }
 
