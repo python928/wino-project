@@ -1,36 +1,36 @@
-import 'package:image_picker/image_picker.dart';
-import '../../core/services/api_service.dart';
-import '../../core/config/api_config.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
+
+import '../../core/config/api_config.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/home_provider.dart';
+import '../../core/providers/pack_provider.dart';
+import '../../core/providers/post_provider.dart';
+import '../../core/providers/store_provider.dart';
 import '../../core/routing/routes.dart';
-import '../../core/services/storage_service.dart';
-import '../../core/utils/helpers.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/follow_change_notifier.dart';
 import '../../core/services/notification_badge_service.dart';
-import '../../core/providers/auth_provider.dart';
-import '../../core/providers/post_provider.dart';
-import '../../core/providers/pack_provider.dart';
-import '../../core/providers/home_provider.dart';
-import '../../core/providers/store_provider.dart';
-import '../../data/models/post_model.dart';
-import '../../data/models/pack_model.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
 import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
 import '../auth/splash_screen.dart';
-import '../notifications/notifications_screen.dart';
-import 'edit_merchant_profile_screen.dart';
-import 'add_product_screen.dart';
-import '../shared_widgets/cards/product_card.dart';
-import 'add_promotion_screen.dart';
-import 'add_pack_screen.dart';
-import '../shared_widgets/cards/pack_card.dart';
-import '../shared_widgets/cards/promotion_card.dart';
-import '../subscription/ads_dashboard_screen.dart';
-import '../shared_widgets/report_bottom_sheet.dart';
-
 import '../common/constants/card_constants.dart';
+import '../notifications/notifications_screen.dart';
+import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/cards/product_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/report_bottom_sheet.dart';
+import '../subscription/ads_dashboard_screen.dart';
+import 'add_pack_screen.dart';
+import 'add_product_screen.dart';
+import 'add_promotion_screen.dart';
+import 'edit_merchant_profile_screen.dart';
 import 'widgets/profile_merchant_header.dart';
 import 'widgets/profile_post_filter.dart';
 
@@ -184,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.analytics_outlined,
                         color: AppColors.primaryColor, size: 20),
                   ),
-                  title: const Text('Ads & Promotions',
+                  title: const Text('Ads',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -587,7 +587,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<StoreProvider>().clear();
     NotificationBadgeService.instance.clear();
     await StorageService.clearAll();
-    await StorageService.setNotFirstTime(); // preserve onboarding flag so launcher screen doesn't re-appear
+    await StorageService
+        .setNotFirstTime(); // preserve onboarding flag so launcher screen doesn't re-appear
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const SplashScreen()),
@@ -867,9 +868,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _hasProfileLocation() {
     final userData = StorageService.getUserData();
-    final address = (userData?['address'] ?? userData?['location'] ?? '')
-        .toString()
-        .trim();
+    final address =
+        (userData?['address'] ?? userData?['location'] ?? '').toString().trim();
     final latRaw = userData?['latitude'];
     final lngRaw = userData?['longitude'];
     final lat = double.tryParse(latRaw?.toString() ?? '');
@@ -1489,7 +1489,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {

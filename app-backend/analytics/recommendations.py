@@ -368,32 +368,22 @@ def _calculate_product_score(
 	scores['negotiable'] = 100 if is_negotiable else 30
 
 	promotion_score = 0
-	ad_boost = 0
 	if hasattr(product, 'promotions'):
 		try:
 			active = product.promotions.filter(
 				is_active=True,
-				start_date__lte=timezone.now(),
-				end_date__gte=timezone.now(),
 			).filter(
-				Q(max_impressions__isnull=True)
-				| Q(unique_viewers_count__lt=models.F('max_impressions'))
+				Q(start_date__isnull=True) | Q(start_date__lte=timezone.now())
+			).filter(
+				Q(end_date__isnull=True) | Q(end_date__gte=timezone.now())
 			)
 			if active.exists():
 				best = max(float(p.percentage) for p in active)
 				promotion_score = min(best * 2, 100)
-			ad_promos = active.filter(kind='advertising')
-			if ad_promos.exists():
-				best_boost = 0
-				for promo in ad_promos:
-					val = int(getattr(promo, 'priority_boost', 0) or 0)
-					if val > best_boost:
-						best_boost = val
-				ad_boost = min(100, 40 + (best_boost * 3))
 		except Exception:
 			promotion_score = 0
 	scores['promotion'] = promotion_score
-	scores['ad_boost'] = ad_boost
+	scores['ad_boost'] = 0
 
 	return scores
 

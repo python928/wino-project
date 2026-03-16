@@ -39,6 +39,8 @@ class SubscriptionPaymentRequestSerializer(serializers.ModelSerializer):
     merchant = serializers.ReadOnlyField(source='merchant.id')
     plan_detail = SubscriptionPlanSerializer(source='plan', read_only=True)
     proofs = serializers.SerializerMethodField()
+    reviewed_by = serializers.ReadOnlyField(source='reviewed_by.id')
+    timeline = serializers.SerializerMethodField()
 
     def get_proofs(self, obj):
         return [
@@ -50,6 +52,27 @@ class SubscriptionPaymentRequestSerializer(serializers.ModelSerializer):
             for proof in obj.proofs.all()
         ]
 
+    def get_timeline(self, obj):
+        events = [
+            {
+                'event': 'submitted',
+                'status': 'pending',
+                'at': obj.created_at,
+                'note': 'Payment request submitted.',
+            }
+        ]
+        if obj.status in [SubscriptionPaymentRequest.STATUS_APPROVED, SubscriptionPaymentRequest.STATUS_REJECTED]:
+            events.append(
+                {
+                    'event': obj.status,
+                    'status': obj.status,
+                    'at': obj.reviewed_at or obj.created_at,
+                    'reason_code': obj.status_reason_code,
+                    'reason_text': obj.status_reason_text,
+                }
+            )
+        return events
+
     class Meta:
         model = SubscriptionPaymentRequest
         fields = [
@@ -59,10 +82,24 @@ class SubscriptionPaymentRequestSerializer(serializers.ModelSerializer):
             'plan_detail',
             'status',
             'payment_note',
+            'status_reason_code',
+            'status_reason_text',
+            'reviewed_by',
+            'reviewed_at',
             'created_at',
             'proofs',
+            'timeline',
         ]
-        read_only_fields = ['id', 'merchant', 'status', 'created_at', 'plan_detail']
+        read_only_fields = [
+            'id',
+            'merchant',
+            'status',
+            'created_at',
+            'plan_detail',
+            'reviewed_by',
+            'reviewed_at',
+            'timeline',
+        ]
 
 
 class SubscriptionPaymentConfigSerializer(serializers.ModelSerializer):

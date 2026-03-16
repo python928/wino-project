@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.core.validators import FileExtensionValidator
 
 from .constants import DEFAULT_SUBSCRIPTION_INSTRUCTIONS, DEFAULT_SUBSCRIPTION_RIB
 from .models import (
@@ -115,8 +116,9 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 		"""
 		date_from = request.query_params.get('date_from')
 		date_to = request.query_params.get('date_to')
+		period = request.query_params.get('period')
 		try:
-			parsed_from, parsed_to = parse_dashboard_date_filters(date_from, date_to)
+			parsed_from, parsed_to = parse_dashboard_date_filters(date_from, date_to, period=period)
 		except serializers.ValidationError as exc:
 			return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
 
@@ -126,6 +128,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 				request,
 				date_from=date_from,
 				date_to=date_to,
+				period=period,
 				parsed_from=parsed_from,
 				parsed_to=parsed_to,
 			)
@@ -137,6 +140,17 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 	serializer_class = SubscriptionPaymentRequestSerializer
 	permission_classes = [permissions.IsAuthenticated]
 	parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+	MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+	ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+	def _validate_proof_image(self, image):
+		validator = FileExtensionValidator(allowed_extensions=self.ALLOWED_EXTENSIONS)
+		validator(image)
+		if getattr(image, 'size', 0) > self.MAX_IMAGE_SIZE_BYTES:
+			raise serializers.ValidationError(
+				f'Image "{getattr(image, "name", "file")}" exceeds 5MB limit.'
+			)
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve', 'create']:
@@ -169,6 +183,12 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
+		try:
+			for image in images:
+				self._validate_proof_image(image)
+		except Exception as exc:
+			return Response({'images': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
 		serializer = self.get_serializer(data={'plan': plan_id, 'payment_note': payment_note})
 		serializer.is_valid(raise_exception=True)
 		payment_request = serializer.save(merchant=request.user)
@@ -182,5 +202,17 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 		headers = self.get_success_headers(serializer.data)
 		out = self.get_serializer(payment_request).data
 		return Response(out, status=status.HTTP_201_CREATED, headers=headers)
+
+	@action(detail=True, methods=['get'], url_path='timeline')
+	def timeline(self, request, pk=None):
+		payment_request = self.get_object()
+		serializer = self.get_serializer(payment_request)
+		return Response(
+			{
+				'id': payment_request.id,
+				'status': payment_request.status,
+				'timeline': serializer.data.get('timeline', []),
+			}
+		)
 
 # Create your views here.

@@ -37,6 +37,17 @@ class MerchantSubscription(models.Model):
 
 
 class SubscriptionPaymentRequest(models.Model):
+	REASON_UNREADABLE_PROOF = 'unreadable_proof'
+	REASON_AMOUNT_MISMATCH = 'amount_mismatch'
+	REASON_MISSING_REFERENCE = 'missing_reference'
+	REASON_OTHER = 'other'
+	REASON_CHOICES = (
+		(REASON_UNREADABLE_PROOF, 'Unreadable proof'),
+		(REASON_AMOUNT_MISMATCH, 'Amount mismatch'),
+		(REASON_MISSING_REFERENCE, 'Missing transfer reference'),
+		(REASON_OTHER, 'Other'),
+	)
+
 	STATUS_PENDING = 'pending'
 	STATUS_APPROVED = 'approved'
 	STATUS_REJECTED = 'rejected'
@@ -58,6 +69,16 @@ class SubscriptionPaymentRequest(models.Model):
 	)
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
 	payment_note = models.TextField(blank=True, default='')
+	status_reason_code = models.CharField(max_length=40, choices=REASON_CHOICES, blank=True, default='')
+	status_reason_text = models.TextField(blank=True, default='')
+	reviewed_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='reviewed_subscription_payment_requests',
+	)
+	reviewed_at = models.DateTimeField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

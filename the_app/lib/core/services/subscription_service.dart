@@ -1,7 +1,8 @@
+import 'package:image_picker/image_picker.dart';
+
+import '../../data/models/subscription_plan_model.dart';
 import '../config/api_config.dart';
 import 'api_service.dart';
-import '../../data/models/subscription_plan_model.dart';
-import 'package:image_picker/image_picker.dart';
 
 class SubscriptionCatalogData {
   final List<SubscriptionPlanModel> plans;
@@ -31,13 +32,13 @@ class SubscriptionService {
     );
   }
 
-  static Future<void> submitPaymentRequest({
+  static Future<Map<String, dynamic>> submitPaymentRequest({
     required int planId,
     required String paymentNote,
     List<XFile> images = const [],
   }) async {
     if (images.isNotEmpty) {
-      await ApiService.postMultipartMany(
+      final resp = await ApiService.postMultipartMany(
         ApiConfig.subscriptionPaymentRequests,
         {
           'plan': planId.toString(),
@@ -46,12 +47,19 @@ class SubscriptionService {
         images,
         fieldName: 'images',
       );
-      return;
+      return resp is Map<String, dynamic> ? resp : <String, dynamic>{};
     }
-    await ApiService.post(ApiConfig.subscriptionPaymentRequests, {
+    final resp = await ApiService.post(ApiConfig.subscriptionPaymentRequests, {
       'plan': planId,
       'payment_note': paymentNote,
     });
+    return resp is Map<String, dynamic> ? resp : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> fetchAccessStatus() async {
+    final resp = await ApiService.get(ApiConfig.subscriptionAccessStatus);
+    if (resp is Map<String, dynamic>) return resp;
+    return <String, dynamic>{};
   }
 
   static bool isSubscriptionRequiredError(Object error) {
@@ -64,6 +72,7 @@ class SubscriptionService {
   static Future<Map<String, dynamic>> fetchMerchantDashboard({
     DateTime? dateFrom,
     DateTime? dateTo,
+    String? period,
   }) async {
     var endpoint = ApiConfig.subscriptionMerchantDashboard;
     final query = <String, String>{};
@@ -73,11 +82,24 @@ class SubscriptionService {
     if (dateTo != null) {
       query['date_to'] = dateTo.toIso8601String().split('T').first;
     }
+    if (period != null && period.trim().isNotEmpty) {
+      query['period'] = period.trim();
+    }
     if (query.isNotEmpty) {
       endpoint = '$endpoint?${Uri(queryParameters: query).query}';
     }
 
     final resp = await ApiService.get(endpoint);
+    if (resp is Map<String, dynamic>) return resp;
+    return <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> fetchPaymentRequestTimeline(
+    int requestId,
+  ) async {
+    final resp = await ApiService.get(
+      ApiConfig.subscriptionPaymentRequestTimeline(requestId),
+    );
     if (resp is Map<String, dynamic>) return resp;
     return <String, dynamic>{};
   }

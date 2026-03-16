@@ -1,41 +1,42 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/providers/home_provider.dart';
+import '../../core/providers/post_provider.dart';
+import '../../core/routing/routes.dart';
+import '../../core/services/analytics_api_service.dart';
+import '../../core/services/location_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/routing/routes.dart';
-import '../../core/utils/helpers.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/providers/home_provider.dart';
-import '../../core/providers/post_provider.dart';
-import '../../core/services/storage_service.dart';
-import '../../core/services/analytics_api_service.dart';
-import '../../data/models/post_model.dart';
-import '../../data/models/pack_model.dart';
-import '../../data/models/offer_model.dart';
-import '../../data/models/user_model.dart';
-import '../../data/repositories/post_repository.dart';
-import '../product/product_detail_screen.dart';
-import '../shared_widgets/shimmer_loading.dart';
-import 'widgets/category_item.dart';
-import '../shared_widgets/cards/product_card.dart';
-import '../shared_widgets/cards/store_chip.dart';
-import '../shared_widgets/cards/promotion_card.dart';
-import '../shared_widgets/cards/pack_card.dart';
-import '../shared_widgets/empty_state_widget.dart';
-import 'main_navigation_screen.dart';
-import '../common/location_picker_screen.dart';
-import '../shared_widgets/unified_app_bar.dart';
-import '../common/constants/card_constants.dart';
-import '../common/widgets/stacked_product_images.dart';
-import '../../features/analytics/analytics_export.dart';
-import '../../core/services/location_service.dart';
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
+import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
+import '../../data/models/user_model.dart';
+import '../../data/repositories/post_repository.dart';
+import '../../features/analytics/analytics_export.dart';
+import '../common/constants/card_constants.dart';
+import '../common/location_picker_screen.dart';
+import '../common/widgets/stacked_product_images.dart';
+import '../product/product_detail_screen.dart';
+import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/cards/product_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/cards/store_chip.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/shimmer_loading.dart';
+import '../shared_widgets/unified_app_bar.dart';
+import 'main_navigation_screen.dart';
+import 'widgets/category_item.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,6 +46,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isLikelyArabic(String text) {
+    return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
+  }
+
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   final AnalyticsApiService _analyticsApiService = AnalyticsApiService();
@@ -274,8 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_radiusKm != null && _userLat != null && _userLng != null) {
       return offers.where((o) {
         if (!o.product.storeNearbyVisible) return false;
-        final dist = Helpers.haversineDistance(
-            _userLat, _userLng, o.product.storeLatitude, o.product.storeLongitude);
+        final dist = Helpers.haversineDistance(_userLat, _userLng,
+            o.product.storeLatitude, o.product.storeLongitude);
         if (dist == null) return false;
         return dist <= _radiusKm!;
       }).toList();
@@ -376,8 +381,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
                 RecommendationsList(
                   onProductTap: _navigateToProductDetails,
-                  onOfferTap: (offer) =>
-                      _navigateToPromotionDetails(offer, placement: 'home_feed'),
+                  onOfferTap: (offer) => _navigateToPromotionDetails(offer,
+                      placement: 'home_feed'),
                 ),
                 const SizedBox(height: AppTheme.spacing24),
 
@@ -1177,6 +1182,10 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: ads.length,
             itemBuilder: (context, index) {
               final ad = ads[index];
+              final storeName = ad.product.storeName;
+              final productTitle = ad.product.title;
+              final isStoreRtl = _isLikelyArabic(storeName);
+              final isTitleRtl = _isLikelyArabic(productTitle);
               final metrics = <String>[
                 if (ad.impressionsCount > 0) '${ad.impressionsCount} views',
                 if (ad.clicksCount > 0) '${ad.clicksCount} clicks',
@@ -1188,7 +1197,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () =>
                     _navigateToPromotionDetails(ad, placement: 'home_top'),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
@@ -1199,7 +1209,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFFF1D6), Color(0xFFFFD39B), Color(0xFFFFB26B)],
+                      colors: [
+                        Color(0xFFFFF1D6),
+                        Color(0xFFFFD39B),
+                        Color(0xFFFFB26B)
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1223,142 +1237,254 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               flex: 6,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(22, 20, 14, 20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              child: LayoutBuilder(
+                                builder: (context, innerConstraints) {
+                                  final compact =
+                                      innerConstraints.maxHeight < 190;
+                                  final ultraCompact =
+                                      innerConstraints.maxHeight < 180;
+                                  return Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      compact ? 18 : 22,
+                                      compact ? 14 : 20,
+                                      compact ? 12 : 14,
+                                      compact ? 14 : 20,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF2C1808),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
-                                          ),
-                                          child: const Text(
-                                            'Sponsored',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            ad.product.storeName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFF7A3F12),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      ad.product.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        height: 1.05,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF2E1C0A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      '${ad.discountPercentage}% OFF',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFB44708),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      Helpers.formatPrice(ad.newPrice),
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF1D140D),
-                                      ),
-                                    ),
-                                    if (metrics.isNotEmpty) ...[
-                                      const SizedBox(height: 10),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: metrics.map((metric) {
-                                          return Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.62),
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: Text(
-                                              metric,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF5E3211),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: compact ? 10 : 12,
+                                                vertical: compact ? 5 : 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF2C1808),
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                'Sponsored',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: compact ? 10 : 11,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                               ),
                                             ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF2D1908),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'View deal',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w800,
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                storeName,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                textDirection: isStoreRtl
+                                                    ? TextDirection.rtl
+                                                    : TextDirection.ltr,
+                                                textAlign: TextAlign.start,
+                                                style: TextStyle(
+                                                  fontSize: compact ? 11 : 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color:
+                                                      const Color(0xFF7A3F12),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: compact ? 6 : 8),
+                                        Expanded(
+                                          child: LayoutBuilder(
+                                            builder:
+                                                (context, textConstraints) {
+                                              final textTight =
+                                                  textConstraints.maxHeight <
+                                                      115;
+                                              final showDiscount =
+                                                  !ultraCompact && !textTight;
+                                              final showMetrics = !compact &&
+                                                  !textTight &&
+                                                  metrics.isNotEmpty;
+
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    productTitle,
+                                                    maxLines: textTight
+                                                        ? 1
+                                                        : (compact ? 1 : 2),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    textDirection: isTitleRtl
+                                                        ? TextDirection.rtl
+                                                        : TextDirection.ltr,
+                                                    textAlign: TextAlign.start,
+                                                    style: TextStyle(
+                                                      fontSize: textTight
+                                                          ? 15
+                                                          : (ultraCompact
+                                                              ? 16
+                                                              : (compact
+                                                                  ? 18
+                                                                  : 20)),
+                                                      height: 1.08,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: const Color(
+                                                          0xFF2E1C0A),
+                                                    ),
+                                                  ),
+                                                  if (showDiscount)
+                                                    SizedBox(
+                                                        height:
+                                                            compact ? 6 : 8),
+                                                  if (showDiscount)
+                                                    Text(
+                                                      '${ad.discountPercentage}% OFF',
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            compact ? 12 : 14,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: const Color(
+                                                            0xFFB44708),
+                                                      ),
+                                                    ),
+                                                  SizedBox(
+                                                      height: textTight
+                                                          ? 4
+                                                          : (ultraCompact
+                                                              ? 6
+                                                              : 2)),
+                                                  Text(
+                                                    Helpers.formatPrice(
+                                                        ad.newPrice),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: textTight
+                                                          ? 18
+                                                          : (ultraCompact
+                                                              ? 19
+                                                              : (compact
+                                                                  ? 21
+                                                                  : 24)),
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: const Color(
+                                                          0xFF1D140D),
+                                                    ),
+                                                  ),
+                                                  if (showMetrics) ...[
+                                                    const SizedBox(height: 8),
+                                                    SingleChildScrollView(
+                                                      scrollDirection:
+                                                          Axis.horizontal,
+                                                      child: Row(
+                                                        children: metrics
+                                                            .map((metric) {
+                                                          return Container(
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    right: 8),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 6,
+                                                            ),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors
+                                                                  .white
+                                                                  .withOpacity(
+                                                                      0.62),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          999),
+                                                            ),
+                                                            child: Text(
+                                                              metric,
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: Color(
+                                                                    0xFF5E3211),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }).toList(),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        if (!compact && !ultraCompact) ...[
+                                          SizedBox(height: compact ? 6 : 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: compact ? 12 : 14,
+                                              vertical: compact ? 8 : 10,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF2D1908),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'View deal',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: compact ? 12 : 14,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Icon(
+                                                  Icons.arrow_forward_rounded,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          SizedBox(width: 8),
-                                          Icon(
-                                            Icons.arrow_forward_rounded,
-                                            size: 18,
-                                            color: Colors.white,
-                                          ),
                                         ],
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
                             ),
                             Expanded(
                               flex: 4,
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
+                                padding:
+                                    const EdgeInsets.fromLTRB(0, 16, 16, 16),
                                 child: Hero(
                                   tag: 'home-ad-${ad.id}',
                                   child: ClipRRect(
@@ -1374,7 +1500,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fit: BoxFit.cover,
                                             )
                                           : Container(
-                                              color: Colors.white.withOpacity(0.5),
+                                              color:
+                                                  Colors.white.withOpacity(0.5),
                                               child: const Icon(
                                                 Icons.campaign_rounded,
                                                 size: 56,
@@ -1641,7 +1768,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToPromotionDetails(Offer offer, {String placement = 'home_feed'}) {
+  void _navigateToPromotionDetails(Offer offer,
+      {String placement = 'home_feed'}) {
     _logPromotionClick(offer, placement: placement);
     final productWithPromotion = offer.product.copyWith(
       price: offer.newPrice,
@@ -1692,7 +1820,9 @@ class _HomeScreenState extends State<HomeScreen> {
       wilayaCode: meta['wilaya_code'] as String?,
       searchQuery: null,
     );
-    PostRepository.registerPromotionClick(offer.id);
+    if (offer.kind == 'advertising') {
+      PostRepository.registerPromotionClick(offer.id, kind: offer.kind);
+    }
   }
 
   void _logFilterWilaya(String wilaya, String baladiya) {

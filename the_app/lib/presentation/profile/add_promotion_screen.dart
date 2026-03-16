@@ -1,26 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_button.dart';
+
+import '../../core/providers/pack_provider.dart';
 import '../../core/providers/post_provider.dart';
-import '../../core/utils/helpers.dart';
 import '../../core/services/subscription_service.dart';
-import '../../data/models/post_model.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_compact_action_button.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_toggle_button.dart';
 import '../../data/models/offer_model.dart';
-import 'widgets/product_picker_sheet.dart';
+import '../../data/models/post_model.dart';
+import '../common/location_filter_picker.dart';
+import '../common/radius_picker_sheet.dart';
 import '../subscription/subscription_gate.dart';
+import 'widgets/pack_picker_sheet.dart';
+import 'widgets/product_picker_sheet.dart';
 
 class AddPromotionScreen extends StatefulWidget {
   final Offer? offer;
   final String initialKind;
   final Post? initialProduct;
+  final int? initialPackId;
+  final String? initialPackName;
 
   const AddPromotionScreen({
     super.key,
     this.offer,
     this.initialKind = 'promotion',
     this.initialProduct,
+    this.initialPackId,
+    this.initialPackName,
   });
 
   @override
@@ -28,67 +39,123 @@ class AddPromotionScreen extends StatefulWidget {
 }
 
 class _AddPromotionScreenState extends State<AddPromotionScreen> {
+  static const List<ToggleOption> _kindOptions = [
+    ToggleOption(label: 'Discount', value: 'promotion'),
+    ToggleOption(label: 'Sponsored Ad', value: 'advertising'),
+  ];
+
+  static const List<ToggleOption> _placementOptions = [
+    ToggleOption(label: 'Home Top', value: 'home_top'),
+    ToggleOption(label: 'Home Feed', value: 'home_feed'),
+    ToggleOption(label: 'Search Top', value: 'search_top'),
+  ];
+
+  static const List<ToggleOption> _audienceOptions = [
+    ToggleOption(label: 'All', value: 'all'),
+    ToggleOption(label: 'Followers', value: 'followers'),
+    ToggleOption(label: 'Nearby', value: 'nearby'),
+    ToggleOption(label: 'Wilaya', value: 'wilaya'),
+  ];
+
+  static const List<ToggleOption> _geoOptions = [
+    ToggleOption(label: 'All Algeria', value: 'all'),
+    ToggleOption(label: 'Wilayas', value: 'wilaya'),
+    ToggleOption(label: 'Radius (km)', value: 'radius'),
+  ];
+
+  static const List<ToggleOption> _availabilityOptions = [
+    ToggleOption(label: 'Active', value: 'active'),
+    ToggleOption(label: 'Paused', value: 'paused'),
+  ];
+
   Post? _selectedProduct;
+  int? _selectedPackId;
+  String? _selectedPackName;
+  String _adTargetType = 'product';
   Offer? _existingOffer;
   final _formKey = GlobalKey<FormState>();
   final _newPriceController = TextEditingController();
   final _discountPercentageController = TextEditingController();
   final _maxImpressionsController = TextEditingController();
   final _priorityBoostController = TextEditingController();
-  final _targetWilayasController = TextEditingController();
-  final _targetUsersController = TextEditingController();
+  final _ageFromController = TextEditingController();
+  final _ageToController = TextEditingController();
   bool _isLoading = false;
   bool _isEditMode = false;
   bool _isAvailable = true;
   String _kind = 'promotion';
   String _placement = 'home_top';
   String _audienceMode = 'all';
-  DateTime? _startDate;
-  DateTime? _endDate;
+  String _geoMode = 'all';
+  List<String> _selectedTargetWilayas = const [];
+  double? _targetRadiusKm;
   Map<String, dynamic> _planFeatures = const {};
   Map<String, dynamic> _adInventory = const {};
 
   bool get _isAdOnlyFlow =>
-      widget.initialKind == 'advertising' || widget.offer?.kind == 'advertising';
+      widget.initialKind == 'advertising' ||
+      widget.offer?.kind == 'advertising';
 
   bool get _isAdMode => _kind == 'advertising';
 
-    String get _entityLabel => _isAdMode ? 'Sponsored Ad' : 'Discount';
+  String get _entityLabel => _isAdMode ? 'Sponsored Ad' : 'Discount';
 
-    String get _screenTitle => _isEditMode ? 'Edit $_entityLabel' : (_isAdMode ? 'Create Sponsored Ad' : 'Add Discount');
+  String get _screenTitle => _isEditMode
+      ? 'Edit $_entityLabel'
+      : (_isAdMode ? 'Create Sponsored Ad' : 'Add Discount');
 
-    String get _productSelectionTitle => _isAdMode ? 'Select Product to Sponsor' : 'Select Product';
+  bool get _isPackTarget => _isAdMode && _adTargetType == 'pack';
 
-    String get _productSelectionHint =>
-      _isAdMode ? 'Tap to select product to sponsor...' : 'Tap to select product...';
+  bool get _hasSelectedTarget =>
+      _selectedProduct != null || (_selectedPackId != null && _isAdMode);
 
-    String get _availabilityTitle => _isAdMode ? 'Ad Active' : 'Available';
+  String get _targetSelectionTitle {
+    if (!_isAdMode) return 'Select Product';
+    return _isPackTarget
+        ? 'Select Pack to Sponsor'
+        : 'Select Product to Sponsor';
+  }
 
-    String get _availabilitySubtitle =>
-      _isAdMode ? 'Show this sponsored ad to customers' : 'Show this discount to customers';
+  String get _targetSelectionHint {
+    if (!_isAdMode) return 'Tap to select product...';
+    return _isPackTarget
+        ? 'Tap to select pack to sponsor...'
+        : 'Tap to select product to sponsor...';
+  }
 
-    String get _submitButtonText {
+  String get _availabilityTitle => _isAdMode ? 'Ad Active' : 'Available';
+
+  String get _availabilitySubtitle => _isAdMode
+      ? 'Show this sponsored ad to customers'
+      : 'Show this discount to customers';
+
+  String get _submitButtonText {
     if (_isLoading) return 'Saving...';
     if (_isEditMode) return 'Save Changes';
     return _isAdMode ? 'Launch Sponsored Ad' : 'Apply Discount';
-    }
+  }
 
-    String get _deleteTitle => _isAdMode ? 'Delete Sponsored Ad?' : 'Delete Discount?';
+  String get _deleteTitle =>
+      _isAdMode ? 'Delete Sponsored Ad?' : 'Delete Discount?';
 
-    String get _deleteDescription => _isAdMode
+  String get _deleteDescription => _isAdMode
       ? 'This will remove the sponsored ad from this product.'
       : 'This will remove the discount from this product.';
 
-    String get _deleteSuccessMessage =>
-      _isAdMode ? 'Sponsored ad deleted successfully' : 'Discount deleted successfully';
+  String get _deleteSuccessMessage => _isAdMode
+      ? 'Sponsored ad deleted successfully'
+      : 'Discount deleted successfully';
 
-    String get _deleteFailurePrefix => _isAdMode ? 'Failed to delete sponsored ad' : 'Failed to delete discount';
+  String get _deleteFailurePrefix =>
+      _isAdMode ? 'Failed to delete sponsored ad' : 'Failed to delete discount';
 
-    String get _saveSuccessMessage =>
-      _isAdMode ? 'Sponsored ad updated successfully' : 'Discount edited successfully';
+  String get _saveSuccessMessage => _isAdMode
+      ? 'Sponsored ad updated successfully'
+      : 'Discount edited successfully';
 
-    String get _createSuccessMessage =>
-      _isAdMode ? 'Sponsored ad created successfully' : 'Discount added successfully';
+  String get _createSuccessMessage => _isAdMode
+      ? 'Sponsored ad created successfully'
+      : 'Discount added successfully';
 
   @override
   void initState() {
@@ -96,7 +163,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
     final offer = widget.offer;
     if (offer != null) {
-      _selectedProduct = offer.product;
       _existingOffer = offer;
       _isEditMode = true;
       _isAvailable = offer.isAvailable;
@@ -105,14 +171,29 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _kind = offer.kind;
       _placement = offer.placement;
       _audienceMode = offer.audienceMode;
-      _maxImpressionsController.text =
-          offer.maxImpressions?.toString() ?? '';
+      _geoMode = offer.geoMode;
+      _maxImpressionsController.text = offer.maxImpressions?.toString() ?? '';
       _priorityBoostController.text = offer.priorityBoost.toString();
-      _targetWilayasController.text = offer.targetWilayas.join(', ');
-      _targetUsersController.text = offer.targetUserIds.join(', ');
+      _selectedTargetWilayas = List<String>.from(offer.targetWilayas);
+      _targetRadiusKm = offer.targetRadiusKm?.toDouble();
+      _ageFromController.text = offer.ageFrom?.toString() ?? '';
+      _ageToController.text = offer.ageTo?.toString() ?? '';
+      if (offer.kind == 'advertising' && offer.targetType == 'pack') {
+        _adTargetType = 'pack';
+        _selectedPackId = offer.targetPackId;
+        _selectedPackName = offer.targetPackName;
+      } else {
+        _adTargetType = 'product';
+        _selectedProduct = offer.product;
+      }
     } else {
       _kind = widget.initialKind;
       _selectedProduct = widget.initialProduct;
+      _selectedPackId = widget.initialPackId;
+      _selectedPackName = widget.initialPackName;
+      if (_isAdOnlyFlow && _selectedPackId != null) {
+        _adTargetType = 'pack';
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -134,7 +215,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       if (!mounted) return;
       setState(() {
         _planFeatures =
-            (data['plan_features'] as Map?)?.cast<String, dynamic>() ?? const {};
+            (data['plan_features'] as Map?)?.cast<String, dynamic>() ??
+                const {};
         _adInventory =
             (data['ad_inventory'] as Map?)?.cast<String, dynamic>() ?? const {};
         if (_kind == 'advertising' &&
@@ -166,25 +248,52 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     _discountPercentageController.dispose();
     _maxImpressionsController.dispose();
     _priorityBoostController.dispose();
-    _targetWilayasController.dispose();
-    _targetUsersController.dispose();
+    _ageFromController.dispose();
+    _ageToController.dispose();
     super.dispose();
   }
 
-  Future<void> _openProductPicker() async {
+  Future<void> _openTargetPicker() async {
     if (_isEditMode) return;
+
+    if (_isPackTarget) {
+      final packProvider = context.read<PackProvider>();
+      final picked = await showPackPickerBottomSheet(
+        context,
+        packs: packProvider.myPacks,
+        title: _targetSelectionTitle,
+      );
+      if (picked != null) {
+        setState(() {
+          _selectedPackId = picked.id;
+          _selectedPackName = picked.name;
+          _selectedProduct = null;
+          _existingOffer = context
+              .read<PostProvider>()
+              .myOffers
+              .where(
+                  (o) => o.kind == 'advertising' && o.targetPackId == picked.id)
+              .firstOrNull;
+          _isEditMode = _existingOffer != null;
+        });
+      }
+      return;
+    }
+
     final provider = context.read<PostProvider>();
     final picked = await showProductPickerBottomSheet(
       context,
       products: provider.myPosts,
-      title: _productSelectionTitle,
+      title: _targetSelectionTitle,
     );
     if (picked != null) _onProductSelected(picked);
   }
 
-  void _clearSelectedProduct() {
+  void _clearSelectedTarget() {
     setState(() {
       _selectedProduct = null;
+      _selectedPackId = null;
+      _selectedPackName = null;
       _existingOffer = null;
       _isEditMode = false;
       _isAvailable = true;
@@ -225,6 +334,12 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         .firstOrNull;
   }
 
+  String _selectedTargetLabel() {
+    if (_isPackTarget)
+      return _selectedPackName ?? 'Pack #${_selectedPackId ?? 0}';
+    return _selectedProduct?.title ?? _targetSelectionHint;
+  }
+
   int _resolvePercentage(Offer? selectedPromotion) {
     if (_isAdMode) {
       return selectedPromotion?.discountPercentage ??
@@ -246,6 +361,36 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       return 'Your plan allows up to $planLimit impressions for one ad';
     }
     return null;
+  }
+
+  int _selectedOptionIndex(List<ToggleOption> options, String value) {
+    final index = options.indexWhere((option) => option.value == value);
+    return index >= 0 ? index : 0;
+  }
+
+  Widget _buildToggleSection({
+    required String title,
+    required List<ToggleOption> options,
+    required String selectedValue,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        AppToggleButtonGroup(
+          options: options,
+          selectedIndex: _selectedOptionIndex(options, selectedValue),
+          onChanged: (index) => onChanged(options[index].value),
+          scrollable: true,
+          compact: true,
+        ),
+      ],
+    );
   }
 
   void _showExistingPromotionDialog(Post post, Offer offer) {
@@ -373,14 +518,19 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   _kind = offer.kind;
                   _placement = offer.placement;
                   _audienceMode = offer.audienceMode;
+                  _geoMode = offer.geoMode;
                   _discountPercentageController.text =
                       offer.discountPercentage.toString();
                   _newPriceController.text = offer.newPrice.toStringAsFixed(2);
                   _maxImpressionsController.text =
                       offer.maxImpressions?.toString() ?? '';
-                  _priorityBoostController.text = offer.priorityBoost.toString();
-                  _targetWilayasController.text = offer.targetWilayas.join(', ');
-                  _targetUsersController.text = offer.targetUserIds.join(', ');
+                  _priorityBoostController.text =
+                      offer.priorityBoost.toString();
+                  _selectedTargetWilayas =
+                      List<String>.from(offer.targetWilayas);
+                  _targetRadiusKm = offer.targetRadiusKm?.toDouble();
+                  _ageFromController.text = offer.ageFrom?.toString() ?? '';
+                  _ageToController.text = offer.ageTo?.toString() ?? '';
                 });
               },
               text: isAdvertising ? 'Edit Sponsored Ad' : 'Edit Discount',
@@ -448,27 +598,46 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     }
   }
 
-  Future<void> _pickDate({required bool isStart}) async {
-    final initial = isStart
-        ? (_startDate ?? DateTime.now())
-        : (_endDate ?? (_startDate ?? DateTime.now()).add(const Duration(days: 7)));
-    final picked = await showDatePicker(
+  Future<void> _pickTargetWilayas() async {
+    final result = await showModalBottomSheet<LocationFilterResult>(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => LocationFilterPicker(
+        initialFilter: LocationFilterResult(
+          selectedWilayas: _selectedTargetWilayas,
+          selectedBaladiyat: const {},
+          allAlgeria: _geoMode == 'all',
+        ),
+      ),
     );
-    if (picked == null) return;
+    if (result == null) return;
     setState(() {
-      if (isStart) {
-        _startDate = picked;
-        if (_endDate != null && _endDate!.isBefore(picked)) {
-          _endDate = picked.add(const Duration(days: 7));
-        }
+      if (result.allAlgeria) {
+        _geoMode = 'all';
+        _selectedTargetWilayas = const [];
       } else {
-        _endDate = picked;
+        _geoMode = 'wilaya';
+        _selectedTargetWilayas = result.selectedWilayas;
       }
     });
+  }
+
+  void _pickRadius() {
+    showRadiusPickerSheet(
+      context,
+      initialRadius: _targetRadiusKm ?? 25,
+      onRadiusChanged: (value) {
+        setState(() {
+          if (value <= 0) {
+            _targetRadiusKm = null;
+          } else {
+            _geoMode = 'radius';
+            _targetRadiusKm = value;
+          }
+        });
+      },
+    );
   }
 
   void _onPercentageChanged(String value) {
@@ -484,10 +653,14 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _selectedProduct == null) {
-      if (_selectedProduct == null) {
-        Helpers.showSnackBar(context, 'Please select a product');
-      }
+    final hasTarget = _isAdMode
+        ? (_selectedProduct != null || _selectedPackId != null)
+        : _selectedProduct != null;
+    if (!_formKey.currentState!.validate() || !hasTarget) {
+      Helpers.showSnackBar(
+        context,
+        _isPackTarget ? 'Please select a pack' : 'Please select a product',
+      );
       return;
     }
 
@@ -499,21 +672,30 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       final percentage = _resolvePercentage(selectedPromotion);
       final maxImpressions =
           int.tryParse(_maxImpressionsController.text.trim());
-      final priorityBoost =
-          int.tryParse(_priorityBoostController.text.trim());
-      final targetWilayas = _targetWilayasController.text
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-      final targetUsers = _targetUsersController.text
-          .split(',')
-          .map((e) => int.tryParse(e.trim()))
-          .whereType<int>()
-          .toList();
-      final impressionValidationError = _validateAdImpressionLimit(maxImpressions);
+      final priorityBoost = int.tryParse(_priorityBoostController.text.trim());
+      final ageFrom = int.tryParse(_ageFromController.text.trim());
+      final ageTo = int.tryParse(_ageToController.text.trim());
+      final impressionValidationError =
+          _validateAdImpressionLimit(maxImpressions);
       if (impressionValidationError != null) {
         Helpers.showSnackBar(context, impressionValidationError);
+        return;
+      }
+
+      if (_isAdMode && ageFrom != null && ageTo != null && ageFrom > ageTo) {
+        Helpers.showSnackBar(context, 'Age range is invalid');
+        return;
+      }
+
+      if (_isAdMode && _geoMode == 'wilaya' && _selectedTargetWilayas.isEmpty) {
+        Helpers.showSnackBar(context, 'Select at least one target wilaya');
+        return;
+      }
+
+      if (_isAdMode &&
+          _geoMode == 'radius' &&
+          (_targetRadiusKm == null || _targetRadiusKm! <= 0)) {
+        Helpers.showSnackBar(context, 'Choose target radius in km');
         return;
       }
 
@@ -521,17 +703,20 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         // Update existing offer
         await provider.updateOffer(
           offerId: _existingOffer!.id,
+          productId: _isPackTarget ? null : _selectedProduct?.id,
+          packId: _isPackTarget ? _selectedPackId : null,
           discountPercentage: percentage,
           isAvailable: _isAvailable,
           kind: _kind,
           placement: _placement,
           audienceMode: _audienceMode,
-          targetWilayas: targetWilayas,
-          targetUserIds: targetUsers,
+          targetWilayas: _selectedTargetWilayas,
           priorityBoost: priorityBoost,
           maxImpressions: maxImpressions,
-          startDate: _startDate,
-          endDate: _endDate,
+          ageFrom: ageFrom,
+          ageTo: ageTo,
+          geoMode: _geoMode,
+          targetRadiusKm: _targetRadiusKm?.round(),
         );
 
         if (mounted) {
@@ -541,18 +726,20 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       } else {
         // Create new offer
         await provider.createOffer(
-          productId: _selectedProduct!.id,
+          productId: _isPackTarget ? null : _selectedProduct?.id,
+          packId: _isPackTarget ? _selectedPackId : null,
           discountPercentage: percentage,
           isAvailable: _isAvailable,
           kind: _kind,
           placement: _placement,
           audienceMode: _audienceMode,
-          targetWilayas: targetWilayas,
-          targetUserIds: targetUsers,
+          targetWilayas: _selectedTargetWilayas,
           priorityBoost: priorityBoost,
           maxImpressions: maxImpressions,
-          startDate: _startDate,
-          endDate: _endDate,
+          ageFrom: ageFrom,
+          ageTo: ageTo,
+          geoMode: _geoMode,
+          targetRadiusKm: _targetRadiusKm?.round(),
         );
 
         if (mounted) {
@@ -580,17 +767,15 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PostProvider>();
-    final selectedPromotion = _promotionForSelectedProduct(provider);
     final planImpressionLimit = _planImpressionLimit;
     final impressionPresets = planImpressionLimit == null
-      ? <int>[]
-      : <int>{
-        (planImpressionLimit * 0.25).round(),
-        (planImpressionLimit * 0.5).round(),
-        (planImpressionLimit * 0.75).round(),
-        planImpressionLimit,
-        }.where((value) => value > 0).toList(growable: true)
+        ? <int>[]
+        : <int>{
+            (planImpressionLimit * 0.25).round(),
+            (planImpressionLimit * 0.5).round(),
+            (planImpressionLimit * 0.75).round(),
+            planImpressionLimit,
+          }.where((value) => value > 0).toList(growable: true)
       ..sort();
 
     return Directionality(
@@ -620,15 +805,36 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_isAdMode) ...[
+                  _buildToggleSection(
+                    title: 'Ad Target',
+                    options: const [
+                      ToggleOption(label: 'Product', value: 'product'),
+                      ToggleOption(label: 'Pack', value: 'pack'),
+                    ],
+                    selectedValue: _adTargetType,
+                    onChanged: _isEditMode
+                        ? (_) {}
+                        : (value) {
+                            setState(() {
+                              _adTargetType = value;
+                              _selectedProduct = null;
+                              _selectedPackId = null;
+                              _selectedPackName = null;
+                              _existingOffer = null;
+                            });
+                          },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Text(
-                  _productSelectionTitle,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  _targetSelectionTitle,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
-
-                // Product Selection Widget
                 InkWell(
-                  onTap: _isEditMode ? null : _openProductPicker,
+                  onTap: _isEditMode ? null : _openTargetPicker,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -655,22 +861,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                                   : Image.network(
                                       _selectedProduct!.image!,
                                       fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null) {
-                                          return child;
-                                        }
-                                        return Container(
-                                          color: Colors.grey[200],
-                                          alignment: Alignment.center,
-                                          child: const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2),
-                                          ),
-                                        );
-                                      },
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                         return Container(
@@ -682,32 +872,42 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                                       },
                                     ),
                             ),
+                          )
+                        else if (_isPackTarget && _selectedPackId != null)
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.inventory_2_outlined,
+                                color: Colors.grey),
                           ),
-                        if (_selectedProduct != null) const SizedBox(width: 12),
+                        if (_hasSelectedTarget) const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            _selectedProduct?.title ?? _productSelectionHint,
+                            _selectedTargetLabel(),
                             style: TextStyle(
-                              color: _selectedProduct == null
-                                  ? Colors.grey
-                                  : Colors.black,
+                              color: _hasSelectedTarget
+                                  ? Colors.black
+                                  : Colors.grey,
                             ),
                           ),
                         ),
-                        if (_selectedProduct != null && !_isEditMode)
+                        if (_hasSelectedTarget && !_isEditMode)
                           IconButton(
-                            onPressed: _clearSelectedProduct,
+                            onPressed: _clearSelectedTarget,
                             icon: const Icon(Icons.close),
                             splashRadius: 18,
                           )
-                        else if (_selectedProduct == null && !_isEditMode)
+                        else if (!_hasSelectedTarget && !_isEditMode)
                           const Icon(Icons.arrow_drop_down),
                       ],
                     ),
                   ),
                 ),
-
-                if (_selectedProduct != null) ...[
+                if (_hasSelectedTarget) ...[
                   const SizedBox(height: 24),
 
                   Container(
@@ -720,7 +920,11 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isAdMode ? 'Sponsored Product Summary' : 'Current Price',
+                          _isAdMode
+                              ? (_isPackTarget
+                                  ? 'Sponsored Pack Summary'
+                                  : 'Sponsored Product Summary')
+                              : 'Current Price',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
@@ -730,62 +934,27 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_isAdMode ? 'Product Price:' : 'Original Price:'),
-                            Text(
-                              Helpers.formatPrice(_selectedProduct!.price),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.grey,
+                            Text(_isAdMode
+                                ? (_isPackTarget ? 'Pack:' : 'Product:')
+                                : 'Original Price:'),
+                            Flexible(
+                              child: Text(
+                                _isPackTarget
+                                    ? (_selectedPackName ??
+                                        'Pack #${_selectedPackId ?? 0}')
+                                    : _selectedProduct!.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        if (_isAdMode && selectedPromotion != null) ...[
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Linked Promotion:'),
-                              Text(
-                                '-${selectedPromotion.discountPercentage}% • ${Helpers.formatPrice(selectedPromotion.newPrice)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'This sponsored ad will boost your existing promotion for this product.',
-                            style: TextStyle(color: Colors.grey.shade700),
-                          ),
-                        ] else if (_isAdMode) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            'No promotion is linked to this product. This sponsored ad will promote the product without discount fields.',
-                            style: TextStyle(color: Colors.grey.shade700),
-                          ),
-                        ] else ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Discount Percentage:'),
-                              Text(
-                                _discountPercentageController.text.isEmpty
-                                    ? '0%'
-                                    : '${_discountPercentageController.text}%',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
+                        if (!_isPackTarget) ...[
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -793,7 +962,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                               const Text('New Price:'),
                               Text(
                                 _newPriceController.text.isEmpty
-                                    ? Helpers.formatPrice(_selectedProduct!.price)
+                                    ? Helpers.formatPrice(
+                                        _selectedProduct!.price)
                                     : '${_newPriceController.text} DZD',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -809,6 +979,40 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   ),
 
                   const SizedBox(height: 24),
+
+                  if (!_isAdOnlyFlow) ...[
+                    _buildToggleSection(
+                      title: 'Campaign Type',
+                      options: _kindOptions,
+                      selectedValue: _kind,
+                      onChanged: _isLoading
+                          ? (_) {}
+                          : (value) {
+                              setState(() {
+                                _kind = value;
+                                _existingOffer = (_selectedProduct == null)
+                                    ? null
+                                    : context
+                                        .read<PostProvider>()
+                                        .myOffers
+                                        .where((offer) =>
+                                            offer.product.id ==
+                                                _selectedProduct!.id &&
+                                            offer.kind == _kind)
+                                        .firstOrNull;
+                                if (_isAdMode &&
+                                    _maxImpressionsController.text
+                                        .trim()
+                                        .isEmpty &&
+                                    planImpressionLimit != null) {
+                                  _maxImpressionsController.text =
+                                      '$planImpressionLimit';
+                                }
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
 
                   if (!_isAdMode) ...[
                     AppTextField(
@@ -846,35 +1050,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Sponsored Ad'),
-                      subtitle: const Text('Boost this product in recommendations'),
-                      value: _isAdMode,
-                      onChanged: _isLoading || _isAdOnlyFlow
-                          ? null
-                          : (value) {
-                              setState(() {
-                                _kind = value ? 'advertising' : 'promotion';
-                                _existingOffer = (_selectedProduct == null)
-                                    ? null
-                                    : context
-                                        .read<PostProvider>()
-                                        .myOffers
-                                        .where((offer) =>
-                                            offer.product.id ==
-                                                _selectedProduct!.id &&
-                                            offer.kind == _kind)
-                                        .firstOrNull;
-                                if (_isAdMode &&
-                                    _maxImpressionsController.text.trim().isEmpty &&
-                                    planImpressionLimit != null) {
-                                  _maxImpressionsController.text =
-                                      '$planImpressionLimit';
-                                }
-                              });
-                            },
-                    ),
                   ],
 
                   if (_isAdMode) ...[
@@ -903,49 +1078,29 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                               'Remaining ad slots: ${_adInventory['remaining_ad_slots'] ?? '-'}',
                               style: TextStyle(color: Colors.grey.shade700),
                             ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Remaining plan impressions: ${_adInventory['remaining_plan_impressions'] ?? '-'}',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
                           ],
                         ),
                       ),
-                    DropdownButtonFormField<String>(
-                      value: _placement,
-                      decoration: const InputDecoration(
-                        labelText: 'Placement',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'home_top', child: Text('Home Top')),
-                        DropdownMenuItem(
-                            value: 'home_feed', child: Text('Home Feed')),
-                        DropdownMenuItem(
-                            value: 'search_top', child: Text('Search Top')),
-                      ],
-                      onChanged: (val) {
-                        if (val == null) return;
-                        setState(() => _placement = val);
+                    _buildToggleSection(
+                      title: 'Placement',
+                      options: _placementOptions,
+                      selectedValue: _placement,
+                      onChanged: (value) {
+                        setState(() => _placement = value);
                       },
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _audienceMode,
-                      decoration: const InputDecoration(
-                        labelText: 'Audience',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('All')),
-                        DropdownMenuItem(
-                            value: 'followers', child: Text('Followers')),
-                        DropdownMenuItem(
-                            value: 'nearby', child: Text('Nearby')),
-                        DropdownMenuItem(
-                            value: 'wilaya', child: Text('Wilaya')),
-                        DropdownMenuItem(
-                            value: 'custom', child: Text('Custom Users')),
-                      ],
-                      onChanged: (val) {
-                        if (val == null) return;
-                        setState(() => _audienceMode = val);
+                    _buildToggleSection(
+                      title: 'Audience',
+                      options: _audienceOptions,
+                      selectedValue: _audienceMode,
+                      onChanged: (value) {
+                        setState(() => _audienceMode = value);
                       },
                     ),
                     const SizedBox(height: 12),
@@ -958,21 +1113,86 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       icon: Icons.visibility_outlined,
                       keyboardType: TextInputType.number,
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Current ad impressions to activate: ${_maxImpressionsController.text.trim().isEmpty ? '-' : _maxImpressionsController.text.trim()}',
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
                     if (impressionPresets.isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: impressionPresets.map((value) {
-                          return ActionChip(
-                            label: Text('$value impressions'),
-                            onPressed: () {
-                              setState(() {
-                                _maxImpressionsController.text = '$value';
-                              });
-                            },
-                          );
-                        }).toList(),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: impressionPresets.map((value) {
+                            final selected =
+                                _maxImpressionsController.text.trim() ==
+                                    '$value';
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: AppToggleButton(
+                                label: '$value',
+                                isSelected: selected,
+                                onTap: () {
+                                  setState(() {
+                                    _maxImpressionsController.text = '$value';
+                                  });
+                                },
+                                compact: true,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppTextField(
+                            controller: _ageFromController,
+                            label: 'Age From',
+                            hint: '18',
+                            icon: Icons.cake_outlined,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: AppTextField(
+                            controller: _ageToController,
+                            label: 'Age To',
+                            hint: '45',
+                            icon: Icons.person_outline,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildToggleSection(
+                      title: 'Geo Target',
+                      options: _geoOptions,
+                      selectedValue: _geoMode,
+                      onChanged: (value) {
+                        setState(() => _geoMode = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (_geoMode == 'wilaya') ...[
+                      AppCompactActionButton(
+                        label: _selectedTargetWilayas.isEmpty
+                            ? 'Select Target Wilayas'
+                            : '${_selectedTargetWilayas.length} wilayas selected',
+                        icon: Icons.map_outlined,
+                        onTap: _pickTargetWilayas,
+                      ),
+                    ] else if (_geoMode == 'radius') ...[
+                      AppCompactActionButton(
+                        label: _targetRadiusKm == null
+                            ? 'Choose Radius (km)'
+                            : '${_targetRadiusKm!.round()} km radius',
+                        icon: Icons.radar,
+                        onTap: _pickRadius,
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -983,63 +1203,31 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       icon: Icons.trending_up,
                       keyboardType: TextInputType.number,
                     ),
-                    const SizedBox(height: 12),
-                    AppTextField(
-                      controller: _targetWilayasController,
-                      label: 'Sponsored Target Wilayas',
-                      hint: 'e.g. 16, 09, 31',
-                      icon: Icons.map_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextField(
-                      controller: _targetUsersController,
-                      label: 'Sponsored Target Users (IDs)',
-                      hint: 'e.g. 12, 55, 103',
-                      icon: Icons.person_pin_circle_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _isLoading
-                                ? null
-                                : () => _pickDate(isStart: true),
-                            icon: const Icon(Icons.calendar_today_outlined),
-                            label: Text(_startDate == null
-                                ? 'Start Date'
-                                : _startDate!.toIso8601String().split('T')[0]),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _isLoading
-                                ? null
-                                : () => _pickDate(isStart: false),
-                            icon: const Icon(Icons.event_outlined),
-                            label: Text(_endDate == null
-                                ? 'End Date'
-                                : _endDate!.toIso8601String().split('T')[0]),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sponsored ad will stay active until impressions are exhausted.',
+                      style: TextStyle(color: Colors.grey.shade700),
                     ),
                   ],
 
                   const SizedBox(height: 24),
 
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_availabilityTitle),
-                    subtitle: Text(_availabilitySubtitle),
-                    value: _isAvailable,
+                  _buildToggleSection(
+                    title: _availabilityTitle,
+                    options: _availabilityOptions,
+                    selectedValue: _isAvailable ? 'active' : 'paused',
                     onChanged: _isLoading
-                        ? null
+                        ? (_) {}
                         : (value) {
-                            setState(() => _isAvailable = value);
+                            setState(() => _isAvailable = value == 'active');
                           },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    _availabilitySubtitle,
+                    style: TextStyle(color: Colors.grey.shade700),
                   ),
 
                   const SizedBox(height: 12),

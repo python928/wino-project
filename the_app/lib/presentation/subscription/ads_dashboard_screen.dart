@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/services/subscription_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
-import '../../core/services/subscription_service.dart';
+import '../../core/widgets/app_compact_action_button.dart';
+import '../../core/widgets/app_toggle_button.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
-import '../profile/add_promotion_screen.dart';
+import 'add_ad_screen.dart';
 import 'subscription_plans_screen.dart';
 
 class AdsDashboardScreen extends StatefulWidget {
@@ -16,9 +18,19 @@ class AdsDashboardScreen extends StatefulWidget {
 }
 
 class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
+  static const List<ToggleOption> _periodOptions = [
+    ToggleOption(label: 'All', value: 'all'),
+    ToggleOption(label: 'Today', value: 'today'),
+    ToggleOption(label: '7D', value: 'last_7_days'),
+    ToggleOption(label: '14D', value: 'last_14_days'),
+    ToggleOption(label: '30D', value: 'last_30_days'),
+    ToggleOption(label: 'MTD', value: 'month_to_date'),
+  ];
+
   late Future<Map<String, dynamic>> _future;
   DateTime? _dateFrom;
   DateTime? _dateTo;
+  String? _selectedPeriod;
 
   @override
   void initState() {
@@ -30,7 +42,17 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     _future = SubscriptionService.fetchMerchantDashboard(
       dateFrom: _dateFrom,
       dateTo: _dateTo,
+      period: _selectedPeriod,
     );
+  }
+
+  void _applyQuickPeriod(String period) {
+    setState(() {
+      _selectedPeriod = period;
+      _dateFrom = null;
+      _dateTo = null;
+      _reload();
+    });
   }
 
   Future<void> _pickDateRange() async {
@@ -44,6 +66,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     );
     if (picked == null) return;
     setState(() {
+      _selectedPeriod = null;
       _dateFrom = picked.start;
       _dateTo = picked.end;
       _reload();
@@ -52,6 +75,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
 
   void _clearDateRange() {
     setState(() {
+      _selectedPeriod = null;
       _dateFrom = null;
       _dateTo = null;
       _reload();
@@ -64,13 +88,31 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     return '${value.year}-$month-$day';
   }
 
-  Future<void> _openCreateAd({Post? product}) async {
+  int get _selectedPeriodIndex {
+    final index = _periodOptions.indexWhere(
+      (option) => option.value == _selectedPeriod,
+    );
+    return index >= 0 ? index : 0;
+  }
+
+  int _asInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is double) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  Future<void> _openCreateAd({
+    Post? product,
+    int? packId,
+    String? packName,
+  }) async {
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddPromotionScreen(
-          initialKind: 'advertising',
+        builder: (_) => AddAdScreen(
           initialProduct: product,
+          initialPackId: packId,
+          initialPackName: packName,
         ),
       ),
     );
@@ -116,7 +158,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
       appBar: AppBar(
-        title: const Text('Ads & Promotions'),
+        title: const Text('Ads'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
@@ -141,8 +183,10 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
           }
 
           final data = snapshot.data ?? {};
-          final subscription = data['active_subscription'] as Map<String, dynamic>?;
-          final latestRequest = data['latest_payment_request'] as Map<String, dynamic>?;
+          final subscription =
+              data['active_subscription'] as Map<String, dynamic>?;
+          final latestRequest =
+              data['latest_payment_request'] as Map<String, dynamic>?;
           final planFeatures =
               (data['plan_features'] as Map?)?.cast<String, dynamic>() ??
                   const <String, dynamic>{};
@@ -150,18 +194,19 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
               (data['ad_inventory'] as Map?)?.cast<String, dynamic>() ??
                   const <String, dynamic>{};
           final daysRemaining = data['days_remaining'];
-          final promotions = (data['promotions'] as List?) ?? const [];
+          final ads = (data['ads'] as List?) ?? const [];
           final productStats = (data['product_stats'] as List?) ?? const [];
           final eligibleProducts =
               (data['eligible_products'] as List?) ?? const [];
+          final eligiblePacks = (data['eligible_packs'] as List?) ?? const [];
 
-          final totalImpressions = promotions.fold<int>(
+          final totalImpressions = ads.fold<int>(
             0,
-            (sum, item) => sum + ((item as Map)['impressions_count'] as int? ?? 0),
+            (sum, item) => sum + _asInt((item as Map)['impressions_count']),
           );
-          final totalClicks = promotions.fold<int>(
+          final totalClicks = ads.fold<int>(
             0,
-            (sum, item) => sum + ((item as Map)['clicks_count'] as int? ?? 0),
+            (sum, item) => sum + _asInt((item as Map)['clicks_count']),
           );
           final ctr = totalImpressions > 0
               ? ((totalClicks / totalImpressions) * 100).toStringAsFixed(2)
@@ -228,21 +273,31 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                 const SizedBox(height: 16),
                 _buildEligibleProductsSection(eligibleProducts),
                 const SizedBox(height: 16),
+                _buildEligiblePacksSection(eligiblePacks),
+                const SizedBox(height: 16),
                 _sectionCard(
-                  title: 'Promotions & Ads',
-                  child: promotions.isEmpty
-                      ? const Text('No campaigns found in this period.')
+                  title: 'Ads',
+                  child: ads.isEmpty
+                      ? const Text('No ads found in this period.')
                       : Column(
-                          children: promotions.map<Widget>((item) {
+                          children: ads.map<Widget>((item) {
                             final promo = (item as Map).cast<String, dynamic>();
-                            final name = (promo['name'] ?? 'Campaign').toString();
-                            final kind = (promo['kind'] ?? 'promotion').toString();
-                            final impressions = promo['impressions_count'] ?? 0;
-                            final clicks = promo['clicks_count'] ?? 0;
-                            final unique = promo['unique_viewers_count'] ?? 0;
-                            final remaining = promo['remaining_impressions'];
+                            final name =
+                                (promo['name'] ?? 'Campaign').toString();
+                            final kind =
+                                (promo['kind'] ?? 'promotion').toString();
+                            final impressions =
+                                _asInt(promo['impressions_count']);
+                            final clicks = _asInt(promo['clicks_count']);
+                            final unique =
+                                _asInt(promo['unique_viewers_count']);
+                            final remaining =
+                                promo['remaining_impressions'] == null
+                                    ? null
+                                    : _asInt(promo['remaining_impressions']);
                             final campaignCtr = impressions > 0
-                                ? ((clicks / impressions) * 100).toStringAsFixed(1)
+                                ? ((clicks / impressions) * 100)
+                                    .toStringAsFixed(1)
                                 : '0.0';
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -266,10 +321,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                           color: kind == 'advertising'
                                               ? const Color(0xFFFFE5D0)
                                               : const Color(0xFFEAF3FF),
-                                          borderRadius: BorderRadius.circular(999),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
                                         ),
                                         child: Text(
-                                          kind == 'advertising' ? 'AD' : 'PROMO',
+                                          'AD',
                                           style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
@@ -300,7 +356,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
-                                      _metricPill('Impressions', '$impressions'),
+                                      _metricPill(
+                                          'Impressions', '$impressions'),
                                       _metricPill('Clicks', '$clicks'),
                                       _metricPill('Unique', '$unique'),
                                       if (remaining != null)
@@ -317,7 +374,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                 _sectionCard(
                   title: 'Product Performance',
                   child: productStats.isEmpty
-                      ? const Text('No product performance data for this period.')
+                      ? const Text(
+                          'No product performance data for this period.')
                       : Column(
                           children: productStats.map<Widget>((row) {
                             final item = (row as Map).cast<String, dynamic>();
@@ -333,7 +391,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    (item['product_name'] ?? 'Product').toString(),
+                                    (item['product_name'] ?? 'Product')
+                                        .toString(),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 15,
@@ -344,12 +403,18 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
-                                      _metricPill('Views', '${item['views'] ?? 0}'),
-                                      _metricPill('Clicks', '${item['clicks'] ?? 0}'),
-                                      _metricPill('Favorites', '${item['favorites'] ?? 0}'),
-                                      _metricPill('Ad Impressions', '${item['ad_impressions'] ?? 0}'),
-                                      _metricPill('Ad Clicks', '${item['ad_clicks'] ?? 0}'),
-                                      _metricPill('Ad CTR', '${item['ad_ctr'] ?? 0}%'),
+                                      _metricPill(
+                                          'Views', '${item['views'] ?? 0}'),
+                                      _metricPill(
+                                          'Clicks', '${item['clicks'] ?? 0}'),
+                                      _metricPill('Favorites',
+                                          '${item['favorites'] ?? 0}'),
+                                      _metricPill('Ad Impressions',
+                                          '${item['ad_impressions'] ?? 0}'),
+                                      _metricPill('Ad Clicks',
+                                          '${item['ad_clicks'] ?? 0}'),
+                                      _metricPill(
+                                          'Ad CTR', '${item['ad_ctr'] ?? 0}%'),
                                     ],
                                   ),
                                 ],
@@ -370,12 +435,12 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _openCreateAd(),
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.campaign_outlined),
-        label: const Text('Create Ad'),
+        tooltip: 'Create Sponsored Ad',
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -385,6 +450,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     required Map<String, dynamic>? latestRequest,
     required dynamic daysRemaining,
   }) {
+    final requestStatus = (latestRequest?['status'] ?? '').toString();
+    final requestReason =
+        (latestRequest?['status_reason_text'] ?? '').toString();
+    final requestReasonCode =
+        (latestRequest?['status_reason_code'] ?? '').toString();
     final label = subscription != null
         ? (subscription['plan_detail']?['name'] ?? 'Active Plan').toString()
         : latestRequest != null
@@ -417,19 +487,14 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                 ),
               ),
               SizedBox(
-                width: 92,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.push(
+                child: AppCompactActionButton(
+                  label: 'Plans',
+                  onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const SubscriptionPlansScreen(),
                     ),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withOpacity(0.4)),
-                  ),
-                  child: const Text('Plans'),
                 ),
               ),
             ],
@@ -450,6 +515,24 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
               color: Colors.white.withOpacity(0.74),
             ),
           ),
+          if (latestRequest != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Latest payment request: ${requestStatus.isEmpty ? 'pending' : requestStatus.toUpperCase()}',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (requestStatus == 'rejected' &&
+                (requestReason.isNotEmpty || requestReasonCode.isNotEmpty))
+              Text(
+                requestReason.isNotEmpty ? requestReason : requestReasonCode,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.76),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -457,47 +540,69 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
 
   Widget _buildDateFilterBar() {
     final hasRange = _dateFrom != null && _dateTo != null;
-    return Row(
+    final hasActiveFilter = hasRange || _selectedPeriod != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_month_outlined, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    hasRange
-                        ? '${_formatDate(_dateFrom!)}  ->  ${_formatDate(_dateTo!)}'
-                        : 'All dates',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_month_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        hasRange
+                            ? '${_formatDate(_dateFrom!)}  ->  ${_formatDate(_dateTo!)}'
+                            : (_selectedPeriod != null
+                                ? 'Preset: ${_selectedPeriod!.replaceAll('_', ' ')}'
+                                : 'All dates'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            AppCompactActionButton(
+              label: 'Custom',
+              onTap: _pickDateRange,
+            ),
+            if (hasActiveFilter) ...[
+              const SizedBox(width: 8),
+              AppCompactActionButton(
+                label: 'Clear',
+                onTap: _clearDateRange,
+              ),
+            ],
+          ],
         ),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 90,
-          child: OutlinedButton(
-            onPressed: _pickDateRange,
-            child: const Text('Filter'),
-          ),
+        const SizedBox(height: 10),
+        AppToggleButtonGroup(
+          options: _periodOptions,
+          selectedIndex: _selectedPeriodIndex,
+          onChanged: (index) {
+            final value = _periodOptions[index].value;
+            if (value == 'all') {
+              _clearDateRange();
+              return;
+            }
+            _applyQuickPeriod(value);
+          },
+          scrollable: true,
+          compact: true,
         ),
-        if (hasRange) ...[
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: _clearDateRange,
-            child: const Text('Clear'),
-          ),
-        ],
       ],
     );
   }
@@ -578,20 +683,27 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                           children: [
                             Text(
                               (product['name'] ?? 'Product').toString(),
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               Helpers.formatPrice(
-                                double.tryParse((product['price'] ?? '0').toString()) ?? 0,
+                                double.tryParse(
+                                        (product['price'] ?? '0').toString()) ??
+                                    0,
                               ),
                               style: TextStyle(color: Colors.grey.shade700),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              hasActiveAd ? 'Already has an active ad' : 'Ready for promotion',
+                              hasActiveAd
+                                  ? 'Already has an active ad'
+                                  : 'Ready for advertising',
                               style: TextStyle(
-                                color: hasActiveAd ? Colors.orange.shade800 : Colors.green.shade700,
+                                color: hasActiveAd
+                                    ? Colors.orange.shade800
+                                    : Colors.green.shade700,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -602,6 +714,98 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                       const SizedBox(width: 8),
                       FilledButton(
                         onPressed: () => _openCreateAd(product: post),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(hasActiveAd ? 'Edit Ad' : 'Advertise'),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  Widget _buildEligiblePacksSection(List eligiblePacks) {
+    return _sectionCard(
+      title: 'Select Pack to Advertise',
+      child: eligiblePacks.isEmpty
+          ? const Text('No packs available for advertising.')
+          : Column(
+              children: eligiblePacks.take(8).map<Widget>((item) {
+                final pack = (item as Map).cast<String, dynamic>();
+                final image = (pack['image'] ?? '').toString();
+                final hasActiveAd = pack['has_active_ad'] as bool? ?? false;
+                final packId =
+                    int.tryParse((pack['id'] ?? '0').toString()) ?? 0;
+                final packName = (pack['name'] ?? 'Pack').toString();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: image.isNotEmpty
+                              ? Image.network(image, fit: BoxFit.cover)
+                              : Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.inventory_2_outlined),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              packName,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              Helpers.formatPrice(
+                                double.tryParse(
+                                        (pack['price'] ?? '0').toString()) ??
+                                    0,
+                              ),
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              hasActiveAd
+                                  ? 'Already has an active ad'
+                                  : 'Ready for advertising',
+                              style: TextStyle(
+                                color: hasActiveAd
+                                    ? Colors.orange.shade800
+                                    : Colors.green.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => _openCreateAd(
+                          packId: packId,
+                          packName: packName,
+                        ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primaryColor,
                           foregroundColor: Colors.white,
@@ -668,7 +872,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 Text(label, style: TextStyle(color: Colors.grey.shade600)),
               ],

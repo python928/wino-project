@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -20,6 +21,8 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
   List<SubscriptionPlanModel> _plans = const [];
   String _rib = '';
   String _instructions = '';
+  Map<String, dynamic>? _accessStatus;
+  bool _showAllPlans = false;
 
   @override
   void initState() {
@@ -34,11 +37,18 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     });
     try {
       final catalog = await SubscriptionService.fetchCatalogData();
+      Map<String, dynamic>? accessStatus;
+      try {
+        accessStatus = await SubscriptionService.fetchAccessStatus();
+      } catch (_) {
+        accessStatus = <String, dynamic>{};
+      }
       if (!mounted) return;
       setState(() {
         _plans = catalog.plans;
         _rib = catalog.rib;
         _instructions = catalog.instructions;
+        _accessStatus = accessStatus;
       });
     } catch (e) {
       if (!mounted) return;
@@ -48,11 +58,60 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     }
   }
 
+  int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  int? get _usedPosts => _parseInt(_accessStatus?['used_posts']);
+
+  int? get _postLimit => _parseInt(_accessStatus?['post_limit']);
+
+  int? get _activePlanId {
+    final active = _accessStatus?['active_subscription'];
+    if (active is Map) return _parseInt(active['plan']);
+    return null;
+  }
+
+  double? get _usageProgress {
+    final used = _usedPosts;
+    final limit = _postLimit;
+    if (used == null || limit == null || limit <= 0) return null;
+    final raw = used / limit;
+    return raw.clamp(0, 1).toDouble();
+  }
+
+  List<SubscriptionPlanModel> _visiblePlans() {
+    if (_showAllPlans || _plans.length <= 2) return _plans;
+    SubscriptionPlanModel? freePlan;
+    for (final plan in _plans) {
+      if (plan.price == 0) {
+        freePlan = plan;
+        break;
+      }
+    }
+    final highlightPlan = _plans.isNotEmpty ? _plans.last : null;
+    final out = <SubscriptionPlanModel>[];
+    if (freePlan != null) out.add(freePlan);
+    if (highlightPlan != null && highlightPlan != freePlan) {
+      out.add(highlightPlan);
+    }
+    if (out.isEmpty) {
+      out.addAll(_plans.take(2));
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visiblePlans = _visiblePlans();
+    final highlightPlanId = _plans.isNotEmpty ? _plans.last.id : null;
+    final activePlanId = _activePlanId;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Subscription Plans'),
+        title: const Text('Discover Plans'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
       ),
@@ -71,39 +130,62 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: _loadPlans,
-                  child: ListView.separated(
+                  child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: _plans.length + 1,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _buildHeader();
-                      }
-                      final p = _plans[index - 1];
-                      final highlight = _plans.isNotEmpty &&
-                          p.id == _plans.last.id;
-                      return _PlanCard(
-                        plan: p,
-                        isHighlighted: highlight,
-                        onSelect: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SubscriptionPaymentScreen(
-                              plan: p,
-                              rib: _rib,
-                              instructions: _instructions,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 12),
+                      ...visiblePlans.map(
+                        (plan) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _PlanCard(
+                            plan: plan,
+                            isHighlighted:
+                                highlightPlanId != null && plan.id == highlightPlanId,
+                            isCurrentPlan: activePlanId != null
+                                ? plan.id == activePlanId
+                                : plan.price == 0,
+                            onSelect: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SubscriptionPaymentScreen(
+                                  plan: plan,
+                                  rib: _rib,
+                                  instructions: _instructions,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      if (_plans.length > 2)
+                        Align(
+                          alignment: Alignment.center,
+                          child: TextButton(
+                            onPressed: () => setState(() {
+                              _showAllPlans = !_showAllPlans;
+                            }),
+                            child: Text(
+                              _showAllPlans
+                                  ? 'Hide plans'
+                                  : 'Show more plans',
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
     );
   }
 
   Widget _buildHeader() {
+    final used = _usedPosts;
+    final limit = _postLimit;
+    final progress = _usageProgress;
+    final usageText =
+        used != null && limit != null ? '$used of $limit products used' : null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -117,14 +199,55 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Boost your store visibility',
+        children: [
+          if (_accessStatus == null) ...[
+            const Text(
+              'Loading usage status...',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 6,
+                backgroundColor: Colors.white.withOpacity(0.7),
+                color: AppColors.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ] else if (usageText != null && progress != null) ...[
+            Text(
+              usageText,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: Colors.white.withOpacity(0.7),
+                color: AppColors.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ] else ...[
+            const Text(
+              'Your current usage is unavailable right now.',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+          ],
+          const Text(
+            'Discover Plans',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
-          SizedBox(height: 6),
-          Text(
-            'Unlock ads, more posts, and higher recommendation priority.',
+          const SizedBox(height: 6),
+          const Text(
+            'Each screen answers one clear question.',
             style: TextStyle(color: Colors.black54, height: 1.3),
           ),
         ],
@@ -137,11 +260,13 @@ class _PlanCard extends StatelessWidget {
   final SubscriptionPlanModel plan;
   final VoidCallback onSelect;
   final bool isHighlighted;
+  final bool isCurrentPlan;
 
   const _PlanCard({
     required this.plan,
     required this.onSelect,
     required this.isHighlighted,
+    required this.isCurrentPlan,
   });
 
   Color _parseHexColor(String value, Color fallback) {
@@ -169,9 +294,7 @@ class _PlanCard extends StatelessWidget {
   }
 
   String? _badgeText() {
-    final badge = plan.planFeatures['ui_badge'];
-    if (badge is String && badge.trim().isNotEmpty) return badge.trim();
-    if (isHighlighted) return 'Top Pick';
+    if (isHighlighted) return 'Most Popular';
     return null;
   }
 
@@ -179,7 +302,7 @@ class _PlanCard extends StatelessWidget {
     final raw = plan.benefits.trim();
     if (raw.isEmpty) {
       return const [
-        'Priority publishing and better exposure.',
+        'Featured exposure and core promotion tools.',
         'Higher visibility in recommendations.',
       ];
     }
@@ -262,11 +385,20 @@ class _PlanCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${plan.price.toStringAsFixed(0)} DZD',
+                plan.price.toStringAsFixed(0),
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: AppColors.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'DZD / month',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black54,
                 ),
               ),
               const SizedBox(width: 8),
@@ -305,7 +437,7 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: _specTile(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Posts',
+                  label: 'Products',
                   value: 'Up to ${plan.maxProducts}',
                 ),
               ),
@@ -369,12 +501,27 @@ class _PlanCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: onSelect,
+              onPressed: isCurrentPlan ? null : onSelect,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Select This Plan'),
+              child: isCurrentPlan
+                  ? const Text('Current Plan')
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          'Start now',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '7 days free',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -510,7 +657,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       });
     } catch (_) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Error selecting images', isError: true);
+        Helpers.showSnackBar(context, 'Could not select images', isError: true);
       }
     }
   }
@@ -523,20 +670,21 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
 
   Future<void> _confirm() async {
     if (_proofImages.isEmpty) {
-      Helpers.showSnackBar(context, 'Please add at least 1 payment proof image');
+      Helpers.showSnackBar(context, 'Please upload at least one receipt image');
       return;
     }
     setState(() => _submitting = true);
     try {
-      await SubscriptionService.submitPaymentRequest(
+      final resp = await SubscriptionService.submitPaymentRequest(
         planId: widget.plan.id,
         paymentNote: _noteController.text.trim(),
         images: List<XFile>.from(_proofImages),
       );
       if (!mounted) return;
-      Helpers.showSnackBar(
-          context, 'Request sent. We will review your payment.');
-      Navigator.popUntil(context, (route) => route.isFirst);
+      await _showSuccessDialog(resp['id']);
+      if (mounted) {
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
     } catch (e) {
       if (!mounted) return;
       Helpers.showErrorSnackBar(context, e);
@@ -545,9 +693,125 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
     }
   }
 
+  String _formatRequestId(dynamic raw) {
+    if (raw == null) return '—';
+    final text = raw.toString().trim();
+    final numeric = int.tryParse(text);
+    if (numeric == null) return text;
+    return 'WN-${text.padLeft(4, '0')}';
+  }
+
+  Future<void> _showSuccessDialog(dynamic requestId) async {
+    final displayId = _formatRequestId(requestId);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Request received'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Request number',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                displayId,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text('No manual follow-up needed'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Back to home'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyRib() async {
+    if (widget.rib.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: widget.rib));
+    if (!mounted) return;
+    Helpers.showSnackBar(context, 'Number copied');
+  }
+
+  Widget _stepCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _numberedInstruction(int number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$number',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                color: AppColors.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final priceText = '${widget.plan.price.toStringAsFixed(0)} DZD';
+    final priceText = '${widget.plan.price.toStringAsFixed(0)} DZD / month';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment'),
@@ -557,7 +821,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('Plan Information'),
+          _sectionTitle('Plan information'),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(16),
@@ -611,94 +875,109 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _infoRow('Posts', 'Up to ${widget.plan.maxProducts}'),
+                _infoRow('Products', 'Up to ${widget.plan.maxProducts}'),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          _sectionTitle('Payment Information'),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
+          _stepCard(
+            title: 'Step 1 — Payment info',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'How it works',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                  'Account number (RIB)',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                _infoRow(
-                  'RIB',
-                  widget.rib.isNotEmpty ? widget.rib : 'N/A',
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.instructions.isNotEmpty
-                      ? widget.instructions
-                      : 'Send payment to the RIB above, then confirm below. We will review and activate your plan.',
-                  style: TextStyle(color: Colors.grey.shade700, height: 1.35),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: const [
-                    Icon(Icons.verified_outlined, size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Activation typically within 24 hours.',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    widget.rib.isNotEmpty ? widget.rib : '—',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                     ),
-                  ],
+                  ),
                 ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: widget.rib.isNotEmpty ? _copyRib : null,
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy number'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'No need to type the number or take a screenshot.',
+                  style: TextStyle(color: Colors.black54, height: 1.3),
+                ),
+                const SizedBox(height: 12),
+                _numberedInstruction(
+                    1, 'Open your banking app and start a transfer.'),
+                _numberedInstruction(2, 'Send the amount to this account.'),
+                _numberedInstruction(3, 'Upload the receipt in the next step.'),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          _proofSection(),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _noteController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: 'Payment note / transfer reference (optional)',
-              filled: true,
-              fillColor: Colors.white,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              enabledBorder:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primaryColor),
-              ),
-            ),
+          _stepCard(
+            title: 'Step 2 — Upload proof',
+            child: _proofSection(),
           ),
           const SizedBox(height: 14),
-          ElevatedButton(
-            onPressed: _submitting ? null : _confirm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+          _stepCard(
+            title: 'Step 3 — Confirm',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _confirm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Send request'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (_submitting)
+                  Row(
+                    children: const [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('We are reviewing your image...')),
+                    ],
                   )
-                : const Text('Confirm Subscription Request'),
+                else
+                  const Text('No manual follow-up needed'),
+              ],
+            ),
           ),
         ],
       ),
@@ -718,96 +997,126 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
   }
 
   Widget _proofSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Payment Proofs',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Upload receipt image',
+                style: TextStyle(fontWeight: FontWeight.w800),
               ),
-              Text(
-                '${_proofImages.length}/3',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            Text(
+              '${_proofImages.length}/3',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_proofImages.isEmpty)
+          InkWell(
+            onTap: _pickProofImages,
+            child: Container(
+              height: 140,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.02),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add 1 to 3 images (receipt, transfer, or bank confirmation).',
-            style: TextStyle(color: Colors.grey.shade700),
-          ),
-          const SizedBox(height: 10),
-          if (_proofImages.isEmpty)
-            OutlinedButton.icon(
-              onPressed: _pickProofImages,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('Add Images'),
-            )
-          else
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: List.generate(_proofImages.length, (index) {
-                final image = _proofImages[index];
-                return Stack(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
-                      onTap: () => _openImage(image),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          File(image.path),
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                    Icon(Icons.upload_file_outlined,
+                        size: 28, color: Colors.grey.shade700),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Tap to choose an image',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                     ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: InkWell(
-                        onTap: () => _removeProofAt(index),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                    Text(
+                      'Camera or gallery',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     ),
                   ],
-                );
-              }),
-            ),
-          if (_proofImages.isNotEmpty && _proofImages.length < 3)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _pickProofImages,
-                icon: const Icon(Icons.add),
-                label: const Text('Add another image'),
+                ),
               ),
             ),
-        ],
-      ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(_proofImages.length, (index) {
+              final image = _proofImages[index];
+              return Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () => _openImage(image),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        File(image.path),
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: InkWell(
+                      onTap: () => _removeProofAt(index),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        if (_proofImages.isNotEmpty && _proofImages.length < 3)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _pickProofImages,
+              icon: const Icon(Icons.add),
+              label: const Text('Add another image'),
+            ),
+          ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _noteController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: 'Note (optional)',
+            hintText: 'Example: transfer sent from Ahmed’s account',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primaryColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

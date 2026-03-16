@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils import timezone
 
 from .models import (
     MerchantSubscription,
@@ -39,10 +40,10 @@ class MerchantSubscriptionAdmin(admin.ModelAdmin):
 class SubscriptionPaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('merchant', 'plan', 'status_icon', 'status', 'created_at')
     list_filter = ('status', 'plan')
-    readonly_fields = ('proof_gallery',)
+    readonly_fields = ('proof_gallery', 'reviewed_by', 'reviewed_at')
     fieldsets = (
         ('Details', {
-            'fields': ('merchant', 'plan', 'status'),
+            'fields': ('merchant', 'plan', 'status', 'status_reason_code', 'status_reason_text', 'reviewed_by', 'reviewed_at'),
             'classes': ('tab', 'tab-details'),
         }),
         ('Payment Proofs', {
@@ -74,6 +75,16 @@ class SubscriptionPaymentRequestAdmin(admin.ModelAdmin):
                 .values_list('status', flat=True)
                 .first()
             )
+
+        if obj.status in [SubscriptionPaymentRequest.STATUS_APPROVED, SubscriptionPaymentRequest.STATUS_REJECTED]:
+            obj.reviewed_by = request.user
+            if obj.reviewed_at is None:
+                obj.reviewed_at = timezone.now()
+        else:
+            obj.reviewed_by = None
+            obj.reviewed_at = None
+            obj.status_reason_code = ''
+            obj.status_reason_text = ''
 
         super().save_model(request, obj, form, change)
 

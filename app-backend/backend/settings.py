@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     # Local
     'users',
     'catalog',
+    'ads',
     'notifications',
     'subscriptions',
     'analytics',
@@ -219,12 +220,14 @@ JAZZMIN_SETTINGS = {
         'users.User': 'fas fa-user',
         'catalog.Product': 'fas fa-box',
         'catalog.Promotion': 'fas fa-bullhorn',
+        'ads.AdCampaign': 'fas fa-bullseye',
         'notifications.Notification': 'fas fa-bell',
         'subscriptions.SubscriptionPlan': 'fas fa-tags',
     },
     'order_with_respect_to': [
         'users',
         'catalog',
+        'ads',
         'notifications',
         'subscriptions',
     ],

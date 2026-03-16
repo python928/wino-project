@@ -20,12 +20,12 @@ Future<void> showSubscriptionRequiredWindow(BuildContext context) async {
                 color: AppColors.primaryColor, size: 20),
           ),
           const SizedBox(width: 10),
-          const Text('Subscription Required'),
+          const Text('Subscription required'),
         ],
       ),
       content: const Text(
-        'You reached the free limit (5 posts).\n\n'
-        'Subscribe to publish more posts, run ads, and unlock priority exposure.',
+        'You reached the free limit.\n\n'
+        'Subscribe to add more products and use promotions.',
       ),
       actions: [
         TextButton(
@@ -45,7 +45,7 @@ Future<void> showSubscriptionRequiredWindow(BuildContext context) async {
                   builder: (_) => const SubscriptionPlansScreen()),
             );
           },
-          child: const Text('View Plans'),
+          child: const Text('View plans'),
         ),
       ],
     ),

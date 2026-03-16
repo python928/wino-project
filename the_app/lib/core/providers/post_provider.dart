@@ -1,10 +1,11 @@
-import 'package:image_picker/image_picker.dart';
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../data/models/post_model.dart';
-import '../../data/repositories/post_repository.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../data/models/offer_model.dart';
+import '../../data/models/post_model.dart';
+import '../../data/repositories/post_repository.dart';
 
 class PostProvider with ChangeNotifier {
   List<Post> _posts = [];
@@ -93,10 +94,17 @@ class PostProvider with ChangeNotifier {
 
     try {
       final storeId = int.tryParse(authorId);
-      _myOffers = await PostRepository.getOffers(
+      final promotions = await PostRepository.getOffers(
         storeId: storeId,
         includeInactive: true,
       );
+      final ads = await PostRepository.getOffers(
+        storeId: storeId,
+        includeInactive: true,
+        kind: 'advertising',
+      );
+      _myOffers = [...promotions, ...ads]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -132,7 +140,8 @@ class PostProvider with ChangeNotifier {
   }
 
   Future<void> createOffer({
-    required int productId,
+    int? productId,
+    int? packId,
     required int discountPercentage,
     bool isAvailable = true,
     String kind = 'promotion',
@@ -140,11 +149,12 @@ class PostProvider with ChangeNotifier {
     String audienceMode = 'all',
     List<String> targetWilayas = const [],
     List<String> targetCategories = const [],
-    List<int> targetUserIds = const [],
     int? priorityBoost,
     int? maxImpressions,
-    DateTime? startDate,
-    DateTime? endDate,
+    int? ageFrom,
+    int? ageTo,
+    String geoMode = 'all',
+    int? targetRadiusKm,
   }) async {
     _isLoading = true;
     _error = null;
@@ -153,6 +163,7 @@ class PostProvider with ChangeNotifier {
     try {
       final newOffer = await PostRepository.createOffer(
         productId: productId,
+        packId: packId,
         discountPercentage: discountPercentage,
         isAvailable: isAvailable,
         kind: kind,
@@ -160,11 +171,12 @@ class PostProvider with ChangeNotifier {
         audienceMode: audienceMode,
         targetWilayas: targetWilayas,
         targetCategories: targetCategories,
-        targetUserIds: targetUserIds,
         priorityBoost: priorityBoost,
         maxImpressions: maxImpressions,
-        startDate: startDate,
-        endDate: endDate,
+        ageFrom: ageFrom,
+        ageTo: ageTo,
+        geoMode: geoMode,
+        targetRadiusKm: targetRadiusKm,
       );
       _myOffers.insert(0, newOffer);
     } catch (e) {
@@ -178,6 +190,8 @@ class PostProvider with ChangeNotifier {
 
   Future<void> updateOffer({
     required int offerId,
+    int? productId,
+    int? packId,
     int? discountPercentage,
     bool? isAvailable,
     String? kind,
@@ -185,11 +199,12 @@ class PostProvider with ChangeNotifier {
     String? audienceMode,
     List<String>? targetWilayas,
     List<String>? targetCategories,
-    List<int>? targetUserIds,
     int? priorityBoost,
     int? maxImpressions,
-    DateTime? startDate,
-    DateTime? endDate,
+    int? ageFrom,
+    int? ageTo,
+    String? geoMode,
+    int? targetRadiusKm,
   }) async {
     _isLoading = true;
     _error = null;
@@ -198,6 +213,8 @@ class PostProvider with ChangeNotifier {
     try {
       final updated = await PostRepository.updateOffer(
         offerId: offerId,
+        productId: productId,
+        packId: packId,
         discountPercentage: discountPercentage,
         isAvailable: isAvailable,
         kind: kind,
@@ -205,11 +222,12 @@ class PostProvider with ChangeNotifier {
         audienceMode: audienceMode,
         targetWilayas: targetWilayas,
         targetCategories: targetCategories,
-        targetUserIds: targetUserIds,
         priorityBoost: priorityBoost,
         maxImpressions: maxImpressions,
-        startDate: startDate,
-        endDate: endDate,
+        ageFrom: ageFrom,
+        ageTo: ageTo,
+        geoMode: geoMode,
+        targetRadiusKm: targetRadiusKm,
       );
       final idx = _myOffers.indexWhere((o) => o.id == offerId);
       if (idx != -1) {

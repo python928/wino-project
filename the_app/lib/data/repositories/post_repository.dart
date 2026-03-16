@@ -1,12 +1,13 @@
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart';
+
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
-import '../../core/utils/jwt_validator.dart';
 import '../../core/utils/app_logger.dart';
+import '../../core/utils/jwt_validator.dart';
 import '../models/offer_model.dart';
 import '../models/post_model.dart';
+import '../models/user_model.dart';
 
 class PostRepository {
   static List<dynamic> _extractList(dynamic response) {
@@ -63,6 +64,16 @@ class PostRepository {
       return map;
     } catch (_) {
       return {};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> _loadPackById(int packId) async {
+    try {
+      final resp = await ApiService.get(ApiConfig.packDetail(packId));
+      if (resp is Map<String, dynamic>) return resp;
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -273,7 +284,8 @@ class PostRepository {
             newImages[i],
             'image',
           );
-          AppLogger.info('Repository: New image ${i + 1} uploaded successfully');
+          AppLogger.info(
+              'Repository: New image ${i + 1} uploaded successfully');
         } catch (imageError) {
           AppLogger.info(
               'Repository: Failed to upload new image ${i + 1}: $imageError');
@@ -296,17 +308,21 @@ class PostRepository {
     String? wilayaCode,
   }) async {
     try {
+      final isAdsRequest = (kind ?? '').trim().toLowerCase() == 'advertising';
       final query = <String, String>{};
-      if (kind != null && kind.isNotEmpty) query['kind'] = kind;
+      if (!isAdsRequest && kind != null && kind.isNotEmpty)
+        query['kind'] = kind;
       if (placement != null && placement.isNotEmpty) {
         query['placement'] = placement;
       }
       if (wilayaCode != null && wilayaCode.isNotEmpty) {
         query['wilaya_code'] = wilayaCode;
       }
+      final baseUrl =
+          isAdsRequest ? ApiConfig.adsCampaigns : ApiConfig.promotions;
       final url = query.isEmpty
-          ? ApiConfig.promotions
-          : '${ApiConfig.promotions}?${Uri(queryParameters: query).query}';
+          ? baseUrl
+          : '$baseUrl?${Uri(queryParameters: query).query}';
       final promotionsResp = await ApiService.get(url);
       AppLogger.info('Repository: Promotions response: $promotionsResp');
       final promos = _extractList(promotionsResp);
@@ -316,6 +332,19 @@ class PostRepository {
       int? parseProductId(Map<String, dynamic> promo) {
         final raw =
             promo['product'] ?? promo['product_id'] ?? promo['productId'];
+        if (raw == null) return null;
+        if (raw is int) return raw;
+        if (raw is String) return int.tryParse(raw);
+        if (raw is Map) {
+          final id = raw['id'];
+          if (id is int) return id;
+          if (id is String) return int.tryParse(id);
+        }
+        return null;
+      }
+
+      int? parsePackId(Map<String, dynamic> promo) {
+        final raw = promo['pack'] ?? promo['pack_id'] ?? promo['packId'];
         if (raw == null) return null;
         if (raw is int) return raw;
         if (raw is String) return int.tryParse(raw);
@@ -375,23 +404,68 @@ class PostRepository {
         }
 
         final productId = parseProductId(promo);
-        AppLogger.info('Repository: Promo ${promo['id']} productId=$productId');
-        if (productId == null) {
+        final packId = parsePackId(promo);
+        AppLogger.info(
+            'Repository: Promo ${promo['id']} productId=$productId, packId=$packId');
+        if (productId == null && packId == null) {
           AppLogger.info(
-              'Repository: Skipping promo ${promo['id']} - no product ID');
+              'Repository: Skipping promo ${promo['id']} - no target ID');
           continue;
         }
 
         Post? product;
-        try {
-          product = productCache[productId] ?? await getPost(productId);
-          productCache[productId] = product;
-          AppLogger.info(
-              'Repository: Loaded product ${product.title} for promo ${promo['id']}');
-        } catch (e) {
-          // If a single product fetch fails, skip this promo rather than failing all offers.
-          AppLogger.info(
-              'Repository: Skipping promo ${promo['id']} - failed to load product $productId: $e');
+        if (productId != null) {
+          try {
+            product = productCache[productId] ?? await getPost(productId);
+            productCache[productId] = product;
+            AppLogger.info(
+                'Repository: Loaded product ${product.title} for promo ${promo['id']}');
+          } catch (e) {
+            AppLogger.info(
+                'Repository: Skipping promo ${promo['id']} - failed to load product $productId: $e');
+            continue;
+          }
+        } else if (packId != null) {
+          final storeIdFromPromo = int.tryParse(
+                  (promo['store'] ?? promo['store_id'] ?? filterStoreId ?? 0)
+                      .toString()) ??
+              0;
+          final packMap = await _loadPackById(packId);
+          final packName =
+              (packMap?['name'] ?? promo['name'] ?? 'Pack #$packId').toString();
+          final packPrice = double.tryParse(
+                  (packMap?['discount_price'] ?? promo['price'] ?? 0)
+                      .toString()) ??
+              0.0;
+          final packImage = (packMap?['image'] ?? '').toString();
+          product = Post(
+            id: -packId,
+            title: packName,
+            description: '',
+            category: 'Pack',
+            categoryId: null,
+            storeId: storeIdFromPromo,
+            storeName: '',
+            author: User(
+              id: storeIdFromPromo,
+              username: '',
+              email: '',
+              name: '',
+              dateJoined: DateTime.now(),
+            ),
+            price: packPrice,
+            isAvailable: true,
+            rating: 0,
+            isHotDeal: false,
+            isFeatured: false,
+            createdAt: DateTime.now(),
+            images: packImage.isEmpty
+                ? const []
+                : [ProductImageData(id: 0, url: packImage, isMain: true)],
+          );
+        }
+
+        if (product == null) {
           continue;
         }
 
@@ -404,8 +478,11 @@ class PostRepository {
                   .toString(),
             ) ??
             0;
-        AppLogger.info('Repository: Promo ${promo['id']} percentage=$percentage');
-        final promoKind = (promo['kind'] ?? 'promotion').toString();
+        AppLogger.info(
+            'Repository: Promo ${promo['id']} percentage=$percentage');
+        final promoKind =
+            (promo['kind'] ?? (isAdsRequest ? 'advertising' : 'promotion'))
+                .toString();
         if (percentage < 0) percentage = 0;
         if (percentage > 100) percentage = 100;
 
@@ -438,6 +515,34 @@ class PostRepository {
                 int.tryParse((promo['unique_viewers_count'] ?? '').toString()),
             remainingImpressions:
                 int.tryParse((promo['remaining_impressions'] ?? '').toString()),
+            kind: promoKind,
+            placement: (promo['placement'] ?? 'home_top').toString(),
+            audienceMode: (promo['audience_mode'] ?? 'all').toString(),
+            priorityBoost:
+                int.tryParse((promo['priority_boost'] ?? '').toString()) ?? 0,
+            impressionsCount:
+                int.tryParse((promo['impressions_count'] ?? '').toString()) ??
+                    0,
+            clicksCount:
+                int.tryParse((promo['clicks_count'] ?? '').toString()) ?? 0,
+            targetWilayas: (promo['target_wilayas'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                const [],
+            targetCategories: (promo['target_categories'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                const [],
+            ageFrom: int.tryParse((promo['age_from'] ?? '').toString()),
+            ageTo: int.tryParse((promo['age_to'] ?? '').toString()),
+            geoMode: (promo['geo_mode'] ?? 'all').toString(),
+            targetRadiusKm:
+                int.tryParse((promo['target_radius_km'] ?? '').toString()),
+            targetType:
+                (promo['target_type'] ?? (packId != null ? 'pack' : 'product'))
+                    .toString(),
+            targetPackId: packId,
+            targetPackName: packId != null ? product.title : null,
           ),
         );
         AppLogger.info(
@@ -455,6 +560,7 @@ class PostRepository {
 
   static Future<Offer> createOffer({
     int? productId,
+    int? packId,
     required int discountPercentage,
     bool isAvailable = true,
     String kind = 'promotion',
@@ -462,72 +568,113 @@ class PostRepository {
     String audienceMode = 'all',
     List<String> targetWilayas = const [],
     List<String> targetCategories = const [],
-    List<int> targetUserIds = const [],
     int? priorityBoost,
     int? maxImpressions,
-    DateTime? startDate,
-    DateTime? endDate,
+    int? ageFrom,
+    int? ageTo,
+    String geoMode = 'all',
+    int? targetRadiusKm,
   }) async {
     try {
-      if (productId == null) {
+      final isAd = kind == 'advertising';
+      if (!isAd && productId == null) {
         throw Exception('productId is required for promotions');
       }
+      if (isAd && productId == null && packId == null) {
+        throw Exception('Either productId or packId is required for ads');
+      }
+      if (isAd && productId != null && packId != null) {
+        throw Exception('Provide only one target for ads: productId or packId');
+      }
+
       final storeId = await _ensureStoreForCurrentUser();
-      final now = DateTime.now();
-      final start = startDate ?? now;
-      final end = endDate ?? now.add(const Duration(days: 30)); // Default 30 days
-
-      final payload = {
+      final payload = <String, dynamic>{
         'store': storeId,
-        if (productId != null) 'product': productId,
-        'name': kind == 'advertising'
-            ? 'Ad for Product $productId'
-            : 'Promotion for Product $productId', // Required by backend
         'percentage': discountPercentage,
-        'kind': kind,
-        'placement': placement,
-        'audience_mode': audienceMode,
-        'target_wilayas': targetWilayas,
-        'target_categories': targetCategories,
-        'target_user_ids': targetUserIds,
-        if (priorityBoost != null) 'priority_boost': priorityBoost,
-        if (maxImpressions != null) 'max_impressions': maxImpressions,
         'is_active': isAvailable,
-        'start_date': start.toIso8601String().split('T')[0], // YYYY-MM-DD
-        'end_date': end.toIso8601String().split('T')[0],
       };
-      final resp = await ApiService.post(ApiConfig.promotions, payload);
 
-      // Refresh related product to compute discounted price
-      final product = productId != null ? await getPost(productId) : null;
-      final double newPrice = product != null
-          ? (product.price * (1 - (discountPercentage / 100))).toDouble()
-          : 0.0;
-
-      // Trigger notification for the promotion
-      final offerId = resp['id'] ?? 0;
-      final title = product != null
-          ? '$discountPercentage% OFF on ${product.title}'
-          : 'New promotion';
-      try {
-        await ApiService.post(ApiConfig.notificationsTrigger, {
-          'post_id': offerId,
-          'post_type': 'promotion',
-          'post_title': title,
+      if (isAd) {
+        payload.addAll({
+          if (productId != null) 'product': productId,
+          if (packId != null) 'pack': packId,
+          'name': productId != null
+              ? 'Ad for Product $productId'
+              : 'Ad for Pack $packId',
+          'placement': placement,
+          'audience_mode': audienceMode,
+          'geo_mode': geoMode,
+          'target_wilayas': targetWilayas,
+          'target_categories': targetCategories,
+          if (ageFrom != null) 'age_from': ageFrom,
+          if (ageTo != null) 'age_to': ageTo,
+          if (targetRadiusKm != null) 'target_radius_km': targetRadiusKm,
+          if (priorityBoost != null) 'priority_boost': priorityBoost,
+          if (maxImpressions != null) 'max_impressions': maxImpressions,
         });
-      } catch (e) {
-        AppLogger.info(
-            'Repository: Warning: Failed to trigger follower notification: $e');
+      } else {
+        payload.addAll({
+          'product': productId,
+          'name': 'Promotion for Product $productId',
+        });
+      }
+
+      final endpoint = isAd ? ApiConfig.adsCampaigns : ApiConfig.promotions;
+      final resp = await ApiService.post(endpoint, payload);
+
+      final product = productId != null
+          ? await getPost(productId)
+          : Post(
+              id: -(packId ?? 1),
+              title: 'Pack #${packId ?? 0}',
+              description: '',
+              category: 'Pack',
+              categoryId: null,
+              storeId: storeId,
+              storeName: '',
+              author: User(
+                id: storeId,
+                username: '',
+                email: '',
+                name: '',
+                dateJoined: DateTime.now(),
+              ),
+              price: 0,
+              isAvailable: true,
+              rating: 0,
+              isHotDeal: false,
+              isFeatured: false,
+              createdAt: DateTime.now(),
+              images: const [],
+            );
+
+      final double newPrice =
+          (product.price * (1 - (discountPercentage / 100))).toDouble();
+
+      // Trigger follower notification for promotions only.
+      final offerId = resp['id'] ?? 0;
+      final title = '$discountPercentage% OFF on ${product.title}';
+      if (kind != 'advertising') {
+        try {
+          await ApiService.post(ApiConfig.notificationsTrigger, {
+            'post_id': offerId,
+            'post_type': 'promotion',
+            'post_title': title,
+          });
+        } catch (e) {
+          AppLogger.info(
+              'Repository: Warning: Failed to trigger follower notification: $e');
+        }
       }
 
       return Offer(
         id: offerId,
-        product: product ?? await getPost(productId ?? 0),
+        product: product,
         discountPercentage: discountPercentage,
         newPrice: newPrice,
         isAvailable: isAvailable,
         createdAt:
-            DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+            DateTime.tryParse(resp['created_at'] ?? '') ?? DateTime.now(),
         endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
         maxImpressions:
             int.tryParse((resp['max_impressions'] ?? '').toString()),
@@ -542,8 +689,17 @@ class PostRepository {
             int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
         impressionsCount:
             int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
-        clicksCount:
-            int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
+        clicksCount: int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
+        geoMode: (resp['geo_mode'] ?? geoMode).toString(),
+        targetRadiusKm:
+            int.tryParse((resp['target_radius_km'] ?? '').toString()),
+        ageFrom: int.tryParse((resp['age_from'] ?? '').toString()),
+        ageTo: int.tryParse((resp['age_to'] ?? '').toString()),
+        targetType:
+            (resp['target_type'] ?? (packId != null ? 'pack' : 'product'))
+                .toString(),
+        targetPackId: packId,
+        targetPackName: packId != null ? product.title : null,
       );
     } catch (e) {
       AppLogger.error('Repository: Error creating offer', error: e);
@@ -553,6 +709,8 @@ class PostRepository {
 
   static Future<Offer> updateOffer({
     required int offerId,
+    int? productId,
+    int? packId,
     int? discountPercentage,
     bool? isAvailable,
     String? kind,
@@ -560,40 +718,49 @@ class PostRepository {
     String? audienceMode,
     List<String>? targetWilayas,
     List<String>? targetCategories,
-    List<int>? targetUserIds,
     int? priorityBoost,
     int? maxImpressions,
-    DateTime? startDate,
-    DateTime? endDate,
+    int? ageFrom,
+    int? ageTo,
+    String? geoMode,
+    int? targetRadiusKm,
   }) async {
     try {
+      final targetKind = (kind ?? '').trim().toLowerCase();
+      final isAd = targetKind == 'advertising';
       final payload = <String, dynamic>{};
       if (discountPercentage != null) {
         payload['percentage'] = discountPercentage;
       }
+      if (productId != null) payload['product'] = productId;
+      if (isAd && packId != null) payload['pack'] = packId;
       if (isAvailable != null) payload['is_active'] = isAvailable;
-      if (kind != null) payload['kind'] = kind;
-      if (placement != null) payload['placement'] = placement;
-      if (audienceMode != null) payload['audience_mode'] = audienceMode;
-      if (targetWilayas != null) payload['target_wilayas'] = targetWilayas;
-      if (targetCategories != null) {
-        payload['target_categories'] = targetCategories;
-      }
-      if (targetUserIds != null) payload['target_user_ids'] = targetUserIds;
-      if (priorityBoost != null) payload['priority_boost'] = priorityBoost;
-      if (maxImpressions != null) payload['max_impressions'] = maxImpressions;
-      if (startDate != null) {
-        payload['start_date'] = startDate.toIso8601String().split('T')[0];
-      }
-      if (endDate != null) {
-        payload['end_date'] = endDate.toIso8601String().split('T')[0];
+
+      if (isAd) {
+        if (placement != null) payload['placement'] = placement;
+        if (audienceMode != null) payload['audience_mode'] = audienceMode;
+        if (targetWilayas != null) payload['target_wilayas'] = targetWilayas;
+        if (targetCategories != null) {
+          payload['target_categories'] = targetCategories;
+        }
+        if (priorityBoost != null) payload['priority_boost'] = priorityBoost;
+        if (maxImpressions != null) payload['max_impressions'] = maxImpressions;
+        if (ageFrom != null) payload['age_from'] = ageFrom;
+        if (ageTo != null) payload['age_to'] = ageTo;
+        if (geoMode != null) payload['geo_mode'] = geoMode;
+        if (targetRadiusKm != null)
+          payload['target_radius_km'] = targetRadiusKm;
       }
 
-      final resp =
-          await ApiService.patch('${ApiConfig.promotions}$offerId/', payload);
+      final endpoint = targetKind == 'advertising'
+          ? ApiConfig.adsCampaigns
+          : ApiConfig.promotions;
+      final resp = await ApiService.patch('$endpoint$offerId/', payload);
 
-      final productId = resp['product'] ?? resp['product_id'];
-      final product = productId != null ? await getPost(productId) : null;
+      final resolvedProductId = resp['product'] ?? resp['product_id'];
+      final resolvedPackId = resp['pack'] ?? resp['pack_id'] ?? packId;
+      final product =
+          resolvedProductId != null ? await getPost(resolvedProductId) : null;
       final pct = discountPercentage ??
           int.tryParse(resp['percentage'].toString()) ??
           0;
@@ -601,9 +768,37 @@ class PostRepository {
           ? (product.price * (1 - (pct / 100))).toDouble()
           : 0.0;
 
+      final fallbackStoreId = await _ensureStoreForCurrentUser();
+      final safePackId = int.tryParse((resolvedPackId ?? '').toString());
+      final fallbackPackPost = safePackId != null
+          ? Post(
+              id: -safePackId,
+              title: 'Pack #$safePackId',
+              description: '',
+              category: 'Pack',
+              categoryId: null,
+              storeId: fallbackStoreId,
+              storeName: '',
+              author: User(
+                id: fallbackStoreId,
+                username: '',
+                email: '',
+                name: '',
+                dateJoined: DateTime.now(),
+              ),
+              price: 0,
+              isAvailable: true,
+              rating: 0,
+              isHotDeal: false,
+              isFeatured: false,
+              createdAt: DateTime.now(),
+              images: const [],
+            )
+          : null;
+
       return Offer(
         id: resp['id'] ?? offerId,
-        product: product ?? await getPost(offerId),
+        product: product ?? fallbackPackPost ?? await getPost(offerId),
         discountPercentage: pct,
         newPrice: newPrice,
         isAvailable: isAvailable ?? resp['is_active'] ?? true,
@@ -618,13 +813,23 @@ class PostRepository {
             int.tryParse((resp['remaining_impressions'] ?? '').toString()),
         kind: (resp['kind'] ?? 'promotion').toString(),
         placement: (resp['placement'] ?? 'home_top').toString(),
-        audienceMode: (resp['audience_mode'] ?? 'all').toString(),
+        audienceMode:
+            (resp['audience_mode'] ?? audienceMode ?? 'all').toString(),
         priorityBoost:
             int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
         impressionsCount:
             int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
-        clicksCount:
-            int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
+        clicksCount: int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
+        geoMode: (resp['geo_mode'] ?? geoMode ?? 'all').toString(),
+        targetRadiusKm:
+            int.tryParse((resp['target_radius_km'] ?? '').toString()),
+        ageFrom: int.tryParse((resp['age_from'] ?? '').toString()),
+        ageTo: int.tryParse((resp['age_to'] ?? '').toString()),
+        targetType: (resp['target_type'] ??
+                (resolvedPackId != null ? 'pack' : 'product'))
+            .toString(),
+        targetPackId: int.tryParse((resolvedPackId ?? '').toString()),
+        targetPackName: resolvedPackId != null ? 'Pack #$resolvedPackId' : null,
       );
     } catch (e) {
       AppLogger.error('Repository: Error updating offer', error: e);
@@ -634,17 +839,24 @@ class PostRepository {
 
   static Future<void> deleteOffer(int offerId) async {
     try {
-      await ApiService.delete('${ApiConfig.promotions}$offerId/');
+      try {
+        await ApiService.delete('${ApiConfig.adsCampaigns}$offerId/');
+        return;
+      } catch (_) {
+        await ApiService.delete('${ApiConfig.promotions}$offerId/');
+      }
     } catch (e) {
       AppLogger.error('Repository: Error deleting offer', error: e);
       throw Exception('Failed to delete offer: $e');
     }
   }
 
-  static Future<void> registerPromotionClick(int promotionId) async {
+  static Future<void> registerPromotionClick(int promotionId,
+      {String kind = 'promotion'}) async {
     try {
-      await ApiService.post(
-          '${ApiConfig.promotions}$promotionId/register-click/', {});
+      final endpoint =
+          kind == 'advertising' ? ApiConfig.adsCampaigns : ApiConfig.promotions;
+      await ApiService.post('$endpoint$promotionId/register-click/', {});
     } catch (e) {
       AppLogger.error('Repository: Failed to register promo click', error: e);
     }

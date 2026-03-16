@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../components/skeleton_loader.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_constants.dart';
 import '../../theme/app_decorations.dart';
-import '../../theme/card_styles.dart';
 import '../../theme/card_dimensions.dart';
-import '../../components/skeleton_loader.dart';
+import '../../theme/card_styles.dart';
 import '../../utils/helpers.dart';
 
 /// Specialized base class for item cards (products, packs, promotions)
@@ -60,6 +61,10 @@ class BaseItemCard extends StatelessWidget {
     this.isUnavailable = false,
     this.showUnavailableOverlay = false,
   });
+
+  bool _isLikelyArabic(String text) {
+    return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
+  }
 
   /// Build custom content - override this method for specialized behavior
   /// By default returns null to use standard layout
@@ -242,7 +247,8 @@ class BaseItemCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.errorRed,
-                    borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusRound),
                   ),
                   child: const Text(
                     'Not Available',
@@ -308,10 +314,13 @@ class BaseItemCard extends StatelessWidget {
   }
 
   Widget _buildTitle() {
+    final isRtl = _isLikelyArabic(title);
     return Text(
       title,
       maxLines: 1, // was 2 – avoid overflow when grid tiles are short
       overflow: TextOverflow.ellipsis,
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      textAlign: TextAlign.start,
       style: const TextStyle(
         fontWeight: FontWeight.w700,
         fontSize: AppConstants.fontSizeSubtitle,
@@ -396,6 +405,10 @@ class BaseItemCard extends StatelessWidget {
                     bottomLeftText!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textDirection: _isLikelyArabic(bottomLeftText!)
+                        ? TextDirection.rtl
+                        : TextDirection.ltr,
+                    textAlign: TextAlign.start,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,

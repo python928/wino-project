@@ -1,12 +1,13 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.94.21:8000/';
-    if (Platform.isAndroid) return 'http://192.168.94.21:8000/';
-    return 'http://192.168.94.21:8000/';
+    if (kIsWeb) return 'http://192.168.93.21:8000/';
+    if (Platform.isAndroid) return 'http://192.168.93.21:8000/';
+    return 'http://192.168.93.21:8000/';
   }
 
   // API prefix
@@ -48,6 +49,7 @@ class ApiConfig {
   static String productDetail(int id) => '$catalog/products/$id/';
   static const String productImages = '$catalog/product-images/';
   static const String packs = '$catalog/packs/';
+  static String packDetail(int id) => '$catalog/packs/$id/';
   static const String packProducts = '$catalog/pack-products/';
   static const String packImages = '$catalog/pack-images/';
   static const String reviews = '$catalog/reviews/';
@@ -62,10 +64,12 @@ class ApiConfig {
   // Promotions (now in catalog)
   static const String promotions = '$catalog/promotions/';
   static const String promotionImages = '$catalog/promotion-images/';
+  static const String adsCampaigns = '$api/ads/campaigns/';
   static const String productReports = '$catalog/product-reports/';
 
   // Analytics
-  static const String analyticsRecommendations = '$api/analytics/recommendations/';
+  static const String analyticsRecommendations =
+      '$api/analytics/recommendations/';
   static const String analyticsEvents = '$api/analytics/events/';
 
   // Notifications
@@ -87,6 +91,8 @@ class ApiConfig {
       '$api/subscriptions/merchant-subscriptions/';
   static const String subscriptionPaymentRequests =
       '$api/subscriptions/payment-requests/';
+  static String subscriptionPaymentRequestTimeline(int requestId) =>
+      '$subscriptionPaymentRequests$requestId/timeline/';
   static const String subscriptionAccessStatus =
       '${merchantSubscriptions}access-status/';
   static const String subscriptionMerchantDashboard =

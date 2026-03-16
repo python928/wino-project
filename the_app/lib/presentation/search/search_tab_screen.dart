@@ -524,7 +524,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       wilayaCode: meta['wilaya_code'] as String?,
       searchQuery: meta['search_query'] as String?,
     );
-    PostRepository.registerPromotionClick(offer.id);
+    if (offer.kind == 'advertising') {
+      PostRepository.registerPromotionClick(offer.id, kind: offer.kind);
+    }
   }
 
   Map<String, dynamic> _buildDiscoveryMetadata() {

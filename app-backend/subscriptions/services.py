@@ -115,22 +115,35 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None,
 				}
 			)
 
-	# Late import to avoid circular dependency.
-	from catalog.models import Promotion
-
 	now = timezone.now()
-	active_qs = Promotion.objects.filter(
-		store=user,
-		is_active=True,
-		start_date__lte=now,
-		end_date__gte=now,
-	)
 	if is_ad:
-		active_qs = active_qs.filter(kind='advertising')
+		# Ads are tracked in the dedicated ads app.
+		from ads.models import AdCampaign
+
+		active_qs = AdCampaign.objects.filter(
+			store=user,
+			is_active=True,
+		).filter(
+			Q(start_date__isnull=True) | Q(start_date__lte=now)
+		).filter(
+			Q(end_date__isnull=True) | Q(end_date__gte=now)
+		)
+		if promotion_id:
+			active_qs = active_qs.exclude(id=promotion_id)
 	else:
-		active_qs = active_qs.exclude(kind='advertising')
-	if promotion_id:
-		active_qs = active_qs.exclude(id=promotion_id)
+		# Late import to avoid circular dependency.
+		from catalog.models import Promotion
+
+		active_qs = Promotion.objects.filter(
+			store=user,
+			is_active=True,
+		).filter(
+			Q(start_date__isnull=True) | Q(start_date__lte=now)
+		).filter(
+			Q(end_date__isnull=True) | Q(end_date__gte=now)
+		)
+		if promotion_id:
+			active_qs = active_qs.exclude(id=promotion_id)
 
 	max_active = _to_int(
 		features.get(max_active_key),
@@ -242,9 +255,35 @@ def activate_subscription_for_payment_request(payment_request):
 	)
 
 
-def parse_dashboard_date_filters(date_from, date_to):
+def parse_dashboard_date_filters(date_from, date_to, period=None):
 	parsed_from = None
 	parsed_to = None
+	now = timezone.now()
+
+	# Quick presets for faster merchant analytics workflows.
+	if period:
+		period_key = str(period).strip().lower()
+		if period_key in ['today']:
+			parsed_from = now.replace(hour=0, minute=0, second=0, microsecond=0)
+			parsed_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+		elif period_key in ['last_7_days', '7d']:
+			start = (now - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
+			parsed_from = start
+			parsed_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+		elif period_key in ['last_14_days', '14d']:
+			start = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
+			parsed_from = start
+			parsed_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+		elif period_key in ['last_30_days', '30d']:
+			start = (now - timedelta(days=29)).replace(hour=0, minute=0, second=0, microsecond=0)
+			parsed_from = start
+			parsed_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+		elif period_key in ['month_to_date', 'mtd']:
+			parsed_from = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+			parsed_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+		else:
+			raise serializers.ValidationError({'detail': 'Invalid period. Use today, last_7_days, last_14_days, last_30_days, or month_to_date.'})
+
 	try:
 		if date_from:
 			parsed_from = datetime.fromisoformat(date_from)
@@ -277,10 +316,12 @@ def _safe_image_url(request, image_field):
 		return ''
 
 
-def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, parsed_from=None, parsed_to=None):
+def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, period=None, parsed_from=None, parsed_to=None):
 	from analytics.models import InteractionLog
-	from catalog.models import Product, Promotion
+	from catalog.models import Pack, Product, Promotion
 	from catalog.serializers import PromotionSerializer
+	from ads.models import AdCampaign
+	from ads.serializers import AdCampaignSerializer
 	from .serializers import MerchantSubscriptionSerializer, SubscriptionPaymentRequestSerializer
 
 	active = get_active_subscription(user)
@@ -296,6 +337,15 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 		parsed_to=parsed_to,
 	)
 	promotions_data = PromotionSerializer(promotions_qs, many=True).data
+
+	ads_qs = AdCampaign.objects.filter(store=user).order_by('-created_at')
+	ads_qs = _apply_range_filter(
+		ads_qs,
+		'created_at',
+		parsed_from=parsed_from,
+		parsed_to=parsed_to,
+	)
+	ads_data = AdCampaignSerializer(ads_qs, many=True).data
 
 	interaction_qs = InteractionLog.objects.filter(product__store=user)
 	interaction_qs = _apply_range_filter(
@@ -317,30 +367,39 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 	}
 
 	promotion_rows = promotions_qs.values('product_id', 'product__name').annotate(
-		ad_count=Count('id', filter=Q(kind='advertising')),
-		promotion_count=Count('id', filter=Q(kind='promotion')),
-		promotion_impressions=Sum('impressions_count'),
-		promotion_clicks=Sum('clicks_count'),
-		promotion_unique_viewers=Sum('unique_viewers_count'),
+		promotion_count=Count('id'),
+	)
+	ads_rows = ads_qs.values('product_id', 'product__name').annotate(
+		ad_count=Count('id'),
+		ad_impressions=Sum('impressions_count'),
+		ad_clicks=Sum('clicks_count'),
+		ad_unique_viewers=Sum('unique_viewers_count'),
 	)
 	promotion_map = {
 		int(row['product_id']): row
 		for row in promotion_rows
 		if row.get('product_id')
 	}
+	ads_map = {
+		int(row['product_id']): row
+		for row in ads_rows
+		if row.get('product_id')
+	}
 
-	product_ids = set(interaction_map.keys()) | set(promotion_map.keys())
+	product_ids = set(interaction_map.keys()) | set(promotion_map.keys()) | set(ads_map.keys())
 	product_stats = []
 	for product_id in product_ids:
 		interaction_row = interaction_map.get(product_id, {})
 		promotion_row = promotion_map.get(product_id, {})
-		ad_impressions = int(promotion_row.get('promotion_impressions') or 0)
-		ad_clicks = int(promotion_row.get('promotion_clicks') or 0)
+		ad_row = ads_map.get(product_id, {})
+		ad_impressions = int(ad_row.get('ad_impressions') or 0)
+		ad_clicks = int(ad_row.get('ad_clicks') or 0)
 		product_stats.append(
 			{
 				'product_id': product_id,
 				'product_name': (
 					interaction_row.get('product__name')
+					or ad_row.get('product__name')
 					or promotion_row.get('product__name')
 					or ''
 				),
@@ -348,11 +407,11 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 				'clicks': int(interaction_row.get('clicks') or 0),
 				'favorites': int(interaction_row.get('favorites') or 0),
 				'promotion_click_events': int(interaction_row.get('promotion_click_events') or 0),
-				'ad_count': int(promotion_row.get('ad_count') or 0),
+				'ad_count': int(ad_row.get('ad_count') or 0),
 				'promotion_count': int(promotion_row.get('promotion_count') or 0),
 				'ad_impressions': ad_impressions,
 				'ad_clicks': ad_clicks,
-				'ad_unique_viewers': int(promotion_row.get('promotion_unique_viewers') or 0),
+				'ad_unique_viewers': int(ad_row.get('ad_unique_viewers') or 0),
 				'ad_ctr': round((ad_clicks / ad_impressions) * 100, 2) if ad_impressions > 0 else 0.0,
 			}
 		)
@@ -361,25 +420,35 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 		reverse=True,
 	)
 
-	active_ads_qs = promotions_qs.filter(
-		kind='advertising',
+	active_ads_qs = ads_qs.filter(
 		is_active=True,
-		start_date__lte=now,
-		end_date__gte=now,
+	).filter(
+		Q(start_date__isnull=True) | Q(start_date__lte=now)
+	).filter(
+		Q(end_date__isnull=True) | Q(end_date__gte=now)
 	)
 	active_ad_counts = {
 		int(row['product_id']): int(row['active_ad_count'] or 0)
 		for row in active_ads_qs.values('product_id').annotate(active_ad_count=Count('id'))
 		if row.get('product_id')
 	}
+	active_pack_ad_counts = {
+		int(row['pack_id']): int(row['active_ad_count'] or 0)
+		for row in active_ads_qs.values('pack_id').annotate(active_ad_count=Count('id'))
+		if row.get('pack_id')
+	}
 	ad_max_active = int(plan_features.get('ad_max_active') or 0)
+	ad_max_impressions_val = int(plan_features.get('ad_max_impressions') or 0)
+	active_total = int(sum(active_ad_counts.values())) + int(sum(active_pack_ad_counts.values()))
+	remaining_slots = max(ad_max_active - active_total, 0)
 	ad_inventory = {
 		'ad_enabled': bool(plan_features.get('ad_enabled', True)),
 		'ad_max_active': ad_max_active,
-		'ad_active_count': int(sum(active_ad_counts.values())),
-		'remaining_ad_slots': max(ad_max_active - int(sum(active_ad_counts.values())), 0),
-		'ad_max_impressions': int(plan_features.get('ad_max_impressions') or 0),
+		'ad_active_count': active_total,
+		'remaining_ad_slots': remaining_slots,
+		'ad_max_impressions': ad_max_impressions_val,
 		'ad_priority_boost': int(plan_features.get('ad_priority_boost') or 0),
+		'remaining_plan_impressions': remaining_slots * ad_max_impressions_val,
 	}
 
 	products_qs = Product.objects.filter(store=user).prefetch_related('images').order_by('-created_at')
@@ -394,6 +463,21 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 				'image': _safe_image_url(request, getattr(product_image, 'image', None)),
 				'has_active_ad': active_ad_counts.get(product.id, 0) > 0,
 				'active_ad_count': active_ad_counts.get(product.id, 0),
+			}
+		)
+
+	packs_qs = Pack.objects.filter(merchant=user).prefetch_related('images').order_by('-created_at')
+	eligible_packs = []
+	for pack in packs_qs:
+		pack_image = next(iter(pack.images.all()), None)
+		eligible_packs.append(
+			{
+				'id': pack.id,
+				'name': pack.name,
+				'price': str(pack.discount),
+				'image': _safe_image_url(request, getattr(pack_image, 'image', None)),
+				'has_active_ad': active_pack_ad_counts.get(pack.id, 0) > 0,
+				'active_ad_count': active_pack_ad_counts.get(pack.id, 0),
 			}
 		)
 
@@ -412,6 +496,7 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 		'filters': {
 			'date_from': date_from,
 			'date_to': date_to,
+			'period': period,
 		},
 		'latest_payment_request': (
 			SubscriptionPaymentRequestSerializer(latest_request).data
@@ -419,6 +504,8 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, par
 			else None
 		),
 		'promotions': promotions_data,
+		'ads': ads_data,
 		'product_stats': product_stats,
 		'eligible_products': eligible_products,
+		'eligible_packs': eligible_packs,
 	}

@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import F
 from django.utils import timezone
 from rest_framework import filters, permissions, viewsets, status, serializers
 import math
@@ -9,7 +8,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport, PromotionViewer
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
 from .serializers import (
 	CategorySerializer,
 	PackImageSerializer,
@@ -494,7 +493,7 @@ class PromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.select_related('store', 'product').prefetch_related('images')
 	serializer_class = PromotionSerializer
 	filter_backends = [filters.OrderingFilter]
-	ordering_fields = ['start_date', 'end_date', 'percentage']
+	ordering_fields = ['created_at', 'percentage']
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve']:
@@ -509,228 +508,45 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		if self.action in ['list', 'retrieve']:
 			qs = qs.filter(
 				is_active=True,
-				start_date__lte=now,
-				end_date__gte=now,
 			).filter(
-				models.Q(max_impressions__isnull=True)
-				| models.Q(unique_viewers_count__lt=F('max_impressions'))
+				# null start_date means starts immediately
+				models.Q(start_date__isnull=True) | models.Q(start_date__lte=now)
+			).filter(
+				# null end_date means open-ended promotion
+				models.Q(end_date__isnull=True) | models.Q(end_date__gte=now)
 			)
-		kind = str(self.request.query_params.get('kind') or '').strip().lower()
-		if kind:
-			qs = qs.filter(kind=kind)
-		placement = str(self.request.query_params.get('placement') or '').strip().lower()
-		if placement:
-			qs = qs.filter(placement=placement)
 		store_id = self.request.query_params.get('store')
 		if store_id:
 			qs = qs.filter(store_id=store_id)
 		product_id = self.request.query_params.get('product')
 		if product_id:
 			qs = qs.filter(product_id=product_id)
-
-		# Audience targeting (best-effort; favors safety for anonymous users)
-		if self.action in ['list']:
-			user = self.request.user
-			wilaya = (
-				self.request.query_params.get('wilaya_code')
-				or self.request.query_params.get('wilaya')
-				or ''
-			)
-			if not user.is_authenticated:
-				qs = qs.filter(audience_mode=Promotion.AUDIENCE_ALL)
-			else:
-				from users.models import Follower
-				followed_store_ids = set(
-					Follower.objects.filter(user=user).values_list('followed_user_id', flat=True)
-				)
-				filtered = []
-				for promo in qs:
-					mode = getattr(promo, 'audience_mode', Promotion.AUDIENCE_ALL)
-					if mode == Promotion.AUDIENCE_ALL:
-						filtered.append(promo.id)
-						continue
-					if mode == Promotion.AUDIENCE_CUSTOM:
-						if user.id in (promo.target_user_ids or []):
-							filtered.append(promo.id)
-						continue
-					if mode == Promotion.AUDIENCE_FOLLOWERS:
-						if promo.store_id in followed_store_ids or promo.store_id == user.id:
-							filtered.append(promo.id)
-						continue
-					if mode == Promotion.AUDIENCE_WILAYA:
-						if not wilaya:
-							continue
-						if wilaya in (promo.target_wilayas or []):
-							filtered.append(promo.id)
-						continue
-					if mode == Promotion.AUDIENCE_NEARBY:
-						# Nearby targeting handled client-side by location filters.
-						filtered.append(promo.id)
-						continue
-				qs = qs.filter(id__in=filtered)
 		return qs
-
-	def _resolve_viewer_key(self, request):
-		if getattr(request.user, 'is_authenticated', False):
-			return f"user:{request.user.id}"
-		session_id = str(
-			request.query_params.get('session_id')
-			or request.headers.get('X-Session-Id')
-			or request.COOKIES.get('sessionid')
-			or ''
-		).strip()
-		if session_id:
-			return f"session:{session_id}"
-		ip = str(request.META.get('REMOTE_ADDR') or 'unknown').strip()
-		return f"ip:{ip}"
-
-	def _register_impressions(self, request, promotion_ids):
-		if not promotion_ids:
-			return
-		viewer_key = self._resolve_viewer_key(request)
-		promotions = Promotion.objects.filter(id__in=promotion_ids).only('id', 'store_id', 'max_impressions')
-		for promo in promotions:
-			# Do not count store owner self-views.
-			if getattr(request.user, 'is_authenticated', False) and request.user.id == promo.store_id:
-				continue
-			obj, created = PromotionViewer.objects.get_or_create(
-				promotion_id=promo.id,
-				viewer_key=viewer_key,
-			)
-			if not created:
-				obj.save(update_fields=['last_seen_at'])
-				continue
-			Promotion.objects.filter(id=promo.id).update(
-				unique_viewers_count=F('unique_viewers_count') + 1,
-			)
-		# Count total impressions even when viewer is repeated (lightweight increment).
-		Promotion.objects.filter(id__in=promotion_ids).update(
-			impressions_count=F('impressions_count') + 1
-		)
-
-		# Auto-disable promotions that reached audience limit.
-		Promotion.objects.filter(
-			id__in=promotion_ids,
-			max_impressions__isnull=False,
-			unique_viewers_count__gte=F('max_impressions'),
-		).update(is_active=False)
-
-	def list(self, request, *args, **kwargs):
-		response = super().list(request, *args, **kwargs)
-		payload = response.data
-		ids = []
-		if isinstance(payload, dict):
-			items = payload.get('results') if isinstance(payload.get('results'), list) else []
-			ids = [item.get('id') for item in items if isinstance(item, dict) and item.get('id')]
-		elif isinstance(payload, list):
-			ids = [item.get('id') for item in payload if isinstance(item, dict) and item.get('id')]
-		self._register_impressions(request, ids)
-		return response
-
-	def retrieve(self, request, *args, **kwargs):
-		response = super().retrieve(request, *args, **kwargs)
-		promo_id = None
-		if isinstance(response.data, dict):
-			promo_id = response.data.get('id')
-		if promo_id:
-			self._register_impressions(request, [promo_id])
-		return response
 
 	def perform_create(self, serializer):
 		ensure_can_create_post(self.request.user)
 		start_date = serializer.validated_data.get('start_date')
 		end_date = serializer.validated_data.get('end_date')
-		kind = serializer.validated_data.get('kind') or 'promotion'
 		features = enforce_promotion_constraints(
 			self.request.user,
 			start_date=start_date,
 			end_date=end_date,
-			kind=kind,
+			kind='promotion',
 		)
-		max_impressions = serializer.validated_data.get('max_impressions')
-		if max_impressions in (None, ''):
-			key = 'ad_max_impressions' if str(kind).lower() == 'advertising' else 'promotion_max_impressions'
-			max_impressions = features.get(key)
-		priority_boost = serializer.validated_data.get('priority_boost')
-		if priority_boost in (None, ''):
-			priority_boost = (
-				features.get('ad_priority_boost')
-				if str(kind).lower() == 'advertising'
-				else features.get('recommendation_priority_boost')
-			)
-		else:
-			plan_boost = (
-				features.get('ad_priority_boost')
-				if str(kind).lower() == 'advertising'
-				else features.get('recommendation_priority_boost')
-			)
-			if plan_boost is not None and int(priority_boost) > int(plan_boost):
-				raise serializers.ValidationError(
-					{'priority_boost': f'Priority boost exceeds plan limit ({plan_boost}).'}
-				)
-		instance = serializer.save(
-			store=self.request.user,
-			max_impressions=max_impressions,
-			priority_boost=priority_boost or 0,
-		)
+		instance = serializer.save(store=self.request.user)
 		_trigger_new_post_notification(self.request.user, instance, 'promotion')
 
 	def perform_update(self, serializer):
 		start_date = serializer.validated_data.get('start_date', serializer.instance.start_date)
 		end_date = serializer.validated_data.get('end_date', serializer.instance.end_date)
-		kind = serializer.validated_data.get('kind', serializer.instance.kind) or 'promotion'
 		features = enforce_promotion_constraints(
 			self.request.user,
 			start_date=start_date,
 			end_date=end_date,
 			promotion_id=serializer.instance.id,
-			kind=kind,
+			kind='promotion',
 		)
-		max_impressions = serializer.validated_data.get('max_impressions', serializer.instance.max_impressions)
-		plan_limit = (
-			features.get('ad_max_impressions')
-			if str(kind).lower() == 'advertising'
-			else features.get('promotion_max_impressions')
-		)
-		if plan_limit and max_impressions and int(max_impressions) > int(plan_limit):
-			raise serializers.ValidationError(
-				{'max_impressions': f'Max impressions exceeds your plan limit ({plan_limit}).'}
-			)
-		priority_boost = serializer.validated_data.get('priority_boost', serializer.instance.priority_boost)
-		plan_boost = (
-			features.get('ad_priority_boost')
-			if str(kind).lower() == 'advertising'
-			else features.get('recommendation_priority_boost')
-		)
-		if plan_boost is not None and priority_boost and int(priority_boost) > int(plan_boost):
-			raise serializers.ValidationError(
-				{'priority_boost': f'Priority boost exceeds plan limit ({plan_boost}).'}
-			)
 		serializer.save()
-
-	@action(detail=True, methods=['post'], url_path='register-click')
-	def register_click(self, request, pk=None):
-		promotion = self.get_object()
-		if getattr(request.user, 'is_authenticated', False) and request.user.id == promotion.store_id:
-			return Response({'status': 'ignored'})
-		Promotion.objects.filter(id=promotion.id).update(clicks_count=F('clicks_count') + 1)
-		try:
-			from analytics.utils import log_user_event
-			log_user_event(
-				request.user if request.user.is_authenticated else None,
-				'promotion_click',
-				product=promotion.product,
-				metadata={
-					'promotion_id': promotion.id,
-					'kind': promotion.kind,
-					'placement': promotion.placement,
-					'store_id': promotion.store_id,
-				},
-				session_id=str(request.data.get('session_id') or ''),
-			)
-		except Exception:
-			pass
-		return Response({'status': 'ok'})
 
 
 class PromotionImageViewSet(viewsets.ModelViewSet):

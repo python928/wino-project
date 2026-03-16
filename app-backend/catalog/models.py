@@ -48,59 +48,16 @@ class ProductImage(models.Model):
 
 
 class Promotion(models.Model):
-	KIND_PROMOTION = 'promotion'
-	KIND_ADVERTISING = 'advertising'
-	KIND_CHOICES = (
-		(KIND_PROMOTION, 'Promotion'),
-		(KIND_ADVERTISING, 'Advertising'),
-	)
-
-	PLACEMENT_HOME_TOP = 'home_top'
-	PLACEMENT_HOME_FEED = 'home_feed'
-	PLACEMENT_SEARCH_TOP = 'search_top'
-	PLACEMENT_CHOICES = (
-		(PLACEMENT_HOME_TOP, 'Home Top'),
-		(PLACEMENT_HOME_FEED, 'Home Feed'),
-		(PLACEMENT_SEARCH_TOP, 'Search Top'),
-	)
-
-	AUDIENCE_ALL = 'all'
-	AUDIENCE_FOLLOWERS = 'followers'
-	AUDIENCE_NEARBY = 'nearby'
-	AUDIENCE_WILAYA = 'wilaya'
-	AUDIENCE_CUSTOM = 'custom'
-	AUDIENCE_CHOICES = (
-		(AUDIENCE_ALL, 'All'),
-		(AUDIENCE_FOLLOWERS, 'Followers'),
-		(AUDIENCE_NEARBY, 'Nearby'),
-		(AUDIENCE_WILAYA, 'Wilaya'),
-		(AUDIENCE_CUSTOM, 'Custom Users'),
-	)
-
 	# Unified: store == users.User
 	store = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='promotions')
 	product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True, related_name='promotions')
 	name = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
-	kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_PROMOTION)
-	placement = models.CharField(max_length=20, choices=PLACEMENT_CHOICES, default=PLACEMENT_HOME_TOP)
-	audience_mode = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
-	target_wilayas = models.JSONField(default=list, blank=True)
-	target_categories = models.JSONField(default=list, blank=True)
-	target_user_ids = models.JSONField(default=list, blank=True)
-	priority_boost = models.IntegerField(default=0)
 	is_active = models.BooleanField(default=True)
-	start_date = models.DateTimeField()
-	end_date = models.DateTimeField()
-	max_impressions = models.PositiveIntegerField(
-		null=True,
-		blank=True,
-		help_text='Maximum unique viewers allowed for this promotion (null = unlimited).',
-	)
-	unique_viewers_count = models.PositiveIntegerField(default=0)
-	impressions_count = models.PositiveIntegerField(default=0)
-	clicks_count = models.PositiveIntegerField(default=0)
+	# Promotion dates only (discount window)
+	start_date = models.DateTimeField(null=True, blank=True)
+	end_date = models.DateTimeField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
