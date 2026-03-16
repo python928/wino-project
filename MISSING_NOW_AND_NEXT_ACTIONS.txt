@@ -43,3 +43,6 @@
 - اختبارات السيناريوهات الحرجة ناجحة.
 - مراقبة الأخطاء/الأداء مفعلة.
 - خطة نسخ احتياطي واسترجاع مجربة.
+
+---
+Update 2026-03-16: Sponsored ads delivery now filters by targeting (category/age/geo/audience), boosts recommendations, and adds controlled randomness to avoid repeat ordering.

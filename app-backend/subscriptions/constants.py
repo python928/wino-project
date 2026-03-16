@@ -13,7 +13,6 @@ DEFAULT_PLAN_FEATURES = {
 	'ad_max_active': 1,
 	'ad_max_duration_days': 7,
 	'ad_max_impressions': 600,
-	'ad_priority_boost': 5,
 }
 
 DEFAULT_SUBSCRIPTION_PLANS = [
@@ -35,7 +34,6 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'ad_max_active': 1,
 			'ad_max_duration_days': 5,
 			'ad_max_impressions': 900,
-			'ad_priority_boost': 6,
 			'ui_badge': 'New',
 			'ui_gradient': ['#F6F8FF', '#E7ECFF'],
 			'old_price': 1800,
@@ -59,7 +57,6 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'ad_max_active': 4,
 			'ad_max_duration_days': 14,
 			'ad_max_impressions': 6500,
-			'ad_priority_boost': 12,
 			'ui_badge': 'Popular',
 			'ui_gradient': ['#FFF7E9', '#FFE4BF'],
 			'old_price': 4500,
@@ -83,7 +80,6 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 			'ad_max_active': 10,
 			'ad_max_duration_days': 30,
 			'ad_max_impressions': 42000,
-			'ad_priority_boost': 22,
 			'ui_badge': 'Best Value',
 			'ui_gradient': ['#EEFDF5', '#D8F7E7'],
 			'old_price': 9000,

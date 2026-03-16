@@ -493,8 +493,6 @@ class _PlanCard extends StatelessWidget {
                     'Ads: ${plan.planFeatures['ad_max_active'] ?? '-'}'),
                 _featureChip(
                     'Ad Impr: ${plan.planFeatures['ad_max_impressions'] ?? '-'}'),
-                _featureChip(
-                    'Boost: ${plan.planFeatures['ad_priority_boost'] ?? '-'}'),
               ],
             ),
           const SizedBox(height: 12),

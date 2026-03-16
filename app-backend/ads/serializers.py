@@ -29,7 +29,6 @@ class AdCampaignSerializer(serializers.ModelSerializer):
 			'target_wilayas',
 			'target_radius_km',
 			'target_categories',
-			'priority_boost',
 			'is_active',
 			'start_date',
 			'end_date',

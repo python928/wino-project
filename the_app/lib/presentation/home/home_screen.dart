@@ -1566,52 +1566,31 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        final topDiscount = rankedOffers.fold<int>(
-          0,
-          (prev, element) => element.discountPercentage > prev
-              ? element.discountPercentage
-              : prev,
-        );
-        final limitedOffers =
-            rankedOffers.where((o) => o.remainingImpressions != null).length;
-        final endingSoon = rankedOffers.where((o) => o.isNearEnding).length;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildOffersOverview(
-              topDiscount: topDiscount,
-              limitedOffers: limitedOffers,
-              endingSoon: endingSoon,
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 280,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: CardConstants.gridHorizontalPadding),
-                scrollDirection: Axis.horizontal,
-                itemCount: rankedOffers.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: CardConstants.gridCrossAxisSpacing),
-                itemBuilder: (context, index) {
-                  final offer = rankedOffers[index];
-                  return SizedBox(
-                    width: _gridCardWidth(context),
-                    child: PromotionCard(
-                      offer: offer,
-                      userLat: _userLat,
-                      userLng: _userLng,
-                      onTap: () => _navigateToPromotionDetails(
-                        offer,
-                        placement: 'home_feed',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+        return SizedBox(
+          height: 280,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(
+                horizontal: CardConstants.gridHorizontalPadding),
+            scrollDirection: Axis.horizontal,
+            itemCount: rankedOffers.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: CardConstants.gridCrossAxisSpacing),
+            itemBuilder: (context, index) {
+              final offer = rankedOffers[index];
+              return SizedBox(
+                width: _gridCardWidth(context),
+                child: PromotionCard(
+                  offer: offer,
+                  userLat: _userLat,
+                  userLng: _userLng,
+                  onTap: () => _navigateToPromotionDetails(
+                    offer,
+                    placement: 'home_feed',
+                  ),
+                ),
+              );
+            },
+          ),
         );
       },
     );
@@ -1648,62 +1627,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return bScore.compareTo(aScore);
     });
     return ranked;
-  }
-
-  Widget _buildOffersOverview({
-    required int topDiscount,
-    required int limitedOffers,
-    required int endingSoon,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primaryColor.withValues(alpha: 0.14),
-            const Color(0xFFFF7A00).withValues(alpha: 0.14),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _offerInfoChip(Icons.local_offer_outlined, 'Top -$topDiscount%'),
-          _offerInfoChip(Icons.groups_outlined, '$limitedOffers limited'),
-          _offerInfoChip(Icons.schedule_outlined, '$endingSoon ending soon'),
-        ],
-      ),
-    );
-  }
-
-  Widget _offerInfoChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.primaryColor),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // ==================== Navigation Methods ====================

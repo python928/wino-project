@@ -365,3 +365,6 @@ Score = w_1 \cdot DistScore + w_2 \cdot PriceScore + w_3 \cdot Reputation
 2. توصية سلوكية قائمة على إشارات نية قوية.
 3. تجربة بائع/مشتري موحدة داخل منصة واحدة.
 4. خطة نمو عملية: الثقة، الدفع المحلي، التحليلات التجارية، وتأثير الشبكة.
+
+---
+Update 2026-03-16: Sponsored ads delivery now filters by targeting (category/age/geo/audience), boosts recommendations, and adds controlled randomness to avoid repeat ordering.

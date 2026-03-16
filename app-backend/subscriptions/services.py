@@ -447,7 +447,6 @@ def build_merchant_dashboard(user, request, *, date_from=None, date_to=None, per
 		'ad_active_count': active_total,
 		'remaining_ad_slots': remaining_slots,
 		'ad_max_impressions': ad_max_impressions_val,
-		'ad_priority_boost': int(plan_features.get('ad_priority_boost') or 0),
 		'remaining_plan_impressions': remaining_slots * ad_max_impressions_val,
 	}
 

@@ -39,11 +39,6 @@ class AddPromotionScreen extends StatefulWidget {
 }
 
 class _AddPromotionScreenState extends State<AddPromotionScreen> {
-  static const List<ToggleOption> _kindOptions = [
-    ToggleOption(label: 'Discount', value: 'promotion'),
-    ToggleOption(label: 'Sponsored Ad', value: 'advertising'),
-  ];
-
   static const List<ToggleOption> _placementOptions = [
     ToggleOption(label: 'Home Top', value: 'home_top'),
     ToggleOption(label: 'Home Feed', value: 'home_feed'),
@@ -63,11 +58,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     ToggleOption(label: 'Radius (km)', value: 'radius'),
   ];
 
-  static const List<ToggleOption> _availabilityOptions = [
-    ToggleOption(label: 'Active', value: 'active'),
-    ToggleOption(label: 'Paused', value: 'paused'),
-  ];
-
   Post? _selectedProduct;
   int? _selectedPackId;
   String? _selectedPackName;
@@ -77,7 +67,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   final _newPriceController = TextEditingController();
   final _discountPercentageController = TextEditingController();
   final _maxImpressionsController = TextEditingController();
-  final _priorityBoostController = TextEditingController();
   final _ageFromController = TextEditingController();
   final _ageToController = TextEditingController();
   bool _isLoading = false;
@@ -89,12 +78,10 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   String _geoMode = 'all';
   List<String> _selectedTargetWilayas = const [];
   double? _targetRadiusKm;
+  DateTime? _startDate;
+  DateTime? _endDate;
   Map<String, dynamic> _planFeatures = const {};
   Map<String, dynamic> _adInventory = const {};
-
-  bool get _isAdOnlyFlow =>
-      widget.initialKind == 'advertising' ||
-      widget.offer?.kind == 'advertising';
 
   bool get _isAdMode => _kind == 'advertising';
 
@@ -173,11 +160,12 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _audienceMode = offer.audienceMode;
       _geoMode = offer.geoMode;
       _maxImpressionsController.text = offer.maxImpressions?.toString() ?? '';
-      _priorityBoostController.text = offer.priorityBoost.toString();
       _selectedTargetWilayas = List<String>.from(offer.targetWilayas);
       _targetRadiusKm = offer.targetRadiusKm?.toDouble();
       _ageFromController.text = offer.ageFrom?.toString() ?? '';
       _ageToController.text = offer.ageTo?.toString() ?? '';
+      _startDate = offer.startDate;
+      _endDate = offer.endDate;
       if (offer.kind == 'advertising' && offer.targetType == 'pack') {
         _adTargetType = 'pack';
         _selectedPackId = offer.targetPackId;
@@ -191,7 +179,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _selectedProduct = widget.initialProduct;
       _selectedPackId = widget.initialPackId;
       _selectedPackName = widget.initialPackName;
-      if (_isAdOnlyFlow && _selectedPackId != null) {
+      if (_kind == 'advertising' && _selectedPackId != null) {
         _adTargetType = 'pack';
       }
     }
@@ -247,7 +235,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     _newPriceController.dispose();
     _discountPercentageController.dispose();
     _maxImpressionsController.dispose();
-    _priorityBoostController.dispose();
     _ageFromController.dispose();
     _ageToController.dispose();
     super.dispose();
@@ -524,8 +511,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   _newPriceController.text = offer.newPrice.toStringAsFixed(2);
                   _maxImpressionsController.text =
                       offer.maxImpressions?.toString() ?? '';
-                  _priorityBoostController.text =
-                      offer.priorityBoost.toString();
                   _selectedTargetWilayas =
                       List<String>.from(offer.targetWilayas);
                   _targetRadiusKm = offer.targetRadiusKm?.toDouble();
@@ -640,6 +625,169 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     );
   }
 
+  String _formatDateTime(DateTime? value) {
+    if (value == null) return 'Not set';
+    final local = value.toLocal();
+    final date = MaterialLocalizations.of(context).formatShortDate(local);
+    final time =
+        MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local));
+    return '$date $time';
+  }
+
+  Future<void> _pickDateTime({required bool isStart}) async {
+    final now = DateTime.now();
+    final current = isStart
+        ? (_startDate ?? now)
+        : (_endDate ?? _startDate ?? now);
+    final date = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (date == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+    );
+    if (time == null) return;
+    final selected = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    setState(() {
+      if (isStart) {
+        _startDate = selected;
+        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+          _endDate = null;
+        }
+      } else {
+        _endDate = selected;
+      }
+    });
+  }
+
+  Widget _buildScheduleSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Schedule',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            AppCompactActionButton(
+              label: 'Start: ${_formatDateTime(_startDate)}',
+              icon: Icons.schedule,
+              onTap: _isLoading ? null : () => _pickDateTime(isStart: true),
+            ),
+            AppCompactActionButton(
+              label: 'End: ${_formatDateTime(_endDate)}',
+              icon: Icons.timer_off_outlined,
+              onTap: _isLoading ? null : () => _pickDateTime(isStart: false),
+            ),
+          ],
+        ),
+        if (_startDate != null || _endDate != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              if (_startDate != null)
+                TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () => setState(() => _startDate = null),
+                  child: const Text('Clear start'),
+                ),
+              if (_endDate != null)
+                TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () => setState(() => _endDate = null),
+                  child: const Text('Clear end'),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAvailabilitySection() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: _isAvailable
+            ? AppColors.primaryColor.withOpacity(0.08)
+            : const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isAvailable
+              ? AppColors.primaryColor.withOpacity(0.3)
+              : Colors.grey.shade200,
+          width: 1.2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: _isAvailable
+                    ? AppColors.primaryColor.withOpacity(0.12)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.toggle_on_outlined,
+                size: 18,
+                color: _isAvailable
+                    ? AppColors.primaryColor
+                    : Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _availabilityTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    _availabilitySubtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: _isAvailable,
+              onChanged: _isLoading ? null : (v) => setState(() => _isAvailable = v),
+              activeColor: AppColors.primaryColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _onPercentageChanged(String value) {
     if (_selectedProduct == null || value.isEmpty) return;
 
@@ -672,7 +820,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       final percentage = _resolvePercentage(selectedPromotion);
       final maxImpressions =
           int.tryParse(_maxImpressionsController.text.trim());
-      final priorityBoost = int.tryParse(_priorityBoostController.text.trim());
       final ageFrom = int.tryParse(_ageFromController.text.trim());
       final ageTo = int.tryParse(_ageToController.text.trim());
       final impressionValidationError =
@@ -699,6 +846,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         return;
       }
 
+      if (_startDate != null &&
+          _endDate != null &&
+          !_endDate!.isAfter(_startDate!)) {
+        Helpers.showSnackBar(context, 'End time must be after start time');
+        return;
+      }
+
       if (_isEditMode && _existingOffer != null) {
         // Update existing offer
         await provider.updateOffer(
@@ -711,12 +865,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           placement: _placement,
           audienceMode: _audienceMode,
           targetWilayas: _selectedTargetWilayas,
-          priorityBoost: priorityBoost,
           maxImpressions: maxImpressions,
           ageFrom: ageFrom,
           ageTo: ageTo,
           geoMode: _geoMode,
           targetRadiusKm: _targetRadiusKm?.round(),
+          startDate: _startDate,
+          endDate: _endDate,
         );
 
         if (mounted) {
@@ -734,12 +889,13 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           placement: _placement,
           audienceMode: _audienceMode,
           targetWilayas: _selectedTargetWilayas,
-          priorityBoost: priorityBoost,
           maxImpressions: maxImpressions,
           ageFrom: ageFrom,
           ageTo: ageTo,
           geoMode: _geoMode,
           targetRadiusKm: _targetRadiusKm?.round(),
+          startDate: _startDate,
+          endDate: _endDate,
         );
 
         if (mounted) {
@@ -980,40 +1136,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
                   const SizedBox(height: 24),
 
-                  if (!_isAdOnlyFlow) ...[
-                    _buildToggleSection(
-                      title: 'Campaign Type',
-                      options: _kindOptions,
-                      selectedValue: _kind,
-                      onChanged: _isLoading
-                          ? (_) {}
-                          : (value) {
-                              setState(() {
-                                _kind = value;
-                                _existingOffer = (_selectedProduct == null)
-                                    ? null
-                                    : context
-                                        .read<PostProvider>()
-                                        .myOffers
-                                        .where((offer) =>
-                                            offer.product.id ==
-                                                _selectedProduct!.id &&
-                                            offer.kind == _kind)
-                                        .firstOrNull;
-                                if (_isAdMode &&
-                                    _maxImpressionsController.text
-                                        .trim()
-                                        .isEmpty &&
-                                    planImpressionLimit != null) {
-                                  _maxImpressionsController.text =
-                                      '$planImpressionLimit';
-                                }
-                              });
-                            },
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
                   if (!_isAdMode) ...[
                     AppTextField(
                       controller: _discountPercentageController,
@@ -1196,14 +1318,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    AppTextField(
-                      controller: _priorityBoostController,
-                      label: 'Sponsored Priority Boost',
-                      hint: '0',
-                      icon: Icons.trending_up,
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 8),
                     Text(
                       'Sponsored ad will stay active until impressions are exhausted.',
                       style: TextStyle(color: Colors.grey.shade700),
@@ -1211,26 +1325,10 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   ],
 
                   const SizedBox(height: 24),
-
-                  _buildToggleSection(
-                    title: _availabilityTitle,
-                    options: _availabilityOptions,
-                    selectedValue: _isAvailable ? 'active' : 'paused',
-                    onChanged: _isLoading
-                        ? (_) {}
-                        : (value) {
-                            setState(() => _isAvailable = value == 'active');
-                          },
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    _availabilitySubtitle,
-                    style: TextStyle(color: Colors.grey.shade700),
-                  ),
-
-                  const SizedBox(height: 12),
+                  _buildScheduleSection(),
+                  const SizedBox(height: 24),
+                  _buildAvailabilitySection(),
+                  const SizedBox(height: 16),
 
                   // Submit Button
                   SizedBox(

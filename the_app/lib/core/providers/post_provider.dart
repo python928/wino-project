@@ -149,12 +149,13 @@ class PostProvider with ChangeNotifier {
     String audienceMode = 'all',
     List<String> targetWilayas = const [],
     List<String> targetCategories = const [],
-    int? priorityBoost,
     int? maxImpressions,
     int? ageFrom,
     int? ageTo,
     String geoMode = 'all',
     int? targetRadiusKm,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     _isLoading = true;
     _error = null;
@@ -171,12 +172,13 @@ class PostProvider with ChangeNotifier {
         audienceMode: audienceMode,
         targetWilayas: targetWilayas,
         targetCategories: targetCategories,
-        priorityBoost: priorityBoost,
         maxImpressions: maxImpressions,
         ageFrom: ageFrom,
         ageTo: ageTo,
         geoMode: geoMode,
         targetRadiusKm: targetRadiusKm,
+        startDate: startDate,
+        endDate: endDate,
       );
       _myOffers.insert(0, newOffer);
     } catch (e) {
@@ -199,12 +201,13 @@ class PostProvider with ChangeNotifier {
     String? audienceMode,
     List<String>? targetWilayas,
     List<String>? targetCategories,
-    int? priorityBoost,
     int? maxImpressions,
     int? ageFrom,
     int? ageTo,
     String? geoMode,
     int? targetRadiusKm,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     _isLoading = true;
     _error = null;
@@ -222,12 +225,13 @@ class PostProvider with ChangeNotifier {
         audienceMode: audienceMode,
         targetWilayas: targetWilayas,
         targetCategories: targetCategories,
-        priorityBoost: priorityBoost,
         maxImpressions: maxImpressions,
         ageFrom: ageFrom,
         ageTo: ageTo,
         geoMode: geoMode,
         targetRadiusKm: targetRadiusKm,
+        startDate: startDate,
+        endDate: endDate,
       );
       final idx = _myOffers.indexWhere((o) => o.id == offerId);
       if (idx != -1) {

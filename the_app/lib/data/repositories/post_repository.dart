@@ -505,9 +505,9 @@ class PostRepository {
             newPrice: newPrice,
             isAvailable: isActive,
             createdAt: DateTime.tryParse(
-                    (promo['start_date'] ?? promo['created_at'] ?? '')
-                        .toString()) ??
+                    (promo['created_at'] ?? '').toString()) ??
                 DateTime.now(),
+            startDate: DateTime.tryParse((promo['start_date'] ?? '').toString()),
             endDate: DateTime.tryParse((promo['end_date'] ?? '').toString()),
             maxImpressions:
                 int.tryParse((promo['max_impressions'] ?? '').toString()),
@@ -518,8 +518,6 @@ class PostRepository {
             kind: promoKind,
             placement: (promo['placement'] ?? 'home_top').toString(),
             audienceMode: (promo['audience_mode'] ?? 'all').toString(),
-            priorityBoost:
-                int.tryParse((promo['priority_boost'] ?? '').toString()) ?? 0,
             impressionsCount:
                 int.tryParse((promo['impressions_count'] ?? '').toString()) ??
                     0,
@@ -568,12 +566,13 @@ class PostRepository {
     String audienceMode = 'all',
     List<String> targetWilayas = const [],
     List<String> targetCategories = const [],
-    int? priorityBoost,
     int? maxImpressions,
     int? ageFrom,
     int? ageTo,
     String geoMode = 'all',
     int? targetRadiusKm,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final isAd = kind == 'advertising';
@@ -592,6 +591,8 @@ class PostRepository {
         'store': storeId,
         'percentage': discountPercentage,
         'is_active': isAvailable,
+        if (startDate != null) 'start_date': startDate.toIso8601String(),
+        if (endDate != null) 'end_date': endDate.toIso8601String(),
       };
 
       if (isAd) {
@@ -609,7 +610,6 @@ class PostRepository {
           if (ageFrom != null) 'age_from': ageFrom,
           if (ageTo != null) 'age_to': ageTo,
           if (targetRadiusKm != null) 'target_radius_km': targetRadiusKm,
-          if (priorityBoost != null) 'priority_boost': priorityBoost,
           if (maxImpressions != null) 'max_impressions': maxImpressions,
         });
       } else {
@@ -675,6 +675,7 @@ class PostRepository {
         isAvailable: isAvailable,
         createdAt:
             DateTime.tryParse(resp['created_at'] ?? '') ?? DateTime.now(),
+        startDate: DateTime.tryParse((resp['start_date'] ?? '').toString()),
         endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
         maxImpressions:
             int.tryParse((resp['max_impressions'] ?? '').toString()),
@@ -685,8 +686,6 @@ class PostRepository {
         kind: (resp['kind'] ?? kind).toString(),
         placement: (resp['placement'] ?? placement).toString(),
         audienceMode: (resp['audience_mode'] ?? audienceMode).toString(),
-        priorityBoost:
-            int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
         impressionsCount:
             int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
         clicksCount: int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,
@@ -718,12 +717,13 @@ class PostRepository {
     String? audienceMode,
     List<String>? targetWilayas,
     List<String>? targetCategories,
-    int? priorityBoost,
     int? maxImpressions,
     int? ageFrom,
     int? ageTo,
     String? geoMode,
     int? targetRadiusKm,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final targetKind = (kind ?? '').trim().toLowerCase();
@@ -735,6 +735,8 @@ class PostRepository {
       if (productId != null) payload['product'] = productId;
       if (isAd && packId != null) payload['pack'] = packId;
       if (isAvailable != null) payload['is_active'] = isAvailable;
+      if (startDate != null) payload['start_date'] = startDate.toIso8601String();
+      if (endDate != null) payload['end_date'] = endDate.toIso8601String();
 
       if (isAd) {
         if (placement != null) payload['placement'] = placement;
@@ -743,7 +745,6 @@ class PostRepository {
         if (targetCategories != null) {
           payload['target_categories'] = targetCategories;
         }
-        if (priorityBoost != null) payload['priority_boost'] = priorityBoost;
         if (maxImpressions != null) payload['max_impressions'] = maxImpressions;
         if (ageFrom != null) payload['age_from'] = ageFrom;
         if (ageTo != null) payload['age_to'] = ageTo;
@@ -803,7 +804,8 @@ class PostRepository {
         newPrice: newPrice,
         isAvailable: isAvailable ?? resp['is_active'] ?? true,
         createdAt:
-            DateTime.tryParse(resp['start_date'] ?? '') ?? DateTime.now(),
+            DateTime.tryParse(resp['created_at'] ?? '') ?? DateTime.now(),
+        startDate: DateTime.tryParse((resp['start_date'] ?? '').toString()),
         endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
         maxImpressions:
             int.tryParse((resp['max_impressions'] ?? '').toString()),
@@ -815,8 +817,6 @@ class PostRepository {
         placement: (resp['placement'] ?? 'home_top').toString(),
         audienceMode:
             (resp['audience_mode'] ?? audienceMode ?? 'all').toString(),
-        priorityBoost:
-            int.tryParse((resp['priority_boost'] ?? '').toString()) ?? 0,
         impressionsCount:
             int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
         clicksCount: int.tryParse((resp['clicks_count'] ?? '').toString()) ?? 0,

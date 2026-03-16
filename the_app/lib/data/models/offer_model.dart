@@ -8,6 +8,7 @@ class Offer {
   final double newPrice;
   final bool isAvailable;
   final DateTime createdAt;
+  final DateTime? startDate;
   final DateTime? endDate;
   final int? maxImpressions;
   final int? uniqueViewersCount;
@@ -15,7 +16,6 @@ class Offer {
   final String kind;
   final String placement;
   final String audienceMode;
-  final int priorityBoost;
   final int impressionsCount;
   final int clicksCount;
   final List<String> targetWilayas;
@@ -35,6 +35,7 @@ class Offer {
     required this.newPrice,
     required this.isAvailable,
     required this.createdAt,
+    this.startDate,
     this.endDate,
     this.maxImpressions,
     this.uniqueViewersCount,
@@ -42,7 +43,6 @@ class Offer {
     this.kind = 'promotion',
     this.placement = 'home_top',
     this.audienceMode = 'all',
-    this.priorityBoost = 0,
     this.impressionsCount = 0,
     this.clicksCount = 0,
     this.targetWilayas = const [],
@@ -149,6 +149,7 @@ class Offer {
       isAvailable: json['is_available'] ?? json['is_active'] ?? true,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
+      startDate: DateTime.tryParse((json['start_date'] ?? '').toString()),
       endDate: DateTime.tryParse((json['end_date'] ?? '').toString()),
       maxImpressions: int.tryParse((json['max_impressions'] ?? '').toString()),
       uniqueViewersCount:
@@ -158,8 +159,6 @@ class Offer {
       kind: (json['kind'] ?? 'promotion').toString(),
       placement: (json['placement'] ?? 'home_top').toString(),
       audienceMode: (json['audience_mode'] ?? 'all').toString(),
-      priorityBoost:
-          int.tryParse((json['priority_boost'] ?? '').toString()) ?? 0,
       impressionsCount:
           int.tryParse((json['impressions_count'] ?? '').toString()) ?? 0,
       clicksCount: int.tryParse((json['clicks_count'] ?? '').toString()) ?? 0,

@@ -45,7 +45,6 @@ class AdCampaign(models.Model):
 	target_wilayas = models.JSONField(default=list, blank=True)
 	target_radius_km = models.PositiveIntegerField(null=True, blank=True)
 	target_categories = models.JSONField(default=list, blank=True)
-	priority_boost = models.IntegerField(default=0)
 	is_active = models.BooleanField(default=True)
 	start_date = models.DateTimeField(null=True, blank=True)
 	end_date = models.DateTimeField(null=True, blank=True)

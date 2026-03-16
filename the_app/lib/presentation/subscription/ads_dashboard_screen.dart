@@ -613,7 +613,6 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
   ) {
     final slots = adInventory['remaining_ad_slots'] ?? 0;
     final maxImpressions = adInventory['ad_max_impressions'] ?? 0;
-    final boost = adInventory['ad_priority_boost'] ?? 0;
     return _sectionCard(
       title: 'Advertising Capacity',
       child: Column(
@@ -625,7 +624,6 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
             children: [
               _metricPill('Remaining Slots', '$slots'),
               _metricPill('Plan Impressions', '$maxImpressions'),
-              _metricPill('Boost Limit', '$boost'),
               _metricPill(
                 'Max Active',
                 '${adInventory['ad_max_active'] ?? planFeatures['ad_max_active'] ?? 0}',
