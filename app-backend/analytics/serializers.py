@@ -35,6 +35,8 @@ class InteractionEventSerializer(serializers.Serializer):
 			raise serializers.ValidationError({'product': 'This action requires product'})
 		if action == 'follow_store' and store is None:
 			raise serializers.ValidationError({'store': 'This action requires store'})
+		if action == 'store_click' and store is None:
+			raise serializers.ValidationError({'store': 'This action requires store'})
 		if product is not None and category is None and getattr(product, 'category_id', None):
 			attrs['category'] = product.category
 		return attrs

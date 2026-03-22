@@ -11,7 +11,7 @@ import '../../data/models/post_model.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/error_state_widget.dart';
-import '../shared_widgets/loading_indicator.dart';
+import '../shared_widgets/shimmer_loading.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../common/constants/card_constants.dart';
 
@@ -131,7 +131,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const LoadingIndicator();
+      return const ProductGridSkeleton(itemCount: 6);
     }
 
     if (_error == 'login_required') {

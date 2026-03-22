@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../core/providers/post_provider.dart';
+
+import '../../core/config/api_config.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/pack_provider.dart';
+import '../../core/providers/post_provider.dart';
 import '../../core/providers/store_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/utils/helpers.dart';
-import '../../core/services/subscription_service.dart';
+import '../../core/providers/wallet_provider.dart';
 import '../../core/services/storage_service.dart';
-import '../../core/config/api_config.dart';
-import '../../data/models/post_model.dart';
+import '../../core/services/subscription_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
 import '../common/location_filter_picker.dart';
-import 'package:flutter/services.dart';
-import 'widgets/product_picker_sheet.dart';
 import '../subscription/subscription_gate.dart';
+import 'widgets/product_picker_sheet.dart';
 
 class AddPackScreen extends StatefulWidget {
   final Pack? pack;
@@ -188,54 +190,6 @@ class _AddPackScreenState extends State<AddPackScreen> {
     super.dispose();
   }
 
-  Future<void> _confirmDeletePack() async {
-    final pack = widget.pack;
-    if (pack == null) return;
-
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.ltr,
-        child: AlertDialog(
-          title: const Text('Delete Pack?'),
-          content: const Text('This action cannot be undone.'),
-          actions: [
-            AppTextButton(
-              onPressed: () => Navigator.pop(context, false),
-              text: 'Cancel',
-            ),
-            AppPrimaryButton(
-              onPressed: () => Navigator.pop(context, true),
-              text: 'Delete',
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (shouldDelete != true) return;
-
-    final auth = context.read<AuthProvider>();
-    final userId = auth.user?.id;
-
-    if (userId == null) return;
-
-    try {
-      setState(() => _formError = null);
-      await context
-          .read<PackProvider>()
-          .deletePack(pack.id, merchantId: userId);
-      if (mounted) {
-        Helpers.showSnackBar(context, 'Pack deleted successfully');
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _formError = 'Failed to delete pack: ${e.toString()}');
-      }
-    }
-  }
-
   void _addProductToPack(Post product) {
     final provider = context.read<PackProvider>();
     if (provider.selectedProducts.any((p) => p.id == product.id)) {
@@ -355,17 +309,25 @@ class _AddPackScreenState extends State<AddPackScreen> {
           deliveryWilayas: deliveryWilayas,
         );
         if (mounted) {
+          await context.read<WalletProvider>().fetchWallet();
           Helpers.showSnackBar(context, 'Pack published successfully');
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
-      if (SubscriptionService.isSubscriptionRequiredError(e) && mounted) {
-        await showSubscriptionRequiredWindow(context);
-        return;
+      if (mounted) {
+        final coinInfo = SubscriptionService.parseCoinBalanceError(e);
+        if (coinInfo != null) {
+          await openCoinStore(
+            context,
+            required: coinInfo['required'] as int?,
+            balance: coinInfo['balance'] as int?,
+          );
+          return;
+        }
+        setState(() => _formError =
+            'Error during publishing: ${provider.error ?? e.toString()}');
       }
-      setState(() => _formError =
-          'Error during publishing: ${provider.error ?? e.toString()}');
     }
   }
 
@@ -772,9 +734,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
 
   bool _hasProfileLocation() {
     final userData = StorageService.getUserData();
-    final address = (userData?['address'] ?? userData?['location'] ?? '')
-        .toString()
-        .trim();
+    final address =
+        (userData?['address'] ?? userData?['location'] ?? '').toString().trim();
     final latRaw = userData?['latitude'];
     final lngRaw = userData?['longitude'];
     final lat = double.tryParse(latRaw?.toString() ?? '');

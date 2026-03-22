@@ -35,12 +35,9 @@ def _connect_signals():
 			from catalog.models import Favorite
 
 			def _on_favorite_created(sender, instance, created, **kwargs):
-				if created:
-					log_user_event(
-						user=instance.user,
-						action='favorite',
-						product=getattr(instance, 'product', None),
-					)
+				# Favorites are logged in the API view (with discovery metadata)
+				# to support correct attribution and avoid double-counting.
+				return
 
 			post_save.connect(_on_favorite_created, sender=Favorite, weak=False, dispatch_uid='analytics_favorite')
 			logger.info('Analytics: Favorite signal connected.')

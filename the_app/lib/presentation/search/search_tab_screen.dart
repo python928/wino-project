@@ -1,41 +1,41 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../common/constants/card_constants.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/app_toggle_button.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../core/providers/post_provider.dart';
 import '../../core/providers/home_provider.dart';
+import '../../core/providers/post_provider.dart';
 import '../../core/routing/routes.dart';
-import '../../core/utils/helpers.dart';
-import '../shared_widgets/cards/product_card.dart';
-import '../shared_widgets/cards/promotion_card.dart';
-import '../shared_widgets/cards/pack_card.dart';
-import '../shared_widgets/shimmer_loading.dart';
-import '../shared_widgets/empty_state_widget.dart';
-import '../shared_widgets/loading_indicator.dart';
-import '../../data/repositories/store_repository.dart';
-import '../../data/models/user_model.dart';
-import '../../data/models/post_model.dart';
-import '../../data/models/offer_model.dart';
-import '../../data/models/pack_model.dart';
-import '../../data/repositories/post_repository.dart';
-import '../product/product_detail_screen.dart';
-import '../common/location_picker_screen.dart';
-import '../common/radius_picker_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import 'category_selection_screen.dart';
-import '../shared_widgets/cards/store_chip.dart';
-import '../shared_widgets/location_mode_switcher.dart';
-import '../../core/services/location_service.dart';
 import '../../core/services/analytics_api_service.dart';
+import '../../core/services/location_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/app_toggle_button.dart';
+import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
+import '../../data/models/user_model.dart';
+import '../../data/repositories/post_repository.dart';
+import '../../data/repositories/store_repository.dart';
+import '../common/constants/card_constants.dart';
+import '../common/location_picker_screen.dart';
+import '../common/radius_picker_sheet.dart';
+import '../product/product_detail_screen.dart';
+import '../shared_widgets/cards/pack_card.dart';
+import '../shared_widgets/cards/product_card.dart';
+import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/cards/store_chip.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/loading_indicator.dart';
+import '../shared_widgets/location_mode_switcher.dart';
+import '../shared_widgets/shimmer_loading.dart';
+import 'category_selection_screen.dart';
 
 class SearchTabScreen extends StatefulWidget {
   final String? initialQuery;
@@ -509,6 +509,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       oldPrice: offer.product.price,
       discountPercentage: offer.discountPercentage,
     );
+    if (offer.kind == 'advertising') {
+      return ProductDetailsArgs(
+        product: productWithPromotion,
+        sourceSurface: 'ads',
+        discoveryMode: 'advertising',
+        distanceKm: _distanceKm,
+        wilayaCode: _selectedWilaya,
+        searchQuery: null,
+        searchContext: null,
+      );
+    }
     return _buildProductDetailsArgs(productWithPromotion);
   }
 
@@ -2046,6 +2057,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
         final categoriesById = _categoriesById(context.read<HomeProvider>());
         var products = postProvider.posts.toList();
+
+        // Filter out products with active discounts
+        products = products
+            .where((p) => !postProvider.isProductDiscounted(p))
+            .toList();
 
         final validStoreIds = _getValidStoreIds();
         if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {

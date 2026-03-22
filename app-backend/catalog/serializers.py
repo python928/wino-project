@@ -9,7 +9,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent', 'icon']
+        fields = ['id', 'name', 'icon']
 
     def get_icon(self, obj):
         if not obj.icon_code_point:

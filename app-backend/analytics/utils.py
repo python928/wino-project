@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 INTERACTION_WEIGHTS = {
 	'view': 1,
 	'click': 2,
+	'store_click': 2,
 	'promotion_click': 2,
 	'search': 0,
 	'filter_price': 3,
@@ -30,6 +31,7 @@ INTERACTION_WEIGHTS = {
 ACTION_CONTRIBUTIONS = {
 	'view': {'category': 1.0, 'mode': 1.0, 'store_category': 1.0, 'seller': 0.8},
 	'click': {'category': 1.5, 'mode': 1.0, 'store_category': 1.2, 'seller': 1.0},
+	'store_click': {'category': 0.6, 'mode': 0.4, 'store_category': 1.2, 'seller': 1.4},
 	'promotion_click': {'category': 1.4, 'mode': 1.0, 'store_category': 1.1, 'seller': 1.0},
 	'search': {'category': 0.4, 'mode': 0.2, 'store_category': 0.0, 'seller': 0.0},
 	'filter_price': {'category': 0.3, 'mode': 0.0, 'store_category': 0.0, 'seller': 0.0},
@@ -111,6 +113,11 @@ def log_user_event(user, action, product=None, metadata=None, session_id=''):
 def normalize_discovery_mode(value):
 	"""Normalize location discovery mode sent by the app."""
 	raw = str(value or '').strip().lower()
+	# Keep explicit ad attribution intact.
+	# We use this for merchant dashboard attribution and to exclude ad-driven
+	# sessions from organic product metrics.
+	if raw in {'advertising', 'ads', 'ad'}:
+		return 'advertising'
 	if raw in {'nearby', 'distance'}:
 		return 'nearby'
 	if raw in {'location', 'area', 'wilaya'}:

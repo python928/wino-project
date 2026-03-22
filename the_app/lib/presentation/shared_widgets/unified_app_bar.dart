@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
-import '../search/search_tab_screen.dart';
-import '../notifications/notifications_screen.dart';
 import '../common/radius_picker_sheet.dart';
+import '../notifications/notifications_screen.dart';
+import '../search/search_tab_screen.dart';
 import 'location_mode_switcher.dart';
 
 /// Unified app bar — Travo style

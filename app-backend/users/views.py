@@ -15,7 +15,7 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from rest_framework import generics
 
 from .models import Follower, StoreReport
-from .models import PhoneOTP
+from .models import PhoneOTP, SystemSettings
 from .serializers import (
 	RegisterSerializer,
 	UserSerializer,
@@ -32,26 +32,26 @@ User = get_user_model()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Allow login with either username or email"""
-    
-    def validate(self, attrs):
-        username_or_email = attrs.get('username', '')
-        password = attrs.get('password', '')
-        
-        # Try to find user by email first
-        user = None
-        if '@' in username_or_email:
-            try:
-                user = User.objects.get(email=username_or_email)
-                attrs['username'] = user.username
-            except User.DoesNotExist:
-                pass
-        
-        return super().validate(attrs)
+	"""Allow login with either username or email"""
+	
+	def validate(self, attrs):
+		username_or_email = attrs.get('username', '')
+		password = attrs.get('password', '')
+		
+		# Try to find user by email first
+		user = None
+		if '@' in username_or_email:
+			try:
+				user = User.objects.get(email=username_or_email)
+				attrs['username'] = user.username
+			except User.DoesNotExist:
+				pass
+		
+		return super().validate(attrs)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
+	serializer_class = CustomTokenObtainPairSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -84,7 +84,11 @@ class RegisterView(APIView):
 	def post(self, request, *args, **kwargs):
 		serializer = RegisterSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
+		from .models import SystemSettings
+		settings_obj = SystemSettings.get_settings()
 		user = serializer.save()
+		user.coins_balance = settings_obj.first_login_coins
+		user.save(update_fields=['coins_balance'])
 		refresh = RefreshToken.for_user(user)
 		return Response(
 			{
@@ -186,6 +190,7 @@ class VerifyPhoneOTPView(APIView):
 				name=display_name or username,
 				phone=phone,
 				email='',
+				coins_balance=SystemSettings.get_settings().first_login_coins,
 			)
 
 		refresh = RefreshToken.for_user(user)
@@ -233,6 +238,9 @@ class MeView(APIView):
 	permission_classes = [permissions.IsAuthenticated]
 
 	def get(self, request):
+		from .services import check_and_grant_daily_coins
+		check_and_grant_daily_coins(request.user)
+		request.user.refresh_from_db()
 		serializer = UserSerializer(request.user, context={'request': request})
 		return Response(serializer.data)
 
@@ -347,6 +355,7 @@ class FollowerToggleView(generics.CreateAPIView):
 				request.user,
 				'follow_store',
 				metadata={
+					'product_id': request.data.get('product_id') or request.data.get('product'),
 					'store_id': followed_user.id,
 					'category_id': request.data.get('category_id'),
 					'discovery_mode': request.data.get('discovery_mode'),

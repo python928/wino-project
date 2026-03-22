@@ -1,16 +1,18 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/services/api_service.dart';
+
 import '../../core/config/api_config.dart';
+import '../../core/providers/wallet_provider.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/notification_badge_service.dart';
-import '../../core/providers/post_provider.dart';
-import '../shared_widgets/custom_bottom_nav.dart';
-import 'home_screen.dart';
+import '../../core/theme/app_colors.dart';
 import '../favorites/favorites_screen.dart';
-import '../store/stores_list_screen.dart';
 import '../profile/profile_screen.dart';
+import '../shared_widgets/custom_bottom_nav.dart';
+import '../store/stores_list_screen.dart';
+import 'home_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
@@ -29,7 +31,6 @@ class MainNavigationScreen extends StatefulWidget {
 class MainNavigationScreenState extends State<MainNavigationScreen>
     with WidgetsBindingObserver {
   late int _selectedIndex;
-  String? _searchQuery;
   int _unreadCount = 0;
   Timer? _badgeTimer;
   late final VoidCallback _badgeListener;
@@ -37,7 +38,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
   // Method to navigate to search tab with a query
   void navigateToSearchWithQuery(String query) {
     setState(() {
-      _searchQuery = query;
       _selectedIndex = 1; // Switch to Search tab
     });
   }
@@ -54,8 +54,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex; // Use initial index from widget
-    _searchQuery =
-        widget.initialSearchQuery; // Use initial search query if provided
     WidgetsBinding.instance.addObserver(this);
     _refreshTokenIfNeeded();
     _badgeListener = () {
@@ -70,6 +68,11 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     _fetchUnreadBadgeCount();
     _badgeTimer = Timer.periodic(
         const Duration(minutes: 2), (_) => _fetchUnreadBadgeCount());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<WalletProvider>().fetchWallet(notifyStart: false);
+      }
+    });
   }
 
   @override
@@ -87,6 +90,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     if (state == AppLifecycleState.resumed) {
       _refreshTokenIfNeeded();
       _fetchUnreadBadgeCount();
+      context.read<WalletProvider>().fetchWallet(notifyStart: false);
       NotificationBadgeService.instance.syncMissedUnreadToShade();
     }
   }
@@ -119,12 +123,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     setState(() {
       _selectedIndex = index;
     });
-
-    // Reload data when home is selected
-    if (index == 0) {
-      final postProvider = context.read<PostProvider>();
-      postProvider.refreshMarketplaceFeed();
-    }
   }
 
   @override

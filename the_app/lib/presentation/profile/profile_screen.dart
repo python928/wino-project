@@ -8,6 +8,7 @@ import '../../core/providers/home_provider.dart';
 import '../../core/providers/pack_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/store_provider.dart';
+import '../../core/providers/wallet_provider.dart';
 import '../../core/routing/routes.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/follow_change_notifier.dart';
@@ -26,7 +27,9 @@ import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
+import '../shared_widgets/shimmer_loading.dart';
 import '../subscription/ads_dashboard_screen.dart';
+import '../wallet/coin_store_screen.dart';
 import 'add_pack_screen.dart';
 import 'add_product_screen.dart';
 import 'add_promotion_screen.dart';
@@ -81,7 +84,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _profileVisibleCount = 12;
 
   int? _storeId; // keep, but storeId == userId now
-  String? _lastProfileType; // remove usage (kept field is harmless but unused)
 
   bool _isSubmittingReview = false;
   final TextEditingController _reviewController = TextEditingController();
@@ -573,6 +575,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _refreshProfile() async {
     await _loadUserData();
+    if (_isOwnerView && mounted) {
+      await context.read<WalletProvider>().fetchWallet(notifyStart: false);
+    }
   }
 
   void _handleLogout() async {
@@ -658,6 +663,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (_followersCount < 0) _followersCount = 0;
         }
       });
+      FollowChangeNotifier.setFollowState(_storeId!, isFollowing);
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
@@ -673,6 +679,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_storeId == null || _isOwnerView) return;
     if (!StorageService.isLoggedIn()) return;
     if (_isLoadingFollowState) return;
+
+    final cached = FollowChangeNotifier.getFollowState(_storeId!);
+    if (cached != null && mounted) {
+      setState(() => _isFollowingStore = cached);
+    }
 
     setState(() => _isLoadingFollowState = true);
     try {
@@ -698,6 +709,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(_storeId!, isFollowing);
     } catch (_) {
       // ignore
     } finally {
@@ -1027,6 +1039,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 elevation: 0,
                 surfaceTintColor: Colors.transparent,
                 centerTitle: true,
+                leadingWidth: 98,
+                leading: Consumer<WalletProvider>(
+                  builder: (context, wallet, _) => Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CoinStoreScreen(),
+                          ),
+                        );
+                      },
+                      child: SizedBox(
+                        height: 38,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.toll_outlined,
+                              color: Color(0xFF8A5A00),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                '${wallet.coinsBalance}',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF8A5A00),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 title: const Text(
                   'Profile',
                   style: TextStyle(
@@ -1261,8 +1314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, postProvider, packProvider, child) {
         if (_isProfileContentLoading) {
           return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 28),
-            child: Center(child: CircularProgressIndicator()),
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: ProductGridSkeleton(itemCount: 6),
           );
         }
 

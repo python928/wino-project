@@ -1,17 +1,19 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../core/providers/home_provider.dart';
+import '../../../core/providers/post_provider.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/providers/post_provider.dart';
-import '../../../core/providers/home_provider.dart';
 import '../../../data/models/offer_model.dart';
 import '../../../data/models/post_model.dart';
 import '../../../presentation/common/constants/card_constants.dart';
+import '../../../presentation/shared_widgets/cards/pack_card.dart';
 import '../../../presentation/shared_widgets/cards/product_card.dart';
 import '../../../presentation/shared_widgets/cards/promotion_card.dart';
-import '../../../presentation/shared_widgets/cards/pack_card.dart';
 import '../../../presentation/shared_widgets/cards/store_chip.dart';
 
 /// Recommended for you — top section on home page.
@@ -58,7 +60,11 @@ class RecommendationsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<PostProvider, HomeProvider>(
       builder: (context, postProvider, homeProvider, _) {
-        final products = postProvider.posts;
+        // Filter products to exclude those with active discounts
+        final allProducts = postProvider.posts;
+        final products = allProducts
+            .where((p) => !postProvider.isProductDiscounted(p))
+            .toList();
         final offers = postProvider.offers;
         final packs = homeProvider.packs;
         final stores = homeProvider.featuredStores; // List<User>

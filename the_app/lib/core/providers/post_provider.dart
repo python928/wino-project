@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/repositories/post_repository.dart';
+import '../utils/app_logger.dart';
 
 class PostProvider with ChangeNotifier {
   List<Post> _posts = [];
@@ -19,7 +20,8 @@ class PostProvider with ChangeNotifier {
   String? _error;
 
   bool _isLoadingPosts = false;
-  bool _isLoadingOffers = false;
+  bool _isLoadingPromotions = false;
+  bool _isLoadingAds = false;
   String? _postsError;
   String? _offersError;
 
@@ -30,13 +32,65 @@ class PostProvider with ChangeNotifier {
   List<Offer> get adOffers => _adOffers;
   List<Offer> get myOffers => _myOffers;
   List<Offer> get storeOffers => _storeOffers;
-  bool get isLoading => _isLoading || _isLoadingPosts || _isLoadingOffers;
+  bool get isLoading =>
+      _isLoading || _isLoadingPosts || _isLoadingPromotions || _isLoadingAds;
   String? get error => _error ?? _postsError ?? _offersError;
 
   bool get isLoadingPosts => _isLoadingPosts;
-  bool get isLoadingOffers => _isLoadingOffers;
+  bool get isLoadingOffers => _isLoadingPromotions || _isLoadingAds;
   String? get postsError => _postsError;
   String? get offersError => _offersError;
+
+  /// Checks if a product has an active discount (promotion) from the same store
+  bool isProductDiscounted(Post product) {
+    return _offers.any((offer) {
+      // Must be a promotion (not advertising), available, and same product
+      if (offer.kind != 'promotion') return false;
+      if (!offer.isAvailable) return false;
+      if (offer.product.id != product.id) return false;
+      if (offer.product.storeId != product.storeId) return false;
+
+      // Check date range: active if no start/end dates or within range
+      final now = DateTime.now();
+      if (offer.startDate != null && now.isBefore(offer.startDate!)) {
+        return false;
+      }
+      if (offer.endDate != null && now.isAfter(offer.endDate!)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /// Returns products without active discounts (for home/search feeds)
+  List<Post> getPostsWithoutDiscounts() {
+    return _posts.where((post) => !isProductDiscounted(post)).toList();
+  }
+
+  /// Returns only products with active discounts (for discounts section)
+  List<Post> getDiscountedProducts() {
+    return _posts.where((post) => isProductDiscounted(post)).toList();
+  }
+
+  /// Returns my posts without active discounts
+  List<Post> getMyPostsWithoutDiscounts() {
+    return _myPosts.where((post) => !isProductDiscounted(post)).toList();
+  }
+
+  /// Returns only my posts with active discounts
+  List<Post> getMyDiscountedProducts() {
+    return _myPosts.where((post) => isProductDiscounted(post)).toList();
+  }
+
+  /// Returns store posts without active discounts
+  List<Post> getStorePostsWithoutDiscounts() {
+    return _storePosts.where((post) => !isProductDiscounted(post)).toList();
+  }
+
+  /// Returns only store posts with active discounts
+  List<Post> getStoreDiscountedProducts() {
+    return _storePosts.where((post) => isProductDiscounted(post)).toList();
+  }
 
   Future<void> refreshMarketplaceFeed({
     String? search,
@@ -52,7 +106,7 @@ class PostProvider with ChangeNotifier {
   }
 
   Future<void> loadOffers() async {
-    _isLoadingOffers = true;
+    _isLoadingPromotions = true;
     _offersError = null;
     notifyListeners();
 
@@ -62,27 +116,26 @@ class PostProvider with ChangeNotifier {
       _offersError = e.toString();
       _error = _offersError;
     } finally {
-      _isLoadingOffers = false;
+      _isLoadingPromotions = false;
       notifyListeners();
     }
   }
 
   Future<void> loadAdOffers({String? wilayaCode}) async {
-    _isLoadingOffers = true;
+    _isLoadingAds = true;
     _offersError = null;
     notifyListeners();
 
     try {
       _adOffers = await PostRepository.getOffers(
         kind: 'advertising',
-        placement: 'home_top',
         wilayaCode: wilayaCode,
       );
     } catch (e) {
       _offersError = e.toString();
       _error = _offersError;
     } finally {
-      _isLoadingOffers = false;
+      _isLoadingAds = false;
       notifyListeners();
     }
   }
@@ -94,6 +147,8 @@ class PostProvider with ChangeNotifier {
 
     try {
       final storeId = int.tryParse(authorId);
+      AppLogger.info(
+          '[PROFILE_OFFERS] loadMyOffers start: authorId=$authorId storeId=$storeId');
       final promotions = await PostRepository.getOffers(
         storeId: storeId,
         includeInactive: true,
@@ -103,10 +158,17 @@ class PostProvider with ChangeNotifier {
         includeInactive: true,
         kind: 'advertising',
       );
+      AppLogger.info(
+          '[PROFILE_OFFERS] promotions=${promotions.length}, ads=${ads.length}');
       _myOffers = [...promotions, ...ads]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      for (final o in _myOffers.take(15)) {
+        AppLogger.info(
+            '[PROFILE_OFFERS] id=${o.id} kind=${o.kind} active=${o.isAvailable} start=${o.startDate?.toIso8601String()} end=${o.endDate?.toIso8601String()} status=${o.getStatusMessage() ?? "active_now"}');
+      }
     } catch (e) {
       _error = e.toString();
+      AppLogger.error('[PROFILE_OFFERS] loadMyOffers failed', error: e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -154,6 +216,8 @@ class PostProvider with ChangeNotifier {
     int? ageTo,
     String geoMode = 'all',
     int? targetRadiusKm,
+    int? displayHour,
+    List<int>? displayHours,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -177,6 +241,8 @@ class PostProvider with ChangeNotifier {
         ageTo: ageTo,
         geoMode: geoMode,
         targetRadiusKm: targetRadiusKm,
+        displayHour: displayHour,
+        displayHours: displayHours,
         startDate: startDate,
         endDate: endDate,
       );
@@ -206,6 +272,8 @@ class PostProvider with ChangeNotifier {
     int? ageTo,
     String? geoMode,
     int? targetRadiusKm,
+    int? displayHour,
+    List<int>? displayHours,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -230,6 +298,8 @@ class PostProvider with ChangeNotifier {
         ageTo: ageTo,
         geoMode: geoMode,
         targetRadiusKm: targetRadiusKm,
+        displayHour: displayHour,
+        displayHours: displayHours,
         startDate: startDate,
         endDate: endDate,
       );
@@ -479,11 +549,13 @@ class PostProvider with ChangeNotifier {
     _myPosts = [];
     _storePosts = [];
     _offers = [];
+    _adOffers = [];
     _myOffers = [];
     _storeOffers = [];
     _isLoading = false;
     _isLoadingPosts = false;
-    _isLoadingOffers = false;
+    _isLoadingPromotions = false;
+    _isLoadingAds = false;
     _error = null;
     _postsError = null;
     _offersError = null;

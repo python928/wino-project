@@ -69,6 +69,33 @@ class SubscriptionService {
         text.contains('subscribe to continue');
   }
 
+  static bool isCoinBalanceError(Object error) {
+    final text = error.toString().toLowerCase();
+    return text.contains('insufficient_coins') ||
+        text.contains('insufficient coins') ||
+        text.contains('code: insufficient_coins') ||
+        text.contains('insufficient balance for');
+  }
+
+  static Map<String, dynamic>? parseCoinBalanceError(Object error) {
+    if (!isCoinBalanceError(error)) return null;
+    final raw = error.toString();
+    final required = _extractInt(raw, 'required');
+    final balance = _extractInt(raw, 'balance');
+
+    return {
+      'required': required,
+      'balance': balance,
+    };
+  }
+
+  static int? _extractInt(String raw, String key) {
+    final pattern = RegExp('$key\\s*[:=]\\s*(\\d+)', caseSensitive: false);
+    final match = pattern.firstMatch(raw);
+    if (match == null) return null;
+    return int.tryParse(match.group(1) ?? '');
+  }
+
   static Future<Map<String, dynamic>> fetchMerchantDashboard({
     DateTime? dateFrom,
     DateTime? dateTo,

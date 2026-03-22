@@ -45,6 +45,12 @@ class User(AbstractUser):
 	show_phone_public = models.BooleanField(default=True)
 	show_social_public = models.BooleanField(default=True)
 
+	# Monetization balances
+	coins_balance = models.PositiveIntegerField(default=0)
+	post_coins = models.PositiveIntegerField(default=0)
+	ad_view_coins = models.PositiveIntegerField(default=0)
+	last_daily_coin_grant = models.DateTimeField(null=True, blank=True)
+
 	# Remove inherited fields we don't need
 	first_name = None
 	last_name = None
@@ -139,3 +145,26 @@ class StoreReport(models.Model):
 
 	def __str__(self) -> str:  # pragma: no cover - simple repr
 		return f"{self.reporter_id} -> {self.store_id} ({self.reason})"
+
+class SystemSettings(models.Model):
+	first_login_coins = models.PositiveIntegerField(
+		default=10,
+		help_text='Amount of coins granted to new users upon registration.',
+	)
+	daily_login_coins = models.PositiveIntegerField(
+		default=3,
+		help_text='The target balance for daily login. If a user has less than this, they get topped up to this amount.',
+	)
+
+	class Meta:
+		verbose_name = 'System Settings'
+		verbose_name_plural = 'System Settings'
+
+	def save(self, *args, **kwargs):
+		self.pk = 1
+		super().save(*args, **kwargs)
+
+	@classmethod
+	def get_settings(cls):
+		obj, _ = cls.objects.get_or_create(pk=1)
+		return obj

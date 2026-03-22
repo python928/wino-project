@@ -50,6 +50,7 @@ urlpatterns = [
     # path('api/messaging/', include('messaging.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/subscriptions/', include('subscriptions.urls')),
+    path('api/wallet/', include('wallet.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/devices/', include(router.urls)),
 ]

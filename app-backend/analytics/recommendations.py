@@ -521,7 +521,9 @@ def _get_popular_products(limit=20, preferred_wilayas=None, user=None):
 		if pref:
 			regional_q = Q()
 			for token in pref:
-				regional_q |= Q(store__address__icontains=token) | Q(store__city__icontains=token)
+				# InteractionLog does not have a direct store field; filter through product->store.
+				# Store profile currently exposes address (not city) on users.User.
+				regional_q |= Q(product__store__address__icontains=token)
 			regional_ids = (
 				InteractionLog.objects.filter(
 					timestamp__gte=timezone.now() - timezone.timedelta(days=7),

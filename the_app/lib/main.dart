@@ -1,23 +1,25 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart';
-import 'core/theme/app_theme.dart';
-import 'core/constants/app_constants.dart';
-import 'core/services/storage_service.dart';
-import 'core/services/store_api_service.dart';
-import 'core/services/pack_api_service.dart';
-import 'core/providers/auth_provider.dart';
-import 'core/providers/post_provider.dart';
-import 'core/providers/home_provider.dart';
-import 'core/providers/store_provider.dart';
-import 'core/providers/pack_provider.dart';
-import 'core/routing/route_generator.dart';
-import 'presentation/auth/splash_screen.dart';
-import 'features/analytics/analytics_export.dart';
-import 'core/services/notification_badge_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+
+import 'core/constants/app_constants.dart';
+import 'core/providers/auth_provider.dart';
+import 'core/providers/home_provider.dart';
+import 'core/providers/pack_provider.dart';
+import 'core/providers/post_provider.dart';
+import 'core/providers/store_provider.dart';
+import 'core/providers/wallet_provider.dart';
+import 'core/routing/route_generator.dart';
+import 'core/services/notification_badge_service.dart';
+import 'core/services/pack_api_service.dart';
+import 'core/services/storage_service.dart';
+import 'core/services/store_api_service.dart';
+import 'core/theme/app_theme.dart';
+import 'features/analytics/analytics_export.dart';
+import 'presentation/auth/splash_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -37,7 +39,7 @@ const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -65,8 +67,7 @@ void main() async {
     NotificationBadgeService.instance.refresh();
     final title =
         message.notification?.title ?? message.data['title']?.toString();
-    final body =
-        message.notification?.body ?? message.data['body']?.toString();
+    final body = message.notification?.body ?? message.data['body']?.toString();
     if ((title != null && title.isNotEmpty) ||
         (body != null && body.isNotEmpty)) {
       flutterLocalNotificationsPlugin.show(
@@ -98,7 +99,7 @@ void main() async {
   await StorageService.init();
   await NotificationBadgeService.instance.refresh();
   await NotificationBadgeService.instance.syncMissedUnreadToShade();
-  
+
   runApp(const DzLocalApp());
 }
 
@@ -112,21 +113,25 @@ class DzLocalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PostProvider()),
         ChangeNotifierProvider(create: (_) => HomeProvider()),
-        ChangeNotifierProvider(create: (_) => StoreProvider(apiService: StoreApiService())),
-        ChangeNotifierProvider(create: (_) => PackProvider(apiService: PackApiService())),
+        ChangeNotifierProvider(
+            create: (_) => StoreProvider(apiService: StoreApiService())),
+        ChangeNotifierProvider(
+            create: (_) => PackProvider(apiService: PackApiService())),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
-        
+
         // Localization
         locale: const Locale(
           AppConstants.arabicLanguageCode,
           AppConstants.algeriaCountryCode,
         ),
         supportedLocales: const [
-          Locale(AppConstants.arabicLanguageCode, AppConstants.algeriaCountryCode),
+          Locale(
+              AppConstants.arabicLanguageCode, AppConstants.algeriaCountryCode),
           Locale(AppConstants.englishLanguageCode, AppConstants.usCountryCode),
         ],
         localizationsDelegates: const [
@@ -134,12 +139,20 @@ class DzLocalApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        
+
         // Theme
         theme: AppTheme.lightTheme,
 
+        // Force LTR across the full app UI.
+        builder: (context, child) {
+          return Directionality(
+            textDirection: TextDirection.ltr,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+
         onGenerateRoute: onGenerateRoute,
-        
+
         // Start with Splash Screen
         home: const SplashScreen(),
       ),

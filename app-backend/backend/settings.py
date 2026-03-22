@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'ads',
     'notifications',
     'subscriptions',
+    'wallet',
     'analytics',
 ]
 
@@ -254,6 +255,20 @@ TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
 TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
 TWILIO_WHATSAPP_CONTENT_SID = os.environ.get('TWILIO_WHATSAPP_CONTENT_SID', '')
 TWILIO_OTP_CHANNEL = os.environ.get('TWILIO_OTP_CHANNEL', 'whatsapp')  # whatsapp | sms | both
+
+# Coin economy settings
+INITIAL_SIGNUP_COINS = int(os.environ.get('INITIAL_SIGNUP_COINS', '40'))
+COST_PRODUCT_POST_COINS = int(os.environ.get('COST_PRODUCT_POST_COINS', '4'))
+COST_PACK_POST_COINS = int(os.environ.get('COST_PACK_POST_COINS', '2'))
+COST_PROMOTION_POST_COINS = int(os.environ.get('COST_PROMOTION_POST_COINS', '2'))
+COST_AD_VIEW_COIN = int(os.environ.get('COST_AD_VIEW_COIN', '1'))
+
+COIN_PACKS = [
+    {'id': 'pack_50', 'coins': 50, 'price': '500'},
+    {'id': 'pack_120', 'coins': 120, 'price': '1000'},
+    {'id': 'pack_200', 'coins': 200, 'price': '1500'},
+    {'id': 'pack_500', 'coins': 500, 'price': '3500'},
+]
 
 # Initialize Firebase Admin SDK
 import firebase_admin

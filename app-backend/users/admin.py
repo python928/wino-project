@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User, Follower, PhoneOTP, StoreReport
+from .models import User, Follower, PhoneOTP, StoreReport, SystemSettings
 
 
 @admin.register(User)
@@ -47,3 +47,14 @@ class StoreReportAdmin(admin.ModelAdmin):
 	list_display = ('reporter', 'store', 'reason', 'status', 'created_at')
 	search_fields = ('reporter__username', 'store__username', 'details')
 	list_filter = ('reason', 'status')
+
+@admin.register(SystemSettings)
+class SystemSettingsAdmin(admin.ModelAdmin):
+	list_display = ('first_login_coins', 'daily_login_coins')
+
+	# Prevent adding more than one setting
+	def has_add_permission(self, request):
+		from .models import SystemSettings
+		if SystemSettings.objects.exists():
+			return False
+		return super().has_add_permission(request)

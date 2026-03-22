@@ -46,6 +46,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isInitialHomeLoad = true;
+
   bool _isLikelyArabic(String text) {
     return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
   }
@@ -82,11 +84,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final homeProvider = context.read<HomeProvider>();
     final postProvider = context.read<PostProvider>();
     final analyticsProvider = context.read<AnalyticsProvider>();
-    await Future.wait([
-      homeProvider.loadHomeData(),
-      postProvider.refreshMarketplaceFeed(wilayaCode: _selectedWilaya),
-      analyticsProvider.fetchRecommendations(limit: 80),
-    ]);
+
+    // Fetch in top-to-bottom screen order to keep section loading predictable.
+    await postProvider.loadAdOffers(wilayaCode: _selectedWilaya);
+    await postProvider.loadOffers();
+    await homeProvider.loadRecentProducts();
+    await homeProvider.loadFeaturedPacks();
+    await homeProvider.loadFeaturedStores();
+    await analyticsProvider.fetchRecommendations(limit: 80);
+
+    if (_isInitialHomeLoad && mounted) {
+      setState(() {
+        _isInitialHomeLoad = false;
+      });
+    }
   }
 
   void _initLocationFromProfile() {
@@ -379,11 +390,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
 
                 // Recommendations (hidden for guests — AnalyticsProvider returns [] when not logged in)
-                RecommendationsList(
-                  onProductTap: _navigateToProductDetails,
-                  onOfferTap: (offer) => _navigateToPromotionDetails(offer,
-                      placement: 'home_feed'),
-                ),
+                _isInitialHomeLoad
+                    ? _buildRecommendationsSkeleton()
+                    : RecommendationsList(
+                        onProductTap: _navigateToProductDetails,
+                        onOfferTap: (offer) => _navigateToPromotionDetails(
+                            offer,
+                            placement: 'home_feed'),
+                      ),
                 const SizedBox(height: AppTheme.spacing24),
 
                 _buildAdBannerBlock(),
@@ -487,10 +501,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentProductsBlock() {
-    return Consumer<HomeProvider>(
-      builder: (context, homeProvider, child) {
+    return Consumer2<HomeProvider, PostProvider>(
+      builder: (context, homeProvider, postProvider, child) {
+        // Filter to exclude products with active discounts
+        final allProducts = homeProvider.recentProducts;
+        final productsWithoutDiscounts = allProducts
+            .where((p) => !postProvider.isProductDiscounted(p))
+            .toList();
         final products =
-            _filterPostsForActiveLocation(homeProvider.recentProducts);
+            _filterPostsForActiveLocation(productsWithoutDiscounts);
         final hasProducts = products.isNotEmpty;
         final isLoading = homeProvider.isLoadingProducts;
         final hasError = homeProvider.productsError != null;
@@ -510,7 +529,91 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppTheme.spacing16),
             _buildRecentProductsSection(),
             const SizedBox(height: AppTheme.spacing24),
+
+            // Discounted Products Section
+            _buildDiscountedProductsBlock(),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDiscountedProductsBlock() {
+    return Consumer2<HomeProvider, PostProvider>(
+      builder: (context, homeProvider, postProvider, child) {
+        // Get only products with active discounts
+        final allProducts = homeProvider.recentProducts;
+        final discountedProducts = allProducts
+            .where((p) => postProvider.isProductDiscounted(p))
+            .toList();
+        final products = _filterPostsForActiveLocation(discountedProducts);
+
+        if (products.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Products with Discounts', 'See All', () {
+              Navigator.pushNamed(
+                context,
+                Routes.searchTab,
+                arguments: {'type': 'Discounted', 'autoSearch': true},
+              );
+            }),
+            const SizedBox(height: AppTheme.spacing16),
+            _buildDiscountedProductsSection(),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDiscountedProductsSection() {
+    return Consumer2<HomeProvider, PostProvider>(
+      builder: (context, homeProvider, postProvider, child) {
+        // Get only products with active discounts
+        final allProducts = homeProvider.recentProducts;
+        final discountedProducts = allProducts
+            .where((p) => postProvider.isProductDiscounted(p))
+            .toList();
+        final products = _filterPostsForActiveLocation(discountedProducts);
+
+        if (products.isEmpty) {
+          return _buildCompactEmptyState(
+            height: 220,
+            message: _radiusKm != null
+                ? 'No discounted products within ${_radiusKm!.toInt()} km'
+                : (_isCityFilterActive
+                    ? 'No discounted products in this location'
+                    : 'No discounted products available at the moment'),
+          );
+        }
+
+        return SizedBox(
+          height: 280,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(
+                horizontal: CardConstants.gridHorizontalPadding),
+            scrollDirection: Axis.horizontal,
+            itemCount: products.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: CardConstants.gridCrossAxisSpacing),
+            itemBuilder: (context, index) {
+              return SizedBox(
+                width: _gridCardWidth(context),
+                child: ProductCard(
+                  product: products[index],
+                  userLat: _userLat,
+                  userLng: _userLng,
+                  onTap: () => _navigateToProductDetails(products[index]),
+                  onFavoriteTap: () => _toggleFavorite(products[index]),
+                ),
+              );
+            },
+          ),
         );
       },
     );
@@ -548,14 +651,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeaturedStoresBlock() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
-        final stores =
-            _filterStoresForActiveLocation(homeProvider.featuredStores);
-        final hasStores = stores.isNotEmpty;
-        final isLoading = homeProvider.isLoadingStores;
-        final hasError = homeProvider.storesError != null;
-        if (!hasStores && !isLoading && !hasError) {
-          return const SizedBox.shrink();
-        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -568,6 +663,7 @@ class _HomeScreenState extends State<HomeScreen> {
             }),
             const SizedBox(height: AppTheme.spacing16),
             _buildFeaturedStoresSection(),
+            const SizedBox(height: AppTheme.spacing24),
           ],
         );
       },
@@ -693,12 +789,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildRecommendationsSkeleton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const ShimmerBox(width: 180, height: 20, borderRadius: 8),
+            ],
+          ),
+        ),
+        ShimmerLoading(
+          child: SizedBox(
+            height: 280,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: CardConstants.gridHorizontalPadding,
+              ),
+              itemCount: 4,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: CardConstants.gridCrossAxisSpacing),
+              itemBuilder: (context, index) => Container(
+                width: _gridCardWidth(context),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: const ShimmerBox(width: 80, height: 18, borderRadius: 8),
+        ),
+        const StoreListSkeleton(itemCount: 3),
+      ],
+    );
+  }
+
   // ==================== Featured Stores Section ====================
 
   Widget _buildFeaturedStoresSection() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
-        if (homeProvider.isLoadingStores &&
+        if ((homeProvider.isLoading || homeProvider.isLoadingStores) &&
             homeProvider.featuredStores.isEmpty) {
           return const StoreListSkeleton(itemCount: 3);
         }
@@ -1083,8 +1232,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Recent Products Section ====================
 
   Widget _buildRecentProductsSection() {
-    return Consumer<HomeProvider>(
-      builder: (context, homeProvider, child) {
+    return Consumer2<HomeProvider, PostProvider>(
+      builder: (context, homeProvider, postProvider, child) {
         if (homeProvider.isLoadingProducts &&
             homeProvider.recentProducts.isEmpty) {
           return _buildProductsShimmer();
@@ -1100,8 +1249,13 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
+        // Filter to exclude products with active discounts
+        final allProducts = homeProvider.recentProducts;
+        final productsWithoutDiscounts = allProducts
+            .where((p) => !postProvider.isProductDiscounted(p))
+            .toList();
         final products =
-            _filterPostsForActiveLocation(homeProvider.recentProducts);
+            _filterPostsForActiveLocation(productsWithoutDiscounts);
         if (products.isEmpty) {
           return _buildCompactEmptyState(
             height: 220,
@@ -1169,7 +1323,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, postProvider, child) {
         final ads = _filterOffersForActiveLocation(postProvider.adOffers);
         if (postProvider.isLoadingOffers && ads.isEmpty) {
-          return const SizedBox(height: 220);
+          return _buildAdBannerShimmer();
         }
         if (ads.isEmpty) {
           return const SizedBox.shrink();
@@ -1527,6 +1681,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildAdBannerShimmer() {
+    return ShimmerLoading(
+      child: SizedBox(
+        height: 228,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
+          scrollDirection: Axis.horizontal,
+          itemCount: 2,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            return Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerBox(height: 16, width: 140, borderRadius: 8),
+                    SizedBox(height: 10),
+                    ShimmerBox(height: 12, width: 200, borderRadius: 8),
+                    Spacer(),
+                    ShimmerBox(height: 120, borderRadius: 22),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   // ==================== Offers Section ====================
 
   Widget _buildOffersSection() {
@@ -1699,6 +1890,24 @@ class _HomeScreenState extends State<HomeScreen> {
       oldPrice: offer.product.price,
       discountPercentage: offer.discountPercentage,
     );
+
+    if (offer.kind == 'advertising') {
+      // Sponsored ad: don't count as a normal product click.
+      Navigator.pushNamed(
+        context,
+        Routes.productDetails,
+        arguments: ProductDetailsArgs(
+          product: productWithPromotion,
+          sourceSurface: 'ads',
+          discoveryMode: 'advertising',
+          distanceKm: _radiusKm,
+          wilayaCode: _isCityFilterActive ? _selectedWilaya : null,
+          searchQuery: null,
+        ),
+      );
+      return;
+    }
+
     _navigateToProductDetails(productWithPromotion);
   }
 

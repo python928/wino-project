@@ -38,6 +38,7 @@ class AdCampaign(models.Model):
 	description = models.TextField(blank=True)
 	percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
 	placement = models.CharField(max_length=20, choices=PLACEMENT_CHOICES, default=PLACEMENT_HOME_TOP)
+	display_hours = models.JSONField(default=list, blank=True)
 	audience_mode = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
 	age_from = models.PositiveIntegerField(null=True, blank=True)
 	age_to = models.PositiveIntegerField(null=True, blank=True)
@@ -51,6 +52,7 @@ class AdCampaign(models.Model):
 	max_impressions = models.PositiveIntegerField(null=True, blank=True)
 	unique_viewers_count = models.PositiveIntegerField(default=0)
 	impressions_count = models.PositiveIntegerField(default=0)
+	delivered_views_count = models.PositiveIntegerField(default=0)
 	clicks_count = models.PositiveIntegerField(default=0)
 	created_at = models.DateTimeField(auto_now_add=True)
 

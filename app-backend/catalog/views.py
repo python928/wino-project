@@ -130,7 +130,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 		return queryset
 
 	def perform_create(self, serializer):
-		ensure_can_create_post(self.request.user)
+		ensure_can_create_post(self.request.user, 'product')
 		# Prevent store spoofing: the authenticated user IS the store
 		instance = serializer.save(store=self.request.user)
 		_trigger_new_post_notification(self.request.user, instance, 'product')
@@ -165,7 +165,7 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 
 class PackViewSet(viewsets.ModelViewSet):
 	# IMPORTANT: your Pack model should now select_related('store') only
-	queryset = Pack.objects.select_related('merchant').prefetch_related('images', 'pack_products')
+	queryset = Pack.objects.select_related('merchant').prefetch_related('images', 'pack_products').order_by('-created_at', '-id')
 	serializer_class = PackSerializer
 	filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
 	ordering_fields = ['created_at', 'discount']
@@ -191,7 +191,7 @@ class PackViewSet(viewsets.ModelViewSet):
 		return queryset
 
 	def perform_create(self, serializer):
-		ensure_can_create_post(self.request.user)
+		ensure_can_create_post(self.request.user, 'pack')
 		# Prevent merchant_id spoofing
 		instance = serializer.save(merchant=self.request.user)
 		_trigger_new_post_notification(self.request.user, instance, 'pack')
@@ -425,7 +425,23 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 		return [permissions.IsAuthenticated()]
 
 	def perform_create(self, serializer):
-		serializer.save(user=self.request.user)
+		favorite = serializer.save(user=self.request.user)
+		try:
+			from analytics.utils import log_user_event
+			log_user_event(
+				self.request.user,
+				'favorite',
+				product=getattr(favorite, 'product', None),
+				metadata={
+					'discovery_mode': self.request.data.get('discovery_mode'),
+					'distance_km': self.request.data.get('distance_km'),
+					'wilaya_code': self.request.data.get('wilaya_code'),
+					'search_query': str(self.request.data.get('search_query') or '').strip().lower(),
+				},
+				session_id=str(self.request.data.get('session_id') or ''),
+			)
+		except Exception:
+			pass
 
 	def create(self, request, *args, **kwargs):
 		# Check if already favorited
@@ -505,29 +521,84 @@ class PromotionViewSet(viewsets.ModelViewSet):
 	def get_queryset(self):
 		qs = super().get_queryset()
 		now = timezone.now()
-		if self.action in ['list', 'retrieve']:
-			qs = qs.filter(
-				is_active=True,
-			).filter(
-				# null start_date means starts immediately
-				models.Q(start_date__isnull=True) | models.Q(start_date__lte=now)
-			).filter(
-				# null end_date means open-ended promotion
-				models.Q(end_date__isnull=True) | models.Q(end_date__gte=now)
-			)
 		store_id = self.request.query_params.get('store')
+		include_inactive_raw = str(
+			self.request.query_params.get('include_inactive', 'false')
+		).lower()
+		include_inactive = include_inactive_raw in ['1', 'true', 'yes', 'on']
+
+		# Owner-only bypass for profile/history screens.
+		allow_include_inactive = False
+		if include_inactive and store_id and self.request.user.is_authenticated:
+			try:
+				allow_include_inactive = int(store_id) == int(self.request.user.id)
+			except Exception:
+				allow_include_inactive = False
+		
+		print(f"\n[PROMOTION_TIME_DEBUG] Server current time: {now} (ISO: {now.isoformat()})")
+		print(
+			f"[PROMOTION_TIME_DEBUG] Request params: store={store_id}, include_inactive={include_inactive}, owner_override={allow_include_inactive}"
+		)
+		
+		if self.action in ['list', 'retrieve']:
+			if not allow_include_inactive:
+				qs = qs.filter(
+					is_active=True,
+				).filter(
+					# null start_date means starts immediately
+					models.Q(start_date__isnull=True) | models.Q(start_date__lte=now)
+				).filter(
+					# null end_date means open-ended promotion
+					models.Q(end_date__isnull=True) | models.Q(end_date__gte=now)
+				)
+				
+				# Debug: Log all promotions (filtered and unfiltered)
+				all_promos = super().get_queryset().filter(is_active=True).order_by('-created_at')
+				print(f"[PROMOTION_TIME_DEBUG] Total active promotions: {all_promos.count()}")
+				for p in all_promos[:10]:
+					status = "✓ SHOWING" if qs.filter(id=p.id).exists() else "✗ HIDDEN"
+					print(f"[PROMOTION_TIME_DEBUG]   Promo #{p.id}: start={p.start_date}, end={p.end_date}, created={p.created_at} → {status}")
+			else:
+				print("[PROMOTION_TIME_DEBUG] Owner include_inactive override enabled: returning promotions regardless of schedule window")
+		
 		if store_id:
 			qs = qs.filter(store_id=store_id)
+		
 		product_id = self.request.query_params.get('product')
 		if product_id:
 			qs = qs.filter(product_id=product_id)
+		
 		return qs
 
 	def perform_create(self, serializer):
-		ensure_can_create_post(self.request.user)
+		ensure_can_create_post(self.request.user, 'promotion')
 		start_date = serializer.validated_data.get('start_date')
 		end_date = serializer.validated_data.get('end_date')
-		features = enforce_promotion_constraints(
+		
+		# Debug logging for time validation
+		now = timezone.now()
+		print(f'[PROMOTION_CREATE] ======================================')
+		print(f'[PROMOTION_CREATE] Server current time: {now}')
+		print(f'[PROMOTION_CREATE] Server time ISO: {now.isoformat()}')
+		print(f'[PROMOTION_CREATE] Start Date: {start_date}')
+		if start_date:
+			print(f'[PROMOTION_CREATE] Start Date ISO: {start_date.isoformat()}')
+			diff = start_date - now
+			print(f'[PROMOTION_CREATE] Status vs server: {("starts in future" if diff.total_seconds() > 0 else "already started")}')
+			print(f'[PROMOTION_CREATE] Time diff: {diff.total_seconds()} seconds')
+		else:
+			print(f'[PROMOTION_CREATE] Start Date: None (starts immediately)')
+		print(f'[PROMOTION_CREATE] End Date: {end_date}')
+		if end_date:
+			print(f'[PROMOTION_CREATE] End Date ISO: {end_date.isoformat()}')
+			diff = end_date - now
+			print(f'[PROMOTION_CREATE] Status vs server: {("expires in future" if diff.total_seconds() > 0 else "already expired")}')
+			print(f'[PROMOTION_CREATE] Time diff: {diff.total_seconds()} seconds')
+		else:
+			print(f'[PROMOTION_CREATE] End Date: None (no expiry)')
+		print(f'[PROMOTION_CREATE] ======================================')
+		
+		enforce_promotion_constraints(
 			self.request.user,
 			start_date=start_date,
 			end_date=end_date,

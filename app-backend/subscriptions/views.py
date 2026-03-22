@@ -23,6 +23,7 @@ from .services import (
 	FREE_POST_LIMIT,
 	build_merchant_dashboard,
 	get_active_subscription,
+	get_coin_wallet_snapshot,
 	get_current_posts_count,
 	get_post_limit,
 	bootstrap_default_subscription_plans,
@@ -102,6 +103,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 				'post_limit': limit,
 				'used_posts': used,
 				'remaining_posts': max(limit - used, 0),
+				'coin_wallet': get_coin_wallet_snapshot(request.user),
 				'plan_features': plan_features,
 				'active_subscription': MerchantSubscriptionSerializer(active).data
 				if active is not None
@@ -117,6 +119,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 		date_from = request.query_params.get('date_from')
 		date_to = request.query_params.get('date_to')
 		period = request.query_params.get('period')
+		debug = str(request.query_params.get('debug') or '').strip().lower() in {'1', 'true', 'yes'}
 		try:
 			parsed_from, parsed_to = parse_dashboard_date_filters(date_from, date_to, period=period)
 		except serializers.ValidationError as exc:
@@ -131,6 +134,7 @@ class MerchantSubscriptionViewSet(viewsets.ModelViewSet):
 				period=period,
 				parsed_from=parsed_from,
 				parsed_to=parsed_to,
+				debug=debug,
 			)
 		)
 

@@ -11,6 +11,7 @@ class ProductCard extends BaseItemCard {
   final VoidCallback? onFavoriteTap;
   final double? userLat;
   final double? userLng;
+  final String? customBadge;
 
   ProductCard({
     super.key,
@@ -22,6 +23,7 @@ class ProductCard extends BaseItemCard {
     bool showStoreName = true,
     this.userLat,
     this.userLng,
+    this.customBadge,
   }) : super(
           title: product.title,
           imageUrl: product.image,
@@ -29,6 +31,7 @@ class ProductCard extends BaseItemCard {
           oldPrice: product.oldPrice,
           hidePrice: product.hidePrice,
           discountPercentage: _calculateDiscountPercent(product),
+          customBadge: customBadge,
           rating: product.rating,
           reviewCount: product.reviewCount,
           bottomLeftText:
@@ -67,6 +70,36 @@ class ProductCard extends BaseItemCard {
   }
 
   @override
+  Widget? buildCustomBottomInfo(BuildContext context) {
+    // Show custom badge text as status info if present
+    if (customBadge != null && customBadge!.isNotEmpty) {
+      final isUnavailable =
+          customBadge!.toLowerCase().contains('not available');
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isUnavailable
+              ? const Color(0xFFFFF2E2).withOpacity(0.8)
+              : const Color(0xFFFFF9E6).withOpacity(0.8),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          customBadge!,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isUnavailable
+                ? const Color(0xFF8A4B08)
+                : const Color(0xFF8A4B08),
+          ),
+        ),
+      );
+    }
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Override to provide context-aware navigation
     return BaseItemCard(
@@ -76,6 +109,7 @@ class ProductCard extends BaseItemCard {
       oldPrice: oldPrice,
       hidePrice: hidePrice,
       discountPercentage: discountPercentage,
+      customBadge: customBadge,
       rating: rating,
       reviewCount: reviewCount,
       bottomLeftText: bottomLeftText,

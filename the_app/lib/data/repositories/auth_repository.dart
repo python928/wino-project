@@ -1,11 +1,34 @@
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter/foundation.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
+  static Future<Map<String, dynamic>> _attachWalletCoins(
+    Map<String, dynamic> userData,
+  ) async {
+    try {
+      final wallet = await ApiService.get(ApiConfig.wallet);
+      if (wallet is Map) {
+        final rawCoins = wallet['coins_balance'];
+        final parsedCoins = rawCoins is int
+            ? rawCoins
+            : int.tryParse(rawCoins?.toString() ?? '');
+        if (parsedCoins != null) {
+          final merged = Map<String, dynamic>.from(userData);
+          merged['coins_balance'] = parsedCoins;
+          return merged;
+        }
+      }
+    } catch (_) {
+      // Keep auth flow resilient if wallet endpoint is temporarily unavailable.
+    }
+    return userData;
+  }
+
   static Future<Map<String, dynamic>> login(
       String usernameOrEmail, String password) async {
     try {
@@ -32,10 +55,13 @@ class AuthRepository {
 
       // Now fetch profile (token is saved, so ApiService can use it)
       final profileJson = await ApiService.get('${ApiConfig.users}$userId/');
+      final profileWithCoins = await _attachWalletCoins(
+        Map<String, dynamic>.from(profileJson as Map),
+      );
 
       late final User user;
       try {
-        user = User.fromJson(profileJson);
+        user = User.fromJson(profileWithCoins);
       } catch (e) {
         print('--- FAILED TO PARSE USER FROM JSON ---');
         print('Error: $e');
@@ -75,8 +101,11 @@ class AuthRepository {
       final userData = (response['user'] is Map<String, dynamic>)
           ? response['user'] as Map<String, dynamic>
           : (await ApiService.get(ApiConfig.profile) as Map<String, dynamic>);
+      final userWithCoins = await _attachWalletCoins(
+        Map<String, dynamic>.from(userData),
+      );
 
-      final user = User.fromJson(userData);
+      final user = User.fromJson(userWithCoins);
 
       return {
         'user': user,
@@ -121,7 +150,10 @@ class AuthRepository {
       final userData = (response['user'] is Map<String, dynamic>)
           ? response['user'] as Map<String, dynamic>
           : (await ApiService.get(ApiConfig.profile) as Map<String, dynamic>);
-      final user = User.fromJson(userData);
+      final userWithCoins = await _attachWalletCoins(
+        Map<String, dynamic>.from(userData),
+      );
+      final user = User.fromJson(userWithCoins);
 
       return {
         'user': user,
@@ -141,9 +173,12 @@ class AuthRepository {
       final decoded = JwtDecoder.decode(accessToken);
       final userId = decoded['user_id'];
       final response = await ApiService.get('${ApiConfig.users}$userId/');
+      final profileWithCoins = await _attachWalletCoins(
+        Map<String, dynamic>.from(response as Map),
+      );
 
       try {
-        return User.fromJson(response);
+        return User.fromJson(profileWithCoins);
       } catch (e) {
         debugPrint('--- FAILED TO PARSE USER FROM JSON (getProfile) ---');
         debugPrint('Error: $e');
@@ -165,7 +200,10 @@ class AuthRepository {
 
       final response =
           await ApiService.patch('${ApiConfig.users}$userId/', data);
-      return User.fromJson(response);
+      final profileWithCoins = await _attachWalletCoins(
+        Map<String, dynamic>.from(response as Map),
+      );
+      return User.fromJson(profileWithCoins);
     } catch (e) {
       throw Exception('Failed to update profile: $e');
     }

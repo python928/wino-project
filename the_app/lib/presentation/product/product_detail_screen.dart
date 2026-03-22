@@ -1,15 +1,18 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kDebugMode;
-import '../../data/models/post_model.dart';
-import '../../core/routing/routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/services/api_service.dart';
-import '../../core/services/storage_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/config/api_config.dart';
-import '../../core/utils/helpers.dart';
+import '../../core/routing/routes.dart';
 import '../../core/services/analytics_api_service.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../data/models/post_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
 import '../shared_widgets/contact_action_row.dart';
@@ -112,6 +115,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     }
     _isFavorited = widget.product.isFavorited;
+    if (StorageService.isLoggedIn() &&
+        (widget.sourceSurface == 'ads' ||
+            widget.discoveryMode == 'advertising')) {
+      unawaited(
+        _analyticsApiService.logInteraction(
+          action: 'click',
+          productId: widget.product.id,
+          storeId: widget.product.storeId > 0 ? widget.product.storeId : null,
+          categoryId: widget.product.categoryId,
+          metadata: _analyticsMetadata(),
+          sessionId: _analyticsSessionId,
+          flushNow: true,
+        ),
+      );
+    }
+    final cachedFollow =
+        FollowChangeNotifier.getFollowState(widget.product.storeId);
+    if (cachedFollow != null) {
+      _isFollowingStore = cachedFollow;
+    }
     _loadFollowState();
     _loadStoreDetails();
   }
@@ -262,6 +285,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(widget.product.storeId, isFollowing);
     } catch (_) {
       // ignore
     } finally {
@@ -312,6 +336,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       final payload = <String, dynamic>{
         'store': widget.product.storeId,
+        'product_id': widget.product.id,
         'category_id': widget.product.categoryId,
         'session_id': _analyticsSessionId,
       };
@@ -320,6 +345,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       final isFollowing = (resp is Map && resp['is_following'] == true);
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(widget.product.storeId, isFollowing);
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
@@ -473,6 +499,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
+                            if (StorageService.isLoggedIn()) {
+                              unawaited(
+                                _analyticsApiService.logInteraction(
+                                  action: 'store_click',
+                                  productId: widget.product.id,
+                                  storeId: widget.product.storeId,
+                                  categoryId: widget.product.categoryId,
+                                  metadata: _analyticsMetadata(),
+                                  sessionId: _analyticsSessionId,
+                                  flushNow: true,
+                                ),
+                              );
+                            }
                             Navigator.pushNamed(
                               context,
                               Routes.store,

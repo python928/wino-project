@@ -49,6 +49,7 @@ class InteractionLog(models.Model):
 	ACTION_CHOICES = (
 		('view', 'View Product'),
 		('click', 'Click Product'),
+		('store_click', 'Click Store'),
 		('promotion_click', 'Click Promotion'),
 		('search', 'Search Keyword'),
 		('filter_price', 'Filter by Price'),

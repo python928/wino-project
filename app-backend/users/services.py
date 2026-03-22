@@ -129,3 +129,44 @@ def send_otp_message(phone: str, code: str) -> None:
 	# Temporary testing mode: disable Twilio delivery.
 	_ = phone, code
 	return
+
+from datetime import timedelta
+from django.utils import timezone
+from django.db import transaction
+
+
+def check_and_grant_daily_coins(user):
+	"""Grants daily login coins if 24 hours have passed since the last grant and balance is below target."""
+	from .models import SystemSettings
+
+	now = timezone.now()
+	# Early exit if we already granted within 24h
+	if user.last_daily_coin_grant and (now - user.last_daily_coin_grant) < timedelta(hours=24):
+		return
+
+	settings = SystemSettings.get_settings()
+	target = settings.daily_login_coins
+
+	with transaction.atomic():
+		from .models import User
+		locked_user = User.objects.select_for_update().get(id=user.id)
+
+		# Check again under lock
+		if locked_user.last_daily_coin_grant and (now - locked_user.last_daily_coin_grant) < timedelta(hours=24):
+			return
+
+		current_balance = locked_user.coins_balance
+		if current_balance < target:
+			from wallet.services import grant_coins
+			diff = target - current_balance
+			grant_coins(
+				locked_user,
+				amount=diff,
+				reason='daily_login',
+				related_model='User',
+				related_id=locked_user.id,
+			)
+
+		locked_user.last_daily_coin_grant = now
+		locked_user.last_login = now
+		locked_user.save(update_fields=['last_daily_coin_grant', 'last_login'])

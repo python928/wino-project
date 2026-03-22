@@ -18,6 +18,28 @@ class PostRepository {
     return [];
   }
 
+  static String _toUtcIso(DateTime value) {
+    // Always send UTC with Z suffix to avoid server interpreting local naive time as UTC.
+    return value.toUtc().toIso8601String();
+  }
+
+  static int _parsePercentage(dynamic raw) {
+    if (raw == null) return 0;
+    if (raw is int) return raw;
+    if (raw is double) return raw.round();
+    final text = raw.toString().trim();
+    final asDouble = double.tryParse(text);
+    if (asDouble != null) return asDouble.round();
+    return int.tryParse(text) ?? 0;
+  }
+
+  static DateTime? _parseDateTimeToLocal(dynamic raw) {
+    if (raw == null) return null;
+    final parsed = DateTime.tryParse(raw.toString());
+    if (parsed == null) return null;
+    return parsed.toLocal();
+  }
+
   static Future<Map<int, String>> _loadStoresById() async {
     final resp = await ApiService.get(ApiConfig.users);
     final list = _extractList(resp);
@@ -58,7 +80,7 @@ class PostRepository {
         if (!isActive) continue;
 
         final productId = promo['product'];
-        final percentage = int.tryParse(promo['percentage'].toString()) ?? 0;
+        final percentage = _parsePercentage(promo['percentage']);
         if (productId != null) map[productId] = percentage;
       }
       return map;
@@ -308,11 +330,22 @@ class PostRepository {
     String? wilayaCode,
   }) async {
     try {
-      final isAdsRequest = (kind ?? '').trim().toLowerCase() == 'advertising';
+      final requestedKind = (kind ?? '').trim().toLowerCase();
+      final isAdsRequest = requestedKind == 'advertising';
       final query = <String, String>{};
+      // Backwards compat: if authorId looks numeric and storeId wasn't provided, treat it as storeId.
+      final int? authorStoreId = int.tryParse(authorId ?? '');
+      final int? filterStoreId = storeId ?? authorStoreId;
+
+      if (filterStoreId != null) {
+        query['store'] = '$filterStoreId';
+      }
+      if (includeInactive) {
+        query['include_inactive'] = 'true';
+      }
       if (!isAdsRequest && kind != null && kind.isNotEmpty)
         query['kind'] = kind;
-      if (placement != null && placement.isNotEmpty) {
+      if (!isAdsRequest && placement != null && placement.isNotEmpty) {
         query['placement'] = placement;
       }
       if (wilayaCode != null && wilayaCode.isNotEmpty) {
@@ -323,6 +356,8 @@ class PostRepository {
       final url = query.isEmpty
           ? baseUrl
           : '$baseUrl?${Uri(queryParameters: query).query}';
+      AppLogger.info(
+          'Repository: getOffers request url=$url kind=$requestedKind includeInactive=$includeInactive storeId=$filterStoreId');
       final promotionsResp = await ApiService.get(url);
       AppLogger.info('Repository: Promotions response: $promotionsResp');
       final promos = _extractList(promotionsResp);
@@ -357,10 +392,6 @@ class PostRepository {
       }
 
       final offers = <Offer>[];
-
-      // Backwards compat: if authorId looks numeric and storeId wasn't provided, treat it as storeId.
-      final int? authorStoreId = int.tryParse(authorId ?? '');
-      final int? filterStoreId = storeId ?? authorStoreId;
 
       final Map<int, Post> productCache = {};
 
@@ -469,29 +500,56 @@ class PostRepository {
           continue;
         }
 
-        int percentage = int.tryParse(
-              (promo['percentage'] ??
-                      promo['discount_percentage'] ??
-                      promo['discountPercentage'] ??
-                      promo['discount'] ??
-                      0)
-                  .toString(),
-            ) ??
-            0;
+        int percentage = _parsePercentage(
+          promo['percentage'] ??
+              promo['discount_percentage'] ??
+              promo['discountPercentage'] ??
+              promo['discount'] ??
+              0,
+        );
         AppLogger.info(
             'Repository: Promo ${promo['id']} percentage=$percentage');
         final promoKind =
             (promo['kind'] ?? (isAdsRequest ? 'advertising' : 'promotion'))
-                .toString();
+                .toString()
+                .toLowerCase();
+
+        // Enforce strict kind matching to avoid ad/promotion mixing glitches.
+        if (requestedKind.isNotEmpty && promoKind != requestedKind) {
+          continue;
+        }
         if (percentage < 0) percentage = 0;
         if (percentage > 100) percentage = 100;
 
-        // Allow 0% discounts to still show (some promotions might have other benefits)
-        // But default to at least showing something
-        if (percentage == 0 && promoKind != 'advertising') {
-          AppLogger.info(
-              'Repository: Promo ${promo['id']} has 0% discount, setting to 10%');
-          percentage = 10; // Default discount if not specified
+        final startDate = _parseDateTimeToLocal(
+          promo['start_date'] ??
+              promo['startDate'] ??
+              promo['start_time'] ??
+              promo['startTime'] ??
+              promo['starts_at'] ??
+              promo['startsAt'],
+        );
+        final endDate = _parseDateTimeToLocal(
+          promo['end_date'] ??
+              promo['endDate'] ??
+              promo['end_time'] ??
+              promo['endTime'] ??
+              promo['expires_at'] ??
+              promo['expiresAt'] ??
+              promo['ends_at'] ??
+              promo['endsAt'],
+        );
+
+        // For public feeds, hide offers outside schedule window on client too.
+        // This avoids brief flashes when backend responses race during refresh.
+        if (!shouldIncludeInactive) {
+          final now = DateTime.now();
+          if (startDate != null && now.isBefore(startDate)) {
+            continue;
+          }
+          if (endDate != null && now.isAfter(endDate)) {
+            continue;
+          }
         }
 
         final double newPrice =
@@ -504,11 +562,11 @@ class PostRepository {
             discountPercentage: percentage,
             newPrice: newPrice,
             isAvailable: isActive,
-            createdAt: DateTime.tryParse(
-                    (promo['created_at'] ?? '').toString()) ??
-                DateTime.now(),
-            startDate: DateTime.tryParse((promo['start_date'] ?? '').toString()),
-            endDate: DateTime.tryParse((promo['end_date'] ?? '').toString()),
+            createdAt:
+                DateTime.tryParse((promo['created_at'] ?? '').toString()) ??
+                    DateTime.now(),
+            startDate: startDate,
+            endDate: endDate,
             maxImpressions:
                 int.tryParse((promo['max_impressions'] ?? '').toString()),
             uniqueViewersCount:
@@ -517,6 +575,11 @@ class PostRepository {
                 int.tryParse((promo['remaining_impressions'] ?? '').toString()),
             kind: promoKind,
             placement: (promo['placement'] ?? 'home_top').toString(),
+            displayHours: ((promo['display_hours'] as List?)
+                    ?.map((e) => int.tryParse(e.toString()))
+                    .whereType<int>()
+                    .toList() ??
+                const []),
             audienceMode: (promo['audience_mode'] ?? 'all').toString(),
             impressionsCount:
                 int.tryParse((promo['impressions_count'] ?? '').toString()) ??
@@ -543,6 +606,7 @@ class PostRepository {
             targetPackName: packId != null ? product.title : null,
           ),
         );
+
         AppLogger.info(
             'Repository: Added offer ${promo['id']} for product ${product.title}');
       }
@@ -571,6 +635,8 @@ class PostRepository {
     int? ageTo,
     String geoMode = 'all',
     int? targetRadiusKm,
+    int? displayHour,
+    List<int>? displayHours,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -591,18 +657,21 @@ class PostRepository {
         'store': storeId,
         'percentage': discountPercentage,
         'is_active': isAvailable,
-        if (startDate != null) 'start_date': startDate.toIso8601String(),
-        if (endDate != null) 'end_date': endDate.toIso8601String(),
+        if (!isAd && startDate != null) 'start_date': _toUtcIso(startDate),
+        if (!isAd && endDate != null) 'end_date': _toUtcIso(endDate),
       };
 
       if (isAd) {
+        final resolvedDisplayHours =
+            displayHours ?? (displayHour != null ? <int>[displayHour] : null);
         payload.addAll({
           if (productId != null) 'product': productId,
           if (packId != null) 'pack': packId,
           'name': productId != null
               ? 'Ad for Product $productId'
               : 'Ad for Pack $packId',
-          'placement': placement,
+          if (resolvedDisplayHours != null)
+            'display_hours': resolvedDisplayHours,
           'audience_mode': audienceMode,
           'geo_mode': geoMode,
           'target_wilayas': targetWilayas,
@@ -675,8 +744,8 @@ class PostRepository {
         isAvailable: isAvailable,
         createdAt:
             DateTime.tryParse(resp['created_at'] ?? '') ?? DateTime.now(),
-        startDate: DateTime.tryParse((resp['start_date'] ?? '').toString()),
-        endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
+        startDate: _parseDateTimeToLocal(resp['start_date']),
+        endDate: _parseDateTimeToLocal(resp['end_date']),
         maxImpressions:
             int.tryParse((resp['max_impressions'] ?? '').toString()),
         uniqueViewersCount:
@@ -685,6 +754,11 @@ class PostRepository {
             int.tryParse((resp['remaining_impressions'] ?? '').toString()),
         kind: (resp['kind'] ?? kind).toString(),
         placement: (resp['placement'] ?? placement).toString(),
+        displayHours: ((resp['display_hours'] as List?)
+                ?.map((e) => int.tryParse(e.toString()))
+                .whereType<int>()
+                .toList() ??
+            const []),
         audienceMode: (resp['audience_mode'] ?? audienceMode).toString(),
         impressionsCount:
             int.tryParse((resp['impressions_count'] ?? '').toString()) ?? 0,
@@ -722,6 +796,8 @@ class PostRepository {
     int? ageTo,
     String? geoMode,
     int? targetRadiusKm,
+    int? displayHour,
+    List<int>? displayHours,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -735,11 +811,16 @@ class PostRepository {
       if (productId != null) payload['product'] = productId;
       if (isAd && packId != null) payload['pack'] = packId;
       if (isAvailable != null) payload['is_active'] = isAvailable;
-      if (startDate != null) payload['start_date'] = startDate.toIso8601String();
-      if (endDate != null) payload['end_date'] = endDate.toIso8601String();
+      if (!isAd && startDate != null)
+        payload['start_date'] = _toUtcIso(startDate);
+      if (!isAd && endDate != null) payload['end_date'] = _toUtcIso(endDate);
 
       if (isAd) {
-        if (placement != null) payload['placement'] = placement;
+        final resolvedDisplayHours =
+            displayHours ?? (displayHour != null ? <int>[displayHour] : null);
+        if (resolvedDisplayHours != null) {
+          payload['display_hours'] = resolvedDisplayHours;
+        }
         if (audienceMode != null) payload['audience_mode'] = audienceMode;
         if (targetWilayas != null) payload['target_wilayas'] = targetWilayas;
         if (targetCategories != null) {
@@ -762,9 +843,7 @@ class PostRepository {
       final resolvedPackId = resp['pack'] ?? resp['pack_id'] ?? packId;
       final product =
           resolvedProductId != null ? await getPost(resolvedProductId) : null;
-      final pct = discountPercentage ??
-          int.tryParse(resp['percentage'].toString()) ??
-          0;
+      final pct = discountPercentage ?? _parsePercentage(resp['percentage']);
       final double newPrice = product != null
           ? (product.price * (1 - (pct / 100))).toDouble()
           : 0.0;
@@ -805,8 +884,8 @@ class PostRepository {
         isAvailable: isAvailable ?? resp['is_active'] ?? true,
         createdAt:
             DateTime.tryParse(resp['created_at'] ?? '') ?? DateTime.now(),
-        startDate: DateTime.tryParse((resp['start_date'] ?? '').toString()),
-        endDate: DateTime.tryParse((resp['end_date'] ?? '').toString()),
+        startDate: _parseDateTimeToLocal(resp['start_date']),
+        endDate: _parseDateTimeToLocal(resp['end_date']),
         maxImpressions:
             int.tryParse((resp['max_impressions'] ?? '').toString()),
         uniqueViewersCount:
@@ -815,6 +894,11 @@ class PostRepository {
             int.tryParse((resp['remaining_impressions'] ?? '').toString()),
         kind: (resp['kind'] ?? 'promotion').toString(),
         placement: (resp['placement'] ?? 'home_top').toString(),
+        displayHours: ((resp['display_hours'] as List?)
+                ?.map((e) => int.tryParse(e.toString()))
+                .whereType<int>()
+                .toList() ??
+            const []),
         audienceMode:
             (resp['audience_mode'] ?? audienceMode ?? 'all').toString(),
         impressionsCount:

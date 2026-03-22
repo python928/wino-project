@@ -19,10 +19,21 @@
 - `catalog`: Categories, products, images, packs, reviews, promotions.
 - `notifications`: Persistent notifications + FCM device endpoints.
 - `subscriptions`: Subscription plans and subscriptions.
+- `wallet`: Coin balances, transactions ledger, and coin purchase/grant endpoints.
 
 ## API entrypoints
 - Auth: `/api/auth/token/`, `/api/auth/token/refresh/`, `/api/users/register/`
-- Routers: `/api/users/`, `/api/catalog/`, `/api/notifications/`, `/api/subscriptions/`
+- Routers: `/api/users/`, `/api/catalog/`, `/api/notifications/`, `/api/subscriptions/`, `/api/wallet/`
+
+## Monetization (Coins)
+- Post Coins are consumed when publishing products/packs/promotions.
+- Ad View Coins are consumed per delivered ad view; campaigns pause when balance reaches 0.
+- Wallet endpoints live under `/api/wallet/`.
+- `POST /api/wallet/buy/` creates a **pending** purchase request (coins are not granted immediately).
+- Admin approval credits coins:
+   - API: `POST /api/wallet/purchases/<purchase_id>/approve/`
+   - Admin panel: `Wallet > Coin Purchases > Approve selected pending purchases`
+- Wallet snapshot now includes both `recent_transactions` and `recent_purchases`.
 
 ## Notifications
  Notifications use FCM (fcm-django). Register devices via `/api/notifications/devices/` and ensure `FCM_SERVER_KEY` is set.

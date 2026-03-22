@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../core/config/api_config.dart';
+import '../../core/providers/wallet_provider.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_compact_action_button.dart';
 import '../../core/widgets/app_toggle_button.dart';
+import '../../data/models/offer_model.dart';
 import '../../data/models/post_model.dart';
-import '../../data/models/user_model.dart';
+import '../../data/repositories/post_repository.dart';
 import 'add_ad_screen.dart';
-import 'subscription_plans_screen.dart';
 
 class AdsDashboardScreen extends StatefulWidget {
   const AdsDashboardScreen({super.key});
@@ -32,13 +36,30 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
   DateTime? _dateTo;
   String? _selectedPeriod;
 
+  static const List<ToggleOption> _productSortOptions = [
+    ToggleOption(label: 'Advertised', value: 'advertised'),
+    ToggleOption(label: 'Views', value: 'views'),
+    ToggleOption(label: 'Ad Impr', value: 'ad_impressions'),
+    ToggleOption(label: 'Clicks', value: 'clicks'),
+  ];
+
+  String _productQuery = '';
+  String _productSort = 'advertised';
+  int _visibleProductStatsCount = 5;
+
   @override
   void initState() {
     super.initState();
     _reload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<WalletProvider>().fetchWallet(notifyStart: false);
+      }
+    });
   }
 
   void _reload() {
+    _visibleProductStatsCount = 5;
     _future = SubscriptionService.fetchMerchantDashboard(
       dateFrom: _dateFrom,
       dateTo: _dateTo,
@@ -95,10 +116,280 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     return index >= 0 ? index : 0;
   }
 
+  int get _selectedProductSortIndex {
+    final index = _productSortOptions.indexWhere(
+      (option) => option.value == _productSort,
+    );
+    return index >= 0 ? index : 0;
+  }
+
   int _asInt(dynamic value, [int fallback = 0]) {
     if (value is int) return value;
     if (value is double) return value.round();
     return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  double _asDouble(dynamic value, [double fallback = 0.0]) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  Widget _buildProductPerformanceSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Search products…',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _productQuery = value;
+                  _visibleProductStatsCount = 5;
+                });
+              },
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+            },
+            icon: const Icon(Icons.search, size: 20),
+            splashRadius: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductPerformanceRow(
+    Map<String, dynamic> stats,
+    Map<String, dynamic>? productInfo,
+    VoidCallback? onEditAd,
+  ) {
+    final name = (stats['product_name'] ?? 'Product').toString();
+    final views = _asInt(stats['ad_impressions']);
+    final clicks = _asInt(stats['ad_clicks']);
+    final favorites = _asInt(stats['ad_favorites']);
+    final adStaySec = _asDouble(stats['ad_stay_time_sec']);
+    final followsFromAds = _asInt(stats['follows_from_ads']);
+    final storeClicksFromAds = _asInt(stats['store_clicks_from_ads']);
+
+    final image = (productInfo?['image'] ?? '').toString();
+    final price = _asDouble(productInfo?['price']);
+    final hasActiveAd = productInfo?['has_active_ad'] == true;
+    final activeAdCount = _asInt(productInfo?['active_ad_count']);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBFCFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: image.isNotEmpty
+                      ? Image.network(image, fit: BoxFit.cover)
+                      : Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.inventory_2_outlined),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (productInfo != null)
+                      Text(
+                        Helpers.formatPrice(price),
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (hasActiveAd)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    activeAdCount > 1
+                        ? 'Advertising ($activeAdCount)'
+                        : 'Advertising',
+                    style: TextStyle(
+                      color: AppColors.primaryColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              if (hasActiveAd)
+                IconButton(
+                  onPressed: onEditAd,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  tooltip: 'Edit Ad',
+                  splashRadius: 18,
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _metricPill('Views', '$views'),
+              _metricPill('Clicks', '$clicks'),
+              _metricPill('Favorites', '$favorites'),
+              if (adStaySec > 0)
+                _metricPill('Stay', _formatDurationCompact(adStaySec)),
+              if (storeClicksFromAds > 0)
+                _metricPill('Store', '$storeClicksFromAds'),
+              if (followsFromAds > 0)
+                _metricPill('Follows (Ad)', '$followsFromAds'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDurationCompact(double seconds) {
+    final total = seconds.isFinite ? seconds.round() : 0;
+    if (total <= 0) return '0s';
+    if (total >= 3600) {
+      final h = total ~/ 3600;
+      final m = (total % 3600) ~/ 60;
+      return m > 0 ? '${h}h ${m}m' : '${h}h';
+    }
+    if (total >= 60) {
+      final m = total ~/ 60;
+      final s = total % 60;
+      return s > 0 ? '${m}m ${s}s' : '${m}m';
+    }
+    return '${total}s';
+  }
+
+  DateTime? _parseDateTimeToLocal(dynamic raw) {
+    if (raw == null) return null;
+    final parsed = DateTime.tryParse(raw.toString());
+    return parsed?.toLocal();
+  }
+
+  int _parsePercentage(dynamic raw) {
+    if (raw == null) return 0;
+    if (raw is int) return raw;
+    if (raw is double) return raw.round();
+    final text = raw.toString().trim();
+    final asDouble = double.tryParse(text);
+    if (asDouble != null) return asDouble.round();
+    return int.tryParse(text) ?? 0;
+  }
+
+  Future<void> _openEditAdForProduct({
+    required int productId,
+    required int campaignId,
+  }) async {
+    try {
+      final campaignRaw =
+          await ApiService.get('${ApiConfig.adsCampaigns}$campaignId/');
+      final product = await PostRepository.getPost(productId);
+      if (!mounted) return;
+
+      final pct = _parsePercentage(campaignRaw['percentage']);
+      final offer = Offer(
+        id: campaignId,
+        product: product,
+        discountPercentage: pct,
+        newPrice: (product.price * (1 - (pct / 100))).toDouble(),
+        isAvailable: campaignRaw['is_active'] == true,
+        createdAt:
+            DateTime.tryParse((campaignRaw['created_at'] ?? '').toString()) ??
+                DateTime.now(),
+        startDate: _parseDateTimeToLocal(campaignRaw['start_date']),
+        endDate: _parseDateTimeToLocal(campaignRaw['end_date']),
+        maxImpressions:
+            int.tryParse((campaignRaw['max_impressions'] ?? '').toString()),
+        uniqueViewersCount: int.tryParse(
+            (campaignRaw['unique_viewers_count'] ?? '').toString()),
+        remainingImpressions: int.tryParse(
+            (campaignRaw['remaining_impressions'] ?? '').toString()),
+        kind: 'advertising',
+        placement: (campaignRaw['placement'] ?? 'home_top').toString(),
+        audienceMode: (campaignRaw['audience_mode'] ?? 'all').toString(),
+        impressionsCount:
+            int.tryParse((campaignRaw['impressions_count'] ?? '').toString()) ??
+                0,
+        clicksCount:
+            int.tryParse((campaignRaw['clicks_count'] ?? '').toString()) ?? 0,
+        geoMode: (campaignRaw['geo_mode'] ?? 'all').toString(),
+        targetRadiusKm:
+            int.tryParse((campaignRaw['target_radius_km'] ?? '').toString()),
+        ageFrom: int.tryParse((campaignRaw['age_from'] ?? '').toString()),
+        ageTo: int.tryParse((campaignRaw['age_to'] ?? '').toString()),
+        targetWilayas: (campaignRaw['target_wilayas'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        targetCategories: (campaignRaw['target_categories'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        targetType: (campaignRaw['target_type'] ?? 'product').toString(),
+      );
+
+      final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddAdScreen(offer: offer, initialProduct: product),
+        ),
+      );
+      if (changed == true && mounted) {
+        setState(_reload);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Helpers.showSnackBar(context, 'Failed to open ad editor: $e',
+          isError: true);
+    }
   }
 
   Future<void> _openCreateAd({
@@ -121,419 +412,414 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     }
   }
 
-  Post _postFromEligible(Map<String, dynamic> json) {
-    final name = (json['name'] ?? 'Product').toString();
-    final image = (json['image'] ?? '').toString();
-    final price = double.tryParse((json['price'] ?? '0').toString()) ?? 0.0;
-    return Post(
-      id: int.tryParse((json['id'] ?? '0').toString()) ?? 0,
-      title: name,
-      description: '',
-      category: 'Product',
-      categoryId: null,
-      storeId: 0,
-      storeName: '',
-      author: User(
-        id: 0,
-        username: '',
-        email: '',
-        name: '',
-        profileImage: null,
-        dateJoined: DateTime.now(),
-      ),
-      price: price,
-      isAvailable: true,
-      rating: 0,
-      isHotDeal: false,
-      isFeatured: false,
-      createdAt: DateTime.now(),
-      images: image.isEmpty
-          ? const []
-          : [ProductImageData(id: 0, url: image, isMain: true)],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
-      appBar: AppBar(
-        title: const Text('Ads'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Filter by date',
-            onPressed: _pickDateRange,
-            icon: const Icon(Icons.date_range_outlined),
-          ),
-        ],
-      ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Failed to load dashboard: ${snapshot.error}'),
-            );
-          }
-
-          final data = snapshot.data ?? {};
-          final subscription =
-              data['active_subscription'] as Map<String, dynamic>?;
-          final latestRequest =
-              data['latest_payment_request'] as Map<String, dynamic>?;
-          final planFeatures =
-              (data['plan_features'] as Map?)?.cast<String, dynamic>() ??
-                  const <String, dynamic>{};
-          final adInventory =
-              (data['ad_inventory'] as Map?)?.cast<String, dynamic>() ??
-                  const <String, dynamic>{};
-          final daysRemaining = data['days_remaining'];
-          final ads = (data['ads'] as List?) ?? const [];
-          final productStats = (data['product_stats'] as List?) ?? const [];
-          final eligibleProducts =
-              (data['eligible_products'] as List?) ?? const [];
-          final eligiblePacks = (data['eligible_packs'] as List?) ?? const [];
-
-          final totalImpressions = ads.fold<int>(
-            0,
-            (sum, item) => sum + _asInt((item as Map)['impressions_count']),
-          );
-          final totalClicks = ads.fold<int>(
-            0,
-            (sum, item) => sum + _asInt((item as Map)['clicks_count']),
-          );
-          final ctr = totalImpressions > 0
-              ? ((totalClicks / totalImpressions) * 100).toStringAsFixed(2)
-              : '0.00';
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              setState(_reload);
-              await _future;
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                _buildHeroHeader(
-                  subscription: subscription,
-                  latestRequest: latestRequest,
-                  daysRemaining: daysRemaining,
-                ),
-                const SizedBox(height: 12),
-                _buildDateFilterBar(),
-                const SizedBox(height: 16),
-                Row(
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F8FC),
+        appBar: AppBar(
+          title: const Text('Ads'),
+          leadingWidth: 96,
+          leading: Consumer<WalletProvider>(
+            builder: (context, wallet, _) => Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: SizedBox(
+                height: 34,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: _statCard(
-                        label: 'Impressions',
-                        value: '$totalImpressions',
-                        icon: Icons.visibility_outlined,
-                      ),
+                    const Icon(
+                      Icons.toll_outlined,
+                      color: Color(0xFF8A5A00),
+                      size: 17,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _statCard(
-                        label: 'Clicks',
-                        value: '$totalClicks',
-                        icon: Icons.ads_click_outlined,
+                    const SizedBox(width: 4),
+                    Text(
+                      '${wallet.coinsBalance}',
+                      style: const TextStyle(
+                        color: Color(0xFF8A5A00),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _statCard(
-                        label: 'CTR',
-                        value: '$ctr%',
-                        icon: Icons.trending_up_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _statCard(
-                        label: 'Active Ads',
-                        value: '${adInventory['ad_active_count'] ?? 0}',
-                        icon: Icons.campaign_outlined,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInventoryCard(planFeatures, adInventory),
-                const SizedBox(height: 16),
-                _buildEligibleProductsSection(eligibleProducts),
-                const SizedBox(height: 16),
-                _buildEligiblePacksSection(eligiblePacks),
-                const SizedBox(height: 16),
-                _sectionCard(
-                  title: 'Ads',
-                  child: ads.isEmpty
-                      ? const Text('No ads found in this period.')
-                      : Column(
-                          children: ads.map<Widget>((item) {
-                            final promo = (item as Map).cast<String, dynamic>();
-                            final name =
-                                (promo['name'] ?? 'Campaign').toString();
-                            final kind =
-                                (promo['kind'] ?? 'promotion').toString();
-                            final impressions =
-                                _asInt(promo['impressions_count']);
-                            final clicks = _asInt(promo['clicks_count']);
-                            final unique =
-                                _asInt(promo['unique_viewers_count']);
-                            final remaining =
-                                promo['remaining_impressions'] == null
-                                    ? null
-                                    : _asInt(promo['remaining_impressions']);
-                            final campaignCtr = impressions > 0
-                                ? ((clicks / impressions) * 100)
-                                    .toStringAsFixed(1)
-                                : '0.0';
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: kind == 'advertising'
-                                              ? const Color(0xFFFFE5D0)
-                                              : const Color(0xFFEAF3FF),
-                                          borderRadius:
-                                              BorderRadius.circular(999),
-                                        ),
-                                        child: Text(
-                                          'AD',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 15,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        'CTR $campaignCtr%',
-                                        style: TextStyle(
-                                          color: AppColors.primaryColor,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      _metricPill(
-                                          'Impressions', '$impressions'),
-                                      _metricPill('Clicks', '$clicks'),
-                                      _metricPill('Unique', '$unique'),
-                                      if (remaining != null)
-                                        _metricPill('Remaining', '$remaining'),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-                const SizedBox(height: 16),
-                _sectionCard(
-                  title: 'Product Performance',
-                  child: productStats.isEmpty
-                      ? const Text(
-                          'No product performance data for this period.')
-                      : Column(
-                          children: productStats.map<Widget>((row) {
-                            final item = (row as Map).cast<String, dynamic>();
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFBFCFF),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    (item['product_name'] ?? 'Product')
-                                        .toString(),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      _metricPill(
-                                          'Views', '${item['views'] ?? 0}'),
-                                      _metricPill(
-                                          'Clicks', '${item['clicks'] ?? 0}'),
-                                      _metricPill('Favorites',
-                                          '${item['favorites'] ?? 0}'),
-                                      _metricPill('Ad Impressions',
-                                          '${item['ad_impressions'] ?? 0}'),
-                                      _metricPill('Ad Clicks',
-                                          '${item['ad_clicks'] ?? 0}'),
-                                      _metricPill(
-                                          'Ad CTR', '${item['ad_ctr'] ?? 0}%'),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-                const SizedBox(height: 16),
-                _sectionCard(
-                  title: 'Tips',
-                  child: const Text(
-                    'Choose high-demand products, reserve impression budget for fast movers, and keep the home-top placement for your most visual campaigns.',
-                  ),
-                ),
-              ],
+              ),
             ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openCreateAd(),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-        tooltip: 'Create Sponsored Ad',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildHeroHeader({
-    required Map<String, dynamic>? subscription,
-    required Map<String, dynamic>? latestRequest,
-    required dynamic daysRemaining,
-  }) {
-    final requestStatus = (latestRequest?['status'] ?? '').toString();
-    final requestReason =
-        (latestRequest?['status_reason_text'] ?? '').toString();
-    final requestReasonCode =
-        (latestRequest?['status_reason_code'] ?? '').toString();
-    final label = subscription != null
-        ? (subscription['plan_detail']?['name'] ?? 'Active Plan').toString()
-        : latestRequest != null
-            ? 'Payment Under Review'
-            : 'No Active Subscription';
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF172033), Color(0xFF2D4470)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
         ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Ad Control Center',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
+        body: FutureBuilder<Map<String, dynamic>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Failed to load dashboard: ${snapshot.error}'),
+              );
+            }
+
+            final data = snapshot.data ?? {};
+            final adInventory =
+                (data['ad_inventory'] as Map?)?.cast<String, dynamic>() ??
+                    const <String, dynamic>{};
+            final ads = (data['ads'] as List?) ?? const [];
+            final productStats = (data['product_stats'] as List?) ?? const [];
+            final eligibleProducts =
+                (data['eligible_products'] as List?) ?? const [];
+            final eligiblePacks = (data['eligible_packs'] as List?) ?? const [];
+
+            final Map<int, Map<String, dynamic>> productInfoById = {};
+            for (final row in eligibleProducts) {
+              if (row is! Map) continue;
+              final item = row.cast<String, dynamic>();
+              final id = _asInt(item['id']);
+              if (id > 0) productInfoById[id] = item;
+            }
+
+            final totalImpressions = ads.fold<int>(
+              0,
+              (sum, item) => sum + _asInt((item as Map)['impressions_count']),
+            );
+            final totalClicks = ads.fold<int>(
+              0,
+              (sum, item) => sum + _asInt((item as Map)['clicks_count']),
+            );
+            final ctr = totalImpressions > 0
+                ? ((totalClicks / totalImpressions) * 100).toStringAsFixed(2)
+                : '0.00';
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                setState(_reload);
+                await _future;
+              },
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  _buildDateFilterBar(),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCard(
+                          label: 'Impressions',
+                          value: '$totalImpressions',
+                          icon: Icons.visibility_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _statCard(
+                          label: 'Clicks',
+                          value: '$totalClicks',
+                          icon: Icons.ads_click_outlined,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              SizedBox(
-                child: AppCompactActionButton(
-                  label: 'Plans',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SubscriptionPlansScreen(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCard(
+                          label: 'CTR',
+                          value: '$ctr%',
+                          icon: Icons.trending_up_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _statCard(
+                          label: 'Active Ads',
+                          value: '${adInventory['ad_active_count'] ?? 0}',
+                          icon: Icons.campaign_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildEligiblePacksSection(eligiblePacks),
+                  const SizedBox(height: 16),
+                  _sectionCard(
+                    title: 'Ads',
+                    child: ads.isEmpty
+                        ? const Text('No ads found in this period.')
+                        : Column(
+                            children: ads.map<Widget>((item) {
+                              final promo =
+                                  (item as Map).cast<String, dynamic>();
+                              final adProductId = _asInt(promo['product']);
+                              final mappedProductName =
+                                  (productInfoById[adProductId]?['name'] ?? '')
+                                      .toString()
+                                      .trim();
+                              final apiProductName =
+                                  (promo['product_name'] ?? '')
+                                      .toString()
+                                      .trim();
+                              final campaignName =
+                                  (promo['name'] ?? 'Campaign').toString();
+                              final name = apiProductName.isNotEmpty
+                                  ? apiProductName
+                                  : (mappedProductName.isNotEmpty
+                                      ? mappedProductName
+                                      : campaignName);
+                              final kind =
+                                  (promo['kind'] ?? 'promotion').toString();
+                              final impressions =
+                                  _asInt(promo['impressions_count']);
+                              final clicks = _asInt(promo['clicks_count']);
+                              final unique =
+                                  _asInt(promo['unique_viewers_count']);
+                              final remaining =
+                                  promo['remaining_impressions'] == null
+                                      ? null
+                                      : _asInt(promo['remaining_impressions']);
+                              final displayHour = int.tryParse(
+                                  (promo['display_hour'] ?? '').toString());
+                              final campaignCtr = impressions > 0
+                                  ? ((clicks / impressions) * 100)
+                                      .toStringAsFixed(1)
+                                  : '0.0';
+                              String? hourLabel;
+                              if (displayHour != null &&
+                                  displayHour >= 0 &&
+                                  displayHour <= 23) {
+                                final h12 = displayHour == 0
+                                    ? 12
+                                    : (displayHour > 12
+                                        ? displayHour - 12
+                                        : displayHour);
+                                final suffix = displayHour < 12 ? 'AM' : 'PM';
+                                hourLabel = '$h12$suffix';
+                              }
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border:
+                                      Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: kind == 'advertising'
+                                                ? const Color(0xFFFFE5D0)
+                                                : const Color(0xFFEAF3FF),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            'AD',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          'CTR $campaignCtr%',
+                                          style: TextStyle(
+                                            color: AppColors.primaryColor,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        _metricPill(
+                                            'Impressions', '$impressions'),
+                                        _metricPill('Clicks', '$clicks'),
+                                        _metricPill('Unique', '$unique'),
+                                        if (hourLabel != null)
+                                          _metricPill('Hour', hourLabel),
+                                        if (remaining != null)
+                                          _metricPill(
+                                              'Remaining', '$remaining'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  _sectionCard(
+                    title: 'Product Performance',
+                    child: productStats.isEmpty
+                        ? const Text(
+                            'No product performance data for this period.')
+                        : Builder(
+                            builder: (context) {
+                              final query = _productQuery.trim().toLowerCase();
+                              final queryId = int.tryParse(query);
+                              final items = productStats
+                                  .whereType<Map>()
+                                  .map((row) => row.cast<String, dynamic>())
+                                  .where((row) {
+                                if (query.isEmpty) return true;
+                                final name =
+                                    (row['product_name'] ?? '').toString();
+                                final pid = _asInt(row['product_id']);
+                                if (queryId != null && pid == queryId) {
+                                  return true;
+                                }
+                                return name.toLowerCase().contains(query);
+                              }).toList();
+
+                              int sortValue(
+                                  Map<String, dynamic> row, String key) {
+                                final v = row[key];
+                                if (v is int) return v;
+                                return int.tryParse(v?.toString() ?? '') ?? 0;
+                              }
+
+                              items.sort((a, b) {
+                                final aId = _asInt(a['product_id']);
+                                final bId = _asInt(b['product_id']);
+                                final aInfo = productInfoById[aId];
+                                final bInfo = productInfoById[bId];
+                                final aActive = aInfo?['has_active_ad'] == true;
+                                final bActive = bInfo?['has_active_ad'] == true;
+                                final aActiveCount =
+                                    _asInt(aInfo?['active_ad_count']);
+                                final bActiveCount =
+                                    _asInt(bInfo?['active_ad_count']);
+
+                                if (_productSort == 'advertised') {
+                                  if (aActive != bActive) {
+                                    return (bActive ? 1 : 0) -
+                                        (aActive ? 1 : 0);
+                                  }
+                                  if (aActiveCount != bActiveCount) {
+                                    return bActiveCount - aActiveCount;
+                                  }
+                                  final aAdImp = sortValue(a, 'ad_impressions');
+                                  final bAdImp = sortValue(b, 'ad_impressions');
+                                  if (aAdImp != bAdImp) return bAdImp - aAdImp;
+                                  final aAdClicks = sortValue(a, 'ad_clicks');
+                                  final bAdClicks = sortValue(b, 'ad_clicks');
+                                  return bAdClicks - aAdClicks;
+                                }
+
+                                if (_productSort == 'views') {
+                                  return sortValue(b, 'ad_impressions') -
+                                      sortValue(a, 'ad_impressions');
+                                }
+                                if (_productSort == 'clicks') {
+                                  return sortValue(b, 'ad_clicks') -
+                                      sortValue(a, 'ad_clicks');
+                                }
+                                if (_productSort == 'ad_impressions') {
+                                  return sortValue(b, 'ad_impressions') -
+                                      sortValue(a, 'ad_impressions');
+                                }
+                                return 0;
+                              });
+
+                              final visible = items
+                                  .take(_visibleProductStatsCount)
+                                  .toList();
+
+                              return Column(
+                                children: [
+                                  _buildProductPerformanceSearchBar(),
+                                  const SizedBox(height: 10),
+                                  AppToggleButtonGroup(
+                                    options: _productSortOptions,
+                                    selectedIndex: _selectedProductSortIndex,
+                                    onChanged: (index) {
+                                      setState(() {
+                                        _productSort =
+                                            _productSortOptions[index].value;
+                                        _visibleProductStatsCount = 5;
+                                      });
+                                    },
+                                    scrollable: true,
+                                    compact: true,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...visible.map((item) {
+                                    final pid = _asInt(item['product_id']);
+                                    final info = productInfoById[pid];
+                                    final campaignId =
+                                        _asInt(info?['active_ad_campaign_id']);
+                                    return _buildProductPerformanceRow(
+                                      item,
+                                      info,
+                                      (campaignId > 0 && pid > 0)
+                                          ? () => _openEditAdForProduct(
+                                                productId: pid,
+                                                campaignId: campaignId,
+                                              )
+                                          : null,
+                                    );
+                                  }),
+                                  if (items.length > _visibleProductStatsCount)
+                                    AppCompactActionButton(
+                                      label: 'Show more',
+                                      onTap: () {
+                                        setState(() {
+                                          _visibleProductStatsCount += 5;
+                                        });
+                                      },
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  _sectionCard(
+                    title: 'Tips',
+                    child: const Text(
+                      'Choose high-demand products, reserve impression budget for fast movers, and keep the home-top placement for your most visual campaigns.',
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.88),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Days remaining: ${daysRemaining ?? '-'}',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.74),
-            ),
-          ),
-          if (latestRequest != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Latest payment request: ${requestStatus.isEmpty ? 'pending' : requestStatus.toUpperCase()}',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (requestStatus == 'rejected' &&
-                (requestReason.isNotEmpty || requestReasonCode.isNotEmpty))
-              Text(
-                requestReason.isNotEmpty ? requestReason : requestReasonCode,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.76),
-                ),
-              ),
-          ],
-        ],
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _openCreateAd(),
+          backgroundColor: AppColors.primaryColor,
+          foregroundColor: Colors.white,
+          tooltip: 'Create Sponsored Ad',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -604,125 +890,6 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
           compact: true,
         ),
       ],
-    );
-  }
-
-  Widget _buildInventoryCard(
-    Map<String, dynamic> planFeatures,
-    Map<String, dynamic> adInventory,
-  ) {
-    final slots = adInventory['remaining_ad_slots'] ?? 0;
-    final maxImpressions = adInventory['ad_max_impressions'] ?? 0;
-    return _sectionCard(
-      title: 'Advertising Capacity',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _metricPill('Remaining Slots', '$slots'),
-              _metricPill('Plan Impressions', '$maxImpressions'),
-              _metricPill(
-                'Max Active',
-                '${adInventory['ad_max_active'] ?? planFeatures['ad_max_active'] ?? 0}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Use the plan impressions as the ceiling when selecting how many times an ad should be shown.',
-            style: TextStyle(color: Colors.grey.shade700),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEligibleProductsSection(List eligibleProducts) {
-    return _sectionCard(
-      title: 'Select Product to Advertise',
-      child: eligibleProducts.isEmpty
-          ? const Text('No products available for advertising.')
-          : Column(
-              children: eligibleProducts.take(8).map<Widget>((item) {
-                final product = (item as Map).cast<String, dynamic>();
-                final image = (product['image'] ?? '').toString();
-                final hasActiveAd = product['has_active_ad'] as bool? ?? false;
-                final post = _postFromEligible(product);
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: image.isNotEmpty
-                              ? Image.network(image, fit: BoxFit.cover)
-                              : Container(
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.inventory_2_outlined),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              (product['name'] ?? 'Product').toString(),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              Helpers.formatPrice(
-                                double.tryParse(
-                                        (product['price'] ?? '0').toString()) ??
-                                    0,
-                              ),
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              hasActiveAd
-                                  ? 'Already has an active ad'
-                                  : 'Ready for advertising',
-                              style: TextStyle(
-                                color: hasActiveAd
-                                    ? Colors.orange.shade800
-                                    : Colors.green.shade700,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => _openCreateAd(product: post),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text(hasActiveAd ? 'Edit Ad' : 'Advertise'),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
     );
   }
 

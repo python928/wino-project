@@ -6,7 +6,7 @@ import '../../data/models/user_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/error_state_widget.dart';
-import '../shared_widgets/loading_indicator.dart';
+import '../shared_widgets/shimmer_loading.dart';
 import '../shared_widgets/unified_app_bar.dart';
 import '../../core/services/follow_change_notifier.dart';
 
@@ -250,7 +250,61 @@ class _StoresListScreenState extends State<StoresListScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const LoadingIndicator();
+    return ShimmerLoading(
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        itemCount: 6,
+        separatorBuilder: (context, index) => const SizedBox(
+          height: AppConstants.spacing16,
+        ),
+        itemBuilder: (context, index) => _buildStoreSkeleton(),
+      ),
+    );
+  }
+
+  Widget _buildStoreSkeleton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+        border: Border.all(
+          color: AppColors.blackColor10,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Row(
+          children: const [
+            ShimmerBox(
+              width: 60,
+              height: 60,
+              borderRadius: AppConstants.radiusSmall,
+            ),
+            SizedBox(width: AppConstants.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(height: 14, width: 140, borderRadius: 8),
+                  SizedBox(height: 8),
+                  ShimmerBox(height: 10, width: 120, borderRadius: 8),
+                  SizedBox(height: 8),
+                  ShimmerBox(height: 10, width: 80, borderRadius: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildErrorState() {

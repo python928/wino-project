@@ -5,15 +5,22 @@ DEFAULT_SUBSCRIPTION_INSTRUCTIONS = (
 
 DEFAULT_PLAN_FEATURES = {
 	'promotion_enabled': True,
-	'promotion_max_active': 1,
+	'promotion_max_active': 10,
 	'promotion_max_duration_days': 10,
 	'promotion_max_impressions': 800,
 	'recommendation_priority_boost': 0,
 	'ad_enabled': True,
-	'ad_max_active': 1,
+	'ad_max_active': 10,
 	'ad_max_duration_days': 7,
 	'ad_max_impressions': 600,
 }
+
+# Coin economy settings.
+# Post Coins are consumed when publishing a post and triggering follower notifications.
+# Ad View Coins are consumed by sponsored ads according to requested impressions.
+POST_COINS_PER_POST_PUBLISH = 8
+POST_COINS_PER_NOTIFICATION = 2
+AD_VIEW_COINS_PER_IMPRESSION = 1
 
 DEFAULT_SUBSCRIPTION_PLANS = [
 	{

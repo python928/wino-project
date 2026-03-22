@@ -40,6 +40,7 @@ class BaseItemCard extends StatelessWidget {
   final Widget? customImageWidget;
   final bool isUnavailable;
   final bool showUnavailableOverlay;
+  final String unavailableMessage;
 
   const BaseItemCard({
     super.key,
@@ -60,6 +61,7 @@ class BaseItemCard extends StatelessWidget {
     this.customImageWidget,
     this.isUnavailable = false,
     this.showUnavailableOverlay = false,
+    this.unavailableMessage = 'Not available',
   });
 
   bool _isLikelyArabic(String text) {
@@ -73,8 +75,18 @@ class BaseItemCard extends StatelessWidget {
   /// Build custom image widget - override to customize image display
   Widget? buildCustomImageWidget(BuildContext context) => customImageWidget;
 
+  /// Build custom widgets to overlay on top of the image section.
+  /// Return a widget meant to live inside the image Stack (can be Positioned).
+  Widget? buildCustomImageOverlay(BuildContext context) => null;
+
   /// Build custom bottom info - override to add specialized bottom content
   Widget? buildCustomBottomInfo(BuildContext context) => null;
+
+  /// Build custom footer info shown near the bottom of the card, above price.
+  Widget? buildCustomFooterInfo(BuildContext context) => null;
+
+  /// Override when a card should hide the default meta row under the title.
+  bool replaceDefaultMetaSection(BuildContext context) => false;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +98,9 @@ class BaseItemCard extends StatelessWidget {
         final height = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : CardDimensions.itemCardHeight;
+        final customBottomInfo = buildCustomBottomInfo(context);
+        final customFooterInfo = buildCustomFooterInfo(context);
+        final showPriceRow = hidePrice || price != null;
 
         final contentPadding = width < 100 ? 6.0 : CardDimensions.cardPadding;
 
@@ -100,11 +115,20 @@ class BaseItemCard extends StatelessWidget {
             (rating != null && bottomLeftText != null) ? 6.0 : 0.0;
         final estimatedPriceHeight =
             hidePrice ? 18.0 : (price != null ? 22.0 : 0.0);
+        final estimatedCustomBottomHeight =
+            customBottomInfo != null && !replaceDefaultMetaSection(context)
+                ? 22.0 + AppConstants.spacing6
+                : 0.0;
+        final estimatedFooterHeight = customFooterInfo != null
+            ? 24.0 + (showPriceRow ? AppConstants.spacing6 : 0.0)
+            : 0.0;
         final estimatedContentMinHeight = (contentPadding * 2) +
             estimatedTitleHeight +
             AppConstants.spacing8 +
             estimatedMetaHeight +
             estimatedMetaGap +
+            estimatedCustomBottomHeight +
+            estimatedFooterHeight +
             (estimatedPriceHeight > 0 ? AppConstants.spacing6 : 0.0) +
             estimatedPriceHeight;
 
@@ -141,8 +165,18 @@ class BaseItemCard extends StatelessWidget {
                         children: [
                           buildCustomContent(context) ?? _buildTitle(),
                           const SizedBox(height: AppConstants.spacing8),
-                          buildCustomBottomInfo(context) ?? _buildMetaSection(),
+                          if (replaceDefaultMetaSection(context))
+                            (customBottomInfo ?? const SizedBox.shrink())
+                          else ...[
+                            _buildMetaSection(),
+                            if (customBottomInfo != null)
+                              const SizedBox(height: AppConstants.spacing6),
+                            if (customBottomInfo != null) customBottomInfo,
+                          ],
                           const Spacer(),
+                          if (customFooterInfo != null) customFooterInfo,
+                          if (customFooterInfo != null && showPriceRow)
+                            const SizedBox(height: AppConstants.spacing6),
                           if (hidePrice)
                             _buildCallForPrice()
                           else if (price != null)
@@ -162,6 +196,7 @@ class BaseItemCard extends StatelessWidget {
 
   Widget _buildImageSection(BuildContext context) {
     final showUnavailable = isUnavailable && showUnavailableOverlay;
+    final customOverlay = buildCustomImageOverlay(context);
 
     return Stack(
       children: [
@@ -228,6 +263,8 @@ class BaseItemCard extends StatelessWidget {
             ),
           ),
 
+        if (customOverlay != null) customOverlay,
+
         // Unavailable Overlay (opt-in per screen)
         if (showUnavailable)
           Positioned.fill(
@@ -250,9 +287,9 @@ class BaseItemCard extends StatelessWidget {
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusRound),
                   ),
-                  child: const Text(
-                    'Not Available',
-                    style: TextStyle(
+                  child: Text(
+                    unavailableMessage,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       fontSize: AppConstants.fontSizeBody,

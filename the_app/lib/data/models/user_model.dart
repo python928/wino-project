@@ -40,6 +40,9 @@ class User {
   final int productCount;
   final int reviewCount;
   final List<String> categories;
+  final int postCoins;
+  final int adViewCoins;
+  final int coinsBalance;
 
   const User({
     required this.id,
@@ -77,6 +80,9 @@ class User {
     this.productCount = 0,
     this.reviewCount = 0,
     this.categories = const [],
+    this.postCoins = 0,
+    this.adViewCoins = 0,
+    this.coinsBalance = 0,
   });
 
   String get fullName => name.isNotEmpty ? name : username;
@@ -132,6 +138,11 @@ class User {
       reviewCount: json['review_count'] as int? ?? 0,
       categories: (json['categories'] as List?)?.whereType<String>().toList() ??
           const [],
+      postCoins: json['post_coins'] as int? ?? 0,
+      adViewCoins: json['ad_view_coins'] as int? ?? 0,
+      coinsBalance: json['coins_balance'] as int? ??
+          ((json['post_coins'] as int? ?? 0) +
+              (json['ad_view_coins'] as int? ?? 0)),
     );
   }
 
@@ -172,6 +183,9 @@ class User {
       'product_count': productCount,
       'review_count': reviewCount,
       'categories': categories,
+      'post_coins': postCoins,
+      'ad_view_coins': adViewCoins,
+      'coins_balance': coinsBalance,
     };
   }
 }

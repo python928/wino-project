@@ -1,20 +1,23 @@
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
+
+import '../../core/config/api_config.dart';
 import '../../core/providers/post_provider.dart';
+import '../../core/providers/wallet_provider.dart';
+import '../../core/services/api_service.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/services/subscription_service.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
-import '../../core/services/api_service.dart';
-import '../../core/services/subscription_service.dart';
-import '../../core/services/storage_service.dart';
-import '../../core/config/api_config.dart';
-import '../../data/models/post_model.dart';
 import '../../data/models/category_model.dart';
-import '../search/category_selection_screen.dart';
+import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
+import '../search/category_selection_screen.dart';
 import '../subscription/subscription_gate.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -276,9 +279,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isLoading = true);
 
     // Resolve selected category name
-    final selectedId = _selectedCategoryIds.isEmpty
-        ? null
-        : _selectedCategoryIds.first;
+    final selectedId =
+        _selectedCategoryIds.isEmpty ? null : _selectedCategoryIds.first;
     final selectedNames = selectedId == null
         ? <String>[]
         : [
@@ -290,9 +292,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               }
             }()
           ].where((n) => n.isNotEmpty).toList();
-    final primaryCategoryName = selectedNames.isNotEmpty
-        ? selectedNames.first
-        : '';
+    final primaryCategoryName =
+        selectedNames.isNotEmpty ? selectedNames.first : '';
 
     try {
       final provider = Provider.of<PostProvider>(context, listen: false);
@@ -301,9 +302,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ).toDouble();
 
       // Compute effective delivery wilayas (empty = use store.address fallback on backend)
-      final List<String> deliveryWilayas = _deliveryAvailable
-          ? (_deliveryAreas?.selectedWilayas ?? [])
-          : [];
+      final List<String> deliveryWilayas =
+          _deliveryAvailable ? (_deliveryAreas?.selectedWilayas ?? []) : [];
 
       if (_isEditMode) {
         final newFiles = _images.whereType<XFile>().toList();
@@ -340,14 +340,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
         );
 
         if (mounted) {
+          await context.read<WalletProvider>().fetchWallet();
           Helpers.showSnackBar(context, 'Product published successfully');
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        if (SubscriptionService.isSubscriptionRequiredError(e)) {
-          await showSubscriptionRequiredWindow(context);
+        final coinInfo = SubscriptionService.parseCoinBalanceError(e);
+        if (coinInfo != null) {
+          await openCoinStore(
+            context,
+            required: coinInfo['required'] as int?,
+            balance: coinInfo['balance'] as int?,
+          );
           return;
         }
         Helpers.showSnackBar(
@@ -372,9 +378,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   bool _hasProfileLocation() {
     final userData = StorageService.getUserData();
-    final address = (userData?['address'] ?? userData?['location'] ?? '')
-        .toString()
-        .trim();
+    final address =
+        (userData?['address'] ?? userData?['location'] ?? '').toString().trim();
     final latRaw = userData?['latitude'];
     final lngRaw = userData?['longitude'];
     final lat = double.tryParse(latRaw?.toString() ?? '');
@@ -781,37 +786,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     )
                   : hasCategories
-                  ? Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: selectedNames.map((name) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryColor.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primaryColor.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primaryColor,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    )
-                  : Text(
-                      'Select category',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                    ),
+                      ? Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: selectedNames.map((name) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color:
+                                      AppColors.primaryColor.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        )
+                      : Text(
+                          'Select category',
+                          style:
+                              TextStyle(color: Colors.grey[400], fontSize: 14),
+                        ),
             ),
             Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
           ],

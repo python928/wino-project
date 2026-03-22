@@ -52,6 +52,11 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
   @override
   void initState() {
     super.initState();
+    final cachedFollow =
+        FollowChangeNotifier.getFollowState(widget.pack.merchantId);
+    if (cachedFollow != null) {
+      _isFollowingStore = cachedFollow;
+    }
     _loadFavoriteState();
     _loadFollowState();
     _loadStoreDetails();
@@ -114,6 +119,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(storeId, isFollowing);
     } catch (_) {
       // ignore
     } finally {
@@ -219,6 +225,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
       final isFollowing = (resp is Map && resp['is_following'] == true);
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(widget.pack.merchantId, isFollowing);
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,

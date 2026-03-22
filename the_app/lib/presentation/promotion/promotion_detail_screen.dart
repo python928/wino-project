@@ -56,6 +56,11 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
   void initState() {
     super.initState();
     _isFavorited = widget.promotion.product.isFavorited;
+    final cachedFollow =
+        FollowChangeNotifier.getFollowState(widget.promotion.product.storeId);
+    if (cachedFollow != null) {
+      _isFollowingStore = cachedFollow;
+    }
     _loadFollowState();
     _loadStoreDetails();
   }
@@ -133,6 +138,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(storeId, isFollowing);
     } catch (_) {
       // ignore
     } finally {
@@ -184,6 +190,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
       final isFollowing = (resp is Map && resp['is_following'] == true);
       if (!mounted) return;
       setState(() => _isFollowingStore = isFollowing);
+      FollowChangeNotifier.setFollowState(
+          widget.promotion.product.storeId, isFollowing);
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,

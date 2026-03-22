@@ -3,18 +3,22 @@ import 'package:provider/provider.dart';
 
 import '../../core/providers/pack_provider.dart';
 import '../../core/providers/post_provider.dart';
+import '../../core/providers/wallet_provider.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/wallet_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_compact_action_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/app_toggle_button.dart';
+import '../../core/widgets/date_time_picker_field.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../common/radius_picker_sheet.dart';
 import '../subscription/subscription_gate.dart';
+import '../wallet/coin_store_screen.dart';
 import 'widgets/pack_picker_sheet.dart';
 import 'widgets/product_picker_sheet.dart';
 
@@ -39,12 +43,14 @@ class AddPromotionScreen extends StatefulWidget {
 }
 
 class _AddPromotionScreenState extends State<AddPromotionScreen> {
-  static const List<ToggleOption> _placementOptions = [
-    ToggleOption(label: 'Home Top', value: 'home_top'),
-    ToggleOption(label: 'Home Feed', value: 'home_feed'),
-    ToggleOption(label: 'Search Top', value: 'search_top'),
-  ];
+  static final List<int> _allHours = List<int>.generate(24, (hour) => hour);
+  static final List<int> _businessHours =
+      List<int>.generate(12, (index) => index + 8);
 
+  static const List<ToggleOption> _kindOptions = [
+    ToggleOption(label: 'Discount', value: 'promotion'),
+    ToggleOption(label: 'Sponsored Ad', value: 'advertising'),
+  ];
   static const List<ToggleOption> _audienceOptions = [
     ToggleOption(label: 'All', value: 'all'),
     ToggleOption(label: 'Followers', value: 'followers'),
@@ -73,17 +79,18 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   bool _isEditMode = false;
   bool _isAvailable = true;
   String _kind = 'promotion';
-  String _placement = 'home_top';
+  List<int> _displayHours = List<int>.from(_allHours);
   String _audienceMode = 'all';
   String _geoMode = 'all';
   List<String> _selectedTargetWilayas = const [];
   double? _targetRadiusKm;
   DateTime? _startDate;
   DateTime? _endDate;
-  Map<String, dynamic> _planFeatures = const {};
   Map<String, dynamic> _adInventory = const {};
+  Map<String, dynamic> _planFeatures = const {};
 
   bool get _isAdMode => _kind == 'advertising';
+  bool get _allowKindSwitch => false;
 
   String get _entityLabel => _isAdMode ? 'Sponsored Ad' : 'Discount';
 
@@ -92,22 +99,25 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       : (_isAdMode ? 'Create Sponsored Ad' : 'Add Discount');
 
   bool get _isPackTarget => _isAdMode && _adTargetType == 'pack';
+  bool get _isDiscountTarget => _isAdMode && _adTargetType == 'discount';
 
   bool get _hasSelectedTarget =>
       _selectedProduct != null || (_selectedPackId != null && _isAdMode);
 
   String get _targetSelectionTitle {
     if (!_isAdMode) return 'Select Product';
-    return _isPackTarget
-        ? 'Select Pack to Sponsor'
-        : 'Select Product to Sponsor';
+    if (_isPackTarget) return 'Select Pack to Sponsor';
+    if (_isDiscountTarget) return 'Select Discount to Sponsor';
+    return 'Select Product to Sponsor';
   }
 
   String get _targetSelectionHint {
     if (!_isAdMode) return 'Tap to select product...';
-    return _isPackTarget
-        ? 'Tap to select pack to sponsor...'
-        : 'Tap to select product to sponsor...';
+    if (_isPackTarget) return 'Tap to select pack to sponsor...';
+    if (_isDiscountTarget) {
+      return 'Tap to select a product with active discount...';
+    }
+    return 'Tap to select product to sponsor...';
   }
 
   String get _availabilityTitle => _isAdMode ? 'Ad Active' : 'Available';
@@ -156,7 +166,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _discountPercentageController.text = offer.discountPercentage.toString();
       _newPriceController.text = offer.newPrice.toStringAsFixed(2);
       _kind = offer.kind;
-      _placement = offer.placement;
+      _displayHours = _resolveInitialDisplayHours(offer);
       _audienceMode = offer.audienceMode;
       _geoMode = offer.geoMode;
       _maxImpressionsController.text = offer.maxImpressions?.toString() ?? '';
@@ -164,8 +174,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _targetRadiusKm = offer.targetRadiusKm?.toDouble();
       _ageFromController.text = offer.ageFrom?.toString() ?? '';
       _ageToController.text = offer.ageTo?.toString() ?? '';
-      _startDate = offer.startDate;
-      _endDate = offer.endDate;
+      _startDate = offer.startDate?.toLocal();
+      _endDate = offer.endDate?.toLocal();
       if (offer.kind == 'advertising' && offer.targetType == 'pack') {
         _adTargetType = 'pack';
         _selectedPackId = offer.targetPackId;
@@ -179,6 +189,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
       _selectedProduct = widget.initialProduct;
       _selectedPackId = widget.initialPackId;
       _selectedPackName = widget.initialPackName;
+      if (_kind == 'advertising') {
+        _displayHours = List<int>.from(_allHours);
+      }
       if (_kind == 'advertising' && _selectedPackId != null) {
         _adTargetType = 'pack';
       }
@@ -195,25 +208,61 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     });
 
     _loadPlanData();
+    _loadAccessStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<WalletProvider>().fetchWallet(notifyStart: false);
+      }
+    });
+  }
+
+  Future<void> _loadAccessStatus() async {
+    try {
+      final status = await SubscriptionService.fetchAccessStatus();
+      if (!mounted) return;
+      final features =
+          (status['plan_features'] as Map?)?.cast<String, dynamic>();
+      if (features == null) return;
+      setState(() {
+        _planFeatures = features;
+      });
+    } catch (_) {
+      // Best effort only.
+    }
+  }
+
+  int? _planMaxDurationDaysForCurrentKind() {
+    final key =
+        _isAdMode ? 'ad_max_duration_days' : 'promotion_max_duration_days';
+    final raw = _planFeatures[key];
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  int _computeDurationDaysLikeBackend(DateTime startUtc, DateTime endUtc) {
+    final durationSeconds = endUtc.difference(startUtc).inSeconds;
+    final days = (durationSeconds ~/ 86400) + 1;
+    return days < 1 ? 1 : days;
   }
 
   Future<void> _loadPlanData() async {
     try {
-      final data = await SubscriptionService.fetchMerchantDashboard();
+      final data = await WalletService.fetchWallet();
       if (!mounted) return;
+      final costs =
+          (data['costs'] as Map?)?.cast<String, dynamic>() ?? const {};
+      final adViewCost = costs['ad_view'];
       setState(() {
-        _planFeatures =
-            (data['plan_features'] as Map?)?.cast<String, dynamic>() ??
-                const {};
-        _adInventory =
-            (data['ad_inventory'] as Map?)?.cast<String, dynamic>() ?? const {};
+        _adInventory = {
+          'ad_view_coins_balance': data['ad_view_coins_balance'] ?? 0,
+          'ad_view_coin_cost': adViewCost ?? 1,
+        };
         if (_kind == 'advertising' &&
             _maxImpressionsController.text.trim().isEmpty) {
-          final limit = _adInventory['ad_max_impressions'] ??
-              _planFeatures['ad_max_impressions'];
-          if (limit != null) {
-            _maxImpressionsController.text = '$limit';
-          }
+          final affordable = _maxAffordableImpressions;
+          final fallback = affordable > 0 ? affordable.clamp(1, 100) : 100;
+          _maxImpressionsController.text = '$fallback';
         }
       });
     } catch (_) {
@@ -221,13 +270,16 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     }
   }
 
-  int? get _planImpressionLimit {
-    final key = _kind == 'advertising'
-        ? 'ad_max_impressions'
-        : 'promotion_max_impressions';
-    final raw = _adInventory[key] ?? _planFeatures[key];
-    if (raw == null) return null;
-    return int.tryParse(raw.toString());
+  int get _adViewCoinsBalance =>
+      int.tryParse((_adInventory['ad_view_coins_balance'] ?? 0).toString()) ??
+      0;
+
+  int get _adViewCoinCost =>
+      int.tryParse((_adInventory['ad_view_coin_cost'] ?? 1).toString()) ?? 1;
+
+  int get _maxAffordableImpressions {
+    final cost = _adViewCoinCost <= 0 ? 1 : _adViewCoinCost;
+    return _adViewCoinsBalance ~/ cost;
   }
 
   @override
@@ -268,9 +320,27 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     }
 
     final provider = context.read<PostProvider>();
+    var products = provider.myPosts;
+    if (_isDiscountTarget) {
+      final discountedProductIds = provider.myOffers
+          .where((offer) => offer.kind == 'promotion' && offer.isAvailable)
+          .map((offer) => offer.product.id)
+          .toSet();
+      products = products
+          .where((product) => discountedProductIds.contains(product.id))
+          .toList();
+      if (products.isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'No active discounts found. Create a discount first.',
+        );
+        return;
+      }
+    }
+
     final picked = await showProductPickerBottomSheet(
       context,
-      products: provider.myPosts,
+      products: products,
       title: _targetSelectionTitle,
     );
     if (picked != null) _onProductSelected(picked);
@@ -322,8 +392,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   }
 
   String _selectedTargetLabel() {
-    if (_isPackTarget)
+    if (_isPackTarget) {
       return _selectedPackName ?? 'Pack #${_selectedPackId ?? 0}';
+    }
     return _selectedProduct?.title ?? _targetSelectionHint;
   }
 
@@ -337,15 +408,24 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   }
 
   String? _validateAdImpressionLimit(int? maxImpressions) {
-    final planLimit = _planImpressionLimit;
-    if (!_isAdMode || planLimit == null) {
+    if (!_isAdMode) {
       return null;
     }
     if ((maxImpressions ?? 0) <= 0) {
       return 'Please enter the number of ad impressions';
     }
-    if (maxImpressions! > planLimit) {
-      return 'Your plan allows up to $planLimit impressions for one ad';
+
+    final requested = maxImpressions!;
+    final alreadyReserved = int.tryParse(
+          (_existingOffer?.maxImpressions ?? 0).toString(),
+        ) ??
+        0;
+    final extraNeeded =
+        requested > alreadyReserved ? requested - alreadyReserved : 0;
+    final affordable = _maxAffordableImpressions;
+
+    if (extraNeeded > affordable) {
+      return 'Insufficient Ad View Coins. Need $extraNeeded more impressions budget, available $affordable.';
     }
     return null;
   }
@@ -353,6 +433,136 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
   int _selectedOptionIndex(List<ToggleOption> options, String value) {
     final index = options.indexWhere((option) => option.value == value);
     return index >= 0 ? index : 0;
+  }
+
+  List<int> _resolveInitialDisplayHours(Offer offer) {
+    final hours = List<int>.from(offer.displayHours)..sort();
+    if (hours.isNotEmpty) {
+      return hours;
+    }
+    if (offer.displayHour != null) {
+      return <int>[offer.displayHour!];
+    }
+    return List<int>.from(_allHours);
+  }
+
+  String _formatHourLabel(int hour) {
+    final h12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    final suffix = hour < 12 ? 'AM' : 'PM';
+    return '$h12$suffix';
+  }
+
+  String _selectedHoursLabel() {
+    if (_displayHours.isEmpty) {
+      return 'No hour selected';
+    }
+    final sorted = List<int>.from(_displayHours)..sort();
+    if (sorted.length == 24) {
+      return 'All day (24h)';
+    }
+    if (_isBusinessHoursOnly(sorted)) {
+      return 'Business hours (8AM-7PM)';
+    }
+    return sorted.map(_formatHourLabel).join(', ');
+  }
+
+  bool _isBusinessHoursOnly(List<int> hours) {
+    if (hours.length != _businessHours.length) return false;
+    for (final hour in _businessHours) {
+      if (!hours.contains(hour)) return false;
+    }
+    return true;
+  }
+
+  Future<void> _pickDisplayHours() async {
+    final initial = Set<int>.from(_displayHours);
+    final selected = await showDialog<Set<int>>(
+      context: context,
+      builder: (context) {
+        final temp = Set<int>.from(initial);
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              title: const Text('Show At Hour'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          AppCompactActionButton(
+                            label: 'All Day',
+                            onTap: () {
+                              setModalState(() {
+                                temp
+                                  ..clear()
+                                  ..addAll(_allHours);
+                              });
+                            },
+                          ),
+                          AppCompactActionButton(
+                            label: 'Business Hours',
+                            onTap: () {
+                              setModalState(() {
+                                temp
+                                  ..clear()
+                                  ..addAll(_businessHours);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ...List<Widget>.generate(24, (hour) {
+                        return CheckboxListTile(
+                          dense: true,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: temp.contains(hour),
+                          title: Text(_formatHourLabel(hour)),
+                          onChanged: (checked) {
+                            setModalState(() {
+                              if (checked == true) {
+                                temp.add(hour);
+                              } else {
+                                temp.remove(hour);
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                AppTextButton(
+                  onPressed: () => Navigator.pop(context),
+                  text: 'Cancel',
+                ),
+                AppPrimaryButton(
+                  onPressed: () => Navigator.pop(context, temp),
+                  text: 'Apply',
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (selected == null) return;
+    if (selected.isEmpty) {
+      Helpers.showSnackBar(context, 'Select at least one hour');
+      return;
+    }
+
+    setState(() {
+      _displayHours = selected.toList()..sort();
+    });
   }
 
   Widget _buildToggleSection({
@@ -503,7 +713,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   _isEditMode = true;
                   _isAvailable = offer.isAvailable;
                   _kind = offer.kind;
-                  _placement = offer.placement;
+                  _displayHours = _resolveInitialDisplayHours(offer);
                   _audienceMode = offer.audienceMode;
                   _geoMode = offer.geoMode;
                   _discountPercentageController.text =
@@ -516,6 +726,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   _targetRadiusKm = offer.targetRadiusKm?.toDouble();
                   _ageFromController.text = offer.ageFrom?.toString() ?? '';
                   _ageToController.text = offer.ageTo?.toString() ?? '';
+                  _startDate = offer.startDate?.toLocal();
+                  _endDate = offer.endDate?.toLocal();
                 });
               },
               text: isAdvertising ? 'Edit Sponsored Ad' : 'Edit Discount',
@@ -625,98 +837,26 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     );
   }
 
-  String _formatDateTime(DateTime? value) {
-    if (value == null) return 'Not set';
-    final local = value.toLocal();
-    final date = MaterialLocalizations.of(context).formatShortDate(local);
-    final time =
-        MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local));
-    return '$date $time';
-  }
-
-  Future<void> _pickDateTime({required bool isStart}) async {
-    final now = DateTime.now();
-    final current = isStart
-        ? (_startDate ?? now)
-        : (_endDate ?? _startDate ?? now);
-    final date = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(now.year + 5),
-    );
-    if (date == null) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(current),
-    );
-    if (time == null) return;
-    final selected = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-    setState(() {
-      if (isStart) {
-        _startDate = selected;
-        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+  Widget _buildScheduleSection() {
+    return DateRangePickerField(
+      title: 'Schedule',
+      startLabel: 'Start Date & Time',
+      endLabel: 'End Date & Time',
+      startIcon: Icons.schedule,
+      endIcon: Icons.timer_off_outlined,
+      startValue: _startDate,
+      endValue: _endDate,
+      onStartChanged: (dt) => setState(() {
+        _startDate = dt;
+        // Reset end date if it's before the new start date
+        if (_endDate != null && _endDate!.isBefore(dt)) {
           _endDate = null;
         }
-      } else {
-        _endDate = selected;
-      }
-    });
-  }
-
-  Widget _buildScheduleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Schedule',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            AppCompactActionButton(
-              label: 'Start: ${_formatDateTime(_startDate)}',
-              icon: Icons.schedule,
-              onTap: _isLoading ? null : () => _pickDateTime(isStart: true),
-            ),
-            AppCompactActionButton(
-              label: 'End: ${_formatDateTime(_endDate)}',
-              icon: Icons.timer_off_outlined,
-              onTap: _isLoading ? null : () => _pickDateTime(isStart: false),
-            ),
-          ],
-        ),
-        if (_startDate != null || _endDate != null) ...[
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              if (_startDate != null)
-                TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () => setState(() => _startDate = null),
-                  child: const Text('Clear start'),
-                ),
-              if (_endDate != null)
-                TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () => setState(() => _endDate = null),
-                  child: const Text('Clear end'),
-                ),
-            ],
-          ),
-        ],
-      ],
+      }),
+      onEndChanged: (dt) => setState(() => _endDate = dt),
+      onStartCleared: () => setState(() => _startDate = null),
+      onEndCleared: () => setState(() => _endDate = null),
+      showTime: true,
     );
   }
 
@@ -779,7 +919,8 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
             ),
             Switch(
               value: _isAvailable,
-              onChanged: _isLoading ? null : (v) => setState(() => _isAvailable = v),
+              onChanged:
+                  _isLoading ? null : (v) => setState(() => _isAvailable = v),
               activeColor: AppColors.primaryColor,
             ),
           ],
@@ -834,6 +975,20 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         return;
       }
 
+      if (_isAdMode && _displayHours.isEmpty) {
+        Helpers.showSnackBar(
+            context, 'Select at least one hour to show your ad');
+        return;
+      }
+
+      if (_isDiscountTarget && selectedPromotion == null) {
+        Helpers.showSnackBar(
+          context,
+          'Discount target requires a product with active discount.',
+        );
+        return;
+      }
+
       if (_isAdMode && _geoMode == 'wilaya' && _selectedTargetWilayas.isEmpty) {
         Helpers.showSnackBar(context, 'Select at least one target wilaya');
         return;
@@ -846,11 +1001,34 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         return;
       }
 
-      if (_startDate != null &&
+      if (!_isAdMode &&
+          _startDate != null &&
           _endDate != null &&
           !_endDate!.isAfter(_startDate!)) {
         Helpers.showSnackBar(context, 'End time must be after start time');
         return;
+      }
+
+      // Match backend duration constraint (subscriptions/services.py).
+      if (!_isAdMode && _startDate != null && _endDate != null) {
+        if (_planFeatures.isEmpty) {
+          await _loadAccessStatus();
+        }
+        final maxDays = _planMaxDurationDaysForCurrentKind();
+        if (maxDays != null && maxDays > 0) {
+          final startUtc = _startDate!.toUtc();
+          final endUtc = _endDate!.toUtc();
+          final durationDays =
+              _computeDurationDaysLikeBackend(startUtc, endUtc);
+          final maxAllowedWithBuffer = maxDays + 1;
+          if (durationDays > maxAllowedWithBuffer) {
+            Helpers.showSnackBar(
+              context,
+              'Duration exceeds the current limit ($maxDays days).',
+            );
+            return;
+          }
+        }
       }
 
       if (_isEditMode && _existingOffer != null) {
@@ -862,7 +1040,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           discountPercentage: percentage,
           isAvailable: _isAvailable,
           kind: _kind,
-          placement: _placement,
           audienceMode: _audienceMode,
           targetWilayas: _selectedTargetWilayas,
           maxImpressions: maxImpressions,
@@ -870,11 +1047,16 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           ageTo: ageTo,
           geoMode: _geoMode,
           targetRadiusKm: _targetRadiusKm?.round(),
-          startDate: _startDate,
-          endDate: _endDate,
+          displayHour: _isAdMode && _displayHours.isNotEmpty
+              ? _displayHours.first
+              : null,
+          displayHours: _isAdMode ? _displayHours : null,
+          startDate: _isAdMode ? null : _startDate,
+          endDate: _isAdMode ? null : _endDate,
         );
 
         if (mounted) {
+          await context.read<WalletProvider>().fetchWallet();
           Helpers.showSnackBar(context, _saveSuccessMessage);
           Navigator.pop(context, true);
         }
@@ -886,7 +1068,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           discountPercentage: percentage,
           isAvailable: _isAvailable,
           kind: _kind,
-          placement: _placement,
           audienceMode: _audienceMode,
           targetWilayas: _selectedTargetWilayas,
           maxImpressions: maxImpressions,
@@ -894,19 +1075,29 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           ageTo: ageTo,
           geoMode: _geoMode,
           targetRadiusKm: _targetRadiusKm?.round(),
-          startDate: _startDate,
-          endDate: _endDate,
+          displayHour: _isAdMode && _displayHours.isNotEmpty
+              ? _displayHours.first
+              : null,
+          displayHours: _isAdMode ? _displayHours : null,
+          startDate: _isAdMode ? null : _startDate,
+          endDate: _isAdMode ? null : _endDate,
         );
 
         if (mounted) {
+          await context.read<WalletProvider>().fetchWallet();
           Helpers.showSnackBar(context, _createSuccessMessage);
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        if (SubscriptionService.isSubscriptionRequiredError(e)) {
-          await showSubscriptionRequiredWindow(context);
+        final coinInfo = SubscriptionService.parseCoinBalanceError(e);
+        if (coinInfo != null) {
+          await openCoinStore(
+            context,
+            required: coinInfo['required'] as int?,
+            balance: coinInfo['balance'] as int?,
+          );
           return;
         }
         Helpers.showSnackBar(
@@ -923,16 +1114,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final planImpressionLimit = _planImpressionLimit;
-    final impressionPresets = planImpressionLimit == null
-        ? <int>[]
-        : <int>{
-            (planImpressionLimit * 0.25).round(),
-            (planImpressionLimit * 0.5).round(),
-            (planImpressionLimit * 0.75).round(),
-            planImpressionLimit,
-          }.where((value) => value > 0).toList(growable: true)
-      ..sort();
+    final maxAffordableImpressions = _maxAffordableImpressions;
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -947,6 +1129,45 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
+            if (_isAdMode)
+              Consumer<WalletProvider>(
+                builder: (context, wallet, _) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CoinStoreScreen(),
+                        ),
+                      );
+                    },
+                    child: SizedBox(
+                      height: 38,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.toll_outlined,
+                            color: Color(0xFF8A5A00),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${wallet.coinsBalance}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF8A5A00),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             if (_isEditMode && _existingOffer != null)
               IconButton(
                 onPressed: _isLoading ? null : _confirmDeleteOffer,
@@ -961,11 +1182,69 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Status message if discount is out of time
+                if (_existingOffer != null) ...[
+                  Builder(
+                    builder: (ctx) {
+                      final statusMsg = _existingOffer!.getStatusMessage();
+                      if (statusMsg != null) {
+                        final isUnavailable =
+                            statusMsg.toLowerCase().contains('not available');
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: isUnavailable
+                                ? const Color(0xFFFFEBEE)
+                                : const Color(0xFFFFF3E0),
+                            border: Border.all(
+                              color: isUnavailable
+                                  ? const Color(0xFFFFCDD2)
+                                  : const Color(0xFFFFE0B2),
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isUnavailable
+                                    ? Icons.error_outline
+                                    : Icons.schedule,
+                                color: isUnavailable
+                                    ? const Color(0xFFC62828)
+                                    : const Color(0xFF8A4B08),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  isUnavailable
+                                      ? 'This discount is not available'
+                                      : statusMsg,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isUnavailable
+                                        ? const Color(0xFFC62828)
+                                        : const Color(0xFF8A4B08),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
                 if (_isAdMode) ...[
                   _buildToggleSection(
                     title: 'Ad Target',
                     options: const [
                       ToggleOption(label: 'Product', value: 'product'),
+                      ToggleOption(label: 'Discounts', value: 'discount'),
                       ToggleOption(label: 'Pack', value: 'pack'),
                     ],
                     selectedValue: _adTargetType,
@@ -1066,6 +1345,45 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                 if (_hasSelectedTarget) ...[
                   const SizedBox(height: 24),
 
+                  if (_allowKindSwitch) ...[
+                    _buildToggleSection(
+                      title: 'Campaign Type',
+                      options: _kindOptions,
+                      selectedValue: _kind,
+                      onChanged: _isEditMode
+                          ? (_) {}
+                          : (value) {
+                              setState(() {
+                                _kind = value;
+                                _existingOffer = (_selectedProduct == null)
+                                    ? null
+                                    : context
+                                        .read<PostProvider>()
+                                        .myOffers
+                                        .where((offer) =>
+                                            offer.product.id ==
+                                                _selectedProduct!.id &&
+                                            offer.kind == _kind)
+                                        .firstOrNull;
+                                if (_isAdMode &&
+                                    _maxImpressionsController.text
+                                        .trim()
+                                        .isEmpty &&
+                                    maxAffordableImpressions > 0) {
+                                  _maxImpressionsController.text =
+                                      '$maxAffordableImpressions';
+                                }
+                                if (!_isAdMode) {
+                                  _adTargetType = 'product';
+                                  _selectedPackId = null;
+                                  _selectedPackName = null;
+                                }
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1079,37 +1397,32 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           _isAdMode
                               ? (_isPackTarget
                                   ? 'Sponsored Pack Summary'
-                                  : 'Sponsored Product Summary')
+                                  : (_isDiscountTarget
+                                      ? 'Sponsored Discount Summary'
+                                      : 'Sponsored Product Summary'))
                               : 'Current Price',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_isAdMode
-                                ? (_isPackTarget ? 'Pack:' : 'Product:')
-                                : 'Original Price:'),
-                            Flexible(
-                              child: Text(
-                                _isPackTarget
-                                    ? (_selectedPackName ??
-                                        'Pack #${_selectedPackId ?? 0}')
-                                    : _selectedProduct!.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        if (_isAdMode) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Original Price:'),
+                              Text(
+                                Helpers.formatPrice(_selectedProduct!.price),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: Colors.grey,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                         if (!_isPackTarget) ...[
                           const SizedBox(height: 8),
                           Row(
@@ -1176,45 +1489,60 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
                   if (_isAdMode) ...[
                     const SizedBox(height: 8),
-                    if (planImpressionLimit != null)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF6E8),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFFD8A8)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Plan sponsored-ad limit: $planImpressionLimit impressions',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Remaining ad slots: ${_adInventory['remaining_ad_slots'] ?? '-'}',
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Remaining plan impressions: ${_adInventory['remaining_plan_impressions'] ?? '-'}',
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                          ],
-                        ),
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF6E8),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFFD8A8)),
                       ),
-                    _buildToggleSection(
-                      title: 'Placement',
-                      options: _placementOptions,
-                      selectedValue: _placement,
-                      onChanged: (value) {
-                        setState(() => _placement = value);
-                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ad View Coins balance: $_adViewCoinsBalance',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Cost per impression: $_adViewCoinCost coin',
+                            style: TextStyle(color: Colors.grey.shade700),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Current max impressions you can activate: $maxAffordableImpressions',
+                            style: TextStyle(color: Colors.grey.shade700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Show At Hour',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickDisplayHours,
+                            icon: const Icon(Icons.access_time),
+                            label: const Text('Select Hours'),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Selected hours: ${_selectedHoursLabel()}',
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _buildToggleSection(
@@ -1228,9 +1556,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     const SizedBox(height: 12),
                     AppTextField(
                       controller: _maxImpressionsController,
-                      label: 'Ad Max Impressions',
-                      hint: planImpressionLimit != null
-                          ? 'Up to $planImpressionLimit'
+                      label: 'Ad Impressions',
+                      hint: maxAffordableImpressions > 0
+                          ? 'Up to $maxAffordableImpressions'
                           : 'e.g. 5000',
                       icon: Icons.visibility_outlined,
                       keyboardType: TextInputType.number,
@@ -1240,32 +1568,6 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       'Current ad impressions to activate: ${_maxImpressionsController.text.trim().isEmpty ? '-' : _maxImpressionsController.text.trim()}',
                       style: TextStyle(color: Colors.grey.shade700),
                     ),
-                    if (impressionPresets.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: impressionPresets.map((value) {
-                            final selected =
-                                _maxImpressionsController.text.trim() ==
-                                    '$value';
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: AppToggleButton(
-                                label: '$value',
-                                isSelected: selected,
-                                onTap: () {
-                                  setState(() {
-                                    _maxImpressionsController.text = '$value';
-                                  });
-                                },
-                                compact: true,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -1325,8 +1627,10 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                   ],
 
                   const SizedBox(height: 24),
-                  _buildScheduleSection(),
-                  const SizedBox(height: 24),
+                  if (!_isAdMode) ...[
+                    _buildScheduleSection(),
+                    const SizedBox(height: 24),
+                  ],
                   _buildAvailabilitySection(),
                   const SizedBox(height: 16),
 

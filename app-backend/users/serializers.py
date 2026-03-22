@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from rest_framework import serializers
 import uuid
 from django.utils import timezone
@@ -27,11 +28,12 @@ class UserSerializer(serializers.ModelSerializer):
             'store_type', 'cover_image', 'followers_count', 'average_rating', 
             'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
             'show_phone_public', 'show_social_public',
+            'coins_balance', 'post_coins', 'ad_view_coins',
             'product_count', 'review_count', 'categories',
             'date_joined'
         ]
         read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at',
-                            'product_count', 'review_count', 'categories']
+                            'coins_balance', 'post_coins', 'ad_view_coins', 'product_count', 'review_count', 'categories']
         extra_kwargs = {
             'store_type': {'required': False, 'allow_blank': True},
         }
@@ -172,6 +174,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         preferred_categories = validated_data.pop('preferred_categories', [])
         user = User(**validated_data)
+        user.coins_balance = int(getattr(settings, 'INITIAL_SIGNUP_COINS', 40) or 40)
         user.set_password(password)
         user.save()
         if preferred_categories:

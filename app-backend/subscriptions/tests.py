@@ -7,9 +7,9 @@ from rest_framework import serializers
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from catalog.models import Product
 from .models import MerchantSubscription, SubscriptionPaymentRequest, SubscriptionPlan
 from .services import ensure_can_create_post, get_active_subscription
+from wallet.services import get_coin_costs
 
 User = get_user_model()
 
@@ -66,24 +66,35 @@ class SubscriptionActivationTests(APITestCase):
 		self.assertEqual(sub.status, 'active')
 
 	def test_approved_subscription_allows_post_creation_beyond_free_limit(self):
-		# Free limit is 5; create 6 products to exceed it.
-		for i in range(6):
-			Product.objects.create(
-				store=self.merchant,
-				name=f'P{i}',
-				price='10.00',
-			)
+		costs = get_coin_costs()
+		cost = int(costs['product'])
+		self.merchant.coins_balance = cost * 2
+		self.merchant.save(update_fields=['coins_balance'])
 
-		with self.assertRaises(serializers.ValidationError):
-			ensure_can_create_post(self.merchant)
+		# Publishing consumes post coins for product create.
+		ensure_can_create_post(self.merchant, 'product')
+		self.merchant.refresh_from_db()
+		self.assertEqual(self.merchant.coins_balance, cost)
 
-		MerchantSubscription.objects.create(
-			store=self.merchant,
-			plan=self.plan,
-			start_date=timezone.now() - timedelta(days=1),
-			end_date=timezone.now() + timedelta(days=30),
-			status='active',
-		)
+		# A second publish with exact remaining budget succeeds.
+		ensure_can_create_post(self.merchant, 'product')
+		self.merchant.refresh_from_db()
+		self.assertEqual(self.merchant.coins_balance, 0)
 
-		# Should not raise after active subscription exists.
-		ensure_can_create_post(self.merchant)
+		# No remaining budget should raise INSUFFICIENT_COINS.
+		with self.assertRaises(serializers.ValidationError) as exc:
+			ensure_can_create_post(self.merchant, 'product')
+		detail = exc.exception.detail
+		self.assertEqual(detail.get('code'), 'INSUFFICIENT_COINS')
+		self.assertEqual(int(detail.get('required')), cost)
+		self.assertEqual(int(detail.get('balance')), 0)
+
+	def test_post_coin_deduction_is_atomic(self):
+		costs = get_coin_costs()
+		cost = int(costs['product'])
+		self.merchant.coins_balance = cost
+		self.merchant.save(update_fields=['coins_balance'])
+
+		ensure_can_create_post(self.merchant, 'product')
+		self.merchant.refresh_from_db()
+		self.assertEqual(self.merchant.coins_balance, 0)

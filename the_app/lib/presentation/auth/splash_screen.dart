@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+
 import '../../core/config/api_config.dart';
-import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/jwt_validator.dart';
 import '../home/main_navigation_screen.dart';
 import 'launch_screen.dart';
@@ -20,6 +23,8 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
+  Timer? _flowTimer;
 
   @override
   void initState() {
@@ -45,22 +50,25 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _flowTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _startFlow() async {
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
+  void _startFlow() {
+    _flowTimer?.cancel();
+    _flowTimer = Timer(const Duration(milliseconds: 1200), () async {
+      if (!mounted) return;
 
-    if (StorageService.isFirstTime()) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LaunchScreen()),
-      );
-      return;
-    }
+      if (StorageService.isFirstTime()) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LaunchScreen()),
+        );
+        return;
+      }
 
-    await _checkAuthenticationStatus();
+      await _checkAuthenticationStatus();
+    });
   }
 
   Future<void> _checkAuthenticationStatus() async {

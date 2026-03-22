@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .models import Notification, NotificationRecipient
 from .serializers import NotificationSerializer
+from .tasks import async_send_new_post_notification
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -52,3 +53,45 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'status': 'ok'})
         except NotificationRecipient.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'], url_path='trigger')
+    def trigger(self, request):
+        """
+        Trigger a new post notification for followers.
+        Used when creating promotions, products, packs, etc.
+        
+        Request body:
+        {
+            "post_id": <int>,
+            "post_type": "promotion" | "product" | "pack" | "ad",
+            "post_title": "<str>"
+        }
+        """
+        post_id = request.data.get('post_id')
+        post_type = request.data.get('post_type', 'promotion')
+        post_title = request.data.get('post_title', '')
+        
+        if not post_id:
+            return Response(
+                {'detail': 'post_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Queue notification task asynchronously
+            async_send_new_post_notification(
+                store_id=request.user.id,
+                post_id=post_id,
+                post_type=post_type,
+                post_title=post_title,
+            )
+            return Response({
+                'status': 'notification_queued',
+                'post_id': post_id,
+                'post_type': post_type,
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {'detail': f'Error triggering notification: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
