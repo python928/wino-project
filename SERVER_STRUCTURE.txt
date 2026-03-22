@@ -2,9 +2,19 @@
 ├── .env
 ├── .env.example
 ├── .github
-│   └── copilot-instructions.md
+│   ├── copilot-instructions.md
+│   └── workflows
+│       └── ci.yml
 ├── Dockerfile
 ├── README.md
+├── ads
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── urls.py
+│   ├── views.py
+│   └── migrations
 ├── analytics
 │   ├── CHECKLIST.py
 │   ├── admin.py
@@ -20,7 +30,8 @@
 │   ├── signals.py
 │   ├── urls.py
 │   ├── utils.py
-│   └── views.py
+│   ├── views.py
+│   └── migrations
 ├── backend
 │   ├── asgi.py
 │   ├── celery.py
@@ -38,20 +49,23 @@
 │   ├── serializers.py
 │   ├── tests.py
 │   ├── urls.py
-│   └── views.py
+│   ├── views.py
+│   └── migrations
 ├── config
 │   ├── settings.py
 │   └── urls.py
 ├── db.sqlite3
 ├── docker-compose.yml
-├── firebase-adminsdk.json (local, ignored)
+├── firebase-adminsdk.json (local)
 ├── manage.py
 ├── media
 │   ├── products
 │   ├── subscriptions
 │   │   └── payment_proofs
-│   └── users
-│       └── covers
+│   ├── users
+│   │   ├── covers
+│   │   └── profiles
+│   └── wallet
 ├── notifications
 │   ├── admin.py
 │   ├── apps.py
@@ -62,7 +76,8 @@
 │   ├── tests.py
 │   ├── urls.py
 │   ├── utils.py
-│   └── views.py
+│   ├── views.py
+│   └── migrations
 ├── requirements.txt
 ├── subscriptions
 │   ├── admin.py
@@ -77,16 +92,30 @@
 │   │       └── admin_tabs.js
 │   ├── tests.py
 │   ├── urls.py
-│   └── views.py
-└── users
+│   ├── views.py
+│   └── migrations
+├── users
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── services.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── views.py
+│   └── migrations
+└── wallet
     ├── admin.py
     ├── apps.py
     ├── models.py
     ├── serializers.py
     ├── services.py
-    ├── tests.py
     ├── urls.py
-    └── views.py
+    ├── views.py
+    └── migrations
 
----
-Update 2026-03-16: Sponsored ads delivery now filters by targeting (category/age/geo/audience), boosts recommendations, and adds controlled randomness to avoid repeat ordering.
+Key architecture notes (2026-03-23):
+- Store model is unified into users.User (Store == User).
+- Ads are a dedicated app (`ads`) and no longer only a promotions sub-mode.
+- Wallet/coins are a dedicated app (`wallet`) with purchase-approval flow.
+- CI workflow exists at `.github/workflows/ci.yml`.

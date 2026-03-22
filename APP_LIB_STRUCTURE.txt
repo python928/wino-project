@@ -23,7 +23,8 @@
 │   │   ├── home_provider.dart
 │   │   ├── pack_provider.dart
 │   │   ├── post_provider.dart
-│   │   └── store_provider.dart
+│   │   ├── store_provider.dart
+│   │   └── wallet_provider.dart
 │   ├── routing
 │   │   ├── route_generator.dart
 │   │   └── routes.dart
@@ -39,7 +40,8 @@
 │   │   ├── product_api_service.dart
 │   │   ├── storage_service.dart
 │   │   ├── store_api_service.dart
-│   │   └── subscription_service.dart
+│   │   ├── subscription_service.dart
+│   │   └── wallet_service.dart
 │   ├── theme
 │   │   ├── app_colors.dart
 │   │   ├── app_constants.dart
@@ -81,7 +83,6 @@
 │       ├── auth_repository.dart
 │       ├── post_repository.dart
 │       └── store_repository.dart
-├── example_overflow_fix.dart
 ├── features
 │   ├── analytics
 │   │   ├── analytics_export.dart
@@ -91,93 +92,31 @@
 │   │       ├── recommendations_list.dart
 │   │       ├── search_tracker.dart
 │   │       └── view_tracker.dart
-│   └── notifications
-│       └── notification_screen.dart
+│   ├── catalog
+│   │   └── screens
+│   ├── notifications
+│   │   └── notification_screen.dart
+│   └── product
 ├── main.dart
 └── presentation
     ├── auth
-    │   ├── launch_screen.dart
-    │   ├── login_screen.dart
-    │   ├── otp_verification_screen.dart
-    │   ├── phone_profile_setup_screen.dart
-    │   ├── register_screen.dart
-    │   └── splash_screen.dart
     ├── common
-    │   ├── constants
-    │   │   └── card_constants.dart
-    │   ├── location_filter_picker.dart
-    │   ├── location_picker_screen.dart
-    │   ├── radius_picker_sheet.dart
-    │   └── widgets
-    │       ├── reviews_section.dart
-    │       ├── stacked_product_images.dart
-    │       └── unified_item_card.dart
     ├── favorites
-    │   └── favorites_screen.dart
     ├── home
-    │   ├── home_screen.dart
-    │   ├── main_navigation_screen.dart
-    │   └── widgets
-    │       ├── category_item.dart
-    │       ├── featured_store_card.dart
-    │       ├── header_location_widget.dart
-    │       ├── hot_deal_card.dart
-    │       ├── promo_banner.dart
-    │       ├── search_bar_widget.dart
-    │       ├── store_card.dart
-    │       └── store_product_card.dart
     ├── notifications
-    │   └── notifications_screen.dart
     ├── pack
-    │   └── pack_detail_screen.dart
     ├── product
-    │   └── product_detail_screen.dart
     ├── profile
-    │   ├── add_pack_screen.dart
-    │   ├── add_product_screen.dart
-    │   ├── add_promotion_screen.dart
-    │   ├── edit_customer_profile_screen.dart
-    │   ├── edit_merchant_profile_screen.dart
-    │   ├── profile_screen.dart
-    │   └── widgets
-    │       ├── product_picker_sheet.dart
-    │       ├── profile_action_buttons.dart
-    │       ├── profile_merchant_header.dart
-    │       ├── profile_post_filter.dart
-    │       ├── profile_stats_card.dart
-    │       └── profile_user_header.dart
     ├── promotion
-    │   └── promotion_detail_screen.dart
     ├── search
-    │   ├── category_selection_screen.dart
-    │   ├── search_tab_screen.dart
-    │   └── widgets
-    │       └── store_result_card.dart
     ├── shared_widgets
-    │   ├── cards
-    │   │   ├── pack_card.dart
-    │   │   ├── product_card.dart
-    │   │   ├── promotion_card.dart
-    │   │   └── store_chip.dart
-    │   ├── contact_action_row.dart
-    │   ├── custom_app_bar.dart
-    │   ├── custom_bottom_nav.dart
-    │   ├── empty_state_widget.dart
-    │   ├── error_state_widget.dart
-    │   ├── gradient_button.dart
-    │   ├── header.dart
-    │   ├── image_carousel.dart
-    │   ├── loading_indicator.dart
-    │   ├── location_mode_switcher.dart
-    │   ├── report_bottom_sheet.dart
-    │   ├── shimmer_loading.dart
-    │   └── unified_app_bar.dart
     ├── store
-    │   └── stores_list_screen.dart
-    └── subscription
-        ├── ads_dashboard_screen.dart
-        ├── subscription_gate.dart
-        └── subscription_plans_screen.dart
+    ├── subscription
+    └── wallet
 
----
-Update 2026-03-16: Sponsored ads delivery now filters by targeting (category/age/geo/audience), boosts recommendations, and adds controlled randomness to avoid repeat ordering.
+Notes:
+- Navigation style is still custom `RouteGenerator` + named routes.
+- `go_router` exists in dependencies but is not the active routing layer.
+- Wallet screens/services/providers are now part of the live app architecture.
+
+Last reviewed: 2026-03-23.

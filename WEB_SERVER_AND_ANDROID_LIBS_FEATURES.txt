@@ -9,43 +9,60 @@ Path: /home/anti-problems/toprice/app-backend
 - django-filter==24.2
 - django-cors-headers==4.4.0
 - Pillow==10.3.0
+- pillow-heif==0.16.0
 - django-jazzmin==2.6.0
 - fcm-django==2.3.1
 - psycopg2-binary==2.9.9
 - celery==5.4.0
 - redis==5.0.3
 - firebase-admin==6.5.0
-- pillow-heif==0.16.0
 - twilio==9.3.7
 
 2) Installed app modules (features)
 - users
 - catalog
+- ads
 - notifications
 - subscriptions
+- wallet
 - analytics
 
-3) API feature routes (from backend/urls.py)
+3) API route groups (from backend/urls.py)
 - /api/users/
 - /api/catalog/
+- /api/ads/
 - /api/notifications/
 - /api/subscriptions/
+- /api/wallet/
 - /api/analytics/
 - /api/devices/
 - /api/auth/token/
 - /api/auth/token/refresh/
 
 4) Extra server capabilities configured
-- JWT authentication (SimpleJWT)
+- JWT authentication + token refresh rotation (SimpleJWT)
 - Filtering/search/ordering (django-filter + DRF filters)
 - FCM device registration (fcm-django)
-- Celery + Redis background tasks
+- Celery + Redis background tasks (task eager mode in DEBUG)
 - Firebase Admin SDK integration
 - Twilio OTP channel support (WhatsApp/SMS)
+- Coin economy + wallet purchase approvals
+- Daily login coin top-up logic controlled by admin settings
+
+5) Important backend model notes
+- Store == User (no separate Store model)
+- Global runtime settings model: users.SystemSettings
+  - first_login_coins
+  - daily_login_coins
+- User has monetization fields:
+  - coins_balance
+  - post_coins
+  - ad_view_coins
+  - last_daily_coin_grant
 
 
-ANDROID APP (the_app)
-=====================
+ANDROID/FLUTTER APP (the_app)
+=============================
 Path: /home/anti-problems/toprice/the_app
 
 1) Flutter/Dart libraries (pubspec dependencies)
@@ -53,27 +70,32 @@ Path: /home/anti-problems/toprice/the_app
 - flutter_localizations (sdk)
 - cupertino_icons
 - equatable
-- shared_preferences
-- http
-- flutter_secure_storage
-- jwt_decoder
+- intl
 - provider
+- shared_preferences
+- flutter_secure_storage
+- http
+- jwt_decoder
 - image_picker
 - geolocator
+- local_auth
+- url_launcher
+- share_plus
+- haptic_feedback
 - google_fonts
 - font_awesome_flutter
 - flutter_animate
 - cached_network_image
 - shimmer
 - glassmorphism
+- flutter_glow
+- flutter_neumorphic_plus
+- flutter_gradient_colors
 - lottie
 - animated_text_kit
 - flutter_staggered_animations
 - spring
 - dropdown_button2
-- flutter_glow
-- flutter_neumorphic_plus
-- flutter_gradient_colors
 - flutter_carousel_widget
 - smooth_page_indicator
 - flutter_rating_bar
@@ -81,20 +103,15 @@ Path: /home/anti-problems/toprice/the_app
 - flutter_slidable
 - flutter_staggered_grid_view
 - sticky_headers
+- visibility_detector
+- flutter_cache_manager
 - extended_image
 - photo_view
 - flutter_blurhash
-- haptic_feedback
-- visibility_detector
-- flutter_cache_manager
-- go_router
-- share_plus
-- url_launcher
-- local_auth
+- go_router (in dependencies but project still uses custom route generator)
 - firebase_core
 - firebase_messaging
 - flutter_local_notifications
-- intl
 - flutter_otp_text_field
 
 2) Android-native/Gradle libraries and plugins
@@ -105,7 +122,9 @@ Path: /home/anti-problems/toprice/the_app
 
 3) App feature modules (lib/features)
 - analytics
+- catalog
 - notifications
+- product
 
 4) App presentation feature areas (lib/presentation)
 - auth
@@ -118,9 +137,10 @@ Path: /home/anti-problems/toprice/the_app
 - profile
 - promotion
 - search
+- shared_widgets
 - store
 - subscription
-- shared_widgets (reusable UI components)
+- wallet
 
 5) Core app libraries/modules (lib)
 - core
@@ -128,5 +148,10 @@ Path: /home/anti-problems/toprice/the_app
 - features
 - presentation
 
----
-Update 2026-03-16: Sponsored ads delivery now filters by targeting (category/age/geo/audience), boosts recommendations, and adds controlled randomness to avoid repeat ordering.
+6) Important app config notes
+- API base URL currently in api_config.dart:
+  - http://192.168.162.21:8000/
+- App route alias keeps: stores == users endpoint
+- Wallet and ads endpoints are configured and used in app services/screens
+
+Last reviewed: 2026-03-23 (updated to match current backend/app implementation).
