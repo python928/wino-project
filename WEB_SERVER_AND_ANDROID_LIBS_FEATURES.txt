@@ -45,7 +45,8 @@ Path: /home/anti-problems/toprice/app-backend
 - FCM device registration (fcm-django)
 - Celery + Redis background tasks (task eager mode in DEBUG)
 - Firebase Admin SDK integration
-- Twilio OTP channel support (WhatsApp/SMS)
+- Twilio OTP integration exists (WhatsApp/SMS)
+  - Current dev/testing mode: OTP delivery is disabled and OTP code is fixed in code
 - Coin economy + wallet purchase approvals
 - Daily login coin top-up logic controlled by admin settings
 

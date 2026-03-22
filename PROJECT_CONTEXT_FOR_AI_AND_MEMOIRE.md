@@ -34,6 +34,10 @@ It focuses on what is true now in code, not planned features.
 4. Ads and Wallet are now independent first-class modules.
 5. CI exists in `.github/workflows/ci.yml`.
 
+## 4.1) Auth/OTP reality (important for QA)
+- OTP generation is currently in dev/testing mode (fixed code) and delivery is effectively disabled in server code.
+- This must be switched to real delivery + secure verification rules before production.
+
 ## 5) API consistency notes (important)
 - App config contains subscription paths like:
   - `/api/subscriptions/plans/`
@@ -61,4 +65,5 @@ Action: align router and app config before production release.
 ## 9) Production-readiness gaps to mention transparently
 - Security hardening in settings still required (`DEBUG`, `ALLOWED_HOSTS`, `CORS`, `SECRET_KEY`).
 - Broader tests needed for OTP, wallet approval, ad delivery/click flows, subscription route alignment.
+- Replace fixed OTP testing behavior with real OTP delivery + throttling + observability.
 - Observability stack (error tracking/APM) still pending.

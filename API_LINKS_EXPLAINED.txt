@@ -33,10 +33,12 @@ Notes
 - /api/users/auth/phone/send-otp/
   Method: POST
   Purpose: send OTP to phone (with rate limiting)
+  Current dev/testing behavior: OTP is fixed and delivery is disabled in server code
 
 - /api/users/auth/phone/verify-otp/
   Method: POST
   Purpose: verify OTP and login/create user (new phone users get first_login_coins)
+  Current dev/testing behavior: verify expects the fixed code
 
 - /api/users/me/
   Methods: GET, PUT, PATCH

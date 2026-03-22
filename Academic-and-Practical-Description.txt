@@ -126,7 +126,7 @@ Wino منصة تجارة محلية رقمية (Local O2O Marketplace) تربط 
 - SQLite (dev) / PostgreSQL (ready)
 - Firebase Admin + FCM
 - Celery + Redis
-- Twilio OTP
+- Twilio OTP (integration exists; current dev/testing mode uses fixed OTP and disables delivery)
 
 ---
 
