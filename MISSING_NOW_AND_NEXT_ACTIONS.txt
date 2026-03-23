@@ -1,49 +1,126 @@
-# ما الذي ينقص المشروع الآن؟ (تقييم عملي محدث)
+# ما الذي ينقص المشروع الآن؟ وما الخطوة التالية؟
+
 آخر مراجعة: 23-03-2026
 
-## 1) نواقص حرجة قبل النشر
-- الإعدادات أصبحت env-driven في `backend/settings.py` لكن القيم الافتراضية ما زالت development-friendly:
-  - `DJANGO_DEBUG` default=True
-  - `ALLOWED_HOSTS` مرن في وضع debug
-  - `DJANGO_SECRET_KEY` fallback تطويري
-- OTP ما يزال في وضع dev/testing (بحسب منطق الخدمات الحالي).
-- غياب monitoring production متكامل (Sentry/APM/alerting).
-- لا يوجد runbook مكتمل للطوارئ (keys rotation / DB restore / incident process).
+## 1) نواقص حرجة قبل أي إطلاق إنتاجي
+1. إعدادات الخادم ما تزال development-friendly:
+   - `DJANGO_DEBUG` default=True
+   - `DJANGO_SECRET_KEY` fallback تطويري
+   - `ALLOWED_HOSTS` واسع عند debug
+2. التطبيق يستخدم `baseUrl` ثابتاً محليا داخل `api_config.dart`.
+3. Android يسمح `usesCleartextTraffic="true"` حاليا.
+4. OTP في وضع مناسب للتطوير لأن الرمز يظهر في الاستجابة عند `DEBUG=True` ويتم طباعته في السجل.
+5. لا توجد observability production كاملة:
+   - Sentry
+   - tracing/APM
+   - alerting
+   - runbooks
 
-## 2) ما تم تحسينه مؤخرا
-- إضافة `feedback` app (API + screens).
-- إضافة `trust-signals` endpoint وطبقة trust scoring.
-- إضافة anti-abuse throttles/cooldowns.
-- إضافة short links `/s/{id}` و`/p/{id}`.
-- توحيد subscriptions routes: plans + payment-requests + merchant-subscriptions.
-- تحويل Flutter لمنصات Android-only (حذف ios/web/desktop folders).
-- تأسيس localization AR/EN/FR + `flutter generate` + l10n yaml.
+---
+
+## 2) ما تم تحسينه فعليا مؤخرا
+1. إضافة `feedback` app من الخادم حتى واجهات Flutter.
+2. إضافة `trust-signals` endpoint.
+3. تعزيز trust scoring للبلاغات والمراجعات.
+4. إضافة `AbuseFlag` و`TrustSettings` retention/tuning.
+5. إضافة short links:
+   - `/s/{id}/`
+   - `/p/{id}/`
+6. تفعيل deep links وQR/share flows في التطبيق.
+7. توسيع localization:
+   - ARB
+   - locale provider
+   - runtime translations migration
+8. تحسين تدفقات report/review في شاشات التفاصيل.
+9. دعم payment proofs متعددة الصور في wallet/subscriptions.
+
+---
 
 ## 3) نواقص جودة واتساق
-- تغطية الاختبارات أقل من المطلوب مقارنة بحجم الميزات الجديدة.
-- لا تزال نصوص UI كثيرة hardcoded وتحتاج إكمال migration إلى ARB.
-- وجود Directionality/locale edge cases في بعض الشاشات يحتاج توحيد نهائي.
-- بعض ملفات التوثيق كانت متأخرة وتم تحديثها بهذه الدفعة.
+1. الترجمة لم تكتمل على كل النصوص في كل الشاشات.
+2. يوجد مزج بين:
+   - generated localization
+   - runtime translations
+   ويحتاج ضبطا نهائيا حتى لا تتكرر المفاتيح أو تُنسى النصوص الجديدة.
+3. بعض التوثيق الداخلي كان متأخرا عن الكود وتم تحديثه في هذه الدفعة، لكنه يحتاج مراجعة دورية لاحقا.
+4. لا تزال بعض المسارات فيها ازدواجية أو تراكم تاريخي:
+   - مثال: device registration له أكثر من path على مستوى backend
+5. يوجد مجلدات/بقايا legacy أو placeholder تحتاج حسم لاحقاً، خاصة في بعض البنية التنظيمية.
 
-## 4) نواقص UX
-- تحسين empty/loading/error states في wallet/ads/feedback وبعض تدفقات profile.
-- تبسيط رسائل أخطاء OTP/Permissions لرفع الوضوح.
-- تحسين first-run language experience قبل تسجيل الدخول.
+---
 
-## 5) نواقص التحليلات
-- لا يوجد إطار KPI رسمي منشور داخل النظام (Precision@K/NDCG@K وغيرها).
-- حاجة إلى dashboard متابعة أداء ads + recommendation impact.
+## 4) نواقص اختبارات
+الاختبارات الموجودة حاليا أفضل من السابق، لكن ما تزال أقل من حجم المنظومة.
 
-## 6) أولويات التنفيذ (مرتبة)
-1. Production hardening كامل + secrets policy.
-2. Monitoring + alerting + log correlation.
-3. توسيع الاختبارات الحرجة (Auth/OTP/Wallet/Ads/Subscriptions/Feedback).
-4. إكمال localization coverage على كل presentation layer.
-5. تحسين dashboard trader KPIs.
+اختبارات backend الموجودة حاليا تشمل:
+- `catalog/tests.py`
+- `notifications/tests.py`
+- `wallet/tests.py`
+- `feedback/tests.py`
+- `users/tests.py`
+- `users/tests_trust.py`
+- `subscriptions/tests.py`
 
-## 7) Definition of Done للإطلاق
-- إعدادات أمان production مفعلة بالكامل عبر env.
-- CI يمر بالكامل على كل PR.
-- المسارات متطابقة ومثبتة باختبارات تكامل.
-- Monitoring فعّال مع baseline alerts.
-- توثيق تشغيلي محدث (runbook + recovery procedure).
+المشكلة
+- لا توجد تغطية end-to-end كافية للمسارات الحرجة بين التطبيق والخادم.
+- اختبارات Flutter ما تزال محدودة جدا.
+
+الأولوية
+1. Auth/OTP
+2. Wallet approvals
+3. Subscription payment requests
+4. Reports/reviews moderation
+5. Deep-link routing
+
+---
+
+## 5) نواقص UX
+1. first-run language experience يحتاج صقلا أكبر.
+2. شرح صلاحيات GPS والموقع يحتاج وضوحا أفضل.
+3. بعض empty/error/loading states لا تزال تحتاج تحسيناً.
+4. dashboard التاجر يحتاج تبسيطا بصريا وقرائيا.
+5. explainability للمستخدم النهائي ما تزال أضعف من قدرة backend الفعلية.
+
+---
+
+## 6) نواقص تشغيلية
+1. لا توجد سياسة secrets/release واضحة ومكتملة.
+2. لا يوجد runbook حادثات رسمي.
+3. purge/retention موجود جزئيا لكنه يحتاج دمجه في تشغيل دوري واضح.
+4. release checklist للتطبيق Android تحتاج أن تصبح وثيقة ثابتة.
+
+---
+
+## 7) نواقص استراتيجية
+1. ربط أقوى بين analytics وبين قرارات UX.
+2. merchant dashboard يحتاج أن يتحول من بيانات خام إلى قرارات تشغيلية.
+3. تقارير ROI للاعلانات والاشتراكات ما تزال في بداية الطريق.
+4. نحتاج framing أوضح للتسويق: لماذا Wino أفضل من listing apps التقليدية؟
+
+---
+
+## 8) أولويات التنفيذ القادمة
+### أولوية 1
+1. Production hardening كامل.
+2. Monitoring + alerting + request tracing.
+3. إزالة/تقليل القيم الصالحة للتطوير فقط في الخادم والتطبيق.
+
+### أولوية 2
+4. إكمال localization coverage.
+5. توسيع الاختبارات الحرجة.
+6. تحسين تجربة nearby/location permissions.
+
+### أولوية 3
+7. merchant dashboard أوضح.
+8. explainability للثقة والتوصية.
+9. cleanup للبنية والواجهات المكررة أو legacy.
+
+---
+
+## 9) Definition of Done لنسخة أقرب للإطلاق
+1. إعدادات إنتاج آمنة بالكامل.
+2. Base URL وkeys تعتمد على environment وليس hardcoded.
+3. CI يغطي الاختبارات الحرجة.
+4. أخطاء production يمكن رصدها وتتبعها.
+5. localization تغطي كل الشاشات الأساسية.
+6. التوثيق البرمجي والتشغيلي محدث ومتسق مع الكود.

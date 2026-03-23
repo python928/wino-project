@@ -1,111 +1,171 @@
 API LINKS EXPLAINED
 ===================
-Project:
-- Backend: /home/anti-problems/toprice/app-backend
-- App config: /home/anti-problems/toprice/the_app/lib/core/config/api_config.dart
 
-Base URL (current in app)
--------------------------
-- http://192.168.36.21:8000/
+Project roots
+-------------
+- Backend: `/home/anti-problems/toprice/app-backend`
+- App API config: `/home/anti-problems/toprice/the_app/lib/core/config/api_config.dart`
 
-Notes
------
-- All paths below are relative to base URL.
-- Many list APIs may return paginated `{results: [...]}` or direct list.
-- Store == User (important for route semantics).
+Base URL currently used by the Flutter app
+------------------------------------------
+- `http://192.168.36.21:8000/`
+
+Important notes
+---------------
+- All paths below are relative to the base URL.
+- `Store == User`, so many "store" routes are actually user routes.
+- Most list endpoints are paginated, but some screens still tolerate direct list responses.
+- The app is Android-first and deep links are wired to both custom schemes and HTTP short links.
 
 1) AUTH
 -------
-- /api/auth/token/ (POST)
-- /api/auth/token/refresh/ (POST)
+- `/api/auth/token/` (POST)
+- `/api/auth/token/refresh/` (POST)
 
-2) USERS / PROFILE
-------------------
-- /api/users/register/ (POST)
-- /api/users/auth/phone/send-otp/ (POST)
-- /api/users/auth/phone/verify-otp/ (POST)
-- /api/users/me/ (GET/PUT/PATCH)
-- /api/users/change-password/ (POST)
-- /api/users/logout/ (POST)
-- /api/users/preferences/categories/ (POST)
-- /api/users/users/ (GET/POST)
-- /api/users/users/{id}/ (GET)
-- /api/users/followers/ (GET)
-- /api/users/followers/toggle/ (POST)
-- /api/users/store-reports/ (GET/POST/...)
-- /api/users/moderation/high-risk/ (GET, admin)
+2) USERS / PROFILE / STORE
+--------------------------
+- `/api/users/register/` (POST)
+- `/api/users/auth/phone/send-otp/` (POST)
+- `/api/users/auth/phone/verify-otp/` (POST)
+- `/api/users/me/` (GET, PUT, PATCH)
+- `/api/users/change-password/` (POST)
+- `/api/users/logout/` (POST)
+- `/api/users/preferences/categories/` (POST)
+- `/api/users/users/` (GET, POST via router, plus list/retrieve APIs below)
+- `/api/users/users/` (GET list via `UserListView`)
+- `/api/users/users/{id}/` (GET, PATCH via `UserDetailView`)
+- `/api/users/followers/` (GET)
+- `/api/users/followers/toggle/` (POST)
+- `/api/users/store-reports/` (GET, POST, admin moderation actions via viewset)
+- `/api/users/moderation/high-risk/` (GET, admin snapshot)
 
 3) CATALOG
 ----------
-- /api/catalog/categories/
-- /api/catalog/products/
-- /api/catalog/products/{id}/
-- /api/catalog/product-images/
-- /api/catalog/packs/
-- /api/catalog/packs/{id}/
-- /api/catalog/pack-products/
-- /api/catalog/pack-images/
-- /api/catalog/reviews/
-- /api/catalog/reviews/rate-store/
-- /api/catalog/reviews/my-store-rating/{storeId}/
-- /api/catalog/favorites/
-- /api/catalog/favorites/toggle/
-- /api/catalog/favorites/check/{productId}/
-- /api/catalog/promotions/
-- /api/catalog/promotion-images/
-- /api/catalog/product-reports/
+- `/api/catalog/categories/`
+- `/api/catalog/products/`
+- `/api/catalog/products/{id}/`
+- `/api/catalog/product-images/`
+- `/api/catalog/packs/`
+- `/api/catalog/packs/{id}/`
+- `/api/catalog/pack-products/`
+- `/api/catalog/pack-images/`
+- `/api/catalog/reviews/`
+- `/api/catalog/reviews/rate-store/` (POST)
+- `/api/catalog/reviews/my-store-rating/{storeId}/` (GET)
+- `/api/catalog/favorites/`
+- `/api/catalog/favorites/toggle/` (POST)
+- `/api/catalog/favorites/check/{productId}/` (GET)
+- `/api/catalog/promotions/`
+- `/api/catalog/promotion-images/`
+- `/api/catalog/product-reports/`
+
+Catalog behavior notes
+----------------------
+- Product reviews and store reviews share the same `reviews` domain model.
+- Reports are throttled and scored for seriousness/credibility.
+- Favorites expose both `toggle` and `check` helpers for app UX.
 
 4) ADS
 ------
-- /api/ads/campaigns/
-- /api/ads/campaigns/{id}/
-- /api/ads/campaigns/{id}/register-click/
+- `/api/ads/campaigns/`
+- `/api/ads/campaigns/{id}/`
+- `/api/ads/campaigns/{id}/register-click/` (POST)
 
 5) ANALYTICS
 ------------
-- /api/analytics/recommendations/
-- /api/analytics/events/
-- /api/analytics/trust-signals/
+- `/api/analytics/recommendations/` (GET)
+- `/api/analytics/events/` (POST)
+- `/api/analytics/trust-signals/` (POST)
+
+Analytics notes
+---------------
+- `events/` accepts one event or a batch.
+- `trust-signals/` is a parallel ingestion path for trust-related behavioral signals.
+- Analytics data also supports recommendation and moderation logic.
 
 6) FEEDBACK
 -----------
-- /api/feedback/ (GET/POST)
-- /api/feedback/my/ (GET)
+- `/api/feedback/` (GET, POST)
+- `/api/feedback/my/` (GET)
 
-7) NOTIFICATIONS
-----------------
-- /api/notifications/notifications/
-- /api/notifications/notifications/unread-count/
-- /api/notifications/notifications/mark-all-read/
-- /api/notifications/notifications/{id}/mark-read/
-- /api/notifications/devices/
+Feedback notes
+--------------
+- Users can submit feedback with optional screenshot.
+- Admins can update feedback status and add admin notes.
+
+7) NOTIFICATIONS / DEVICES
+--------------------------
+- `/api/notifications/notifications/`
+- `/api/notifications/notifications/unread-count/`
+- `/api/notifications/notifications/mark-all-read/`
+- `/api/notifications/notifications/{id}/mark-read/`
+- `/api/notifications/notifications/trigger/`
+- `/api/notifications/devices/`
+- `/api/devices/devices/`
+
+Device registration note
+------------------------
+- The codebase currently exposes device registration through both:
+  - notifications router: `/api/notifications/devices/`
+  - root router: `/api/devices/devices/`
+- The Flutter app currently points to `/api/notifications/devices/`.
 
 8) SUBSCRIPTIONS
 ----------------
-- /api/subscriptions/plans/
-- /api/subscriptions/plans/public-data/
-- /api/subscriptions/payment-requests/
-- /api/subscriptions/subscription-payment-requests/
-- /api/subscriptions/merchant-subscriptions/
-- /api/subscriptions/merchant-subscriptions/access-status/
-- /api/subscriptions/merchant-subscriptions/merchant-dashboard/
+- `/api/subscriptions/plans/`
+- `/api/subscriptions/plans/public-data/`
+- `/api/subscriptions/merchant-subscriptions/`
+- `/api/subscriptions/merchant-subscriptions/access-status/`
+- `/api/subscriptions/merchant-subscriptions/merchant-dashboard/`
+- `/api/subscriptions/payment-requests/`
+- `/api/subscriptions/payment-requests/{id}/timeline/`
+- `/api/subscriptions/payment-requests/{id}/approve/`
+- `/api/subscriptions/payment-requests/{id}/reject/`
+- `/api/subscriptions/subscription-payment-requests/`
+
+Subscriptions notes
+-------------------
+- `payment-requests/` is the alias used by the Flutter app.
+- `subscription-payment-requests/` points to the same backend viewset and exists for compatibility.
+- Payment requests support up to 3 proof images.
 
 9) WALLET
 ---------
-- /api/wallet/
-- /api/wallet/packs/
-- /api/wallet/buy/
-- /api/wallet/grant/
-- /api/wallet/purchases/{purchase_id}/approve/
-- /api/wallet/purchases/{purchase_id}/reject/
+- `/api/wallet/` (GET wallet snapshot)
+- `/api/wallet/packs/` (GET coin packs)
+- `/api/wallet/buy/` (POST purchase request with proof images)
+- `/api/wallet/grant/` (POST, admin)
+- `/api/wallet/purchases/{purchase_id}/approve/` (POST, admin)
+- `/api/wallet/purchases/{purchase_id}/reject/` (POST, admin)
+
+Wallet notes
+------------
+- Wallet snapshot includes balances, recent transactions, recent purchases, and current costs.
+- Coin purchase approval is manual/admin-mediated in the current design.
 
 10) DEEP LINKS / SHORT LINKS
 ----------------------------
-- /s/{store_id}/ -> redirects to wino://store/{store_id}
-- /p/{product_id}/ -> redirects to wino://product/{product_id}
+- `/s/{store_id}/` -> redirects to `wino://store/{store_id}`
+- `/p/{product_id}/` -> redirects to `wino://product/{product_id}`
+
+Android manifest currently also accepts
+--------------------------------------
+- `wino://...`
+- `toprice://...`
+- `http(s)://wino.app/s/{id}`
+- `http(s)://toprice.app/s/{id}`
+- `http://192.168.36.21/s/{id}`
+- same pattern for `/p/{id}`
 
 11) MEDIA
 ---------
-- /media/{path} (served when DEBUG=True)
+- `/media/{path}` when `DEBUG=True`
+
+12) App-side path aliases to remember
+-------------------------------------
+- `stores == users`
+- store details are fetched from the users API
+- product and promotion reports both use catalog reporting endpoints
+- review deletion uses the same review endpoint with `DELETE /api/catalog/reviews/{id}/`
 
 Last reviewed: 2026-03-23.

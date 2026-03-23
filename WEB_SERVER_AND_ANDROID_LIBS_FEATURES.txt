@@ -1,108 +1,223 @@
-WEB SERVER (app-backend)
-========================
-Path: /home/anti-problems/toprice/app-backend
+WEB SERVER AND ANDROID/FLUTTER LIBS + FEATURES
+==============================================
 
-1) Libraries (requirements)
-- Django==5.0.6
-- djangorestframework==3.15.2
-- djangorestframework-simplejwt==5.3.1
-- django-filter==24.2
-- django-cors-headers==4.4.0
-- django-jazzmin==2.6.0
-- Pillow==10.3.0
-- pillow-heif==0.16.0
-- celery==5.4.0
-- redis==5.0.3
-- fcm-django==2.3.1
-- firebase-admin==6.5.0
-- twilio==9.3.7
-- psycopg2-binary==2.9.9
+Last reviewed: 2026-03-23
+
+WEB SERVER (`app-backend`)
+==========================
+
+1) Core libraries from `requirements.txt`
+----------------------------------------
+- `Django==5.0.6`
+- `djangorestframework==3.15.2`
+- `djangorestframework-simplejwt==5.3.1`
+- `django-filter==24.2`
+- `django-cors-headers==4.4.0`
+- `django-jazzmin==2.6.0`
+- `Pillow==10.3.0`
+- `pillow-heif==0.16.0`
+- `celery==5.4.0`
+- `redis==5.0.3`
+- `fcm-django==2.3.1`
+- `firebase-admin==6.5.0`
+- `twilio==9.3.7`
+- `psycopg2-binary==2.9.9`
 
 2) Installed backend modules
-- users
-- catalog
-- ads
-- notifications
-- subscriptions
-- wallet
-- analytics
-- feedback
-- common (middleware/helpers)
+----------------------------
+- `users`
+- `catalog`
+- `ads`
+- `notifications`
+- `subscriptions`
+- `wallet`
+- `analytics`
+- `feedback`
 
-3) API groups
-- /api/users/
-- /api/catalog/
-- /api/ads/
-- /api/notifications/
-- /api/subscriptions/
-- /api/wallet/
-- /api/analytics/
-- /api/feedback/
-- /api/devices/
-- /api/auth/token/
-- /api/auth/token/refresh/
-- /s/{id}/ and /p/{id}/ short links
+Infrastructure helpers
+----------------------
+- `common.middleware.RequestIdMiddleware`
+- `common.throttles.BurstScopedRateThrottle`
 
-4) Notable backend capabilities
-- JWT auth + refresh rotation
-- DRF filtering/search/ordering
-- Scoped rate throttling (OTP, reports, analytics, feedback, payment requests)
-- FCM device registration + notification support
-- Wallet purchases with admin approve/reject
-- Trust scoring + abuse signals + moderation snapshot
-- Feedback workflow with optional screenshot
+3) Backend feature groups
+-------------------------
+`users`
+- JWT auth
+- phone OTP
+- unified store/profile model
+- followers
+- store reports
+- trust settings
 
-5) Backend model/business highlights
-- Store == User
-- SystemSettings controls coin policy
-- TrustSettings controls trust/abuse policy
-- User includes verification fields (`is_verified`, `verification_status`)
+`catalog`
+- categories
+- products
+- packs
+- promotions
+- reviews
+- favorites
+- product reports
+
+`ads`
+- ad campaigns
+- click registration
+
+`analytics`
+- recommendations endpoint
+- interaction events ingestion
+- trust signals ingestion
+- user interest profiles
+- retention cleanup command
+
+`wallet`
+- wallet snapshot
+- coin packs
+- buy request with proof images
+- admin approve/reject
+
+`subscriptions`
+- plans
+- public payment data
+- merchant subscription access status
+- merchant dashboard
+- payment requests with proof images
+
+`feedback`
+- submit feedback
+- list user feedback
+- admin update feedback status
+
+`notifications`
+- notification list/unread/read actions
+- trigger endpoint
+- FCM device registration
+
+4) Important backend capabilities
+---------------------------------
+- JWT auth with refresh rotation + blacklist
+- Default authenticated API posture
+- Filtering/search/ordering/pagination
+- Scoped throttling for OTP, reviews, reports, analytics, feedback, payment flows
+- Request correlation id in responses
+- Trust/abuse scoring and moderation data
+- Short deep links:
+  - `/s/{id}/`
+  - `/p/{id}/`
+
+5) Important backend business rules
+-----------------------------------
+- `Store == User`
+- `SystemSettings` controls signup/daily coin policy
+- `TrustSettings` controls report/review abuse tuning and retention days
+- Review uniqueness is enforced per user/target
+- Report cooldowns and daily caps are enforced server-side
 
 
-ANDROID/FLUTTER APP (the_app)
-=============================
-Path: /home/anti-problems/toprice/the_app
+ANDROID / FLUTTER APP (`the_app`)
+=================================
 
 1) Platform scope
-- Android-only project folders retained.
-- ios/web/macos/linux/windows folders removed.
+-----------------
+- Android folder retained and active
+- iOS/Web/macOS/Linux/Windows removed from the repo
 
-2) Main Flutter dependencies
-- flutter (sdk)
-- flutter_localizations (sdk)
-- intl
-- provider
-- shared_preferences
-- flutter_secure_storage
-- http
-- image_picker
-- geolocator
-- local_auth
-- url_launcher
-- share_plus
-- app_links
-- mobile_scanner
-- qr_flutter
-- firebase_core
-- firebase_messaging
-- flutter_local_notifications
-- go_router (installed but not active router)
+2) Main Flutter dependencies from `pubspec.yaml`
+------------------------------------------------
+Core / app
+- `provider`
+- `shared_preferences`
+- `flutter_secure_storage`
+- `http`
+- `intl`
+- `equatable`
 
-3) Android/Gradle side
-- Plugin: com.google.gms.google-services
-- Firebase BoM + Analytics
-- desugar_jdk_libs enabled
+Device / platform
+- `image_picker`
+- `geolocator`
+- `local_auth`
+- `url_launcher`
+- `share_plus`
+- `app_links`
+- `mobile_scanner`
+- `qr_flutter`
 
-4) Current app architecture highlights
-- core / data / features / presentation layering
-- custom RouteGenerator + named routes
-- locale provider (AR/EN/FR) persisted in storage
-- deep link service for `wino://` and short-link paths
-- feedback screens added (send/my/scan)
+Firebase / notifications
+- `firebase_core`
+- `firebase_messaging`
+- `flutter_local_notifications`
 
-5) App config notes
-- Base URL in `api_config.dart`: http://192.168.36.21:8000/
-- Store endpoints alias users endpoints (`stores == users`)
-- APIs now include feedback + trust signals + extended subscription/wallet flows
+UI / interaction
+- `google_fonts`
+- `font_awesome_flutter`
+- `flutter_animate`
+- `cached_network_image`
+- `shimmer`
+- `dropdown_button2`
+- `flutter_carousel_widget`
+- `smooth_page_indicator`
+- `flutter_rating_bar`
+- `pull_to_refresh`
+- `flutter_slidable`
+- `flutter_staggered_grid_view`
+- `visibility_detector`
+- `extended_image`
+- `photo_view`
+- `flutter_blurhash`
+- `lottie`
+- `animated_text_kit`
 
-Last reviewed: 2026-03-23.
+Navigation / localization
+- `go_router` (installed, not the active router)
+- `flutter_localizations`
+
+3) App architecture highlights
+------------------------------
+- `main.dart` bootstraps Firebase, local notifications, providers, deep links
+- Active navigation is `RouteGenerator` + named routes
+- State management is `Provider` + `ChangeNotifier`
+- API access goes through `ApiService`
+- Local language setting goes through `LocaleProvider` + `StorageService`
+- Localization is hybrid:
+  - ARB/generated strings
+  - runtime translation bridge
+
+4) Current app feature highlights
+---------------------------------
+- search + nearby + category filtering
+- product / promotion / pack detail screens
+- favorites and follow flows
+- review / report flows
+- share + QR flows
+- merchant profile and publishing flows
+- wallet purchase flow
+- subscription plan and payment request flow
+- notifications
+- feedback screens
+
+5) Deep-link / Android manifest highlights
+------------------------------------------
+Android manifest currently handles:
+- `wino://...`
+- `toprice://...`
+- `http(s)://wino.app/...`
+- `http(s)://toprice.app/...`
+- `http://192.168.36.21/...`
+
+6) App configuration notes
+--------------------------
+- Base URL is currently hardcoded in `api_config.dart`
+- Notifications device endpoint used by the app:
+  - `/api/notifications/devices/`
+- Store APIs are aliased to users APIs because of `Store == User`
+
+7) Product maturity summary
+---------------------------
+The codebase is no longer just a marketplace UI. It now has:
+- local discovery
+- trust moderation primitives
+- merchant monetization
+- feedback collection
+- deep linking and sharing
+- multilingual groundwork
+
+This makes it technically rich enough for both real product iteration and academic analysis.

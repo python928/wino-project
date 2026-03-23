@@ -1,43 +1,106 @@
-.
-├── .env
-├── .env.example
-├── .github
-│   ├── copilot-instructions.md
-│   └── workflows
-│       └── ci.yml
-├── app-backend
-│   ├── Dockerfile
-│   ├── README.md
-│   ├── manage.py
-│   ├── requirements.txt
-│   ├── db.sqlite3
-│   ├── docker-compose.yml
-│   ├── firebase-adminsdk.json (local)
-│   ├── backend/
-│   ├── config/
-│   ├── common/
-│   ├── users/
-│   ├── catalog/
-│   ├── ads/
-│   ├── notifications/
-│   ├── subscriptions/
-│   ├── wallet/
-│   ├── analytics/
-│   ├── feedback/
-│   └── media/
-└── the_app
-    ├── android/
-    ├── assets/
-    ├── lib/
-    ├── test/
-    ├── l10n.yaml
-    ├── pubspec.yaml
-    ├── pubspec.lock
-    └── README.md
+SERVER / REPOSITORY STRUCTURE
+============================
 
-Key architecture notes (2026-03-23):
-- Store model is unified into `users.User` (Store == User).
-- Ads, wallet, analytics, feedback are first-class apps.
-- Subscriptions routes include plans + payment-requests + merchant-subscriptions.
-- Short deep links exist at backend root: `/s/{id}` and `/p/{id}`.
-- Flutter project is Android-only at platform-folder level.
+Last reviewed: 2026-03-23
+
+Top-level repository view
+-------------------------
+.
+├── .github/
+├── .venv/
+├── .vscode/
+├── app-backend/
+├── the_app/
+├── Academic-and-Practical-Description.txt
+├── ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt
+├── API_LINKS_EXPLAINED.txt
+├── APP_LIB_STRUCTURE.txt
+├── CODEBASE_MAP_FOR_AI.md
+├── Market-Analysis-Algeria.txt
+├── MEMOIRE_TECHNICAL_SUMMARY_2026-03.md
+├── MISSING_NOW_AND_NEXT_ACTIONS.txt
+├── SERVER_STRUCTURE.txt
+└── WEB_SERVER_AND_ANDROID_LIBS_FEATURES.txt
+
+Backend tree (`app-backend/`)
+-----------------------------
+app-backend
+├── .github/
+├── Dockerfile
+├── README.md
+├── db.sqlite3
+├── docker-compose.yml
+├── manage.py
+├── requirements.txt
+├── backend/                # active Django project package
+├── config/                 # secondary/legacy config package still present
+├── common/                 # middleware + shared throttles/helpers
+├── users/
+├── catalog/
+├── ads/
+├── notifications/
+├── subscriptions/
+├── wallet/
+├── analytics/
+├── feedback/
+└── media/
+
+Important backend notes
+-----------------------
+- Active settings entrypoint: `app-backend/backend/settings.py`
+- Active root router: `app-backend/backend/urls.py`
+- `common/` is not a Django app in `INSTALLED_APPS`, but it is used by middleware/imports.
+- Root short-link routes live in backend root:
+  - `/s/{id}/`
+  - `/p/{id}/`
+
+Backend module roles
+--------------------
+- `users/`
+  - auth, profile, OTP, followers, store reports, trust settings
+- `catalog/`
+  - categories, products, packs, promotions, reviews, favorites, product reports
+- `ads/`
+  - sponsored campaigns and click tracking
+- `notifications/`
+  - notification list/read flows + FCM device routes
+- `subscriptions/`
+  - plans, payment requests, merchant subscriptions, dashboard
+- `wallet/`
+  - coin packs, purchases, balances, approvals
+- `analytics/`
+  - recommendations, events, trust signals, interest profiles
+- `feedback/`
+  - user feedback and admin review flow
+
+Media directories currently visible
+-----------------------------------
+- `app-backend/media/feedback/`
+- `app-backend/media/products/`
+- `app-backend/media/subscriptions/`
+- `app-backend/media/users/`
+- `app-backend/media/wallet/`
+
+Flutter app tree (`the_app/`)
+-----------------------------
+the_app
+├── android/
+├── assets/
+├── lib/
+├── test/
+├── l10n.yaml
+├── pubspec.yaml
+├── pubspec.lock
+└── README.md
+
+Platform scope
+--------------
+- Android platform folder is retained.
+- iOS/Web/macOS/Linux/Windows folders were removed from the repo.
+
+Key architecture notes
+----------------------
+- `Store == User` is the core backend domain rule.
+- The Flutter app uses named routes via `RouteGenerator`.
+- Localization is split between ARB-generated strings and runtime translations.
+- The repo now contains both technical docs and memoire-oriented docs at the root.

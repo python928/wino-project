@@ -1,45 +1,65 @@
 # Memoire Technical Summary (Wino)
 
+Last updated: 2026-03-23
+
 ## 1) Problem framing
-Wino addresses local commerce friction in Algeria by combining:
-- location-aware discovery,
-- trust-oriented interaction handling,
-- and merchant monetization mechanisms.
+Wino addresses a practical Algerian O2O commerce problem:
+- users need nearby and trustworthy discovery,
+- merchants need simple growth tools,
+- and the system must work even when payment and logistics are not fully automated.
 
 ## 2) Technical stack
-- Backend: Django + DRF + JWT + scoped throttling.
-- Mobile client: Flutter (Android-only deployment scope at repository level).
-- Notifications: Firebase messaging.
-- Background jobs: Celery/Redis (optional depending on deployment mode).
+- Backend: Django + DRF + JWT + scoped throttling
+- Mobile client: Flutter + Provider
+- Notifications: Firebase Messaging + flutter_local_notifications
+- Deep links: short links + custom schemes
+- Optional ops stack: Celery + Redis
 
-## 3) Core architectural decision
-- `Store == User` model unification.
+## 3) Core architectural choice
+- `Store == User`
 
-## 4) System modules
-- Catalog/search/reviews/favorites.
-- Ads campaigns and click registration.
-- Wallet with purchase approvals.
-- Subscriptions plans + merchant access status.
-- Analytics (events, recommendations, trust signals).
-- Feedback module.
+This reduces domain duplication and keeps store, auth, profile, trust, and monetization flows tightly aligned.
+
+## 4) Main implemented modules
+- Catalog: products, promotions, packs, reviews, favorites
+- Trust: product/store reports, review credibility, abuse flags, trust settings
+- Analytics: events, trust signals, recommendations, interest profiles
+- Monetization: ads, wallet, subscriptions, payment proof workflows
+- Feedback: user feedback with admin review
+- Notifications and deep links
 
 ## 5) Research-relevant contributions
-- Hybrid recommendation pipeline usable in production constraints.
-- Trust/abuse mitigation layer with credibility scoring.
-- Practical monetization integration with operational controls.
-- Local O2O adaptation for Algerian market context.
+1. A hybrid recommendation pipeline grounded in real interaction logs.
+2. A credibility/moderation layer that scores reports and reviews instead of treating all signals equally.
+3. A local-market architecture adapted to Algerian constraints:
+   - proximity
+   - direct contact
+   - trust deficit
+   - partial/manual payment operations
+4. A practical integration of monetization inside the same platform.
 
-## 6) Operational gaps before production
-- Production hardening defaults and secret governance.
-- End-to-end observability (errors/traces/APM).
-- Wider automated test coverage for critical monetization and trust flows.
-- Full localization rollout across all UI text.
+## 6) Current maturity
+The project is no longer a simple CRUD marketplace. It contains:
+- local search and nearby logic,
+- behavioral tracking,
+- trust/abuse mitigation,
+- merchant monetization flows,
+- multilingual groundwork,
+- Android deep-link and notification infrastructure.
 
-## 7) Suggested academic KPIs
-- Recommendation quality: Precision@K, Recall@K, NDCG@K.
-- Business conversion: CTR, conversion funnel, retention.
-- Trust quality: low-credibility report ratio over time.
-- System performance: latency and error rate by endpoint group.
+## 7) Main limitations before production
+- development-friendly defaults still exist in server settings
+- app base URL is hardcoded locally
+- localization is not fully complete across all UI text
+- production monitoring and runbooks are still incomplete
+- automated coverage needs to grow, especially end-to-end
 
-## 8) Conclusion
-Wino demonstrates an applied architecture that is both academically discussable and commercially actionable, with clear next steps toward production maturity and measurable impact.
+## 8) Suggested academic KPIs
+- Precision@K / Recall@K / NDCG@K for recommendations
+- conversion from search/nearby to contact/share
+- merchant activation and retention
+- low-credibility report ratio over time
+- latency/error rate by endpoint family
+
+## 9) Conclusion
+Wino is academically valuable because it combines recommendation, trust, and monetization in one applied local-commerce architecture. It is practically valuable because the implemented flows already reflect real market constraints rather than idealized e-commerce assumptions.

@@ -1,37 +1,20 @@
+the_app/lib
+===========
+
+Last reviewed: 2026-03-23
+
+1) High-level structure
+-----------------------
 .
 ├── core
 │   ├── components
 │   ├── config
-│   │   ├── api_config.dart
-│   │   └── app_config.dart
 │   ├── constants
+│   ├── extensions
+│   ├── localization
 │   ├── providers
-│   │   ├── analytics_provider.dart
-│   │   ├── auth_provider.dart
-│   │   ├── home_provider.dart
-│   │   ├── locale_provider.dart
-│   │   ├── pack_provider.dart
-│   │   ├── post_provider.dart
-│   │   ├── store_provider.dart
-│   │   └── wallet_provider.dart
 │   ├── routing
-│   │   ├── route_generator.dart
-│   │   └── routes.dart
 │   ├── services
-│   │   ├── analytics_api_service.dart
-│   │   ├── api_service.dart
-│   │   ├── auth_service.dart
-│   │   ├── deep_link_service.dart
-│   │   ├── favorites_change_notifier.dart
-│   │   ├── follow_change_notifier.dart
-│   │   ├── location_service.dart
-│   │   ├── notification_badge_service.dart
-│   │   ├── pack_api_service.dart
-│   │   ├── product_api_service.dart
-│   │   ├── storage_service.dart
-│   │   ├── store_api_service.dart
-│   │   ├── subscription_service.dart
-│   │   └── wallet_service.dart
 │   ├── theme
 │   ├── utils
 │   └── widgets
@@ -41,36 +24,168 @@
 │   └── repositories
 ├── features
 │   ├── analytics
-│   ├── catalog
-│   ├── notifications
-│   └── product
+│   └── notifications
 ├── l10n
-│   ├── app_ar.arb
-│   ├── app_en.arb
-│   └── app_fr.arb
-├── main.dart
-└── presentation
-    ├── auth
-    ├── common
-    ├── favorites
-    ├── feedback
-    ├── home
-    ├── notifications
-    ├── pack
-    ├── product
-    ├── profile
-    ├── promotion
-    ├── search
-    ├── shared_widgets
-    ├── store
-    ├── subscription
-    └── wallet
+├── presentation
+│   ├── auth
+│   ├── common
+│   ├── favorites
+│   ├── feedback
+│   ├── home
+│   ├── notifications
+│   ├── pack
+│   ├── product
+│   ├── profile
+│   ├── promotion
+│   ├── search
+│   ├── shared_widgets
+│   ├── store
+│   ├── subscription
+│   └── wallet
+└── main.dart
 
-Notes:
-- Active navigation is custom RouteGenerator + named routes.
-- go_router is present in dependencies but not the active routing layer.
-- Locale switching (AR/EN/FR) is wired through LocaleProvider + StorageService.
-- Deep links handled by DeepLinkService (HTTP short-links + wino scheme).
-- Flutter project is now Android-only at platform folder level.
+2) What each major folder is doing
+----------------------------------
+`core/`
+- Cross-cutting infrastructure.
+- API config, routing, providers, app services, theme, utility helpers.
 
-Last reviewed: 2026-03-23.
+Important files
+- `core/config/api_config.dart`
+- `core/routing/route_generator.dart`
+- `core/routing/routes.dart`
+- `core/services/api_service.dart`
+- `core/services/storage_service.dart`
+- `core/services/deep_link_service.dart`
+- `core/providers/locale_provider.dart`
+- `core/extensions/l10n_extension.dart`
+- `core/localization/runtime_translations.dart`
+
+`data/`
+- Models and repositories shared across screens/providers.
+
+Important files
+- `data/models/post_model.dart`
+- `data/models/offer_model.dart`
+- `data/models/pack_model.dart`
+- `data/repositories/post_repository.dart`
+- `data/repositories/store_repository.dart`
+
+`features/`
+- Smaller reusable product logic that is not tied to a single screen tree.
+- Currently active mainly in:
+  - `features/analytics/`
+  - `features/notifications/`
+
+Note
+- Some directories exist as architectural placeholders, but most product UI still lives under `presentation/`.
+
+`l10n/`
+- Generated/localized app strings from ARB files.
+- Current languages:
+  - `app_en.arb`
+  - `app_ar.arb`
+  - `app_fr.arb`
+
+`presentation/`
+- Screen-first UI layer.
+- This is where most real feature work currently happens.
+
+3) Presentation subfolders
+--------------------------
+`presentation/auth/`
+- login, register, OTP, splash, phone profile setup
+
+`presentation/home/`
+- home shell and home widgets
+
+`presentation/product/`
+- product detail flow
+
+`presentation/promotion/`
+- promotion/discount detail flow
+
+`presentation/pack/`
+- pack detail flow
+
+`presentation/profile/`
+- merchant/customer profile
+- add/edit product/pack/promotion
+- profile widgets
+
+`presentation/search/`
+- search tab, category selection, results widgets
+
+`presentation/feedback/`
+- send feedback
+- my feedback
+- QR scan
+
+`presentation/shared_widgets/`
+- reusable UI pieces shared across many screens
+- includes report bottom sheet, QR dialog, image carousel, contact row, cards
+
+4) Routing pattern actually used
+--------------------------------
+- Active router: `RouteGenerator.generateRoute`
+- Route registry: `core/routing/routes.dart`
+- Navigation style: named routes + manual arguments
+- `go_router` is installed but not the active navigation system
+
+5) Localization pattern actually used
+-------------------------------------
+There are two localization layers:
+
+1. Generated localization
+- `l10n/*.arb`
+- `app_localizations.dart`
+- Used for newer screens and strongly typed strings
+
+2. Runtime translation bridge
+- `core/localization/runtime_translations.dart`
+- Used through `context.tr(...)`
+- Helps migrate legacy hardcoded strings without blocking feature work
+
+This means both layers are important when updating text.
+
+6) Deep-link pattern
+--------------------
+- App bootstrap installs `DeepLinkService`
+- Supported paths:
+  - `/s/{id}`
+  - `/p/{id}`
+- Supported schemes:
+  - `wino://`
+  - `toprice://`
+
+Main file
+- `core/services/deep_link_service.dart`
+
+7) State management pattern
+---------------------------
+- `Provider` + `ChangeNotifier`
+- Main app providers registered in `main.dart`
+- Feature-specific API services are injected into some providers
+
+Core providers currently registered
+- `AuthProvider`
+- `PostProvider`
+- `HomeProvider`
+- `LocaleProvider`
+- `StoreProvider`
+- `PackProvider`
+- `WalletProvider`
+- `AnalyticsProvider`
+
+8) Platform scope
+-----------------
+- The repository is Android-only at platform-folder level.
+- iOS, Web, macOS, Linux, and Windows folders were removed from the Flutter project tree.
+
+9) Practical editing note
+-------------------------
+If you change one of these UI areas, check the related siblings too:
+- product details <-> promotion details <-> pack details
+- review/report UI <-> translations
+- deep links <-> routes <-> Android manifest
+

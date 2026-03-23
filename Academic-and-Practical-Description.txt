@@ -1,148 +1,293 @@
-# التوصيف الاكاديمي والتقني لمشروع Wino
+# التوصيف الاكاديمي والتطبيقي لمشروع Wino
 
 آخر تحديث: 23-03-2026
 
-## 1) التعريف بالمشروع
-Wino منصة تجارة محلية رقمية (Local O2O Marketplace) تربط بين:
-- تطبيق Flutter (Android-first حاليا).
-- Django + DRF API للخادم.
+## 1) تعريف المشروع
+Wino منصة تجارة محلية رقمية موجهة للسوق الجزائري، تجمع بين:
+- اكتشاف المنتجات والمتاجر محليا.
+- توصية مبنية على السلوك الفعلي للمستخدم.
+- طبقة ثقة ومكافحة إساءة استخدام.
+- مسارات monetization للتاجر: إعلانات + محافظ عملات + اشتراكات.
 
-المبدأ البنيوي المركزي: **Store == User**.
-كل مستخدم يمكن تمثيله كتاجر بدون نموذج Store منفصل.
+النموذج المركزي في المشروع هو:
+**Store == User**
+
+أي أن المتجر ليس كيانا منفصلا، بل هو نفس حساب المستخدم مع حقول متجر وتحقق وموقع ووسائل تواصل.
 
 ---
 
 ## 2) الاشكالية البحثية
-كيف نبني نظام بحث وتوصية محلي قابل للتفسير ويعمل بكفاءة ضمن:
-- قيود الموقع الجغرافي الواقعي.
-- تفاوت جودة المتاجر والثقة.
-- ضغط الأداء مع نمو البيانات.
-- الحاجة لطبقة monetization عملية للتجار (Ads/Wallet/Subscriptions).
+السوق المحلي الجزائري يواجه عدة مشاكل متداخلة:
+- صعوبة اكتشاف ما هو "قريب فعلا" من المستخدم.
+- ضعف الثقة في بعض الإعلانات والمتاجر والمحتوى.
+- محدودية الأدوات التحليلية والاعلانية للتاجر الصغير.
+- الحاجة إلى حل عملي لا يفترض وجود checkout إلكتروني كامل.
+
+بناء على ذلك، يحاول Wino الإجابة عن السؤال التالي:
+
+كيف نبني منصة O2O محلية قابلة للتفسير، تراعي الجغرافيا والثقة وسلوك التاجر الجزائري، وتدعم في الوقت نفسه نماذج نمو وربح قابلة للتطبيق؟
 
 ---
 
-## 3) الاهداف العلمية والتقنية
-1. تصميم معمارية معيارية تفصل Presentation / API / Domain Logic.
-2. تحسين البحث المحلي (Nearby + ولاية + ترتيب متعدد العوامل).
-3. بناء توصية سلوكية هجينة مدعومة بـ InteractionLog.
-4. تفعيل تحليلات تشغيلية قابلة للتوسع (events + trust signals).
-5. دمج monetization عملي: ads + wallet + subscription access.
+## 3) القرارات المعمارية الأساسية
+1. توحيد هوية المستخدم والمتجر (`Store == User`).
+2. فصل نسبي بين:
+   - Backend API في Django/DRF
+   - Flutter client
+   - خدمات تحليلات وثقة ومونيتايزيشن مستقلة منطقيا
+3. اعتماد Android-first حاليا:
+   - مجلدات `ios/web/macos/linux/windows` محذوفة من المشروع
+   - البنية التطبيقية تركز على Android
+4. استخدام Routing مخصص في Flutter:
+   - `RouteGenerator` + named routes
+   - `go_router` موجود كاعتماد لكنه ليس المسار النشط
+5. اعتماد Localization هجينة:
+   - ARB/generated localizations
+   - `runtime_translations.dart` كطبقة انتقالية للنصوص legacy
 
 ---
 
 ## 4) المعمارية الحالية
-### 4.1 Backend (Django/DRF)
-- Django 5.0.6 + DRF 3.15.2
+### 4.1 Backend
+- Django + Django REST Framework
 - JWT عبر SimpleJWT
-- Apps الفعلية:
-  - users
-  - catalog
-  - ads
-  - notifications
-  - subscriptions
-  - wallet
-  - analytics
-  - feedback
-  - common (middleware)
+- CORS + Filtering + Pagination + Scoped throttling
+- Firebase/FCM للإشعارات
+- Celery/Redis موجودان كبنية تشغيلية اختيارية
 
-### 4.2 Frontend (Flutter)
-- Provider/ChangeNotifier
-- RouteGenerator + named routes (go_router موجود كاعتماد فقط)
-- Firebase Messaging + Local Notifications
+### 4.2 تطبيقات الخادم الفعلية
+- `users`
+- `catalog`
+- `ads`
+- `notifications`
+- `subscriptions`
+- `wallet`
+- `analytics`
+- `feedback`
+- `common` كبنية middleware/throttling مساعدة
+
+### 4.3 Frontend
+- Flutter + Provider/ChangeNotifier
+- طبقات: `core`, `data`, `features`, `presentation`
 - Deep links عبر `app_links`
-- QR share/scan عبر `qr_flutter` + `mobile_scanner`
-- Android-only platforms في المشروع حاليا (تم حذف ios/web/macos/linux/windows)
-
-### 4.3 Integration Layer
-- REST APIs تحت `/api/...`
-- Media upload (صور منتجات/حملات/دفعات/feedback)
-- FCM device registration
+- إشعارات عبر Firebase Messaging + flutter_local_notifications
+- مشاركة وروابط قصيرة وQR
+- دعم لغات: العربية والفرنسية والانجليزية
 
 ---
 
-## 5) النموذج المفاهيمي للبيانات
-### 5.1 كيانات رئيسية
-- User (حساب + ملف متجر + حقول توثيق)
-- SystemSettings (first_login_coins / daily_login_coins)
-- TrustSettings + AbuseFlag
-- Category, Product, ProductImage
-- Pack, PackProduct, PackImage
-- Promotion, PromotionImage
-- Review, Favorite, ProductReport, StoreReport
-- AdCampaign
-- SubscriptionPlan, MerchantSubscription, SubscriptionPaymentRequest
-- CoinPurchase, CoinTransaction, CoinPackPlan
-- InteractionLog, UserInterestProfile
-- Feedback
+## 5) الوحدات الوظيفية الرئيسية
+### 5.1 المستخدم والمتجر
+- تسجيل/دخول JWT
+- OTP للهاتف
+- ملف متجر موحد داخل `users.User`
+- متابعون Follow/Unfollow
+- حقول تحقق: `verification_status`, `is_verified`
 
-### 5.2 قيود اتساق مهمة
-- Review/Favorite uniqueness بقيود منطقية على مستوى المستخدم/الهدف.
-- Ownership checks في create/update/delete.
-- Anti-abuse throttling + cooldowns لبلاغات/مراجعات/OTP.
-- `SystemSettings` و`TrustSettings` كنماذج singleton تشغيلية.
+### 5.2 الكاتالوج
+- Products
+- Packs
+- Promotions
+- Reviews
+- Favorites
+- Product reports
+- Store reports
 
----
+### 5.3 التحليلات والتوصيات
+- Interaction logging
+- توصيات هجينة
+- Trust signals
+- User interest profile
+- Retention/abuse retention management
 
-## 6) منطق ذكي منفذ فعليا
-1. توصية هجينة عبر `analytics/recommendations.py`.
-2. تتبع تفاعل عبر `/api/analytics/events/`.
-3. Trust signals عبر `/api/analytics/trust-signals/`.
-4. تقييم مصداقية البلاغات/المراجعات (trust scoring).
-5. شارات تحقق متجر (`is_verified`) مع تدفقات تقييم أهلية.
-6. Daily coin top-up في مسار profile حسب SystemSettings.
+### 5.4 monetization
+- Ads campaigns
+- Coin wallet
+- Coin purchase approval flow
+- Subscription plans
+- Subscription payment requests + proof images
+- Merchant dashboard + access status
 
----
-
-## 7) الواجهات والروابط التشغيلية
-- Auth: `/api/auth/token/`, `/api/auth/token/refresh/`
-- Users: `/api/users/...`
-- Catalog: `/api/catalog/...`
-- Ads: `/api/ads/campaigns/`
-- Analytics: `/api/analytics/recommendations/`, `/api/analytics/events/`, `/api/analytics/trust-signals/`
-- Feedback: `/api/feedback/`, `/api/feedback/my/`
-- Subscriptions: `/api/subscriptions/plans/`, `/api/subscriptions/payment-requests/`, `/api/subscriptions/merchant-subscriptions/...`
-- Wallet: `/api/wallet/...` مع approve/reject لطلبات الشراء
-- Short links: `/s/{id}/` و`/p/{id}/` مع redirect إلى scheme `wino://...`
+### 5.5 قنوات تحسين الجودة
+- Feedback module
+- Report flows
+- Credibility scoring
+- Abuse flags
 
 ---
 
-## 8) الحوكمة والامن
-1. JWT rotation + blacklist.
-2. DRF permissions افتراضي IsAuthenticated.
-3. Scoped throttling (OTP/reports/reviews/analytics/feedback/payment).
-4. Request correlation id عبر `common.middleware.RequestIdMiddleware`.
+## 6) النموذج المفاهيمي للبيانات
+### 6.1 كيانات رئيسية
+- `User`
+- `Follower`
+- `PhoneOTP`
+- `SystemSettings`
+- `TrustSettings`
+- `AbuseFlag`
+- `Category`
+- `Product`, `ProductImage`
+- `Pack`, `PackProduct`, `PackImage`
+- `Promotion`, `PromotionImage`, `PromotionViewer`
+- `Review`
+- `Favorite`
+- `ProductReport`
+- `StoreReport`
+- `AdCampaign`
+- `SubscriptionPlan`
+- `MerchantSubscription`
+- `SubscriptionPaymentRequest`
+- `SubscriptionPaymentProof`
+- `SubscriptionPaymentConfig`
+- `CoinTransaction`
+- `CoinPackPlan`
+- `CoinPurchase`
+- `CoinPurchaseProof`
+- `UserInterestProfile`
+- `InteractionLog`
+- `Feedback`
 
-ملاحظة:
-- الإعدادات أصبحت env-driven، لكن القيم الافتراضية لا تزال development-friendly، وبالتالي يلزم production hardening قبل الإطلاق.
+### 6.2 قيود اتساق مهمة
+1. مراجعة واحدة لكل مستخدم على المنتج نفسه أو المتجر نفسه.
+2. Favorite واحد لكل مستخدم/منتج.
+3. بلاغ واحد لكل مستخدم/هدف مع ضوابط cooldown وحدود يومية.
+4. `SystemSettings` و`TrustSettings` singleton settings.
+5. ownership checks في create/update/delete على مستوى الخادم.
 
 ---
 
-## 9) KPIs مقترحة للتقييم الاكاديمي/العملي
-1. CTR/Conversion للتوصيات والاعلانات.
-2. زمن الاستجابة (P95/P99) لمسارات search/recommendation.
-3. Retention للتاجر والمستخدم.
-4. نسبة نجاح تدفقات wallet/subscription.
-5. جودة الثقة: نسبة البلاغات منخفضة المصداقية مقابل البلاغات المفيدة.
+## 7) المسارات التشغيلية الحقيقية
+### 7.1 Auth وProfile
+- `/api/auth/token/`
+- `/api/auth/token/refresh/`
+- `/api/users/register/`
+- `/api/users/auth/phone/send-otp/`
+- `/api/users/auth/phone/verify-otp/`
+- `/api/users/me/`
+
+### 7.2 Catalog
+- `/api/catalog/products/`
+- `/api/catalog/packs/`
+- `/api/catalog/promotions/`
+- `/api/catalog/reviews/`
+- `/api/catalog/reviews/rate-store/`
+- `/api/catalog/favorites/toggle/`
+- `/api/catalog/product-reports/`
+
+### 7.3 Analytics
+- `/api/analytics/recommendations/`
+- `/api/analytics/events/`
+- `/api/analytics/trust-signals/`
+
+### 7.4 Wallet وSubscriptions
+- `/api/wallet/`
+- `/api/wallet/buy/`
+- `/api/wallet/packs/`
+- `/api/subscriptions/plans/`
+- `/api/subscriptions/plans/public-data/`
+- `/api/subscriptions/payment-requests/`
+- `/api/subscriptions/merchant-subscriptions/access-status/`
+- `/api/subscriptions/merchant-subscriptions/merchant-dashboard/`
+
+### 7.5 Feedback وNotifications
+- `/api/feedback/`
+- `/api/feedback/my/`
+- `/api/notifications/notifications/`
+- `/api/notifications/devices/`
+
+### 7.6 Deep Links
+- `/s/{id}/` -> `wino://store/{id}`
+- `/p/{id}/` -> `wino://product/{id}`
 
 ---
 
-## 10) حدود النسخة الحالية
-1. النظام rule/score-based أكثر من كونه Learning-to-Rank كامل.
-2. لا تزال المراقبة الإنتاجية (Sentry/APM) غير مفعلة بالكامل.
-3. ترجمة الواجهة تحسنت (AR/EN/FR + locale switch) لكنها تحتاج تعميم كامل على كل النصوص.
+## 8) المساهمات العلمية في المشروع
+1. بناء مسار توصية سلوكي يعمل ضمن قيود منصة محلية فعلية وليس بيئة مخبرية فقط.
+2. إدخال طبقة ثقة قابلة للقياس:
+   - credibility scoring
+   - report seriousness
+   - abuse flags
+3. دمج monetization داخل نفس المنظومة وليس كإضافة منفصلة لاحقا.
+4. تصميم تجربة O2O تلائم السوق الجزائري:
+   - القرب الجغرافي
+   - التواصل المباشر
+   - إثبات الدفع بالصور في بعض التدفقات
 
 ---
 
-## 11) افاق التطوير البحثي
-1. Learning-to-rank / ranking calibration.
-2. Explainability dashboard للتوصيات والبلاغات.
-3. A/B testing منهجي على search/recommendation/ads.
-4. طبقة قياس أعمال للتاجر (funnel + cohort).
+## 9) القيمة التطبيقية
+### للمستخدم
+- اكتشاف منتجات ومتاجر قريبة
+- تقييم ومراجعة وإبلاغ
+- متابعة متاجر مفضلة
+- مشاركة الروابط والـ QR
+
+### للتاجر
+- نشر منتجات/عروض/باكات
+- تشغيل حملات إعلانية
+- إدارة الظهور والرصيد
+- شراء باقات عملات
+- طلب اشتراك مع إثبات دفع
+- متابعة مؤشرات أولية عبر dashboard
+
+### للإدارة
+- moderation snapshots
+- trust scoring
+- approve/reject لطلبات الدفع
+- إعدادات نظام قابلة للتحكم
 
 ---
 
-## 12) خلاصة
-Wino حاليا يمثل منصة O2O محلية ناضجة مع:
-- نواة domain متماسكة (Store==User).
-- بحث/توصية/ثقة/Monetization في منظومة واحدة.
-- قابلية تطوير عالية نحو نسخة إنتاج كاملة للسوق الجزائري.
+## 10) ملامح النضج التقني الحالية
+1. البنية لم تعد مجرد CRUD تقليدي؛ بل تحتوي طبقات trust/analytics/monetization.
+2. التوثيق الداخلي بدأ يصبح أوضح وأقرب للواقع البرمجي.
+3. localization تحسنت وأصبحت متعددة الطبقات.
+4. deep links والـ short links مفعلة فعليا.
+5. feedback app موجودة من الخادم حتى الشاشات.
+
+---
+
+## 11) القيود الحالية
+1. `DEBUG=True` افتراضيا في الخادم ما زال مناسباً للتطوير أكثر من الإنتاج.
+2. `api_config.dart` ما زال يحتوي Base URL محليا ثابتا.
+3. بعض نصوص الواجهة ما زالت تعتمد على migration تدريجي نحو الترجمة الكاملة.
+4. OTP في وضع development-friendly لأن الرمز يظهر في الاستجابة عند `DEBUG=True`.
+5. الرصد الإنتاجي الكامل (Sentry/APM/alerts) غير مكتمل بعد.
+6. المشروع Android-only على مستوى المنصات داخل المستودع.
+
+---
+
+## 12) مؤشرات قياس مقترحة للمذكرة
+1. جودة التوصية:
+   - Precision@K
+   - Recall@K
+   - NDCG@K
+2. مؤشرات العمل:
+   - CTR
+   - Conversion funnel
+   - Merchant activation
+   - Retention
+3. مؤشرات الثقة:
+   - نسبة البلاغات منخفضة المصداقية
+   - نسبة المراجعات ذات credibility المرتفع
+4. مؤشرات الأداء:
+   - زمن الاستجابة
+   - error rate
+   - latency للمسارات الحرجة
+
+---
+
+## 13) آفاق التطوير
+1. Learning-to-rank أو ranking calibration.
+2. explainability dashboard للتوصيات والثقة.
+3. توسيع اختبارات التكامل للمسارات الحرجة.
+4. تحسين merchant dashboard وتحويله إلى لوحة قرار تشغيلية.
+5. فصل إعدادات التطبيق والبيئات على مستوى Flutter بصورة أوضح.
+
+---
+
+## 14) خلاصة
+Wino يمثل حاليا مشروعا تطبيقيا وأكاديميا قويا لأنه يجمع بين:
+- بنية domain واضحة
+- منطق محلي مناسب للسوق الجزائري
+- مسارات ثقة وتحليلات ومونيتايزيشن مترابطة
+- قابلية حقيقية للتحول من prototype متقدم إلى منصة إنتاجية ناضجة
