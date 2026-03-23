@@ -1,10 +1,11 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import ScopedRateThrottle
 
 from analytics.scoring import update_user_profile
 from analytics.recommendations import get_recommended_products
-from analytics.serializers import InteractionEventSerializer, RecommendationItemSerializer
+from analytics.serializers import InteractionEventSerializer, RecommendationItemSerializer, TrustSignalSerializer
 from analytics.utils import log_user_event, normalize_discovery_mode
 
 
@@ -54,6 +55,8 @@ class InteractionEventAPIView(APIView):
 	(nearby/location mode, search query, distance, wilaya, etc.).
 	"""
 	permission_classes = [IsAuthenticated]
+	throttle_classes = [ScopedRateThrottle]
+	throttle_scope = 'analytics_events'
 
 	def post(self, request):
 		raw_events = request.data
@@ -106,3 +109,51 @@ class InteractionEventAPIView(APIView):
 				pass
 
 		return Response({'logged': True, 'count': len(events)})
+
+
+class TrustSignalAPIView(APIView):
+	"""Receives lightweight trust signals (dwell/contact taps) from client."""
+
+	permission_classes = [IsAuthenticated]
+	throttle_classes = [ScopedRateThrottle]
+	throttle_scope = 'trust_signals'
+
+	def post(self, request):
+		raw_events = request.data
+		if isinstance(request.data, dict) and isinstance(request.data.get('events'), list):
+			raw_events = request.data.get('events') or []
+		if not isinstance(raw_events, list):
+			raw_events = [raw_events]
+
+		serializer = TrustSignalSerializer(data=raw_events, many=True)
+		serializer.is_valid(raise_exception=True)
+
+		for item in serializer.validated_data:
+			target_type = item['target_type']
+			target_id = item['target_id']
+			signal_type = item['signal_type']
+			metadata = dict(item.get('metadata') or {})
+			metadata['signal_type'] = signal_type
+			if 'dwell_ms' in item:
+				metadata['dwell_ms'] = item['dwell_ms']
+			if 'contact_channel' in item:
+				metadata['contact_channel'] = item['contact_channel']
+
+			if target_type == 'product':
+				metadata['product_id'] = target_id
+				log_user_event(
+					user=request.user,
+					action='view' if signal_type == 'dwell' else 'contact',
+					metadata=metadata,
+					session_id=item.get('session_id', ''),
+				)
+			else:
+				metadata['store_id'] = target_id
+				log_user_event(
+					user=request.user,
+					action='store_click' if signal_type == 'dwell' else 'contact',
+					metadata=metadata,
+					session_id=item.get('session_id', ''),
+				)
+
+		return Response({'logged': True, 'count': len(serializer.validated_data)})

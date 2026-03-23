@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
 class ReportReason {
   final String value;
@@ -22,12 +23,16 @@ class ReportBottomSheet {
     required BuildContext context,
     required String title,
     required List<ReportReason> reasons,
-    String detailsHint = 'Add details (optional)',
-    String submitLabel = 'Send Report',
+    String? detailsHint,
+    String? submitLabel,
   }) async {
     if (reasons.isEmpty) return null;
     String selectedReason = reasons.first.value;
     final detailsController = TextEditingController();
+    final localizedTitle = context.tr(title);
+    final localizedDetailsHint =
+        context.tr(detailsHint ?? 'Add details (optional)');
+    final localizedSubmitLabel = context.tr(submitLabel ?? 'Send Report');
 
     final result = await showModalBottomSheet<ReportResult>(
       context: context,
@@ -35,7 +40,8 @@ class ReportBottomSheet {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -58,7 +64,7 @@ class ReportBottomSheet {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  title,
+                  localizedTitle,
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -88,7 +94,7 @@ class ReportBottomSheet {
                           ),
                         ),
                         child: Text(
-                          r.label,
+                          context.tr(r.label),
                           style: TextStyle(
                             color:
                                 selected ? Colors.red.shade700 : Colors.black87,
@@ -105,7 +111,7 @@ class ReportBottomSheet {
                   controller: detailsController,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    hintText: detailsHint,
+                    hintText: localizedDetailsHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -126,7 +132,7 @@ class ReportBottomSheet {
                         details: detailsController.text.trim(),
                       ),
                     ),
-                    child: Text(submitLabel),
+                    child: Text(localizedSubmitLabel),
                   ),
                 ),
               ],

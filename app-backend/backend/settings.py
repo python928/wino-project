@@ -37,16 +37,28 @@ def _load_dotenv_file() -> None:
 _load_dotenv_file()
 
 
+def _env_bool(key: str, default: bool = False) -> bool:
+    raw = os.environ.get(key)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _env_list(key: str, default: str = '') -> list[str]:
+    raw = os.environ.get(key, default)
+    return [item.strip() for item in str(raw).split(',') if item.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@f^x2+&2!^r08i%99^s2@zni=r0fu3_+)l+gp=20sr6@bwnp&('
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-insecure-key-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool('DJANGO_DEBUG', default=True)
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = _env_list('DJANGO_ALLOWED_HOSTS', default='*' if DEBUG else 'localhost,127.0.0.1')
 
 
 # Application definition
@@ -80,10 +92,12 @@ INSTALLED_APPS = [
     'subscriptions',
     'wallet',
     'analytics',
+    'feedback',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.RequestIdMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -94,8 +108,9 @@ MIDDLEWARE = [
 ]
 
 # CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development - restrict in production
+CORS_ALLOW_ALL_ORIGINS = _env_bool('DJANGO_CORS_ALLOW_ALL_ORIGINS', default=DEBUG)
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = _env_list('DJANGO_CORS_ALLOWED_ORIGINS')
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -194,6 +209,24 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/min',
+        'user': '300/min',
+        'otp_send': '5/hour',
+        'otp_verify': '20/hour',
+        'report_create': '15/hour',
+        'review_create': '30/hour',
+        'payment_request_create': '20/hour',
+        'ad_click': '180/hour',
+        'analytics_events': '120/min',
+        'trust_signals': '180/hour',
+        'feedback_create': '20/hour',
+    },
 }
 
 SIMPLE_JWT = {

@@ -45,7 +45,7 @@ class StoreMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         from django.contrib.auth import get_user_model
         model = get_user_model()
-        fields = ['id', 'username', 'store_name', 'display_name', 'store_avatar']
+        fields = ['id', 'username', 'store_name', 'display_name', 'store_avatar', 'is_verified']
 
     def get_store_avatar(self, obj):
         request = self.context.get('request')

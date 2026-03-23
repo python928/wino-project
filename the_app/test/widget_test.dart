@@ -5,7 +5,7 @@ import 'package:dzlocal_shop/main.dart';
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const DzLocalApp());
+    await tester.pumpWidget(const WinoApp());
 
     // Verify that the app loads successfully
     expect(find.byType(MaterialApp), findsOneWidget);

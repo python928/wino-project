@@ -4,10 +4,12 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import filters, permissions, status, viewsets
+from datetime import timedelta
+from rest_framework import filters, permissions, status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -15,7 +17,9 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from rest_framework import generics
 
 from .models import Follower, StoreReport
-from .models import PhoneOTP, SystemSettings
+from .models import PhoneOTP, SystemSettings, TrustSettings
+from .abuse import record_abuse_signal
+from .trust_scoring import high_risk_snapshot, score_store_report
 from .serializers import (
 	RegisterSerializer,
 	UserSerializer,
@@ -26,7 +30,7 @@ from .serializers import (
 	PreferredCategoriesSerializer,
 	StoreReportSerializer,
 )
-from .services import generate_otp_code, send_otp_message
+from .services import generate_otp_code, send_otp_message, generate_unique_username_from_name
 
 User = get_user_model()
 
@@ -102,6 +106,8 @@ class RegisterView(APIView):
 
 class SendPhoneOTPView(APIView):
 	permission_classes = [permissions.AllowAny]
+	throttle_classes = [ScopedRateThrottle]
+	throttle_scope = 'otp_send'
 
 	def post(self, request, *args, **kwargs):
 		serializer = SendPhoneOTPSerializer(data=request.data)
@@ -140,6 +146,8 @@ class SendPhoneOTPView(APIView):
 
 class VerifyPhoneOTPView(APIView):
 	permission_classes = [permissions.AllowAny]
+	throttle_classes = [ScopedRateThrottle]
+	throttle_scope = 'otp_verify'
 
 	def post(self, request, *args, **kwargs):
 		serializer = VerifyPhoneOTPSerializer(data=request.data)
@@ -179,12 +187,7 @@ class VerifyPhoneOTPView(APIView):
 		is_new_user = False
 		if user is None:
 			is_new_user = True
-			base_username = f"user_{phone.replace('+', '')[-8:]}"
-			username = base_username
-			counter = 1
-			while User.objects.filter(username=username).exists():
-				username = f"{base_username}_{counter}"
-				counter += 1
+			username = generate_unique_username_from_name(display_name or phone)
 			user = User.objects.create(
 				username=username,
 				name=display_name or username,
@@ -192,6 +195,9 @@ class VerifyPhoneOTPView(APIView):
 				email='',
 				coins_balance=SystemSettings.get_settings().first_login_coins,
 			)
+		elif display_name and not (user.name or '').strip():
+			user.name = display_name
+			user.save(update_fields=['name'])
 
 		refresh = RefreshToken.for_user(user)
 		return Response(
@@ -374,6 +380,13 @@ class FollowerToggleView(generics.CreateAPIView):
 class StoreReportViewSet(viewsets.ModelViewSet):
 	serializer_class = StoreReportSerializer
 	permission_classes = [permissions.IsAuthenticated]
+	throttle_classes = [ScopedRateThrottle]
+
+	def get_throttles(self):
+		if self.action == 'create':
+			self.throttle_scope = 'report_create'
+			return [ScopedRateThrottle()]
+		return super().get_throttles()
 
 	def get_queryset(self):
 		user = self.request.user
@@ -382,4 +395,60 @@ class StoreReportViewSet(viewsets.ModelViewSet):
 		return StoreReport.objects.select_related('reporter', 'store').filter(reporter=user)
 
 	def perform_create(self, serializer):
-		serializer.save(reporter=self.request.user)
+		store = serializer.validated_data.get('store')
+		trust = TrustSettings.get_settings()
+		cutoff = timezone.now() - timedelta(minutes=int(trust.report_cooldown_minutes or 10))
+		if StoreReport.objects.filter(reporter=self.request.user, store=store, created_at__gte=cutoff).exists():
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='report_spam',
+				target_type='store',
+				target_id=store.id,
+				metadata={'reason': 'cooldown_hit'},
+			)
+			raise serializers.ValidationError({'detail': 'Please wait before submitting another report for this store.'})
+
+		reports_today = StoreReport.objects.filter(
+			reporter=self.request.user,
+			created_at__date=timezone.now().date(),
+		).count()
+		if reports_today >= int(trust.max_reports_per_day or 20):
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='report_spam',
+				target_type='account',
+				target_id=self.request.user.id,
+				metadata={'reason': 'daily_cap_hit', 'reports_today': reports_today},
+			)
+			raise serializers.ValidationError({'detail': 'Daily report limit reached. Try again tomorrow.'})
+
+		scored = score_store_report(self.request.user, store)
+		if scored.is_low_credibility:
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='low_cred_report',
+				target_type='store',
+				target_id=store.id,
+				metadata={'score': scored.score},
+			)
+		serializer.save(
+			reporter=self.request.user,
+			seriousness_score=scored.score,
+			seriousness_level=scored.level,
+			evidence_snapshot=scored.evidence_snapshot,
+			is_low_credibility=scored.is_low_credibility,
+			reporter_reputation_score_at_submission=scored.reporter_reputation,
+			scored_at=timezone.now(),
+		)
+
+
+class TrustModerationSnapshotView(APIView):
+	permission_classes = [permissions.IsAdminUser]
+
+	def get(self, request, *args, **kwargs):
+		limit = request.query_params.get('limit')
+		try:
+			limit_value = max(1, min(100, int(limit or 20)))
+		except Exception:
+			limit_value = 20
+		return Response(high_risk_snapshot(limit=limit_value), status=status.HTTP_200_OK)

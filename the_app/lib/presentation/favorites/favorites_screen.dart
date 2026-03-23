@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/routing/routes.dart';
@@ -140,7 +141,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     if (_error != null) {
       return ErrorStateWidget(
-        message: 'Failed to load favorites',
+        message: context.tr('Failed to load favorites'),
         details: _error,
         onRetry: _loadFavorites,
       );
@@ -221,9 +222,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildLoginRequired() {
     return EmptyStateWidget(
       icon: Icons.login,
-      title: 'Log in to view your favorites',
-      message: 'Log in to save your favorite products',
-      actionText: 'Log In',
+      title: context.tr('Log in to view your favorites'),
+      message: context.tr('Log in to save your favorite products'),
+      actionText: context.tr('Log In'),
       onActionPressed: () => Navigator.pushNamed(context, Routes.login),
     );
   }
@@ -231,9 +232,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildEmptyState() {
     return EmptyStateWidget(
       icon: Icons.favorite_border,
-      title: 'No favorite products',
-      message: 'Add products to your favorites to find them here easily',
-      actionText: 'Explore Products',
+      title: context.tr('No favorite products'),
+      message: context.tr('Add products to your favorites to find them here easily'),
+      actionText: context.tr('Explore Products'),
       onActionPressed: () => Navigator.pushNamed(context, Routes.searchTab),
     );
   }

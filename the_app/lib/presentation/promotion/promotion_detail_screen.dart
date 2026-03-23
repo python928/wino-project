@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/routing/routes.dart';
 import '../../data/models/offer_model.dart';
@@ -225,7 +226,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
   Future<void> _showReportPromotionSheet() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in first to report offers',
+      Helpers.showSnackBar(context, context.tr('Log in first to report offers'),
           isError: true);
       return;
     }
@@ -240,7 +241,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
     final result = await ReportBottomSheet.show(
       context: context,
-      title: 'Report Offer',
+      title: context.tr('Report Offer'),
       reasons: reasons,
     );
 
@@ -255,21 +256,25 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
         'details': result.details,
       });
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+      Helpers.showSnackBar(context, context.tr('Report submitted. Thank you.'));
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+      Helpers.showSnackBar(
+        context,
+        '${context.tr('Failed to send report')}: $e',
+        isError: true,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('Promotion Details'),
+          title: Text(context.tr('Promotion Details')),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
@@ -278,10 +283,10 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
               onSelected: (value) {
                 if (value == 'report') _showReportPromotionSheet();
               },
-              itemBuilder: (context) => const [
+              itemBuilder: (context) => [
                 PopupMenuItem<String>(
                   value: 'report',
-                  child: Text('Report Offer'),
+                  child: Text(context.tr('Report Offer')),
                 ),
               ],
             ),
@@ -396,8 +401,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                 _isTogglingFollow
                                     ? '...'
                                     : (_isFollowingStore
-                                        ? 'Following'
-                                        : 'Follow'),
+                                        ? context.tr('Following')
+                                        : context.tr('Follow')),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -493,7 +498,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Regular Price:', style: TextStyle(fontSize: 14)),
+              Text(context.tr('Regular Price:'),
+                  style: const TextStyle(fontSize: 14)),
               Text(
                 Helpers.formatPrice(_regularPrice),
                 style: const TextStyle(
@@ -508,8 +514,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'New Price:',
+              Text(
+                context.tr('New Price:'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(

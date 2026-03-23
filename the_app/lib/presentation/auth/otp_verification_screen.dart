@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -138,7 +139,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _skipWithPrototypeCode() async {
     if (_isLoading) return;
-    for (int i = 0; i < _otpControllers.length && i < _prototypeOtp.length; i++) {
+    for (int i = 0;
+        i < _otpControllers.length && i < _prototypeOtp.length;
+        i++) {
       _otpControllers[i].text = _prototypeOtp[i];
     }
     _otpFocusNodes.last.requestFocus();
@@ -148,10 +151,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Verify Code'),
+          title: Text(context.tr('Verify Code')),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -189,7 +192,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       child: Focus(
                         onKeyEvent: (node, event) {
                           if (event is KeyDownEvent &&
-                              event.logicalKey == LogicalKeyboardKey.backspace &&
+                              event.logicalKey ==
+                                  LogicalKeyboardKey.backspace &&
                               _otpControllers[index].text.isEmpty &&
                               index > 0) {
                             _otpControllers[index - 1].clear();
@@ -258,8 +262,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   text: _remainingSeconds > 0
                       ? 'Resend in ${_remainingSeconds}s'
                       : 'Resend code',
-                  onPressed:
-                      (_remainingSeconds > 0 || _isLoading) ? null : _resendCode,
+                  onPressed: (_remainingSeconds > 0 || _isLoading)
+                      ? null
+                      : _resendCode,
                 ),
                 const SizedBox(height: 6),
                 AppTextButton(

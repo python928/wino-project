@@ -305,6 +305,52 @@ def activate_subscription_for_payment_request(payment_request):
 	)
 
 
+def approve_payment_request(payment_request, *, reviewer, reason_code='', reason_text=''):
+	"""Approve request idempotently and activate subscription exactly once."""
+	with transaction.atomic():
+		locked = SubscriptionPaymentRequest.objects.select_for_update().select_related('plan', 'merchant').get(id=payment_request.id)
+		if locked.status == SubscriptionPaymentRequest.STATUS_APPROVED:
+			return locked, False, get_active_subscription(locked.merchant)
+		if locked.status == SubscriptionPaymentRequest.STATUS_REJECTED:
+			raise serializers.ValidationError({'detail': 'Cannot approve a rejected request.'})
+		if locked.status != SubscriptionPaymentRequest.STATUS_PENDING:
+			raise serializers.ValidationError({'detail': f'Cannot approve request with status "{locked.status}".'})
+
+		locked.status = SubscriptionPaymentRequest.STATUS_APPROVED
+		locked.reviewed_by = reviewer
+		locked.reviewed_at = timezone.now()
+		locked.status_reason_code = reason_code or ''
+		locked.status_reason_text = reason_text or ''
+		locked.save(
+			update_fields=['status', 'reviewed_by', 'reviewed_at', 'status_reason_code', 'status_reason_text']
+		)
+
+		subscription = activate_subscription_for_payment_request(locked)
+		return locked, True, subscription
+
+
+def reject_payment_request(payment_request, *, reviewer, reason_code='', reason_text=''):
+	"""Reject request idempotently with atomic lock."""
+	with transaction.atomic():
+		locked = SubscriptionPaymentRequest.objects.select_for_update().get(id=payment_request.id)
+		if locked.status == SubscriptionPaymentRequest.STATUS_REJECTED:
+			return locked, False
+		if locked.status == SubscriptionPaymentRequest.STATUS_APPROVED:
+			raise serializers.ValidationError({'detail': 'Cannot reject an approved request.'})
+		if locked.status != SubscriptionPaymentRequest.STATUS_PENDING:
+			raise serializers.ValidationError({'detail': f'Cannot reject request with status "{locked.status}".'})
+
+		locked.status = SubscriptionPaymentRequest.STATUS_REJECTED
+		locked.reviewed_by = reviewer
+		locked.reviewed_at = timezone.now()
+		locked.status_reason_code = reason_code or SubscriptionPaymentRequest.REASON_OTHER
+		locked.status_reason_text = reason_text or ''
+		locked.save(
+			update_fields=['status', 'reviewed_by', 'reviewed_at', 'status_reason_code', 'status_reason_text']
+		)
+		return locked, True
+
+
 def parse_dashboard_date_filters(date_from, date_to, period=None):
 	parsed_from = None
 	parsed_to = None

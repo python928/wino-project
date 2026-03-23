@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/config/api_config.dart';
@@ -75,20 +76,20 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     return showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose image source'),
+        title: Text(context.tr('Choose image source')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading:
                   const Icon(Icons.camera_alt, color: AppColors.primaryColor),
-              title: const Text('Camera'),
+              title: Text(context.tr('Camera')),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library,
                   color: AppColors.primaryColor),
-              title: const Text('Gallery'),
+              title: Text(context.tr('Gallery')),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
           ],
@@ -152,16 +153,17 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete profile image?'),
-        content: const Text('This will remove your current profile image.'),
+        title: Text(context.tr('Delete profile image?')),
+        content:
+            Text(context.tr('This will remove your current profile image.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ],
       ),
@@ -248,7 +250,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
 
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -262,12 +264,12 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                 color: AppColors.neutral100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_forward_ios,
+              child: const Icon(Icons.arrow_back,
                   size: 16, color: AppColors.textPrimary),
             ),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Edit Profile',
+          title: Text(context.tr('Edit Profile'),
               style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
           centerTitle: true,
           actions: [
@@ -278,7 +280,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _saveProfile,
                   icon: const Icon(Icons.save_outlined, size: 18),
-                  label: const Text('Save'),
+                  label: Text(context.tr('Save')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
@@ -397,11 +399,11 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
               hint: '+213 XXX XXX XXX',
               icon: Icons.phone_rounded,
               keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
+              textDirection: Directionality.of(context),
               style: AppTextFieldStyle.profile,
             ),
             const SizedBox(height: 8),
-            Text('Location',
+            Text(context.tr('Location'),
                 style: AppTextStyles.bodyMedium
                     .copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),

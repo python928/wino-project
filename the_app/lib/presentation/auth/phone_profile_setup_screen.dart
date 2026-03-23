@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/api_config.dart';
@@ -133,7 +134,7 @@ class _PhoneProfileSetupScreenState extends State<PhoneProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F8FF),
         body: SingleChildScrollView(
@@ -211,94 +212,94 @@ class _PhoneProfileSetupScreenState extends State<PhoneProfileSetupScreen> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
         child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Full Name', style: _labelStyle),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: AppInputDecorations.form(
-                hintText: 'Enter your full name',
-                prefixIcon: Icons.person_outline,
-              ),
-              validator: (v) {
-                final t = (v ?? '').trim();
-                if (t.length < 2) return 'Name is required';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Text('Birthday', style: _labelStyle),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: _dateField(_dayController, 'DD', 2)),
-                const SizedBox(width: 10),
-                Expanded(child: _dateField(_monthController, 'MM', 2)),
-                const SizedBox(width: 10),
-                Expanded(child: _dateField(_yearController, 'YYYY', 4)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text('Gender', style: _labelStyle),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                    child: _genderCard('male', 'Male', Icons.male_rounded)),
-                const SizedBox(width: 10),
-                Expanded(
-                    child:
-                        _genderCard('female', 'Female', Icons.female_rounded)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text('Favorite Categories', style: _labelStyle),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _loadingCategories ? null : _openCategories,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderPrimary),
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(context.tr('Full Name'), style: _labelStyle),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nameController,
+                decoration: AppInputDecorations.form(
+                  hintText: context.tr('Enter your full name'),
+                  prefixIcon: Icons.person_outline,
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.category_outlined),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _selectedCategoryIds.isEmpty
-                            ? 'Select categories'
-                            : '${_selectedCategoryIds.length} selected',
-                        style: AppTextStyles.bodyMedium,
+                validator: (v) {
+                  final t = (v ?? '').trim();
+                  if (t.length < 2) return 'Name is required';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(context.tr('Birthday'), style: _labelStyle),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _dateField(_dayController, 'DD', 2)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _dateField(_monthController, 'MM', 2)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _dateField(_yearController, 'YYYY', 4)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(context.tr('Gender'), style: _labelStyle),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                      child: _genderCard('male', 'Male', Icons.male_rounded)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _genderCard(
+                          'female', 'Female', Icons.female_rounded)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(context.tr('Favorite Categories'), style: _labelStyle),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _loadingCategories ? null : _openCategories,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderPrimary),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.category_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selectedCategoryIds.isEmpty
+                              ? 'Select categories'
+                              : '${_selectedCategoryIds.length} selected',
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
-                    ),
-                    if (_loadingCategories)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      const Icon(Icons.chevron_right_rounded),
-                  ],
+                      if (_loadingCategories)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            AppPrimaryButton(
-              text: 'Continue',
-              onPressed: _submit,
-              isLoading: _isLoading,
-              height: 52,
-            ),
-          ],
+              const SizedBox(height: 20),
+              AppPrimaryButton(
+                text: 'Continue',
+                onPressed: _submit,
+                isLoading: _isLoading,
+                height: 52,
+              ),
+            ],
           ),
         ),
       ),

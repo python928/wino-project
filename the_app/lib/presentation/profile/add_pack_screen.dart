@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -209,7 +210,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
     final picked = await showProductPickerBottomSheet(
       context,
       products: provider.myPosts,
-      title: 'Select Product',
+      title: context.tr('Select Product'),
     );
     if (picked != null) _addProductToPack(picked);
   }
@@ -341,21 +342,21 @@ class _AddPackScreenState extends State<AddPackScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: Colors.grey[200],
-              child: const Row(
+              child: Row(
                 children: [
                   Expanded(
                       flex: 3,
-                      child: Text('Product',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                      child: Text(context.tr('Product'),
+                          style: const TextStyle(fontWeight: FontWeight.bold))),
                   Expanded(
                       flex: 2,
-                      child: Text('Quantity',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                      child: Text(context.tr('Quantity'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center)),
                   Expanded(
                       flex: 2,
-                      child: Text('Total',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                      child: Text(context.tr('Total'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                           textAlign: TextAlign.end)),
                 ],
               ),
@@ -455,7 +456,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('${product.price} DZD',
+                          Text('${product.price} ${context.tr('DZD')}',
                               style: const TextStyle(
                                   fontSize: 10, color: Colors.grey)),
                         ],
@@ -550,9 +551,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Product Prices:',
+                      Text(context.tr('Total Product Prices:'),
                           style: TextStyle(color: Colors.grey)),
-                      Text('${totalPrice.toStringAsFixed(2)} DZD',
+                      Text(
+                          '${totalPrice.toStringAsFixed(2)} ${context.tr('DZD')}',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                     ],
@@ -573,11 +575,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Savings',
+                          Text(context.tr('Savings'),
                               style:
                                   TextStyle(fontSize: 10, color: Colors.grey)),
                           Text(
-                            '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} DZD',
+                            '${diff > 0 ? diff.toStringAsFixed(2) : "0.00"} ${context.tr('DZD')}',
                             style: const TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold),
@@ -589,9 +591,9 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Available'),
-                    subtitle:
-                        const Text('Show this pack to customers in your store'),
+                    title: Text(context.tr('Available')),
+                    subtitle: Text(context
+                        .tr('Show this pack to customers in your store')),
                     value: _isAvailable,
                     onChanged: (value) {
                       setState(() => _isAvailable = value);
@@ -601,8 +603,9 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   // ─── Delivery Section ─────────────────────────────────────
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Delivery Available'),
-                    subtitle: const Text('Enable home delivery for this pack'),
+                    title: Text(context.tr('Delivery Available')),
+                    subtitle:
+                        Text(context.tr('Enable home delivery for this pack')),
                     value: _deliveryAvailable,
                     activeColor: AppColors.primary,
                     onChanged: (value) {
@@ -682,10 +685,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Create New Pack'),
+          title: Text(context.tr('Create New Pack')),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
@@ -706,7 +709,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     child: IgnorePointer(
                       child: AppSearchField(
                         controller: _searchController,
-                        hintText: 'Select product to add...',
+                        hintText: context.tr('Select product to add...'),
                         compact: false,
                         showClearButton: false,
                       ),

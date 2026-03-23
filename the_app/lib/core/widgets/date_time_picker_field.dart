@@ -111,7 +111,7 @@ class _DateTimePickerFieldState extends State<DateTimePickerField> {
           context: context,
           locale: _pickerLocale,
           child: Directionality(
-            textDirection: TextDirection.ltr,
+            textDirection: Directionality.of(context),
             child: child,
           ),
         );
@@ -135,7 +135,7 @@ class _DateTimePickerFieldState extends State<DateTimePickerField> {
             context: context,
             locale: _pickerLocale,
             child: Directionality(
-              textDirection: TextDirection.ltr,
+              textDirection: Directionality.of(context),
               child: child,
             ),
           );

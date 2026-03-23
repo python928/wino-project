@@ -1,11 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/subscription_plan_model.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/error_state_widget.dart';
 
 class SubscriptionPlansScreen extends StatefulWidget {
   const SubscriptionPlansScreen({super.key});
@@ -111,7 +114,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover Plans'),
+        title: Text(context.tr('Discover Plans')),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
       ),
@@ -123,8 +126,15 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      const SizedBox(height: 140),
-                      Center(child: Text('Failed to load plans: $_error')),
+                      const SizedBox(height: 80),
+                      SizedBox(
+                        height: 420,
+                        child: ErrorStateWidget(
+                          message: context.tr('Failed to load plans'),
+                          details: _error,
+                          onRetry: _loadPlans,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -136,29 +146,43 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                     children: [
                       _buildHeader(),
                       const SizedBox(height: 12),
-                      ...visiblePlans.map(
-                        (plan) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _PlanCard(
-                            plan: plan,
-                            isHighlighted:
-                                highlightPlanId != null && plan.id == highlightPlanId,
-                            isCurrentPlan: activePlanId != null
-                                ? plan.id == activePlanId
-                                : plan.price == 0,
-                            onSelect: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SubscriptionPaymentScreen(
-                                  plan: plan,
-                                  rib: _rib,
-                                  instructions: _instructions,
+                      if (_plans.isEmpty)
+                        SizedBox(
+                          height: 360,
+                          child: EmptyStateWidget(
+                            icon: Icons.workspace_premium_outlined,
+                            title: context.tr('No plans available right now'),
+                            message: context.tr(
+                              'Please refresh in a moment to load the subscription catalog.',
+                            ),
+                            actionText: context.l10n.commonRetry,
+                            onActionPressed: _loadPlans,
+                          ),
+                        )
+                      else
+                        ...visiblePlans.map(
+                          (plan) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _PlanCard(
+                              plan: plan,
+                              isHighlighted: highlightPlanId != null &&
+                                  plan.id == highlightPlanId,
+                              isCurrentPlan: activePlanId != null
+                                  ? plan.id == activePlanId
+                                  : plan.price == 0,
+                              onSelect: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SubscriptionPaymentScreen(
+                                    plan: plan,
+                                    rib: _rib,
+                                    instructions: _instructions,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                       if (_plans.length > 2)
                         Align(
                           alignment: Alignment.center,
@@ -168,8 +192,8 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                             }),
                             child: Text(
                               _showAllPlans
-                                  ? 'Hide plans'
-                                  : 'Show more plans',
+                                  ? context.tr('Hide plans')
+                                  : context.tr('Show more plans'),
                             ),
                           ),
                         ),
@@ -183,8 +207,9 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     final used = _usedPosts;
     final limit = _postLimit;
     final progress = _usageProgress;
-    final usageText =
-        used != null && limit != null ? '$used of $limit products used' : null;
+    final usageText = used != null && limit != null
+        ? '$used ${context.tr('of')} $limit ${context.tr('products used')}'
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -201,8 +226,8 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_accessStatus == null) ...[
-            const Text(
-              'Loading usage status...',
+            Text(
+              context.tr('Loading usage status...'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
@@ -235,19 +260,19 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
             ),
             const SizedBox(height: 14),
           ] else ...[
-            const Text(
-              'Your current usage is unavailable right now.',
+            Text(
+              context.tr('Your current usage is unavailable right now.'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 14),
           ],
-          const Text(
-            'Discover Plans',
+          Text(
+            context.tr('Discover Plans'),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Each screen answers one clear question.',
+          Text(
+            context.tr('Each screen answers one clear question.'),
             style: TextStyle(color: Colors.black54, height: 1.3),
           ),
         ],
@@ -293,8 +318,8 @@ class _PlanCard extends StatelessWidget {
     return [Colors.white, Colors.white];
   }
 
-  String? _badgeText() {
-    if (isHighlighted) return 'Most Popular';
+  String? _badgeText(BuildContext context) {
+    if (isHighlighted) return context.tr('Most Popular');
     return null;
   }
 
@@ -312,11 +337,8 @@ class _PlanCard extends StatelessWidget {
         .where((e) => e.isNotEmpty)
         .toList();
     if (newlineSplit.length >= 2) return newlineSplit;
-    final sentenceSplit = raw
-        .split('.')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final sentenceSplit =
+        raw.split('.').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     return sentenceSplit.isNotEmpty ? sentenceSplit : [raw];
   }
 
@@ -329,9 +351,9 @@ class _PlanCard extends StatelessWidget {
     final hasDiscount =
         oldPrice != null && oldPrice > 0 && oldPrice > plan.price;
     final discountPercent = hasDiscount
-      ? (((oldPrice - plan.price) / oldPrice) * 100).round()
+        ? (((oldPrice - plan.price) / oldPrice) * 100).round()
         : null;
-    final badge = _badgeText();
+    final badge = _badgeText(context);
     final gradient = _resolveGradient();
     final benefits = _benefitLines();
     return Container(
@@ -393,8 +415,8 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
-                'DZD / month',
+              Text(
+                context.tr('DZD / month'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -437,16 +459,16 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: _specTile(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Products',
-                  value: 'Up to ${plan.maxProducts}',
+                  label: context.tr('Products'),
+                  value: '${context.tr('Up to')} ${plan.maxProducts}',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _specTile(
                   icon: Icons.calendar_month_outlined,
-                  label: 'Duration',
-                  value: '${plan.durationDays} days',
+                  label: context.tr('Duration'),
+                  value: '${plan.durationDays} ${context.tr('days')}',
                 ),
               ),
             ],
@@ -469,7 +491,7 @@ class _PlanCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            text,
+                            context.tr(text),
                             style: TextStyle(
                               color: Colors.grey.shade800,
                               height: 1.35,
@@ -490,9 +512,9 @@ class _PlanCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 _featureChip(
-                    'Ads: ${plan.planFeatures['ad_max_active'] ?? '-'}'),
+                    '${context.tr('Ads')}: ${plan.planFeatures['ad_max_active'] ?? '-'}'),
                 _featureChip(
-                    'Ad Impr: ${plan.planFeatures['ad_max_impressions'] ?? '-'}'),
+                    '${context.tr('Ad Impr')}: ${plan.planFeatures['ad_max_impressions'] ?? '-'}'),
               ],
             ),
           const SizedBox(height: 12),
@@ -505,18 +527,21 @@ class _PlanCard extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
               child: isCurrentPlan
-                  ? const Text('Current Plan')
+                  ? Text(context.tr('Current Plan'))
                   : Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Text(
-                          'Start now',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                          context.tr('Start now'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          '7 days free',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          context.tr('7 days free'),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -655,7 +680,11 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       });
     } catch (_) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Could not select images', isError: true);
+        Helpers.showSnackBar(
+          context,
+          context.tr('Could not select images'),
+          isError: true,
+        );
       }
     }
   }
@@ -668,7 +697,10 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
 
   Future<void> _confirm() async {
     if (_proofImages.isEmpty) {
-      Helpers.showSnackBar(context, 'Please upload at least one receipt image');
+      Helpers.showSnackBar(
+        context,
+        context.tr('Please upload at least one receipt image'),
+      );
       return;
     }
     setState(() => _submitting = true);
@@ -705,13 +737,13 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Request received'),
+        title: Text(context.tr('Request received')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Request number',
+            Text(
+              context.tr('Request number'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
@@ -730,13 +762,13 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text('No manual follow-up needed'),
+            Text(context.tr('No manual follow-up needed')),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Back to home'),
+            child: Text(context.tr('Back to home')),
           ),
         ],
       ),
@@ -747,7 +779,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
     if (widget.rib.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: widget.rib));
     if (!mounted) return;
-    Helpers.showSnackBar(context, 'Number copied');
+    Helpers.showSnackBar(context, context.tr('Number copied'));
   }
 
   Widget _stepCard({required String title, required Widget child}) {
@@ -809,17 +841,18 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final priceText = '${widget.plan.price.toStringAsFixed(0)} DZD / month';
+    final priceText =
+        '${widget.plan.price.toStringAsFixed(0)} ${context.tr('DZD / month')}';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payment'),
+        title: Text(context.tr('Payment')),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('Plan information'),
+          _sectionTitle(context.tr('Plan information')),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(16),
@@ -830,7 +863,8 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
+              border:
+                  Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,7 +898,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      '${widget.plan.durationDays} days',
+                      '${widget.plan.durationDays} ${context.tr('days')}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Colors.black87,
@@ -873,18 +907,21 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _infoRow('Products', 'Up to ${widget.plan.maxProducts}'),
+                _infoRow(
+                  context.tr('Products'),
+                  '${context.tr('Up to')} ${widget.plan.maxProducts}',
+                ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           _stepCard(
-            title: 'Step 1 — Payment info',
+            title: context.tr('Step 1 — Payment info'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Account number (RIB)',
+                Text(
+                  context.tr('Account number (RIB)'),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -910,30 +947,39 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                   child: OutlinedButton.icon(
                     onPressed: widget.rib.isNotEmpty ? _copyRib : null,
                     icon: const Icon(Icons.copy),
-                    label: const Text('Copy number'),
+                    label: Text(context.tr('Copy number')),
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'No need to type the number or take a screenshot.',
+                Text(
+                  context
+                      .tr('No need to type the number or take a screenshot.'),
                   style: TextStyle(color: Colors.black54, height: 1.3),
                 ),
                 const SizedBox(height: 12),
                 _numberedInstruction(
-                    1, 'Open your banking app and start a transfer.'),
-                _numberedInstruction(2, 'Send the amount to this account.'),
-                _numberedInstruction(3, 'Upload the receipt in the next step.'),
+                  1,
+                  context.tr('Open your banking app and start a transfer.'),
+                ),
+                _numberedInstruction(
+                  2,
+                  context.tr('Send the amount to this account.'),
+                ),
+                _numberedInstruction(
+                  3,
+                  context.tr('Upload the receipt in the next step.'),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 14),
           _stepCard(
-            title: 'Step 2 — Upload proof',
+            title: context.tr('Step 2 — Upload proof'),
             child: _proofSection(),
           ),
           const SizedBox(height: 14),
           _stepCard(
-            title: 'Step 3 — Confirm',
+            title: context.tr('Step 3 — Confirm'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -956,24 +1002,26 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Send request'),
+                        : Text(context.tr('Send request')),
                   ),
                 ),
                 const SizedBox(height: 10),
                 if (_submitting)
                   Row(
-                    children: const [
+                    children: [
                       SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       SizedBox(width: 8),
-                      Expanded(child: Text('We are reviewing your image...')),
+                      Expanded(
+                          child: Text(
+                              context.tr('We are reviewing your image...'))),
                     ],
                   )
                 else
-                  const Text('No manual follow-up needed'),
+                  Text(context.tr('No manual follow-up needed')),
               ],
             ),
           ),
@@ -1000,10 +1048,10 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
-                'Upload receipt image',
-                style: TextStyle(fontWeight: FontWeight.w800),
+                context.tr('Upload receipt image'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
             Text(
@@ -1030,14 +1078,15 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
                     Icon(Icons.upload_file_outlined,
                         size: 28, color: Colors.grey.shade700),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Tap to choose an image',
+                    Text(
+                      context.tr('Tap to choose an image'),
                       style:
                           TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                     Text(
-                      'Camera or gallery',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      context.tr('Camera or gallery'),
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1093,7 +1142,7 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
             child: TextButton.icon(
               onPressed: _pickProofImages,
               icon: const Icon(Icons.add),
-              label: const Text('Add another image'),
+              label: Text(context.tr('Add another image')),
             ),
           ),
         const SizedBox(height: 12),
@@ -1101,8 +1150,8 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
           controller: _noteController,
           maxLines: 3,
           decoration: InputDecoration(
-            labelText: 'Note (optional)',
-            hintText: 'Example: transfer sent from Ahmed’s account',
+            labelText: context.tr('Note (optional)'),
+            hintText: context.tr('Example: transfer sent from Ahmed’s account'),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

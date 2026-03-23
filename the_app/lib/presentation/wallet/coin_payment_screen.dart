@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -107,14 +108,14 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Request submitted'),
+          title: Text(context.tr('Request submitted')),
           content: Text(
             'Payment request #$requestId is pending server approval.\nCoins are added after approval.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
+              child: Text(context.tr('OK')),
             ),
           ],
         ),
@@ -143,7 +144,7 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Coin Payment'),
+        title: Text(context.tr('Coin Payment')),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -162,15 +163,15 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Coins',
+                  context.tr('Coins'),
                   style: const TextStyle(
                       fontWeight: FontWeight.w800, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                Text('$coins coins',
+                Text('$coins ${context.tr('coins')}',
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text('$price DZD',
+                Text('$price ${context.tr('DZD')}',
                     style: TextStyle(color: Colors.grey.shade700)),
               ],
             ),
@@ -186,14 +187,14 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Payment note (optional)',
+                Text(context.tr('Payment note (optional)'),
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _noteController,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Transfer reference / notes',
+                  decoration: InputDecoration(
+                    hintText: context.tr('Transfer reference / notes'),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -211,11 +212,13 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Payment proof images',
+                Text(context.tr('Payment proof images'),
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
-                  'Upload 1 to 3 images. Your request will be reviewed by admin.',
+                  context.tr(
+                    'Upload 1 to 3 images. Your request will be reviewed by admin.',
+                  ),
                   style: TextStyle(color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 10),
@@ -257,7 +260,7 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
                           minimumSize: const Size(120, 40),
                         ),
                         icon: const Icon(Icons.add_photo_alternate_outlined),
-                        label: const Text('Add images'),
+                        label: Text(context.tr('Add images')),
                       ),
                   ],
                 ),
@@ -280,7 +283,7 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Submit payment request'),
+                : Text(context.tr('Submit payment request')),
           ),
         ],
       ),

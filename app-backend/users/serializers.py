@@ -1,11 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from rest_framework import serializers
-import uuid
 from django.utils import timezone
 from django.db.models import Avg
 from .models import Follower, StoreReport
-from .services import normalize_phone
+from .services import normalize_phone, generate_unique_username_from_name
 
 User = get_user_model()
 
@@ -29,11 +28,13 @@ class UserSerializer(serializers.ModelSerializer):
             'facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube',
             'show_phone_public', 'show_social_public',
             'coins_balance', 'post_coins', 'ad_view_coins',
+            'verification_status', 'is_verified',
             'product_count', 'review_count', 'categories',
             'date_joined'
         ]
         read_only_fields = ['id', 'date_joined', 'followers_count', 'average_rating', 'location_updated_at',
-                            'coins_balance', 'post_coins', 'ad_view_coins', 'product_count', 'review_count', 'categories']
+                            'coins_balance', 'post_coins', 'ad_view_coins', 'verification_status', 'is_verified',
+                            'product_count', 'review_count', 'categories']
         extra_kwargs = {
             'store_type': {'required': False, 'allow_blank': True},
         }
@@ -149,24 +150,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        # Auto-generate username from email if not provided
-        username = attrs.get('username', '').strip()
-        email = attrs.get('email', '')
-        
-        if not username and email:
-            # Generate username from email prefix + unique suffix
-            base_username = email.split('@')[0].replace('.', '_').replace('-', '_')
-            username = base_username
-            # Ensure uniqueness
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}_{counter}"
-                counter += 1
-            attrs['username'] = username
-        elif not username:
-            # Fallback to UUID-based username
-            attrs['username'] = f"user_{uuid.uuid4().hex[:8]}"
-        
+        # Always auto-generate username from full name.
+        # Rule: name.replace(' ', '.') + random number, then unique increment.
+        attrs['username'] = generate_unique_username_from_name(attrs.get('name', ''))
         return attrs
 
     def create(self, validated_data):

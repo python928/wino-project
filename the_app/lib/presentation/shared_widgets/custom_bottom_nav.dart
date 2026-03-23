@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Travo-style bottom navigation bar
@@ -47,7 +48,7 @@ class CustomBottomNavBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(
               _items.length,
-              (i) => _buildNavItem(i),
+              (i) => _buildNavItem(context, i),
             ),
           ),
         ),
@@ -55,7 +56,7 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index) {
+  Widget _buildNavItem(BuildContext context, int index) {
     final isSelected = selectedIndex == index;
     final item = _items[index];
 
@@ -112,7 +113,7 @@ class CustomBottomNavBar extends StatelessWidget {
             if (isSelected) ...[
               const SizedBox(width: 6),
               Text(
-                item.label,
+                context.tr(item.label),
                 style: const TextStyle(
                   color: AppColors.primaryColor,
                   fontSize: 13,

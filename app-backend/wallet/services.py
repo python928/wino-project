@@ -182,3 +182,28 @@ def approve_coin_purchase(purchase, *, approver=None):
 			locked.approved_by = approver
 		locked.save(update_fields=['status', 'approved_at', 'approved_by'])
 		return locked, True
+
+
+def reject_coin_purchase(purchase, *, approver=None, reason=''):
+	"""Reject a pending purchase exactly once in an idempotent way."""
+	with transaction.atomic():
+		locked = CoinPurchase.objects.select_for_update().get(id=purchase.id)
+		if locked.status == CoinPurchase.STATUS_FAILED:
+			return locked, False
+		if locked.status == CoinPurchase.STATUS_COMPLETED:
+			raise serializers.ValidationError(
+				{'detail': 'Cannot reject a completed purchase.'}
+			)
+		if locked.status != CoinPurchase.STATUS_PENDING:
+			raise serializers.ValidationError(
+				{'detail': f'Cannot reject purchase with status "{locked.status}".'}
+			)
+
+		locked.status = CoinPurchase.STATUS_FAILED
+		locked.approved_at = timezone.now()
+		if approver is not None:
+			locked.approved_by = approver
+		if reason:
+			locked.payment_note = f"{locked.payment_note}\n[ADMIN_REJECT] {reason}".strip()
+		locked.save(update_fields=['status', 'approved_at', 'approved_by', 'payment_note'])
+		return locked, True

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 
 class LocationModeSwitcher extends StatelessWidget {
@@ -28,14 +29,17 @@ class LocationModeSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final citySelected = !distanceActive;
-    final align = citySelected ? Alignment.centerLeft : Alignment.centerRight;
+    final align = citySelected
+        ? AlignmentDirectional.centerStart
+        : AlignmentDirectional.centerEnd;
+    final effectiveLoadingNearbyLabel = context.tr(loadingNearbyLabel);
 
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FF),
+        color: AppColors.blackColor5,
         borderRadius: BorderRadius.circular(height / 2),
-        border: Border.all(color: const Color(0xFFDDE5FF)),
+        border: Border.all(color: const Color(0xFFE6E6E6)),
       ),
       child: Stack(
         children: [
@@ -50,17 +54,8 @@ class LocationModeSwitcher extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1E5BFF), Color(0xFF4A7DFF)],
-                    ),
+                    color: AppColors.primaryColor,
                     borderRadius: BorderRadius.circular((height - 6) / 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryColor.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -69,9 +64,7 @@ class LocationModeSwitcher extends StatelessWidget {
             Container(
               margin: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E5BFF), Color(0xFF4A7DFF)],
-                ),
+                color: AppColors.primaryColor,
                 borderRadius: BorderRadius.circular((height - 6) / 2),
               ),
             ),
@@ -90,7 +83,9 @@ class LocationModeSwitcher extends StatelessWidget {
                   child: _ModeButton(
                     selected: !citySelected,
                     icon: isLoadingNearby ? null : Icons.radar,
-                    label: isLoadingNearby ? loadingNearbyLabel : nearbyLabel,
+                    label: isLoadingNearby
+                        ? effectiveLoadingNearbyLabel
+                        : nearbyLabel,
                     onTap: isLoadingNearby ? () {} : onNearbyTap,
                     loading: isLoadingNearby,
                   ),
@@ -134,14 +129,14 @@ class _ModeButton extends StatelessWidget {
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: selected ? Colors.white : AppColors.textSecondary,
+                  color: selected ? Colors.white : AppColors.textPrimary,
                 ),
               )
             else if (icon != null)
               Icon(
                 icon,
                 size: 16,
-                color: selected ? Colors.white : AppColors.textSecondary,
+                color: selected ? Colors.white : AppColors.textPrimary,
               ),
             const SizedBox(width: 5),
             Flexible(
@@ -152,7 +147,7 @@ class _ModeButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.textSecondary,
+                  color: selected ? Colors.white : AppColors.textPrimary,
                 ),
               ),
             ),

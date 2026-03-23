@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/config/api_config.dart';
 import '../../core/routing/routes.dart';
@@ -17,6 +20,7 @@ import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
 import '../shared_widgets/contact_action_row.dart';
 import '../shared_widgets/image_carousel.dart';
+import '../shared_widgets/qr_payload_dialog.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
 
 class ProductDetailsArgs {
@@ -72,6 +76,90 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isTogglingFavorite = false;
   bool _isTogglingFollow = false;
 
+  String get _productShareLink => '${ApiConfig.baseUrl}p/${widget.product.id}/';
+
+  Future<void> _shareProduct() async {
+    final text = '${widget.product.title}\n$_productShareLink';
+    await Share.share(text);
+  }
+
+  Future<void> _showProductQr() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => QrPayloadDialog(
+        payload: _productShareLink,
+        title: context.tr('Product QR'),
+        showPayloadText: false,
+      ),
+    );
+  }
+
+  Future<void> _copyProductLink() async {
+    await Clipboard.setData(ClipboardData(text: _productShareLink));
+    if (!mounted) return;
+    Helpers.showSnackBar(context, 'Product link copied');
+  }
+
+  Future<void> _showShareProductOptions() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.qr_code_2_outlined),
+                title: Text(context.tr('Show Product QR')),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showProductQr();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: Text(context.tr('Copy link')),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _copyProductLink();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: Text(context.tr('Share')),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _shareProduct();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onProductMenuSelected(String value) async {
+    switch (value) {
+      case 'favorite':
+        await _toggleFavorite();
+        break;
+      case 'share':
+        await _showShareProductOptions();
+        break;
+      case 'report':
+        await _showReportProductSheet();
+        break;
+    }
+  }
+
   bool _isFollowingStore = false;
   bool _isLoadingFollowState = false;
 
@@ -80,6 +168,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String? _storeWhatsapp;
   bool _storeShowPhone = true;
   bool _storeShowSocial = true;
+
+  int? get _currentUserId {
+    final raw = StorageService.getUserData()?['id'];
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  bool get _isOwnStore {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return false;
+    return widget.product.storeId == currentUserId ||
+        widget.product.author.id == currentUserId;
+  }
 
   List<String> get _galleryImages {
     final urls = widget.product.images
@@ -135,7 +236,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (cachedFollow != null) {
       _isFollowingStore = cachedFollow;
     }
-    _loadFollowState();
+    if (!_isOwnStore) {
+      _loadFollowState();
+    }
     _loadStoreDetails();
   }
 
@@ -257,6 +360,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _loadFollowState() async {
+    if (_isOwnStore) return;
     if (!StorageService.isLoggedIn()) return;
     if (widget.product.storeId <= 0) return;
     if (_isLoadingFollowState) return;
@@ -326,6 +430,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _toggleFollow() async {
+    if (_isOwnStore) return;
     if (!StorageService.isLoggedIn()) {
       Helpers.showSnackBar(context, 'Log in to follow stores', isError: true);
       return;
@@ -360,10 +465,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _refreshDetails() async {
-    await Future.wait([
-      _loadFollowState(),
+    final futures = <Future<void>>[
       _loadStoreDetails(),
-    ]);
+    ];
+    if (!_isOwnStore) {
+      futures.add(_loadFollowState());
+    }
+    await Future.wait(futures);
   }
 
   Widget _buildContactButtons() {
@@ -380,7 +488,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _showReportProductSheet() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in first to report products',
+      Helpers.showSnackBar(
+          context, context.tr('Log in first to report products'),
           isError: true);
       return;
     }
@@ -395,7 +504,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     final result = await ReportBottomSheet.show(
       context: context,
-      title: 'Report Product',
+      title: context.tr('Report Product'),
       reasons: reasons,
     );
 
@@ -410,33 +519,65 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         'details': result.details,
       });
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+      Helpers.showSnackBar(context, context.tr('Report submitted. Thank you.'));
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+      Helpers.showSnackBar(
+        context,
+        '${context.tr('Failed to send report')}: $e',
+        isError: true,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('Product Details'),
+          title: Text(context.tr('Product Details')),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
           actions: [
             PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'report') _showReportProductSheet();
-              },
-              itemBuilder: (context) => const [
+              onSelected: (value) => _onProductMenuSelected(value),
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'favorite',
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(_isFavorited ? 'Remove Favorite' : 'Add Favorite'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.share_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text(context.tr('Share Product')),
+                    ],
+                  ),
+                ),
                 PopupMenuItem<String>(
                   value: 'report',
-                  child: Text('Report Product'),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text(context.tr('Report Product')),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -529,53 +670,76 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
-                      // Follow button
-                      GestureDetector(
-                        onTap: _toggleFollow,
-                        child: Container(
-                          height: 32,
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                      if (widget.product.storeIsVerified)
+                        Container(
+                          margin: const EdgeInsetsDirectional.only(start: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryColor,
-                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.green.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _isLoadingFollowState
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Icon(
-                                      _isFollowingStore
-                                          ? Icons.done
-                                          : Icons.add,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                              SizedBox(width: 4),
-                              Text(
-                                _isTogglingFollow
-                                    ? '...'
-                                    : (_isFollowingStore
-                                        ? 'Following'
-                                        : 'Follow'),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              const Icon(Icons.verified,
+                                  color: Colors.green, size: 14),
+                              const SizedBox(width: 4),
+                              Text(context.tr('Verified'),
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.green)),
                             ],
                           ),
                         ),
-                      ),
+                      if (!_isOwnStore) ...[
+                        SizedBox(width: 8),
+                        // Follow button
+                        GestureDetector(
+                          onTap: _toggleFollow,
+                          child: Container(
+                            height: 32,
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _isLoadingFollowState
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Icon(
+                                        _isFollowingStore
+                                            ? Icons.done
+                                            : Icons.add,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                SizedBox(width: 4),
+                                Text(
+                                  _isTogglingFollow
+                                      ? '...'
+                                      : (_isFollowingStore
+                                          ? context.tr('Following')
+                                          : context.tr('Follow')),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
 
@@ -691,7 +855,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Regular Price:', style: TextStyle(fontSize: 14)),
+              Text(context.tr('Regular Price:'),
+                  style: const TextStyle(fontSize: 14)),
               Text(
                 Helpers.formatPrice(_regularPrice),
                 style: const TextStyle(
@@ -706,8 +871,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'New Price:',
+              Text(
+                context.tr('New Price:'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(

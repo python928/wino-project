@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
 import '../../data/models/category_model.dart';
 import '../../core/widgets/app_button.dart';
@@ -115,7 +116,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: AppSearchField(
               controller: _searchController,
-              hintText: 'Search categories...',
+              hintText: context.tr('Search categories...'),
               onChanged: (v) => setState(() => _query = v),
               onClear: () => setState(() => _query = ''),
             ),

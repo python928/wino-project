@@ -18,6 +18,7 @@ from .services import (
 	get_coin_costs,
 	get_wallet_snapshot,
 	grant_coins,
+	reject_coin_purchase,
 )
 
 
@@ -189,6 +190,28 @@ def wallet_approve_purchase(request, purchase_id=None):
 		{
 			'purchase': CoinPurchaseSerializer(purchase).data,
 			'credited': credited,
+		}
+	)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAdminUser])
+def wallet_reject_purchase(request, purchase_id=None):
+	target_id = purchase_id or request.data.get('purchase_id')
+	if not target_id:
+		return Response({'detail': 'purchase_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+	try:
+		purchase = CoinPurchase.objects.select_related('user').get(id=target_id)
+	except CoinPurchase.DoesNotExist:
+		return Response({'detail': 'Purchase not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+	reason = str(request.data.get('reason') or '').strip()
+	purchase, changed = reject_coin_purchase(purchase, approver=request.user, reason=reason)
+	return Response(
+		{
+			'purchase': CoinPurchaseSerializer(purchase).data,
+			'rejected': changed,
 		}
 	)
 

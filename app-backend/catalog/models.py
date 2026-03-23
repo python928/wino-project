@@ -120,11 +120,25 @@ class PackImage(models.Model):
 
 
 class Review(models.Model):
+	LEVEL_LOW = 'low'
+	LEVEL_MEDIUM = 'medium'
+	LEVEL_HIGH = 'high'
+	LEVEL_CHOICES = (
+		(LEVEL_LOW, 'Low'),
+		(LEVEL_MEDIUM, 'Medium'),
+		(LEVEL_HIGH, 'High'),
+	)
+
 	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_reviews')
 	store = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='store_reviews', null=True, blank=True)
 	product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True, related_name='reviews')
 	rating = models.IntegerField()
 	comment = models.TextField(blank=True)
+	credibility_score = models.PositiveSmallIntegerField(default=0)
+	credibility_level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default=LEVEL_LOW)
+	evidence_snapshot = models.JSONField(default=dict, blank=True)
+	is_low_credibility = models.BooleanField(default=True)
+	scored_at = models.DateTimeField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:
@@ -180,6 +194,14 @@ class ProductReport(models.Model):
 		(STATUS_REVIEWED, 'Reviewed'),
 		(STATUS_REJECTED, 'Rejected'),
 	)
+	LEVEL_LOW = 'low'
+	LEVEL_MEDIUM = 'medium'
+	LEVEL_HIGH = 'high'
+	LEVEL_CHOICES = (
+		(LEVEL_LOW, 'Low'),
+		(LEVEL_MEDIUM, 'Medium'),
+		(LEVEL_HIGH, 'High'),
+	)
 
 	reporter = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
@@ -194,6 +216,12 @@ class ProductReport(models.Model):
 	reason = models.CharField(max_length=20, choices=REASON_CHOICES)
 	details = models.TextField(blank=True, default='')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+	seriousness_score = models.PositiveSmallIntegerField(default=0)
+	seriousness_level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default=LEVEL_LOW)
+	evidence_snapshot = models.JSONField(default=dict, blank=True)
+	is_low_credibility = models.BooleanField(default=True)
+	scored_at = models.DateTimeField(null=True, blank=True)
+	reporter_reputation_score_at_submission = models.PositiveSmallIntegerField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

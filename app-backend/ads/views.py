@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import filters, permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from analytics.models import UserInterestProfile
 from analytics.recommendations import get_recommended_products
@@ -36,6 +37,12 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsAdOwnerOrReadOnly()]
 		return [permissions.IsAuthenticated()]
+
+	def get_throttles(self):
+		if self.action == 'register_click':
+			self.throttle_scope = 'ad_click'
+			return [ScopedRateThrottle()]
+		return super().get_throttles()
 
 	def get_queryset(self):
 		qs = super().get_queryset()

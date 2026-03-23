@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,6 +21,9 @@ class ErrorStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveMessage = message == 'An error occurred'
+        ? context.l10n.errorGenericTitle
+        : context.tr(message);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spacing32),
@@ -45,7 +49,7 @@ class ErrorStateWidget extends StatelessWidget {
 
             // Message
             Text(
-              message,
+              effectiveMessage,
               style: AppTextStyles.h3,
               textAlign: TextAlign.center,
             ),
@@ -53,7 +57,7 @@ class ErrorStateWidget extends StatelessWidget {
             if (details != null) ...[
               const SizedBox(height: AppTheme.spacing8),
               Text(
-                details!,
+                context.tr(details!),
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -67,7 +71,7 @@ class ErrorStateWidget extends StatelessWidget {
             if (onRetry != null) ...[
               const SizedBox(height: AppTheme.spacing24),
               AppSecondaryButton(
-                text: 'Retry',
+                text: context.l10n.commonRetry,
                 onPressed: onRetry,
                 icon: Icons.refresh,
                 width: 150,
@@ -90,8 +94,8 @@ class NetworkErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorStateWidget(
       icon: Icons.wifi_off_rounded,
-      message: 'No internet connection',
-      details: 'Please check your connection and try again.',
+      message: context.tr('No internet connection'),
+      details: context.l10n.networkErrorDetails,
       onRetry: onRetry,
     );
   }
@@ -107,8 +111,8 @@ class ServerErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorStateWidget(
       icon: Icons.cloud_off_rounded,
-      message: 'Server error',
-      details: 'Sorry, something went wrong. Please try again later.',
+      message: context.tr('Server error'),
+      details: context.l10n.serverErrorDetails,
       onRetry: onRetry,
     );
   }

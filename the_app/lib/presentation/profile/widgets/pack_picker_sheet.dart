@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
 import '../../../core/components/custom_modal_bottom_sheet.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,7 +56,7 @@ class _PackPickerSheetState extends State<_PackPickerSheet> {
             .toList();
 
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.55,
@@ -98,7 +99,7 @@ class _PackPickerSheetState extends State<_PackPickerSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                 child: AppSearchField(
                   controller: _searchController,
-                  hintText: 'Search packs...',
+                  hintText: context.tr('Search packs...'),
                   compact: true,
                   onChanged: (_) => setState(() {}),
                 ),

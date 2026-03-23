@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/auth_provider.dart';
@@ -93,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SingleChildScrollView(
@@ -188,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen>
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _sendOtp(),
             decoration: AppInputDecorations.form(
-              hintText: '0XXXXXXXXX',
+              hintText: context.tr('0XXXXXXXXX'),
               prefixIcon: Icons.phone_outlined,
             ),
             validator: (value) {

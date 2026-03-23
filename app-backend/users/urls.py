@@ -15,6 +15,7 @@ from .views import (
     VerifyPhoneOTPView,
     PreferredCategoriesView,
     StoreReportViewSet,
+    TrustModerationSnapshotView,
 )
 
 router = DefaultRouter()
@@ -34,4 +35,5 @@ urlpatterns = [
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),  
     path('followers/', FollowerListView.as_view(), name='followers'),
     path('followers/toggle/', FollowerToggleView.as_view(), name='follower-toggle'),
+    path('moderation/high-risk/', TrustModerationSnapshotView.as_view(), name='moderation-high-risk'),
 ]

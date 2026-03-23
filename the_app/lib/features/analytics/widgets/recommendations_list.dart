@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/home_provider.dart';
@@ -38,14 +39,14 @@ class RecommendationsList extends StatelessWidget {
         CardConstants.gridCrossAxisCount;
   }
 
-  Widget _sectionLabel(String title) {
+  Widget _sectionLabel(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            title,
+            context.tr(title),
             style: AppTextStyles.h2.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -135,7 +136,7 @@ class RecommendationsList extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Recommended for you',
+                    context.tr('Recommended for you'),
                     style: AppTextStyles.h2.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -165,7 +166,7 @@ class RecommendationsList extends StatelessWidget {
             // ── Sub-section 2: Stores (category-chip style) ─────────────────
             if (hasStores) ...[
               const SizedBox(height: 24),
-              _sectionLabel('Stores'),
+              _sectionLabel(context, 'Stores'),
               SizedBox(
                 height: 130,
                 child: ListView.separated(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 
@@ -35,7 +36,7 @@ class ContactActionRow extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => Helpers.launchURL('tel:$phoneValue'),
               icon: const Icon(Icons.phone_outlined, size: 18),
-              label: const Text('Call'),
+              label: Text(context.tr('Call')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
                 foregroundColor: Colors.white,
@@ -56,7 +57,7 @@ class ContactActionRow extends StatelessWidget {
                 'https://wa.me/${_normalizeWhatsApp(whatsappValue)}',
               ),
               icon: const Icon(Icons.chat_outlined, size: 18),
-              label: const Text('WhatsApp'),
+              label: Text(context.tr('WhatsApp')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.green.shade700,
                 side: BorderSide(color: Colors.green.shade400),

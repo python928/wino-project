@@ -77,9 +77,9 @@ class PackAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-	list_display = ('user', 'product', 'rating', 'comment_preview', 'created_at')
+	list_display = ('user', 'product', 'rating', 'credibility_level', 'credibility_score', 'comment_preview', 'created_at')
 	search_fields = ('user__username', 'product__name', 'comment')
-	list_filter = ('rating', 'created_at')
+	list_filter = ('rating', 'credibility_level', 'is_low_credibility', 'created_at')
 	readonly_fields = ('user', 'created_at')
 
 	def comment_preview(self, obj):
@@ -99,6 +99,6 @@ class FavoriteAdmin(admin.ModelAdmin):
 
 @admin.register(ProductReport)
 class ProductReportAdmin(admin.ModelAdmin):
-	list_display = ('reporter', 'product', 'reason', 'status', 'created_at')
+	list_display = ('reporter', 'product', 'reason', 'status', 'seriousness_level', 'seriousness_score', 'created_at')
 	search_fields = ('reporter__username', 'product__name', 'details')
-	list_filter = ('reason', 'status')
+	list_filter = ('reason', 'status', 'seriousness_level', 'is_low_credibility')

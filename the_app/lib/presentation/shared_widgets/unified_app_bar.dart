@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
 import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../common/location_permission_helper.dart';
 import '../common/radius_picker_sheet.dart';
 import '../notifications/notifications_screen.dart';
 import '../search/search_tab_screen.dart';
@@ -85,13 +87,19 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 location!.isNotEmpty &&
                                 location != '/')
                             ? location!
-                            : 'City',
+                            : context.tr('City'),
                         nearbyLabel: radiusKm != null
-                            ? '${radiusKm!.toInt()} km'
-                            : 'Nearby',
+                            ? '${radiusKm!.toInt()} ${context.tr('km')}'
+                            : context.tr('Nearby'),
                         onCityTap: onLocationTap ?? () {},
-                        onNearbyTap: () {
+                        onNearbyTap: () async {
                           if (onRadiusChanged == null) return;
+                          final shouldContinue = await LocationPermissionHelper
+                              .ensureEducationShown(
+                            context,
+                            flow: LocationEducationFlow.nearbySearch,
+                          );
+                          if (!shouldContinue || !context.mounted) return;
                           showRadiusPickerSheet(
                             context,
                             initialRadius: radiusKm ?? 20.0,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../data/models/pack_model.dart';
 import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -260,7 +261,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   Future<void> _showReportPackSheet() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in first to report packs',
+      Helpers.showSnackBar(context, context.tr('Log in first to report packs'),
           isError: true);
       return;
     }
@@ -275,7 +276,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
     final result = await ReportBottomSheet.show(
       context: context,
-      title: 'Report Pack',
+      title: context.tr('Report Pack'),
       reasons: reasons,
     );
 
@@ -291,21 +292,25 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
             'Pack: ${widget.pack.name} (ID: ${widget.pack.id}). ${result.details}',
       });
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+      Helpers.showSnackBar(context, context.tr('Report submitted. Thank you.'));
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+      Helpers.showSnackBar(
+        context,
+        '${context.tr('Failed to send report')}: $e',
+        isError: true,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('Pack Details'),
+          title: Text(context.tr('Pack Details')),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
@@ -314,10 +319,10 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
               onSelected: (value) {
                 if (value == 'report') _showReportPackSheet();
               },
-              itemBuilder: (context) => const [
+              itemBuilder: (context) => [
                 PopupMenuItem<String>(
                   value: 'report',
-                  child: Text('Report Pack'),
+                  child: Text(context.tr('Report Pack')),
                 ),
               ],
             ),
@@ -486,7 +491,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Regular Total:',
+                            Text(context.tr('Regular Total:'),
                                 style: TextStyle(fontSize: 14)),
                             Text(
                               Helpers.formatPrice(widget.pack.totalPrice),
@@ -628,8 +633,8 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                                 _isTogglingFollow
                                     ? '...'
                                     : (_isFollowingStore
-                                        ? 'Following'
-                                        : 'Follow'),
+                                        ? context.tr('Following')
+                                        : context.tr('Follow')),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

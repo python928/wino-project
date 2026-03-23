@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 
 void showRadiusPickerSheet(
@@ -13,6 +14,7 @@ void showRadiusPickerSheet(
   double sliderValue = initialRadius.clamp(minKm, maxKm);
   final TextEditingController textCtrl =
       TextEditingController(text: sliderValue.toInt().toString());
+  final l10n = context.l10n;
 
   showModalBottomSheet(
     context: context,
@@ -70,8 +72,8 @@ void showRadiusPickerSheet(
                             color: AppColors.primaryColor, size: 18),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        'Search Radius',
+                      Text(
+                        context.tr('Search Radius'),
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700),
                       ),
@@ -86,12 +88,46 @@ void showRadiusPickerSheet(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                         ),
-                        child: const Text('Clear',
+                        child: Text(context.tr('Clear'),
                             style: TextStyle(fontSize: 13)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primaryColor.withOpacity(0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.locationEducationRadiusHint,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryDeep,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.locationEducationAddressHint,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Container(
@@ -128,7 +164,7 @@ void showRadiusPickerSheet(
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'km',
+                        context.tr('km'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -137,7 +173,7 @@ void showRadiusPickerSheet(
                       ),
                       const Spacer(),
                       Text(
-                        '${minKm.toInt()} – ${maxKm.toInt()} km',
+                        '${minKm.toInt()} - ${maxKm.toInt()} ${context.tr('km')}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade400,
@@ -172,16 +208,16 @@ void showRadiusPickerSheet(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${minKm.toInt()} km',
+                        Text('${minKm.toInt()} ${context.tr('km')}',
                             style: TextStyle(
                                 fontSize: 11, color: Colors.grey.shade400)),
-                        Text('250 km',
+                        Text('250 ${context.tr('km')}',
                             style: TextStyle(
                                 fontSize: 11, color: Colors.grey.shade400)),
-                        Text('500 km',
+                        Text('500 ${context.tr('km')}',
                             style: TextStyle(
                                 fontSize: 11, color: Colors.grey.shade400)),
-                        Text('${maxKm.toInt()} km',
+                        Text('${maxKm.toInt()} ${context.tr('km')}',
                             style: TextStyle(
                                 fontSize: 11, color: Colors.grey.shade400)),
                       ],
@@ -202,7 +238,7 @@ void showRadiusPickerSheet(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
-                        'Apply  ${sliderValue.toInt()} km',
+                        '${context.tr('Apply')} ${sliderValue.toInt()} ${context.tr('km')}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,

@@ -99,3 +99,32 @@ class RecommendationItemSerializer(serializers.Serializer):
 			'store_name': store_name,
 			'image_url': image_url,
 		}
+
+
+class TrustSignalSerializer(serializers.Serializer):
+	SIGNAL_DWELL = 'dwell'
+	SIGNAL_CONTACT_TAP = 'contact_tap'
+	SIGNAL_CHOICES = (SIGNAL_DWELL, SIGNAL_CONTACT_TAP)
+
+	TARGET_STORE = 'store'
+	TARGET_PRODUCT = 'product'
+	TARGET_CHOICES = (TARGET_STORE, TARGET_PRODUCT)
+
+	signal_type = serializers.ChoiceField(choices=SIGNAL_CHOICES)
+	target_type = serializers.ChoiceField(choices=TARGET_CHOICES)
+	target_id = serializers.IntegerField(min_value=1)
+	dwell_ms = serializers.IntegerField(required=False, min_value=0)
+	contact_channel = serializers.ChoiceField(
+		choices=['call', 'whatsapp', 'message', 'other'],
+		required=False,
+	)
+	session_id = serializers.CharField(required=False, allow_blank=True, max_length=100)
+	metadata = serializers.JSONField(required=False)
+
+	def validate(self, attrs):
+		signal_type = attrs.get('signal_type')
+		if signal_type == self.SIGNAL_DWELL and 'dwell_ms' not in attrs:
+			raise serializers.ValidationError({'dwell_ms': 'dwell_ms is required for dwell signal.'})
+		if signal_type == self.SIGNAL_CONTACT_TAP and 'contact_channel' not in attrs:
+			raise serializers.ValidationError({'contact_channel': 'contact_channel is required for contact_tap signal.'})
+		return attrs

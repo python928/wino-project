@@ -1,12 +1,15 @@
 from django.db import models
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework import filters, permissions, viewsets, status, serializers
+from rest_framework.throttling import ScopedRateThrottle
 import math
 from .search_engine import calculate_adaptive_radius, apply_weighted_ranking
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.core.validators import FileExtensionValidator
 
 from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
 from .serializers import (
@@ -22,10 +25,22 @@ from .serializers import (
 	PromotionImageSerializer,
 	ProductReportSerializer,
 )
-from users.models import User
+from users.models import User, TrustSettings
+from users.abuse import record_abuse_signal
+from users.trust_scoring import score_product_report, score_review_credibility, evaluate_store_verification
 from subscriptions.services import ensure_can_create_post, enforce_promotion_constraints
 
 # NOTE: Store == users.User now (unified profile)
+
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+
+def _validate_uploaded_image(image):
+	validator = FileExtensionValidator(allowed_extensions=ALLOWED_EXTENSIONS)
+	validator(image)
+	if getattr(image, 'size', 0) > MAX_IMAGE_SIZE_BYTES:
+		raise serializers.ValidationError('Image exceeds 5MB limit.')
 
 
 def _trigger_new_post_notification(user, instance, post_type):
@@ -158,6 +173,9 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		product = serializer.validated_data.get('product')
+		image = serializer.validated_data.get('image')
+		if image is not None:
+			_validate_uploaded_image(image)
 		if product is None or product.store != self.request.user:
 			raise PermissionDenied('You can only add images to your own products')
 		serializer.save()
@@ -231,6 +249,9 @@ class PackImageViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		pack = serializer.validated_data.get('pack')
+		image = serializer.validated_data.get('image')
+		if image is not None:
+			_validate_uploaded_image(image)
 		if pack is None or pack.merchant != self.request.user:
 			raise PermissionDenied('You can only add images to your own packs')
 		serializer.save()
@@ -257,6 +278,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
 		if self.action in ['update', 'partial_update', 'destroy']:
 			return [permissions.IsAuthenticated(), IsReviewOwner()]
 		return [permissions.IsAuthenticated()]
+
+	def get_throttles(self):
+		if self.action in ['create', 'rate_store']:
+			self.throttle_scope = 'review_create'
+			return [ScopedRateThrottle()]
+		return super().get_throttles()
 
 	def get_queryset(self):
 		queryset = super().get_queryset()
@@ -313,21 +340,50 @@ class ReviewViewSet(viewsets.ModelViewSet):
 		defaults.pop('product', None)
 		defaults['store'] = store
 
-		# Enforce one review per user per product (when product is provided),
-		# otherwise one review per user per store.
-		if product is not None:
-			review, _created = Review.objects.update_or_create(
-				user=self.request.user,
-				product=product,
-				defaults=defaults,
-			)
+		# Allow users to edit their existing review immediately, but keep a cooldown
+		# against rapid-fire creation of a fresh review on the same target.
+		existing_review = Review.objects.filter(
+			user=self.request.user,
+			product=product if product is not None else None,
+			store=store,
+		).first()
+		if existing_review is not None:
+			for field, value in defaults.items():
+				setattr(existing_review, field, value)
+			review = existing_review
+			review.save()
 		else:
-			review, _created = Review.objects.update_or_create(
+			trust = TrustSettings.get_settings()
+			cooldown_cutoff = timezone.now() - timedelta(minutes=int(trust.review_cooldown_minutes or 5))
+			recent_existing = Review.objects.filter(
 				user=self.request.user,
+				product=product if product is not None else None,
 				store=store,
-				product=None,
-				defaults=defaults,
-			)
+				created_at__gte=cooldown_cutoff,
+			).first()
+			if recent_existing is not None:
+				record_abuse_signal(
+					actor=self.request.user,
+					signal_type='review_spam',
+					target_type='product' if product is not None else 'store',
+					target_id=product.id if product is not None else store.id,
+					metadata={'reason': 'cooldown_hit'},
+				)
+				raise serializers.ValidationError({'detail': 'Please wait before updating this review again.'})
+
+			if product is not None:
+				review, _created = Review.objects.update_or_create(
+					user=self.request.user,
+					product=product,
+					defaults=defaults,
+				)
+			else:
+				review, _created = Review.objects.update_or_create(
+					user=self.request.user,
+					store=store,
+					product=None,
+					defaults=defaults,
+				)
 		try:
 			from analytics.utils import log_user_event
 			meta = {
@@ -347,6 +403,40 @@ class ReviewViewSet(viewsets.ModelViewSet):
 			)
 		except Exception:
 			pass
+
+		scored = score_review_credibility(
+			user=self.request.user,
+			store_id=store.id if store else None,
+			product_id=product.id if product else None,
+			rating=int(review.rating),
+		)
+		review.credibility_score = scored.score
+		review.credibility_level = scored.level
+		review.evidence_snapshot = scored.evidence_snapshot
+		review.is_low_credibility = scored.is_low_credibility
+		review.scored_at = timezone.now()
+		review.save(
+			update_fields=[
+				'credibility_score',
+				'credibility_level',
+				'evidence_snapshot',
+				'is_low_credibility',
+				'scored_at',
+			]
+		)
+		if scored.is_low_credibility:
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='review_spam',
+				target_type='product' if product is not None else 'store',
+				target_id=product.id if product is not None else store.id,
+				metadata={'reason': 'low_credibility', 'score': scored.score},
+			)
+		if store is not None:
+			try:
+				evaluate_store_verification(store)
+			except Exception:
+				pass
 		serializer.instance = review
 
 	@action(detail=False, methods=['post'], url_path='rate-store')
@@ -627,6 +717,9 @@ class PromotionImageViewSet(viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		promotion = serializer.validated_data.get('promotion')
+		image = serializer.validated_data.get('image')
+		if image is not None:
+			_validate_uploaded_image(image)
 		if promotion is None or promotion.store != self.request.user:
 			raise PermissionDenied('You can only add images to your own promotions')
 		serializer.save()
@@ -635,6 +728,13 @@ class PromotionImageViewSet(viewsets.ModelViewSet):
 class ProductReportViewSet(viewsets.ModelViewSet):
 	serializer_class = ProductReportSerializer
 	permission_classes = [permissions.IsAuthenticated]
+	throttle_classes = [ScopedRateThrottle]
+
+	def get_throttles(self):
+		if self.action == 'create':
+			self.throttle_scope = 'report_create'
+			return [ScopedRateThrottle()]
+		return super().get_throttles()
 
 	def get_queryset(self):
 		user = self.request.user
@@ -643,4 +743,52 @@ class ProductReportViewSet(viewsets.ModelViewSet):
 		return ProductReport.objects.select_related('reporter', 'product', 'product__store').filter(reporter=user)
 
 	def perform_create(self, serializer):
-		serializer.save(reporter=self.request.user)
+		product = serializer.validated_data.get('product')
+		trust = TrustSettings.get_settings()
+		cutoff = timezone.now() - timedelta(minutes=int(trust.report_cooldown_minutes or 10))
+		if ProductReport.objects.filter(reporter=self.request.user, product=product, created_at__gte=cutoff).exists():
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='report_spam',
+				target_type='product',
+				target_id=product.id,
+				metadata={'reason': 'cooldown_hit'},
+			)
+			raise serializers.ValidationError({'detail': 'Please wait before submitting another report for this product.'})
+
+		reports_today = ProductReport.objects.filter(
+			reporter=self.request.user,
+			created_at__date=timezone.now().date(),
+		).count()
+		if reports_today >= int(trust.max_reports_per_day or 20):
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='report_spam',
+				target_type='account',
+				target_id=self.request.user.id,
+				metadata={'reason': 'daily_cap_hit', 'reports_today': reports_today},
+			)
+			raise serializers.ValidationError({'detail': 'Daily report limit reached. Try again tomorrow.'})
+
+		scored = score_product_report(
+			reporter=self.request.user,
+			product_id=product.id,
+			store_id=product.store_id,
+		)
+		serializer.save(
+			reporter=self.request.user,
+			seriousness_score=scored.score,
+			seriousness_level=scored.level,
+			evidence_snapshot=scored.evidence_snapshot,
+			is_low_credibility=scored.is_low_credibility,
+			reporter_reputation_score_at_submission=scored.reporter_reputation,
+			scored_at=timezone.now(),
+		)
+		if scored.is_low_credibility:
+			record_abuse_signal(
+				actor=self.request.user,
+				signal_type='low_cred_report',
+				target_type='product',
+				target_id=product.id,
+				metadata={'score': scored.score},
+			)

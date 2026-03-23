@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/notification_badge_service.dart';
@@ -141,7 +142,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
@@ -157,7 +158,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               const Icon(Icons.notifications_outlined, color: Colors.black87),
               const SizedBox(width: 8),
               Text(
-                'Notifications',
+                context.tr('Notifications'),
                 style: const TextStyle(
                   color: Colors.black87,
                   fontSize: 18,
@@ -200,7 +201,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: TextButton(
                               onPressed: _markAllRead,
                               child: Text(
-                                'Mark all as read',
+                                context.tr('Mark all as read'),
                                 style: TextStyle(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w600),
@@ -209,8 +210,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                         Expanded(
                           child: _notifications.isEmpty
-                              ? const Center(
-                                  child: Text('No notifications yet'))
+                              ? Center(
+                                  child:
+                                      Text(context.tr('No notifications yet')))
                               : ListView.separated(
                                   padding: EdgeInsets.zero,
                                   itemCount: _notifications.length,

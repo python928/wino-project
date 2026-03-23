@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/api_config.dart';
@@ -13,6 +14,8 @@ import '../../data/models/offer_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/repositories/post_repository.dart';
 import 'add_ad_screen.dart';
+import '../shared_widgets/empty_state_widget.dart';
+import '../shared_widgets/error_state_widget.dart';
 
 class AdsDashboardScreen extends StatefulWidget {
   const AdsDashboardScreen({super.key});
@@ -147,9 +150,9 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
         children: [
           Expanded(
             child: TextField(
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Search products…',
+                hintText: context.tr('Search products…'),
               ),
               onChanged: (value) {
                 setState(() {
@@ -176,7 +179,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     Map<String, dynamic>? productInfo,
     VoidCallback? onEditAd,
   ) {
-    final name = (stats['product_name'] ?? 'Product').toString();
+    final name = (stats['product_name'] ?? context.tr('Product')).toString();
     final views = _asInt(stats['ad_impressions']);
     final clicks = _asInt(stats['ad_clicks']);
     final favorites = _asInt(stats['ad_favorites']);
@@ -253,8 +256,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                   ),
                   child: Text(
                     activeAdCount > 1
-                        ? 'Advertising ($activeAdCount)'
-                        : 'Advertising',
+                        ? '${context.tr('Advertising')} ($activeAdCount)'
+                        : context.tr('Advertising'),
                     style: TextStyle(
                       color: AppColors.primaryColor,
                       fontWeight: FontWeight.w800,
@@ -266,7 +269,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                 IconButton(
                   onPressed: onEditAd,
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  tooltip: 'Edit Ad',
+                  tooltip: context.tr('Edit Ad'),
                   splashRadius: 18,
                 ),
             ],
@@ -288,6 +291,63 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInsightsCard({
+    required int activeAds,
+    required int totalImpressions,
+    required int totalClicks,
+    required double ctrValue,
+  }) {
+    final insights = <String>[
+      if (activeAds <= 0)
+        'You have no active ads right now. Start with one clear product or pack.'
+      else if (totalImpressions <= 0)
+        'Your ads are active, but they still need reach. Review dates, placement, and budget.'
+      else if (ctrValue < 1)
+        'People are seeing your ads, but clicks are still low. Improve the image, title, or offer.'
+      else
+        'Your ads are getting both views and clicks. Keep budget on the products that move fastest.',
+      'Nearby performance improves when both your store GPS and address are complete.',
+    ];
+
+    return _sectionCard(
+      title: 'What these numbers mean',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: insights
+            .map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 16,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        context.tr(item),
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -387,8 +447,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to open ad editor: $e',
-          isError: true);
+      Helpers.showSnackBar(
+        context,
+        '${context.tr('Failed to open ad editor')}: $e',
+        isError: true,
+      );
     }
   }
 
@@ -415,11 +478,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FC),
         appBar: AppBar(
-          title: const Text('Ads'),
+          title: Text(context.tr('Ads')),
           leadingWidth: 96,
           leading: Consumer<WalletProvider>(
             builder: (context, wallet, _) => Padding(
@@ -459,8 +522,25 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(
-                child: Text('Failed to load dashboard: ${snapshot.error}'),
+              return RefreshIndicator(
+                onRefresh: () async {
+                  setState(_reload);
+                  await _future;
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 80),
+                    SizedBox(
+                      height: 420,
+                      child: ErrorStateWidget(
+                        message: context.tr('Failed to load dashboard'),
+                        details: '${snapshot.error}',
+                        onRetry: () => setState(_reload),
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
@@ -493,6 +573,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
             final ctr = totalImpressions > 0
                 ? ((totalClicks / totalImpressions) * 100).toStringAsFixed(2)
                 : '0.00';
+            final ctrValue = double.tryParse(ctr) ?? 0;
+            final activeAdsCount = _asInt(adInventory['ad_active_count']);
 
             return RefreshIndicator(
               onRefresh: () async {
@@ -545,12 +627,26 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  _buildInsightsCard(
+                    activeAds: activeAdsCount,
+                    totalImpressions: totalImpressions,
+                    totalClicks: totalClicks,
+                    ctrValue: ctrValue,
+                  ),
+                  const SizedBox(height: 16),
                   _buildEligiblePacksSection(eligiblePacks),
                   const SizedBox(height: 16),
                   _sectionCard(
-                    title: 'Ads',
+                    title: context.tr('Ads'),
                     child: ads.isEmpty
-                        ? const Text('No ads found in this period.')
+                        ? EmptyStateWidget(
+                            icon: Icons.campaign_outlined,
+                            title: context.tr('No ads found in this period.'),
+                            message: context.tr(
+                              'Change the dates or create a new ad to start collecting results.',
+                            ),
+                            compact: true,
+                          )
                         : Column(
                             children: ads.map<Widget>((item) {
                               final promo =
@@ -565,7 +661,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                       .toString()
                                       .trim();
                               final campaignName =
-                                  (promo['name'] ?? 'Campaign').toString();
+                                  (promo['name'] ?? context.tr('Campaign'))
+                                      .toString();
                               final name = apiProductName.isNotEmpty
                                   ? apiProductName
                                   : (mappedProductName.isNotEmpty
@@ -627,7 +724,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                                 BorderRadius.circular(999),
                                           ),
                                           child: Text(
-                                            'AD',
+                                            context.tr('AD'),
                                             style: const TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w800,
@@ -677,10 +774,17 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
                   _sectionCard(
-                    title: 'Product Performance',
+                    title: context.tr('Product Performance'),
                     child: productStats.isEmpty
-                        ? const Text(
-                            'No product performance data for this period.')
+                        ? EmptyStateWidget(
+                            icon: Icons.insights_outlined,
+                            title: context.tr(
+                                'No product performance data for this period.'),
+                            message: context.tr(
+                              'Once ads collect views and clicks, product-level insights will appear here.',
+                            ),
+                            compact: true,
+                          )
                         : Builder(
                             builder: (context) {
                               final query = _productQuery.trim().toLowerCase();
@@ -789,7 +893,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                                   }),
                                   if (items.length > _visibleProductStatsCount)
                                     AppCompactActionButton(
-                                      label: 'Show more',
+                                      label: context.tr('Show more'),
                                       onTap: () {
                                         setState(() {
                                           _visibleProductStatsCount += 5;
@@ -803,9 +907,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
                   _sectionCard(
-                    title: 'Tips',
-                    child: const Text(
-                      'Choose high-demand products, reserve impression budget for fast movers, and keep the home-top placement for your most visual campaigns.',
+                    title: context.tr('Tips'),
+                    child: Text(
+                      context.tr(
+                        'Choose high-demand products, reserve impression budget for fast movers, and keep the home-top placement for your most visual campaigns.',
+                      ),
                     ),
                   ),
                 ],
@@ -817,7 +923,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
           onPressed: () => _openCreateAd(),
           backgroundColor: AppColors.primaryColor,
           foregroundColor: Colors.white,
-          tooltip: 'Create Sponsored Ad',
+          tooltip: context.tr('Create Sponsored Ad'),
           child: const Icon(Icons.add),
         ),
       ),
@@ -851,8 +957,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                         hasRange
                             ? '${_formatDate(_dateFrom!)}  ->  ${_formatDate(_dateTo!)}'
                             : (_selectedPeriod != null
-                                ? 'Preset: ${_selectedPeriod!.replaceAll('_', ' ')}'
-                                : 'All dates'),
+                                ? '${context.tr('Preset')}: ${context.tr(_selectedPeriod!.replaceAll('_', ' '))}'
+                                : context.tr('All dates')),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -862,13 +968,13 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
             ),
             const SizedBox(width: 10),
             AppCompactActionButton(
-              label: 'Custom',
+              label: context.tr('Custom'),
               onTap: _pickDateRange,
             ),
             if (hasActiveFilter) ...[
               const SizedBox(width: 8),
               AppCompactActionButton(
-                label: 'Clear',
+                label: context.tr('Clear'),
                 onTap: _clearDateRange,
               ),
             ],
@@ -895,9 +1001,9 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
 
   Widget _buildEligiblePacksSection(List eligiblePacks) {
     return _sectionCard(
-      title: 'Select Pack to Advertise',
+      title: context.tr('Select Pack to Advertise'),
       child: eligiblePacks.isEmpty
-          ? const Text('No packs available for advertising.')
+          ? Text(context.tr('No packs available for advertising.'))
           : Column(
               children: eligiblePacks.take(8).map<Widget>((item) {
                 final pack = (item as Map).cast<String, dynamic>();
@@ -905,7 +1011,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                 final hasActiveAd = pack['has_active_ad'] as bool? ?? false;
                 final packId =
                     int.tryParse((pack['id'] ?? '0').toString()) ?? 0;
-                final packName = (pack['name'] ?? 'Pack').toString();
+                final packName =
+                    (pack['name'] ?? context.tr('Pack')).toString();
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -952,8 +1059,8 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                             const SizedBox(height: 6),
                             Text(
                               hasActiveAd
-                                  ? 'Already has an active ad'
-                                  : 'Ready for advertising',
+                                  ? context.tr('Already has an active ad')
+                                  : context.tr('Ready for advertising'),
                               style: TextStyle(
                                 color: hasActiveAd
                                     ? Colors.orange.shade800
@@ -975,7 +1082,11 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                           backgroundColor: AppColors.primaryColor,
                           foregroundColor: Colors.white,
                         ),
-                        child: Text(hasActiveAd ? 'Edit Ad' : 'Advertise'),
+                        child: Text(
+                          hasActiveAd
+                              ? context.tr('Edit Ad')
+                              : context.tr('Advertise'),
+                        ),
                       ),
                     ],
                   ),
@@ -997,7 +1108,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            context.tr(title),
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
           ),
           const SizedBox(height: 12),
@@ -1040,7 +1151,10 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
                   style: const TextStyle(
                       fontSize: 17, fontWeight: FontWeight.w800),
                 ),
-                Text(label, style: TextStyle(color: Colors.grey.shade600)),
+                Text(
+                  context.tr(label),
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
               ],
             ),
           ),
@@ -1057,7 +1171,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        '$label: $value',
+        '${context.tr(label)}: $value',
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );

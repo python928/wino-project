@@ -1,7 +1,7 @@
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/home_provider.dart';
@@ -25,6 +25,7 @@ import '../../data/models/user_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../features/analytics/analytics_export.dart';
 import '../common/constants/card_constants.dart';
+import '../common/location_permission_helper.dart';
 import '../common/location_picker_screen.dart';
 import '../common/widgets/stacked_product_images.dart';
 import '../product/product_detail_screen.dart';
@@ -161,62 +162,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _logFilterDistance(km);
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      if (msg.contains('Location services are disabled')) {
-        await _showLocationActionDialog(
-          title: 'Enable GPS',
-          message:
-              'Location services are disabled. Please enable GPS to use nearby search.',
-          openSettings: Geolocator.openLocationSettings,
-          actionLabel: 'Open Location Settings',
-        );
-      } else if (msg.contains('permanently denied')) {
-        await _showLocationActionDialog(
-          title: 'Permission Required',
-          message:
-              'Location permission is permanently denied. Please allow it from app settings.',
-          openSettings: Geolocator.openAppSettings,
-          actionLabel: 'Open App Settings',
-        );
-      } else if (msg.contains('permission denied')) {
-        Helpers.showSnackBar(context, 'Location permission denied');
-      } else {
-        Helpers.showSnackBar(context, 'Failed to get current GPS location');
-      }
+      await LocationPermissionHelper.handleLocationError(
+        context,
+        e,
+        fallbackMessage: context.tr('Failed to get current GPS location'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isNearbyLoading = false);
       }
     }
-  }
-
-  Future<void> _showLocationActionDialog({
-    required String title,
-    required String message,
-    required Future<bool> Function() openSettings,
-    required String actionLabel,
-  }) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await openSettings();
-            },
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showLocationPicker() async {
@@ -425,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            title,
+            context.tr(title),
             style: AppTextStyles.h2.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -440,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                action,
+                context.tr(action),
                 style: const TextStyle(
                   color: AppColors.primaryColor,
                   fontSize: 12,
@@ -651,6 +606,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeaturedStoresBlock() {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
+        final stores =
+            _filterStoresForActiveLocation(homeProvider.featuredStores);
+        final hasStores = stores.isNotEmpty;
+        final isLoading =
+            homeProvider.isLoading || homeProvider.isLoadingStores;
+        final hasError = homeProvider.storesError != null;
+
+        if (!hasStores && !isLoading && !hasError) {
+          return const SizedBox.shrink();
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -752,22 +718,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     return SizedBox(
       height: height,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: Colors.grey[400]),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(color: Colors.grey[600]),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isTightHeight =
+              constraints.maxHeight.isFinite && constraints.maxHeight <= 170;
+          return Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: isTightHeight ? 4 : 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon,
+                        size: isTightHeight ? 30 : 40, color: Colors.grey[400]),
+                    SizedBox(height: isTightHeight ? 4 : 8),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      maxLines: isTightHeight ? 2 : null,
+                      overflow: isTightHeight ? TextOverflow.ellipsis : null,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: isTightHeight ? 12 : null,
+                      ),
+                    ),
+                    SizedBox(height: isTightHeight ? 2 : 4),
+                    AppTextButton(
+                      text: 'Retry',
+                      onPressed: onRetry,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            AppTextButton(
-              text: 'Retry',
-              onPressed: onRetry,
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -857,7 +846,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildCompactErrorState(
             height: 160,
             icon: Icons.store_outlined,
-            message: 'Failed to load stores',
+            message: context.tr('Failed to load stores'),
             onRetry: () => homeProvider.loadFeaturedStores(),
           );
         }
@@ -1034,7 +1023,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildCompactErrorState(
             height: 200,
             icon: Icons.inventory_2_outlined,
-            message: 'Failed to load packs',
+            message: context.tr('Failed to load packs'),
             onRetry: () => homeProvider.loadFeaturedPacks(),
           );
         }
@@ -1244,7 +1233,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildCompactErrorState(
             height: 280,
             icon: Icons.shopping_bag_outlined,
-            message: 'Failed to load products',
+            message: context.tr('Failed to load products'),
             onRetry: () => homeProvider.loadRecentProducts(),
           );
         }
@@ -1733,7 +1722,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildCompactErrorState(
             height: 280,
             icon: Icons.local_offer_outlined,
-            message: 'Failed to load discounts',
+            message: context.tr('Failed to load discounts'),
             onRetry: () => postProvider.loadOffers(),
           );
         }
@@ -1823,7 +1812,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Navigation Methods ====================
 
   void _showNotifications() {
-    Helpers.showSnackBar(context, 'Notifications coming soon');
+    Helpers.showSnackBar(context, context.tr('Notifications coming soon'));
   }
 
   void _navigateToSearch() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/pack_provider.dart';
@@ -483,7 +484,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              title: const Text('Show At Hour'),
+              title: Text(context.tr('Show At Hour')),
               content: SizedBox(
                 width: double.maxFinite,
                 child: SingleChildScrollView(
@@ -595,7 +596,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.ltr,
+        textDirection: Directionality.of(context),
         child: AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -745,7 +746,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.ltr,
+        textDirection: Directionality.of(context),
         child: AlertDialog(
           title: Text(_deleteTitle),
           content: Text(_deleteDescription),
@@ -839,7 +840,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
   Widget _buildScheduleSection() {
     return DateRangePickerField(
-      title: 'Schedule',
+      title: context.tr('Schedule'),
       startLabel: 'Start Date & Time',
       endLabel: 'End Date & Time',
       startIcon: Icons.schedule,
@@ -1117,7 +1118,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     final maxAffordableImpressions = _maxAffordableImpressions;
 
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         appBar: AppBar(
           title: Text(_screenTitle),
@@ -1241,7 +1242,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                 ],
                 if (_isAdMode) ...[
                   _buildToggleSection(
-                    title: 'Ad Target',
+                    title: context.tr('Ad Target'),
                     options: const [
                       ToggleOption(label: 'Product', value: 'product'),
                       ToggleOption(label: 'Discounts', value: 'discount'),
@@ -1347,7 +1348,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
 
                   if (_allowKindSwitch) ...[
                     _buildToggleSection(
-                      title: 'Campaign Type',
+                      title: context.tr('Campaign Type'),
                       options: _kindOptions,
                       selectedValue: _kind,
                       onChanged: _isEditMode
@@ -1411,7 +1412,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Original Price:'),
+                              Text(context.tr('Original Price:')),
                               Text(
                                 Helpers.formatPrice(_selectedProduct!.price),
                                 style: const TextStyle(
@@ -1428,7 +1429,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('New Price:'),
+                              Text(context.tr('New Price:')),
                               Text(
                                 _newPriceController.text.isEmpty
                                     ? Helpers.formatPrice(
@@ -1534,7 +1535,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _pickDisplayHours,
                             icon: const Icon(Icons.access_time),
-                            label: const Text('Select Hours'),
+                            label: Text(context.tr('Select Hours')),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1546,7 +1547,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildToggleSection(
-                      title: 'Audience',
+                      title: context.tr('Audience'),
                       options: _audienceOptions,
                       selectedValue: _audienceMode,
                       onChanged: (value) {
@@ -1594,7 +1595,7 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildToggleSection(
-                      title: 'Geo Target',
+                      title: context.tr('Geo Target'),
                       options: _geoOptions,
                       selectedValue: _geoMode,
                       onChanged: (value) {

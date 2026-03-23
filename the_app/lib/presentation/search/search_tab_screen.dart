@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/home_provider.dart';
@@ -24,6 +24,7 @@ import '../../data/models/user_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/constants/card_constants.dart';
+import '../common/location_permission_helper.dart';
 import '../common/location_picker_screen.dart';
 import '../common/radius_picker_sheet.dart';
 import '../product/product_detail_screen.dart';
@@ -167,7 +168,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: const Icon(Icons.expand_more_rounded),
-        label: const Text('Load more'),
+        label: Text(context.tr('Load more')),
       ),
     );
   }
@@ -255,13 +256,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Ready to search',
+                    context.tr('Ready to search'),
                     style:
                         AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose type and categories, then tap Search',
+                    context.tr('Choose type and categories, then tap Search'),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
@@ -342,7 +343,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
   }
 
-  void _showDistancePicker() {
+  Future<void> _showDistancePicker() async {
+    final shouldContinue = await LocationPermissionHelper.ensureEducationShown(
+      context,
+      flow: LocationEducationFlow.nearbySearch,
+    );
+    if (!shouldContinue || !mounted) return;
+
     showRadiusPickerSheet(
       context,
       initialRadius: _distanceKm ?? 20.0,
@@ -375,7 +382,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
       if (!mounted) return;
       if (lat == null || lng == null) {
-        Helpers.showSnackBar(context, 'Could not get current GPS location');
+        Helpers.showSnackBar(
+          context,
+          context.tr('Could not get current GPS location'),
+        );
         return;
       }
 
@@ -391,62 +401,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _logFilterDistance(km);
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      if (msg.contains('Location services are disabled')) {
-        await _showLocationActionDialog(
-          title: 'Enable GPS',
-          message:
-              'Location services are disabled. Please enable GPS to use nearby search.',
-          openSettings: Geolocator.openLocationSettings,
-          actionLabel: 'Open Location Settings',
-        );
-      } else if (msg.contains('permanently denied')) {
-        await _showLocationActionDialog(
-          title: 'Permission Required',
-          message:
-              'Location permission is permanently denied. Please allow it from app settings.',
-          openSettings: Geolocator.openAppSettings,
-          actionLabel: 'Open App Settings',
-        );
-      } else if (msg.contains('permission denied')) {
-        Helpers.showSnackBar(context, 'Location permission denied');
-      } else {
-        Helpers.showSnackBar(context, 'Failed to get current GPS location');
-      }
+      await LocationPermissionHelper.handleLocationError(
+        context,
+        e,
+        fallbackMessage: context.tr('Failed to get current GPS location'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isNearbyLoading = false);
       }
     }
-  }
-
-  Future<void> _showLocationActionDialog({
-    required String title,
-    required String message,
-    required Future<bool> Function() openSettings,
-    required String actionLabel,
-  }) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await openSettings();
-            },
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
   }
 
   ProductDetailsArgs _buildProductDetailsArgs(Post product) {
@@ -753,7 +717,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         bottomNavigationBar: Container(
@@ -771,7 +735,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           child: SafeArea(
             top: false,
             child: AppPrimaryButton(
-              text: 'Search',
+              text: context.tr('Search'),
               icon: Icons.search_rounded,
               onPressed: _performSearch,
             ),
@@ -780,8 +744,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Search header (containing back button, location toggle, search field, and filter button)
+              // App bar (back + location mode only)
               _buildHeader(),
+
+              // Search input + filters section
+              _buildSearchControls(),
 
               // Type Toggle Buttons
               _buildTypeToggleButtons(),
@@ -821,72 +788,71 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Row 1: Back button + Location Toggle
-          Row(
-            children: [
-              // Back button
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0EEFF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.arrow_back_rounded,
-                      color: AppColors.primaryColor, size: 20),
-                ),
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.blackColor5,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              // Location Toggle
-              Expanded(
-                child: LocationModeSwitcher(
-                  distanceActive: distanceActive,
-                  cityLabel: (!distanceActive &&
-                          _selectedLocation.isNotEmpty &&
-                          _selectedLocation != '/')
-                      ? _selectedLocation
-                      : 'City',
-                  nearbyLabel:
-                      distanceActive ? '${_distanceKm!.toInt()} km' : 'Nearby',
-                  onCityTap: _showLocationPicker,
-                  onNearbyTap: _showDistancePicker,
-                  isLoadingNearby: _isNearbyLoading,
-                ),
-              ),
-            ],
+              child: const Icon(Icons.arrow_back,
+                  color: AppColors.textPrimary, size: 20),
+            ),
           ),
-          const SizedBox(height: 12),
-          // Row 2: Search field + Filter button
-          Row(
-            children: [
-              // Search field
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: AppSearchField(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    hintText: 'Search products, stores...',
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: () => _searchFocus.unfocus(),
-                    onClear: () => setState(() {}),
-                  ),
-                ),
+          const SizedBox(width: 12),
+          // Location Toggle
+          Expanded(
+            child: LocationModeSwitcher(
+              distanceActive: distanceActive,
+              cityLabel: (!distanceActive &&
+                      _selectedLocation.isNotEmpty &&
+                      _selectedLocation != '/')
+                  ? _selectedLocation
+                  : context.tr('City'),
+              nearbyLabel: distanceActive
+                  ? '${_distanceKm!.toInt()} ${context.tr('km')}'
+                  : context.tr('Nearby'),
+              onCityTap: _showLocationPicker,
+              onNearbyTap: _showDistancePicker,
+              isLoadingNearby: _isNearbyLoading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchControls() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 46,
+              child: AppSearchField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                hintText: context.tr('Search products, stores...'),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: () => _searchFocus.unfocus(),
+                onClear: () => setState(() {}),
               ),
-              const SizedBox(width: 8),
-              // Filter button
-              _buildHeaderButton(
-                icon: Icons.tune_rounded,
-                isActive: _minRating > 0 ||
-                    _priceRange.start > 0 ||
-                    _priceRange.end < 100000,
-                onTap: _showFiltersSheet,
-              ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildHeaderButton(
+            icon: Icons.tune_rounded,
+            isActive: _minRating > 0 ||
+                _priceRange.start > 0 ||
+                _priceRange.end < 100000,
+            onTap: _showFiltersSheet,
           ),
         ],
       ),
@@ -965,6 +931,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }),
         scrollable: true,
         compact: true,
+        showBorder: false,
       ),
     );
   }
@@ -998,8 +965,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
                 child: Row(
                   children: [
-                    const Text(
-                      'Categories',
+                    Text(
+                      context.tr('Categories'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -1013,7 +980,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'See all',
+                            context.tr('See All'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -1045,7 +1012,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     if (index == 0) {
                       return _buildCategoryCard(
                         icon: Icons.grid_view_rounded,
-                        label: 'All',
+                        label: context.tr('All'),
                         color: AppColors.primaryColor,
                         isSelected: _selectedCategoryIds.isEmpty,
                         onTap: () => setState(() {
@@ -1217,12 +1184,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     ),
                   if (_distanceKm != null)
                     _buildFilterTag(
-                      '${_distanceKm!.toInt()} km radius',
+                      '${_distanceKm!.toInt()} ${context.tr('km radius')}',
                       Icons.radar,
                     ),
                   if (_selectedCategoryIds.isNotEmpty)
                     _buildFilterTag(
-                      'Categories: ${_selectedCategoryIds.length}',
+                      '${context.tr('Categories')}: ${_selectedCategoryIds.length}',
                       Icons.category_rounded,
                     ),
                   if (_minRating > 0)
@@ -1248,7 +1215,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Clear',
+                context.tr('Clear'),
                 style: TextStyle(
                   color: AppColors.errorRed,
                   fontSize: 12,
@@ -1264,7 +1231,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   Widget _buildFilterTag(String label, IconData icon) {
     return Container(
-      margin: const EdgeInsets.only(right: 8),
+      margin: const EdgeInsetsDirectional.only(end: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1344,14 +1311,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'Filters',
+                          context.tr('Filters'),
                           style: AppTextStyles.h3
                               .copyWith(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                     AppTextButton(
-                      text: 'Reset',
+                      text: context.tr('Reset'),
                       onPressed: () {
                         setSheetState(() {
                           draftSort = 'Newest';
@@ -1372,7 +1339,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     children: [
                       // Sort By
                       Text(
-                        'Sort By',
+                        context.tr('Sort By'),
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -1416,7 +1383,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                                     : null,
                               ),
                               child: Text(
-                                option,
+                                context.tr(option),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: isSelected
@@ -1438,7 +1405,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Price Range',
+                            context.tr('Price Range'),
                             style: AppTextStyles.bodyMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -1489,7 +1456,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Minimum Rating',
+                            context.tr('Minimum Rating'),
                             style: AppTextStyles.bodyMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -1561,7 +1528,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 ),
                 child: SafeArea(
                   child: AppPrimaryButton(
-                    text: 'Apply Filters',
+                    text: context.tr('Apply Filters'),
                     onPressed: () {
                       setState(() {
                         _selectedSort = draftSort;
@@ -1863,7 +1830,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Row(
                   children: [
                     Text(
-                      'Results',
+                      context.tr('Results'),
                       style: AppTextStyles.h4
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -1911,7 +1878,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 Row(
                   children: [
                     Text(
-                      'Stores',
+                      context.tr('Stores'),
                       style: AppTextStyles.h4
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -2013,7 +1980,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             child: Row(
               children: [
                 Text(
-                  'View All',
+                  context.tr('View All'),
                   style: TextStyle(
                     color: AppColors.primaryColor,
                     fontWeight: FontWeight.w600,
@@ -2037,10 +2004,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   Widget _buildEmptyState() {
     return EmptyStateWidget(
       icon: Icons.search_off_rounded,
-      title: 'No Results Found',
-      message:
-          'Try adjusting your search or filters to find what you\'re looking for',
-      actionText: _hasActiveFilters ? 'Clear Filters' : null,
+      title: context.tr('No Results Found'),
+      message: context.tr(
+        'Try adjusting your search or filters to find what you\'re looking for',
+      ),
+      actionText: _hasActiveFilters ? context.tr('Clear Filters') : null,
       onActionPressed: _hasActiveFilters ? _clearAllFilters : null,
     );
   }

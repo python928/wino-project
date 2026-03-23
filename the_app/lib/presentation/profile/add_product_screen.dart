@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -205,18 +206,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.ltr,
+        textDirection: Directionality.of(context),
         child: AlertDialog(
-          title: const Text('Delete Product?'),
-          content: const Text('This action cannot be undone.'),
+          title: Text(context.tr('Delete Product?')),
+          content: Text(context.tr('This action cannot be undone.')),
           actions: [
             AppTextButton(
               onPressed: () => Navigator.pop(context, false),
-              text: 'Cancel',
+              text: context.tr('Cancel'),
             ),
             AppPrimaryButton(
               onPressed: () => Navigator.pop(context, true),
-              text: 'Delete',
+              text: context.tr('Delete'),
             ),
           ],
         ),
@@ -391,16 +392,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text(_isEditMode ? 'Edit Product' : 'Publish New Product'),
+          title: Text(
+            _isEditMode
+                ? context.tr('Edit Product')
+                : context.tr('Publish New Product'),
+          ),
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
@@ -497,7 +502,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Show Price'),
+                        title: Text(context.tr('Show Price')),
                         subtitle: const Text(
                           'Show price to customers in listings',
                         ),
@@ -509,7 +514,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Available'),
+                        title: Text(context.tr('Available')),
                         subtitle: const Text(
                           'Is the product available for sale?',
                         ),
@@ -620,8 +625,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Delivery Available',
+                      Text(
+                        context.tr('Delivery Available'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -629,8 +634,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                       Text(
                         _deliveryAvailable
-                            ? 'Select areas you deliver to'
-                            : 'Customers can come pick up',
+                            ? context.tr('Select areas you deliver to')
+                            : context.tr('Customers can come pick up'),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade500,
@@ -661,8 +666,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     children: [
                       Text(
                         _deliveryAreas == null || !_deliveryAreas!.hasFilters
-                            ? 'No areas selected'
-                            : _deliveryAreas!.displayText,
+                            ? context.tr('No areas selected')
+                            : _deliveryAreas!.displayTextFor(context),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -695,8 +700,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               const SizedBox(width: 4),
                               Text(
                                 _deliveryAreas?.hasFilters == true
-                                    ? 'Edit'
-                                    : 'Add Areas',
+                                    ? context.tr('Edit')
+                                    : context.tr('Add Areas'),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.white,

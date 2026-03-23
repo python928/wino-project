@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 import '../../shared_widgets/contact_action_row.dart';
@@ -23,6 +25,7 @@ class ProfileMerchantHeader extends StatelessWidget {
   final VoidCallback? onSettingsTap;
   final Function(String)? onSettingsMenuSelected;
   final bool isOwnerView;
+  final bool isVerified;
   final bool isFollowing;
   final VoidCallback? onFollowTap;
   final VoidCallback? onFavoriteTap;
@@ -55,6 +58,7 @@ class ProfileMerchantHeader extends StatelessWidget {
     this.onSettingsTap,
     this.onSettingsMenuSelected,
     required this.isOwnerView,
+    this.isVerified = false,
     this.isFollowing = false,
     this.onFollowTap,
     this.onFavoriteTap,
@@ -129,7 +133,7 @@ class ProfileMerchantHeader extends StatelessWidget {
                               Icon(Icons.edit_outlined,
                                   color: AppColors.primaryColor, size: 20),
                               const SizedBox(width: 12),
-                              const Text('Edit Information'),
+                              Text(context.tr('Edit Information')),
                             ],
                           ),
                         ),
@@ -140,8 +144,8 @@ class ProfileMerchantHeader extends StatelessWidget {
                               const Icon(Icons.logout,
                                   color: Colors.red, size: 20),
                               const SizedBox(width: 12),
-                              const Text('Logout',
-                                  style: TextStyle(color: Colors.red)),
+                              Text(context.tr('Logout'),
+                                  style: const TextStyle(color: Colors.red)),
                             ],
                           ),
                         ),
@@ -157,9 +161,9 @@ class ProfileMerchantHeader extends StatelessWidget {
                       ),
                     ),
             ),
-            Positioned(
+            PositionedDirectional(
               bottom: -34,
-              left: 20,
+              start: 20,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -220,6 +224,26 @@ class ProfileMerchantHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (isVerified)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.verified,
+                              size: 14, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(context.tr('Verified'),
+                              style: const TextStyle(
+                                  color: Colors.green, fontSize: 11)),
+                        ],
+                      ),
+                    ),
                   const SizedBox(width: 12),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -295,7 +319,9 @@ class ProfileMerchantHeader extends StatelessWidget {
                               ),
                               SizedBox(width: 6),
                               Text(
-                                isFollowing ? 'Following' : 'Follow',
+                                isFollowing
+                                    ? context.tr('Following')
+                                    : context.tr('Follow'),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -324,7 +350,7 @@ class ProfileMerchantHeader extends StatelessWidget {
                                 size: 16, color: Colors.red.shade500),
                             const SizedBox(width: 6),
                             Text(
-                              'Report',
+                              context.tr('Report'),
                               style: TextStyle(
                                 color: Colors.red.shade500,
                                 fontWeight: FontWeight.w600,
@@ -404,7 +430,7 @@ class ProfileMerchantHeader extends StatelessWidget {
 
   Widget _buildSocialIcon(IconData icon, String url, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsetsDirectional.only(end: 12),
       child: InkWell(
         onTap: () => Helpers.launchURL(url),
         borderRadius: BorderRadius.circular(50),

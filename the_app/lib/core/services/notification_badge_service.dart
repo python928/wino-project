@@ -37,7 +37,8 @@ class NotificationBadgeService {
       final List<dynamic> items;
       if (response is List) {
         items = response;
-      } else if (response is Map<String, dynamic> && response['results'] is List) {
+      } else if (response is Map<String, dynamic> &&
+          response['results'] is List) {
         items = response['results'] as List;
       } else {
         items = const [];
@@ -58,12 +59,13 @@ class NotificationBadgeService {
       }
 
       pending.sort(
-        (a, b) =>
-            ((a['id'] as num?)?.toInt() ?? 0).compareTo((b['id'] as num?)?.toInt() ?? 0),
+        (a, b) => ((a['id'] as num?)?.toInt() ?? 0)
+            .compareTo((b['id'] as num?)?.toInt() ?? 0),
       );
 
       for (final n in pending) {
-        final id = (n['id'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch.remainder(100000);
+        final id = (n['id'] as num?)?.toInt() ??
+            DateTime.now().millisecondsSinceEpoch.remainder(100000);
         final title = (n['title']?.toString().trim().isNotEmpty == true)
             ? n['title'].toString()
             : 'Notification';
@@ -75,8 +77,8 @@ class NotificationBadgeService {
           body,
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'dz_local_channel',
-              'DZ Local Notifications',
+              'wino_channel',
+              'Wino Notifications',
               channelDescription: 'General notifications for Wino app',
               importance: Importance.max,
               priority: Priority.high,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/routing/routes.dart';
@@ -309,17 +310,17 @@ class _StoresListScreenState extends State<StoresListScreen> {
 
   Widget _buildErrorState() {
     return ErrorStateWidget(
-      message: 'Failed to load stores',
+      message: context.tr('Failed to load stores'),
       details: _error ?? 'Unknown error',
       onRetry: _loadStores,
     );
   }
 
   Widget _buildEmptyState() {
-    return const EmptyStateWidget(
+    return EmptyStateWidget(
       icon: Icons.store_outlined,
-      title: 'No followed stores',
-      message: 'Follow a store to see it here',
+      title: context.tr('No followed stores'),
+      message: context.tr('Follow a store to see it here'),
     );
   }
 }

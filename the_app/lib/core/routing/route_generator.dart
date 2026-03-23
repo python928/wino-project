@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 
-import '../../presentation/auth/splash_screen.dart';
+import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
+import '../../data/repositories/post_repository.dart';
+import '../../core/services/storage_service.dart';
+import '../../features/notifications/notification_screen.dart';
 import '../../presentation/auth/login_screen.dart';
 import '../../presentation/auth/register_screen.dart';
-import '../../presentation/home/main_navigation_screen.dart';
-import '../../presentation/product/product_detail_screen.dart';
-import '../../presentation/pack/pack_detail_screen.dart';
-import '../../presentation/profile/profile_screen.dart';
-import '../../presentation/profile/add_product_screen.dart';
-import '../../presentation/profile/add_pack_screen.dart';
-import '../../presentation/profile/add_promotion_screen.dart';
-import '../../presentation/promotion/promotion_detail_screen.dart';
+import '../../presentation/auth/splash_screen.dart';
 import '../../presentation/favorites/favorites_screen.dart';
+import '../../presentation/feedback/my_feedback_screen.dart';
+import '../../presentation/feedback/scan_qr_screen.dart';
+import '../../presentation/feedback/send_feedback_screen.dart';
+import '../../presentation/home/main_navigation_screen.dart';
+import '../../presentation/pack/pack_detail_screen.dart';
+import '../../presentation/product/product_detail_screen.dart';
+import '../../presentation/profile/add_pack_screen.dart';
+import '../../presentation/profile/add_product_screen.dart';
+import '../../presentation/profile/add_promotion_screen.dart';
+import '../../presentation/profile/profile_screen.dart';
+import '../../presentation/promotion/promotion_detail_screen.dart';
 import '../../presentation/search/search_tab_screen.dart';
-import '../../data/models/post_model.dart';
-import '../../data/models/pack_model.dart';
-import '../../data/models/offer_model.dart';
 import 'routes.dart';
-import '../../features/notifications/notification_screen.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -59,6 +65,17 @@ class RouteGenerator {
         if (id == null) {
           return _invalidArgsRoute(settings);
         }
+        final currentUserData = StorageService.getUserData();
+        final currentRawId = currentUserData?['id'];
+        final currentUserId = currentRawId is int
+            ? currentRawId
+            : int.tryParse(currentRawId?.toString() ?? '');
+        if (currentUserId != null && currentUserId == id) {
+          return _slideTransition(
+            settings: settings,
+            child: const MainNavigationScreen(initialIndex: 3),
+          );
+        }
         return _fadeTransition(
           settings: settings,
           child: ProfileScreen(storeId: id),
@@ -79,6 +96,13 @@ class RouteGenerator {
               searchQuery: args.searchQuery,
               searchContext: args.searchContext,
             ),
+          );
+        }
+        final productId = RouteGenerator._asInt(args);
+        if (productId != null) {
+          return _slideTransition(
+            settings: settings,
+            child: _ProductDetailByIdLoader(productId: productId),
           );
         }
         if (args is! Post) {
@@ -190,6 +214,24 @@ class RouteGenerator {
           settings: settings,
         );
 
+      case Routes.feedbackSend:
+        return _slideTransition(
+          settings: settings,
+          child: const SendFeedbackScreen(),
+        );
+
+      case Routes.feedbackMy:
+        return _slideTransition(
+          settings: settings,
+          child: const MyFeedbackScreen(),
+        );
+
+      case Routes.qrScan:
+        return _slideTransition(
+          settings: settings,
+          child: const ScanQrScreen(),
+        );
+
       default:
         return _notFoundRoute(settings);
     }
@@ -240,10 +282,10 @@ class RouteGenerator {
 
   static Route<dynamic> _invalidArgsRoute(RouteSettings settings) {
     return MaterialPageRoute(
-      builder: (_) => _SimpleRouteErrorScreen(
-        title: 'Invalid Data',
-        message:
-            'This page cannot be opened because the provided data is invalid.',
+      builder: (context) => _SimpleRouteErrorScreen(
+        title: context.tr('Invalid Data'),
+        message: context.tr(
+            'This page cannot be opened because the provided data is invalid.'),
         routeName: settings.name,
       ),
       settings: settings,
@@ -252,9 +294,9 @@ class RouteGenerator {
 
   static Route<dynamic> _notFoundRoute(RouteSettings settings) {
     return MaterialPageRoute(
-      builder: (_) => _SimpleRouteErrorScreen(
-        title: 'Page Not Found',
-        message: 'This page is currently unavailable.',
+      builder: (context) => _SimpleRouteErrorScreen(
+        title: context.tr('Page Not Found'),
+        message: context.tr('This page is currently unavailable.'),
         routeName: settings.name,
       ),
       settings: settings,
@@ -294,12 +336,39 @@ class _SimpleRouteErrorScreen extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('Back'),
+                child: Text(context.tr('Back')),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProductDetailByIdLoader extends StatelessWidget {
+  final int productId;
+
+  const _ProductDetailByIdLoader({required this.productId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Post>(
+      future: PostRepository.getPost(productId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _SimpleRouteErrorScreen(
+            title: context.tr('Product Unavailable'),
+            message: context.tr('Could not load this product.'),
+            routeName: Routes.productDetails,
+          );
+        }
+        return ProductDetailScreen(product: snapshot.data!);
+      },
     );
   }
 }

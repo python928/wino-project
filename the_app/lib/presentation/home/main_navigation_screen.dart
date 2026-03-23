@@ -115,7 +115,12 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
         }
       }
     } catch (e) {
-      debugPrint('Failed to fetch unread badge count: $e');
+      final message = e.toString();
+      final isExpectedAuthExpiry = message.contains('Session expired') ||
+          message.contains('Please login again');
+      if (!isExpectedAuthExpiry) {
+        debugPrint('Failed to fetch unread badge count: $e');
+      }
     }
   }
 
@@ -130,7 +135,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
     final liveUnread = NotificationBadgeService.instance.unreadCount.value;
     final badge = liveUnread > 0 ? liveUnread : _unreadCount;
     return Directionality(
-      textDirection: TextDirection.ltr, // Changed to LTR
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
         appBar: null, // No AppBar as screens have their own headers

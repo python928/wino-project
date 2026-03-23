@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -7,7 +8,8 @@ import '../../core/widgets/app_button.dart';
 
 class LocationFilterResult {
   final List<String> selectedWilayas;
-  final Map<String, List<String>> selectedBaladiyat; // wilaya -> list of baladiyat
+  final Map<String, List<String>>
+      selectedBaladiyat; // wilaya -> list of baladiyat
   final bool allAlgeria;
 
   LocationFilterResult({
@@ -41,6 +43,29 @@ class LocationFilterResult {
     if (selectedWilayas.length == 1) return selectedWilayas.first;
     return '${selectedWilayas.length} wilayas';
   }
+
+  String displayTextFor(BuildContext context) {
+    if (allAlgeria) return context.tr('All Algeria');
+    if (selectedWilayas.isEmpty) return context.tr('All Locations');
+
+    int totalBaladiyat = 0;
+    for (final list in selectedBaladiyat.values) {
+      totalBaladiyat += list.length;
+    }
+
+    if (totalBaladiyat > 0) {
+      if (selectedWilayas.length == 1) {
+        if (totalBaladiyat == 1) {
+          return selectedBaladiyat.values.first.first;
+        }
+        return '$totalBaladiyat ${context.tr('areas')} ${context.tr('in')} ${selectedWilayas.first}';
+      }
+      return '$totalBaladiyat ${context.tr('areas')}';
+    }
+
+    if (selectedWilayas.length == 1) return selectedWilayas.first;
+    return '${selectedWilayas.length} ${context.tr('wilayas')}';
+  }
 }
 
 class LocationFilterPicker extends StatefulWidget {
@@ -54,13 +79,14 @@ class LocationFilterPicker extends StatefulWidget {
 
 class _LocationFilterPickerState extends State<LocationFilterPicker> {
   Set<String> _selectedWilayas = {};
-  Map<String, Set<String>> _selectedBaladiyat = {};
+  final Map<String, Set<String>> _selectedBaladiyat = {};
   bool _allAlgeria = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   // For 2-step flow
-  String? _currentWilaya; // null = showing wilayas, non-null = showing baladiyat
+  String?
+      _currentWilaya; // null = showing wilayas, non-null = showing baladiyat
 
   List<String> get _wilayaList => algeriaWilayasBaladiat.keys.toList();
 
@@ -71,8 +97,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
         .toList();
   }
 
-  List<String> get _baladiyaList =>
-      _currentWilaya != null ? algeriaWilayasBaladiat[_currentWilaya!] ?? [] : [];
+  List<String> get _baladiyaList => _currentWilaya != null
+      ? algeriaWilayasBaladiat[_currentWilaya!] ?? []
+      : [];
 
   List<String> get _filteredBaladiyaList {
     if (_searchQuery.isEmpty) return _baladiyaList;
@@ -172,22 +199,25 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                         color: AppColors.neutral100,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.arrow_back, size: 18, color: AppColors.textPrimary),
+                      child: Icon(Icons.arrow_back,
+                          size: 18, color: AppColors.textPrimary),
                     ),
                   ),
-                Icon(Icons.location_on_rounded, color: AppColors.primaryColor, size: 22),
+                Icon(Icons.location_on_rounded,
+                    color: AppColors.primaryColor, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _currentWilaya ?? 'Filter by Location',
-                    style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                    _currentWilaya ?? context.tr('Filter by Location'),
+                    style: AppTextStyles.bodyLarge
+                        .copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
                 if (_selectedWilayas.isNotEmpty || _allAlgeria)
                   GestureDetector(
                     onTap: _clearFilters,
                     child: Text(
-                      'Clear',
+                      context.tr('Clear'),
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.errorRed,
                         fontWeight: FontWeight.w600,
@@ -205,7 +235,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
               height: 44,
               child: AppSearchField(
                 controller: _searchController,
-                hintText: _currentWilaya == null ? 'Search wilayas...' : 'Search baladiyat...',
+                hintText: _currentWilaya == null
+                    ? context.tr('Search wilayas...')
+                    : context.tr('Search baladiyat...'),
                 onChanged: (value) => setState(() => _searchQuery = value),
                 onClear: () => setState(() => _searchQuery = ''),
                 compact: true,
@@ -216,7 +248,8 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
           const SizedBox(height: 12),
 
           // Selected wilayas chips (when viewing baladiyat)
-          if (_currentWilaya != null && _selectedWilayas.contains(_currentWilaya))
+          if (_currentWilaya != null &&
+              _selectedWilayas.contains(_currentWilaya))
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -228,13 +261,14 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, size: 16, color: AppColors.primaryColor),
+                    Icon(Icons.check_circle,
+                        size: 16, color: AppColors.primaryColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _selectedBaladiyat[_currentWilaya]?.isNotEmpty == true
-                            ? '${_selectedBaladiyat[_currentWilaya]!.length} baladiyat selected'
-                            : 'All baladiyat in $_currentWilaya',
+                            ? '${_selectedBaladiyat[_currentWilaya]!.length} ${context.tr('baladiyat selected')}'
+                            : '${context.tr('All baladiyat in')} $_currentWilaya',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.w500,
@@ -250,7 +284,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
 
           // List
           Expanded(
-            child: _currentWilaya == null ? _buildWilayaList() : _buildBaladiyaList(),
+            child: _currentWilaya == null
+                ? _buildWilayaList()
+                : _buildBaladiyaList(),
           ),
 
           // Bottom Button
@@ -283,8 +319,8 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
   }
 
   String _getButtonText() {
-    if (_allAlgeria) return 'Apply - All Algeria';
-    if (_selectedWilayas.isEmpty) return 'Apply - All Locations';
+    if (_allAlgeria) return context.tr('Apply - All Algeria');
+    if (_selectedWilayas.isEmpty) return context.tr('Apply - All Locations');
 
     int totalBaladiyat = 0;
     for (final list in _selectedBaladiyat.values) {
@@ -292,9 +328,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
     }
 
     if (totalBaladiyat > 0) {
-      return 'Apply - $totalBaladiyat areas in ${_selectedWilayas.length} wilayas';
+      return '${context.tr('Apply')} - $totalBaladiyat ${context.tr('areas')} ${context.tr('in')} ${_selectedWilayas.length} ${context.tr('wilayas')}';
     }
-    return 'Apply - ${_selectedWilayas.length} wilayas';
+    return '${context.tr('Apply')} - ${_selectedWilayas.length} ${context.tr('wilayas')}';
   }
 
   Widget _buildWilayaList() {
@@ -305,8 +341,8 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
       children: [
         // All Algeria option
         _buildCompactItem(
-          title: 'All Algeria',
-          subtitle: '58 wilayas',
+          title: context.tr('All Algeria'),
+          subtitle: '58 ${context.tr('wilayas')}',
           isSelected: _allAlgeria,
           icon: Icons.public,
           onTap: () {
@@ -331,7 +367,8 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
           final wilaya = entry.value;
           final isSelected = _selectedWilayas.contains(wilaya);
           final baladiyatCount = algeriaWilayasBaladiat[wilaya]?.length ?? 0;
-          final selectedBaladiyatCount = _selectedBaladiyat[wilaya]?.length ?? 0;
+          final selectedBaladiyatCount =
+              _selectedBaladiyat[wilaya]?.length ?? 0;
 
           return _buildCompactWilayaItem(
             index: index + 1,
@@ -379,12 +416,18 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.08)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: isSelected ? AppColors.primaryColor : AppColors.textSecondary),
+            Icon(icon,
+                size: 18,
+                color: isSelected
+                    ? AppColors.primaryColor
+                    : AppColors.textSecondary),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -394,12 +437,15 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                     title,
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? AppColors.primaryColor : AppColors.textPrimary,
+                      color: isSelected
+                          ? AppColors.primaryColor
+                          : AppColors.textPrimary,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textTertiary),
                   ),
                 ],
               ),
@@ -427,7 +473,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor.withOpacity(0.05) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.05)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -469,14 +517,18 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       child: Text(
                         wilaya,
                         style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.primaryColor : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? AppColors.primaryColor
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ),
                     if (selectedBaladiyatCount > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         margin: const EdgeInsets.only(right: 4),
                         decoration: BoxDecoration(
                           color: AppColors.primaryColor,
@@ -493,10 +545,12 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       ),
                     Text(
                       '$baladiyatCount',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.textTertiary),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
+                    Icon(Icons.chevron_right,
+                        size: 16, color: AppColors.textTertiary),
                   ],
                 ),
               ),
@@ -548,7 +602,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: wilayaSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.transparent,
+              color: wilayaSelected
+                  ? AppColors.primaryColor.withOpacity(0.08)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -556,15 +612,21 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 Icon(
                   Icons.select_all,
                   size: 18,
-                  color: wilayaSelected ? AppColors.primaryColor : AppColors.textSecondary,
+                  color: wilayaSelected
+                      ? AppColors.primaryColor
+                      : AppColors.textSecondary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    wilayaSelected ? 'Deselect $_currentWilaya' : 'Select all $_currentWilaya',
+                    wilayaSelected
+                        ? '${context.tr('Deselect')} $_currentWilaya'
+                        : '${context.tr('Select all')} $_currentWilaya',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: wilayaSelected ? AppColors.primaryColor : AppColors.textPrimary,
+                      color: wilayaSelected
+                          ? AppColors.primaryColor
+                          : AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -600,9 +662,12 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
               opacity: wilayaSelected ? 1.0 : 0.4,
               child: Container(
                 margin: const EdgeInsets.only(bottom: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.successGreen.withOpacity(0.08) : Colors.transparent,
+                  color: isSelected
+                      ? AppColors.successGreen.withOpacity(0.08)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -611,15 +676,20 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.successGreen : Colors.transparent,
+                        color: isSelected
+                            ? AppColors.successGreen
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: isSelected ? AppColors.successGreen : AppColors.neutral300,
+                          color: isSelected
+                              ? AppColors.successGreen
+                              : AppColors.neutral300,
                           width: 1.5,
                         ),
                       ),
                       child: isSelected
-                          ? const Icon(Icons.check, color: Colors.white, size: 14)
+                          ? const Icon(Icons.check,
+                              color: Colors.white, size: 14)
                           : null,
                     ),
                     const SizedBox(width: 12),
@@ -627,8 +697,11 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       child: Text(
                         baladiya,
                         style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.successGreen : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? AppColors.successGreen
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -651,12 +724,15 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 16, color: AppColors.warningAmber),
+                Icon(Icons.info_outline,
+                    size: 16, color: AppColors.warningAmber),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Select the wilaya first to choose specific baladiyat',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                    context.tr(
+                        'Select the wilaya first to choose specific baladiyat'),
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -674,8 +750,10 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
 // =============================================================================
 class LocationChipsWidget extends StatefulWidget {
   final LocationFilterResult filter;
+
   /// Optional edit callback — shows an "Edit" chip at the end.
   final VoidCallback? onEdit;
+
   /// Max chips before collapse. Default 5.
   final int maxVisible;
 
@@ -694,9 +772,11 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
   bool _expanded = false;
 
   /// Build the flat list of labels to display.
-  List<String> get _allLabels {
-    if (widget.filter.allAlgeria) return ['All Algeria'];
-    if (widget.filter.selectedWilayas.isEmpty) return ['All Algeria'];
+  List<String> _allLabels(BuildContext context) {
+    if (widget.filter.allAlgeria) return [context.tr('All Algeria')];
+    if (widget.filter.selectedWilayas.isEmpty) {
+      return [context.tr('All Algeria')];
+    }
 
     final labels = <String>[];
     for (final wilaya in widget.filter.selectedWilayas) {
@@ -714,7 +794,7 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final all = _allLabels;
+    final all = _allLabels(context);
     final visible = _expanded ? all : all.take(widget.maxVisible).toList();
     final remaining = all.length - widget.maxVisible;
 
@@ -727,7 +807,7 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
         // "+N more" expand button
         if (!_expanded && remaining > 0)
           _buildActionChip(
-            label: '+$remaining more',
+            label: '+$remaining ${context.tr('more')}',
             icon: Icons.expand_more_rounded,
             color: AppColors.primaryColor,
             bg: AppColors.primaryColor.withOpacity(0.10),
@@ -737,7 +817,7 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
         // "Show less" collapse button
         if (_expanded && all.length > widget.maxVisible)
           _buildActionChip(
-            label: 'Show less',
+            label: context.tr('Show less'),
             icon: Icons.expand_less_rounded,
             color: AppColors.textSecondary,
             bg: const Color(0xFFF3F4F6),
@@ -747,7 +827,7 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
         // Edit chip
         if (widget.onEdit != null)
           _buildActionChip(
-            label: 'Edit',
+            label: context.tr('Edit'),
             icon: Icons.edit_rounded,
             color: Colors.white,
             bg: AppColors.primaryColor,

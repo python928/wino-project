@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/card_styles.dart';
@@ -45,7 +46,7 @@ class ProfileStatsCard extends StatelessWidget {
               child: _buildStatItem(
                 icon: Icons.inventory_2_outlined,
                 value: productsCount.toString(),
-                label: 'Products',
+                label: context.tr('Products'),
               ),
             ),
           ],

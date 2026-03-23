@@ -4,6 +4,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 
 from .models import Category, Product, Review
+from wallet.services import get_coin_costs
 
 User = get_user_model()
 
@@ -12,6 +13,8 @@ class ProductTests(APITestCase):
 	def setUp(self):
 		self.owner = User.objects.create_user(username='owner', password='pass1234', name='Owner')
 		self.category = Category.objects.create(name='Cat')
+		self.owner.coins_balance = get_coin_costs()['product']
+		self.owner.save(update_fields=['coins_balance'])
 
 	def test_create_product(self):
 		url = reverse('product-list')
@@ -34,6 +37,8 @@ class ReviewTests(APITestCase):
 		self.store = User.objects.create_user(username='store', password='pass1234', name='Store')
 		self.reviewer = User.objects.create_user(username='reviewer', password='pass1234', name='Reviewer')
 		self.category = Category.objects.create(name='Food')
+		self.store.coins_balance = get_coin_costs()['product'] * 2
+		self.store.save(update_fields=['coins_balance'])
 		self.product_1 = Product.objects.create(
 			store=self.store,
 			category=self.category,

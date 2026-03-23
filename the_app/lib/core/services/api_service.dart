@@ -1,16 +1,32 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/api_config.dart';
-import '../utils/jwt_validator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'storage_service.dart';
+
+import '../config/api_config.dart';
 import '../utils/app_logger.dart';
+import '../utils/jwt_validator.dart';
+import 'storage_service.dart';
+
+enum ApiErrorType { network, timeout, unauthorized, validation, server, unknown }
+
+class ApiException implements Exception {
+  final ApiErrorType type;
+  final String message;
+  final int? statusCode;
+
+  ApiException(this.type, this.message, {this.statusCode});
+
+  @override
+  String toString() => message;
+}
 
 class ApiService {
   static DateTime? _lastRefreshAttempt;
   static bool _refreshTokenInvalid = false;
   static int _consecutiveRefreshServerErrors = 0;
+  static Future<bool>? _ongoingRefresh;
 
   // ==================== PUBLIC METHODS WITH AUTO-RETRY ====================
 
@@ -201,7 +217,7 @@ class ApiService {
   /// Send FCM token to backend
   static Future<void> updateFcmToken(String token) async {
     try {
-      final uri = _buildUri('/api/devices/');
+      final uri = _buildUri(ApiConfig.devices);
       final accessToken = await StorageService.getAccessToken();
       if (accessToken == null) return;
 
@@ -228,6 +244,20 @@ class ApiService {
   // ==================== TOKEN REFRESH ====================
 
   static Future<bool> refreshToken() async {
+    if (_ongoingRefresh != null) {
+      return _ongoingRefresh!;
+    }
+
+    final future = _doRefreshToken();
+    _ongoingRefresh = future;
+    try {
+      return await future;
+    } finally {
+      _ongoingRefresh = null;
+    }
+  }
+
+  static Future<bool> _doRefreshToken() async {
     try {
       // Avoid spamming refresh endpoint
       final now = DateTime.now();
@@ -318,9 +348,12 @@ class ApiService {
       return await request();
     } catch (e) {
       // Check if it's a 401 Unauthorized error
-      if (e.toString().contains('401') ||
-          e.toString().contains('Session expired') ||
-          e.toString().contains('Unauthorized')) {
+        final isUnauthorized =
+          (e is ApiException && e.type == ApiErrorType.unauthorized) ||
+            e.toString().contains('401') ||
+            e.toString().contains('Session expired') ||
+            e.toString().contains('Unauthorized');
+        if (isUnauthorized) {
         AppLogger.info('Token expired, attempting refresh...');
 
         // Try to refresh token
@@ -645,19 +678,31 @@ class ApiService {
       // For authenticated calls this usually means token expired/invalid.
       // For auth endpoints (login/register) we want to surface the backend message instead.
       if (treat401AsSessionExpired) {
-        throw Exception('Session expired. Please login again.');
+        throw ApiException(
+          ApiErrorType.unauthorized,
+          'Session expired. Please login again.',
+          statusCode: 401,
+        );
       }
       final body = utf8.decode(response.bodyBytes);
       try {
         final error = jsonDecode(body);
         if (error is Map<String, dynamic>) {
-          if (error.containsKey('detail')) throw Exception(error['detail']);
-          if (error.containsKey('message')) throw Exception(error['message']);
-          if (error.containsKey('error')) throw Exception(error['error']);
+          if (error.containsKey('detail')) {
+            throw ApiException(ApiErrorType.unauthorized, '${error['detail']}', statusCode: 401);
+          }
+          if (error.containsKey('message')) {
+            throw ApiException(ApiErrorType.unauthorized, '${error['message']}', statusCode: 401);
+          }
+          if (error.containsKey('error')) {
+            throw ApiException(ApiErrorType.unauthorized, '${error['error']}', statusCode: 401);
+          }
         }
-        throw Exception(body);
+        throw ApiException(ApiErrorType.unauthorized, body, statusCode: 401);
       } catch (e) {
-        if (e is FormatException) throw Exception('Request failed: $body');
+        if (e is FormatException) {
+          throw ApiException(ApiErrorType.unauthorized, 'Request failed: $body', statusCode: 401);
+        }
         rethrow;
       }
     } else if (statusCode >= 400 && statusCode < 500) {
@@ -665,9 +710,9 @@ class ApiService {
       try {
         final error = jsonDecode(body);
         if (error is Map<String, dynamic>) {
-          if (error.containsKey('error')) throw Exception(error['error']);
-          if (error.containsKey('message')) throw Exception(error['message']);
-          if (error.containsKey('detail')) throw Exception(error['detail']);
+          if (error.containsKey('error')) throw ApiException(ApiErrorType.validation, '${error['error']}', statusCode: statusCode);
+          if (error.containsKey('message')) throw ApiException(ApiErrorType.validation, '${error['message']}', statusCode: statusCode);
+          if (error.containsKey('detail')) throw ApiException(ApiErrorType.validation, '${error['detail']}', statusCode: statusCode);
 
           // If it's a list of errors (DRF standard)
           final buffer = StringBuffer();
@@ -678,29 +723,34 @@ class ApiService {
               buffer.writeln('$key: $value');
             }
           });
-          if (buffer.isNotEmpty) throw Exception(buffer.toString().trim());
+          if (buffer.isNotEmpty) {
+            throw ApiException(ApiErrorType.validation, buffer.toString().trim(), statusCode: statusCode);
+          }
         }
-        throw Exception(body);
+        throw ApiException(ApiErrorType.validation, body, statusCode: statusCode);
       } catch (e) {
-        if (e is FormatException) throw Exception('Request failed: $body');
+        if (e is FormatException) {
+          throw ApiException(ApiErrorType.validation, 'Request failed: $body', statusCode: statusCode);
+        }
         rethrow;
       }
     } else {
-      throw Exception('Server error. Please try again later.');
+      throw ApiException(ApiErrorType.server, 'Server error. Please try again later.', statusCode: statusCode);
     }
   }
 
   static Exception _handleError(dynamic error) {
     AppLogger.error('ApiService error', error: error);
+    if (error is ApiException) return error;
     final msg = error.toString();
     if (msg.contains('SocketException') ||
         msg.contains('Failed host lookup') ||
         msg.contains('Connection refused')) {
-      return Exception('No internet connection or server is unreachable');
+      return ApiException(ApiErrorType.network, 'No internet connection or server is unreachable');
     } else if (msg.contains('TimeoutException') || msg.contains('timed out')) {
-      return Exception('Connection timed out. Please try again.');
+      return ApiException(ApiErrorType.timeout, 'Connection timed out. Please try again.');
     } else if (msg.contains('FormatException')) {
-      return Exception('Invalid response format from server');
+      return ApiException(ApiErrorType.unknown, 'Invalid response format from server');
     }
     // Re-wrap anything else so it's always an Exception
     if (error is Exception) return error;

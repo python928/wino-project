@@ -1,4 +1,5 @@
 from rest_framework import permissions, serializers, viewsets
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -21,6 +22,7 @@ from .serializers import (
 )
 from .services import (
 	FREE_POST_LIMIT,
+	approve_payment_request,
 	build_merchant_dashboard,
 	get_active_subscription,
 	get_coin_wallet_snapshot,
@@ -29,6 +31,7 @@ from .services import (
 	bootstrap_default_subscription_plans,
 	get_merchant_plan_features,
 	parse_dashboard_date_filters,
+	reject_payment_request,
 )
 
 
@@ -161,6 +164,12 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 			return [permissions.IsAuthenticated()]
 		return [permissions.IsAdminUser()]
 
+	def get_throttles(self):
+		if self.action == 'create':
+			self.throttle_scope = 'payment_request_create'
+			return [ScopedRateThrottle()]
+		return super().get_throttles()
+
 	def get_queryset(self):
 		user = self.request.user
 		if user.is_superuser or user.is_staff:
@@ -218,5 +227,39 @@ class SubscriptionPaymentRequestViewSet(viewsets.ModelViewSet):
 				'timeline': serializer.data.get('timeline', []),
 			}
 		)
+
+	@action(detail=True, methods=['post'], url_path='approve', permission_classes=[permissions.IsAdminUser])
+	def approve(self, request, pk=None):
+		payment_request = self.get_object()
+		reason_code = str(request.data.get('reason_code') or '').strip()
+		reason_text = str(request.data.get('reason_text') or '').strip()
+		updated, changed, subscription = approve_payment_request(
+			payment_request,
+			reviewer=request.user,
+			reason_code=reason_code,
+			reason_text=reason_text,
+		)
+		data = self.get_serializer(updated).data
+		return Response(
+			{
+				'request': data,
+				'approved': changed,
+				'activated_subscription_id': getattr(subscription, 'id', None),
+			}
+		)
+
+	@action(detail=True, methods=['post'], url_path='reject', permission_classes=[permissions.IsAdminUser])
+	def reject(self, request, pk=None):
+		payment_request = self.get_object()
+		reason_code = str(request.data.get('reason_code') or SubscriptionPaymentRequest.REASON_OTHER).strip()
+		reason_text = str(request.data.get('reason_text') or '').strip()
+		updated, changed = reject_payment_request(
+			payment_request,
+			reviewer=request.user,
+			reason_code=reason_code,
+			reason_text=reason_text,
+		)
+		data = self.get_serializer(updated).data
+		return Response({'request': data, 'rejected': changed})
 
 # Create your views here.

@@ -32,4 +32,9 @@ class Routes {
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String notifications    = '/notifications';
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+  static const String feedbackSend     = '/feedback/send';
+  static const String feedbackMy       = '/feedback/my';
+  static const String qrScan           = '/qr/scan';
 }

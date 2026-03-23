@@ -1,10 +1,14 @@
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/config/api_config.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/home_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import '../../core/providers/pack_provider.dart';
 import '../../core/providers/post_provider.dart';
 import '../../core/providers/store_provider.dart';
@@ -26,6 +30,7 @@ import '../notifications/notifications_screen.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/qr_payload_dialog.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../subscription/ads_dashboard_screen.dart';
@@ -69,6 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   int _followersCount = 0;
   double _averageRating = 0.0;
+  bool _isVerifiedStore = false;
 
   bool _isFollowingStore = false;
   bool _isLoadingFollowState = false;
@@ -128,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.inventory_2_outlined,
                         color: AppColors.primaryColor, size: 20),
                   ),
-                  title: const Text('Add Product',
+                  title: Text(context.tr('Add Product'),
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -147,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.local_offer_outlined,
                         color: AppColors.primaryColor, size: 20),
                   ),
-                  title: const Text('Add Discount',
+                  title: Text(context.tr('Add Discount'),
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -166,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.all_inbox_outlined,
                         color: AppColors.primaryColor, size: 20),
                   ),
-                  title: const Text('Add Pack',
+                  title: Text(context.tr('Add Pack'),
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -186,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.analytics_outlined,
                         color: AppColors.primaryColor, size: 20),
                   ),
-                  title: const Text('Ads',
+                  title: Text(context.tr('Ads'),
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -239,6 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _phoneNumber = (u.phone ?? '').toString();
         _followersCount = u.followersCount;
         _averageRating = u.averageRating;
+        _isVerifiedStore = u.isVerified;
         _location = u.address.isNotEmpty ? u.address : 'Select Location';
 
         _facebook = u.facebook;
@@ -259,25 +266,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return _currentUserId == _userId;
   }
 
+  String get _storeShareLink => '${ApiConfig.baseUrl}s/${_userId ?? 0}/';
+
+  Future<void> _shareStore() async {
+    if (_userId == null) return;
+    await Share.share('${_userName.trim()}\n$_storeShareLink');
+  }
+
+  Future<void> _showStoreQr() async {
+    if (_userId == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => QrPayloadDialog(
+        payload: _storeShareLink,
+        title: context.l10n.profileShareQrTitle,
+        showPayloadText: false,
+      ),
+    );
+  }
+
+  Future<void> _copyStoreLink() async {
+    if (_userId == null || !mounted) return;
+    await Clipboard.setData(ClipboardData(text: _storeShareLink));
+    if (!mounted) return;
+    Helpers.showSnackBar(context, context.l10n.profileShareLinkCopied);
+  }
+
+  Future<void> _showShareProfileOptions() async {
+    if (_userId == null || !mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        final l10n = sheetContext.l10n;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.qr_code_2_outlined),
+                title: Text(l10n.profileShareShowQr),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showStoreQr();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: Text(l10n.profileShareCopyLink),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _copyStoreLink();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: Text(l10n.profileShareShare),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _shareStore();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<ImageSource?> _showImageSourcePicker() async {
     return showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
+        final l10n = context.l10n;
         return AlertDialog(
-          title: const Text('Choose image source'),
+          title: Text(l10n.profileSettingsChooseImageSource),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading:
                     const Icon(Icons.camera_alt, color: AppColors.primaryColor),
-                title: const Text('Camera'),
+                title: Text(l10n.profileSettingsCamera),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library,
                     color: AppColors.primaryColor),
-                title: const Text('Gallery'),
+                title: Text(l10n.profileSettingsGallery),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
             ],
@@ -327,16 +408,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete cover image?'),
-        content: const Text('This will remove your current cover image.'),
+        title: Text(context.tr('Delete cover image?')),
+        content: Text(context.tr('This will remove your current cover image.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ],
       ),
@@ -408,16 +489,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete profile image?'),
-        content: const Text('This will remove your current profile image.'),
+        title: Text(context.tr('Delete profile image?')),
+        content:
+            Text(context.tr('This will remove your current profile image.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ],
       ),
@@ -637,10 +719,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case 'edit':
         _navigateToEditProfile();
         break;
+      case 'share':
+        _showShareProfileOptions();
+        break;
+      case 'ads':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AdsDashboardScreen(),
+          ),
+        );
+        break;
+      case 'language':
+        _showLanguagePicker();
+        break;
+      case 'scan_qr':
+        Navigator.pushNamed(context, Routes.qrScan);
+        break;
+      case 'feedback_send':
+        Navigator.pushNamed(context, Routes.feedbackSend);
+        break;
       case 'logout':
         _handleLogout();
         break;
     }
+  }
+
+  Future<void> _showLanguagePicker() async {
+    if (!mounted) return;
+    final localeProvider = context.read<LocaleProvider>();
+    final current = localeProvider.languageCode;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  current == 'ar'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                ),
+                title: Text(context.tr('العربية')),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await localeProvider.setLanguage('ar');
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  current == 'en'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                ),
+                title: Text(context.tr('English')),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await localeProvider.setLanguage('en');
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  current == 'fr'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                ),
+                title: Text(context.tr('Français')),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await localeProvider.setLanguage('fr');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _handleFollow() {
@@ -734,7 +896,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final result = await ReportBottomSheet.show(
       context: context,
-      title: 'Report Store',
+      title: context.tr('Report Store'),
       reasons: reasons,
     );
 
@@ -748,10 +910,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'details': result.details,
       });
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Report submitted. Thank you.');
+      Helpers.showSnackBar(context, context.tr('Report submitted. Thank you.'));
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to send report: $e', isError: true);
+      Helpers.showSnackBar(
+        context,
+        '${context.tr('Failed to send report')}: $e',
+        isError: true,
+      );
     }
   }
 
@@ -777,6 +943,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onFollowTap: !_isOwnerView ? _handleFollow : null,
       onFavoriteTap: !_isOwnerView ? _handleFavorite : null,
       onReportTap: !_isOwnerView ? _showReportStoreSheet : null,
+      isVerified: _isVerifiedStore,
       primaryGradient: primaryGradient,
       phoneNumber: (_isOwnerView || _showPhonePublic) ? _phoneNumber : '',
       facebook: (_isOwnerView || _showSocialPublic) ? _facebook : null,
@@ -971,7 +1138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text('Rating: '),
+                Text(context.tr('Rating: ')),
                 ...List.generate(5, (index) {
                   return GestureDetector(
                     onTap: () {
@@ -993,7 +1160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               controller: _reviewController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Write your review...',
+                hintText: context.tr('Write your review...'),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1015,7 +1182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Submit Review'),
+                    : Text(context.tr('Submit Review')),
               ),
             ),
           ],
@@ -1029,281 +1196,318 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const Color primaryColor = AppColors.primaryColor;
     const Gradient primaryGradient = AppColors.deepGradient;
 
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: AppColors.scaffoldBackground,
-        appBar: _isOwnerView
-            ? AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                centerTitle: true,
-                leadingWidth: 98,
-                leading: Consumer<WalletProvider>(
-                  builder: (context, wallet, _) => Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CoinStoreScreen(),
-                          ),
-                        );
-                      },
-                      child: SizedBox(
-                        height: 38,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.toll_outlined,
-                              color: Color(0xFF8A5A00),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 5),
-                            Flexible(
-                              child: Text(
-                                '${wallet.coinsBalance}',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF8A5A00),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                title: const Text(
-                  'Profile',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    tooltip: 'Ads Dashboard',
-                    onPressed: () {
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBackground,
+      appBar: _isOwnerView
+          ? AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              centerTitle: true,
+              leadingWidth: 98,
+              leading: Consumer<WalletProvider>(
+                builder: (context, wallet, _) => Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 12),
+                  child: GestureDetector(
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AdsDashboardScreen(),
+                          builder: (_) => const CoinStoreScreen(),
                         ),
                       );
                     },
-                    icon: Container(
-                      width: 38,
+                    child: SizedBox(
                       height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0EEFF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.campaign_outlined,
-                        color: AppColors.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  ValueListenableBuilder<int>(
-                    valueListenable:
-                        NotificationBadgeService.instance.unreadCount,
-                    builder: (context, unread, _) => Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Stack(
-                        clipBehavior: Clip.none,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            tooltip: 'Notifications',
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const NotificationsScreen(),
-                                ),
-                              );
-                              NotificationBadgeService.instance.refresh();
-                            },
-                            icon: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0EEFF),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.notifications_outlined,
-                                color: AppColors.primaryColor,
-                                size: 20,
+                          const Icon(
+                            Icons.toll_outlined,
+                            color: Color(0xFF8A5A00),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              '${wallet.coinsBalance}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF8A5A00),
                               ),
                             ),
                           ),
-                          if (unread > 0)
-                            Positioned(
-                              right: 6,
-                              top: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                constraints: const BoxConstraints(minWidth: 16),
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
                   ),
-                  PopupMenuButton<String>(
-                    onSelected: _onSettingsMenuSelected,
-                    offset: const Offset(0, 40),
-                    shape: RoundedRectangleBorder(
+                ),
+              ),
+              title: Text(
+                context.l10n.profileTitle,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              actions: [
+                ValueListenableBuilder<int>(
+                  valueListenable:
+                      NotificationBadgeService.instance.unreadCount,
+                  builder: (context, unread, _) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          tooltip: context.l10n.profileTooltipNotifications,
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
+                            NotificationBadgeService.instance.refresh();
+                          },
+                          icon: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0EEFF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColors.primaryColor,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(minWidth: 16),
+                              child: Text(
+                                unread > 99 ? '99+' : '$unread',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: _onSettingsMenuSelected,
+                  offset: const Offset(0, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileSettingsEdit),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(Icons.share_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileTooltipShare),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'scan_qr',
+                      child: Row(
+                        children: [
+                          Icon(Icons.qr_code_scanner,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileSettingsScanQr),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'feedback_send',
+                      child: Row(
+                        children: [
+                          Icon(Icons.feedback_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileSettingsSendFeedback),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'ads',
+                      child: Row(
+                        children: [
+                          Icon(Icons.campaign_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileTooltipAds),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'language',
+                      child: Row(
+                        children: [
+                          Icon(Icons.language_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileSettingsLanguage),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.logout, color: Colors.red, size: 20),
+                          const SizedBox(width: 12),
+                          Text(
+                            context.l10n.profileSettingsLogout,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    margin: const EdgeInsets.only(right: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0EEFF),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined,
-                                color: AppColors.primaryColor, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Edit Information'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'logout',
-                        child: Row(
-                          children: [
-                            Icon(Icons.logout, color: Colors.red, size: 20),
-                            SizedBox(width: 12),
-                            Text('Logout', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      margin: const EdgeInsets.only(right: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0EEFF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.settings_outlined,
-                        color: AppColors.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                leading: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
                     child: const Icon(
-                      Icons.arrow_back,
+                      Icons.settings_outlined,
+                      color: AppColors.primaryColor,
                       size: 20,
-                      color: Colors.black,
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
                 ),
-                title: Text(
-                  _userName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              ],
+            )
+          : AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    size: 20,
                     color: Colors.black,
                   ),
                 ),
-                centerTitle: true,
+                onPressed: () => Navigator.pop(context),
               ),
-        floatingActionButton: _isOwnerView
-            ? FloatingActionButton(
-                onPressed: _showPublishMenu,
-                backgroundColor: AppColors.primaryColor,
-                child: const Icon(Icons.add, color: Colors.white),
-              )
-            : null,
-        body: RefreshIndicator(
-          onRefresh: _refreshProfile,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _buildMerchantHeader(primaryColor, primaryGradient),
-              ),
-              SliverToBoxAdapter(
-                child: Consumer2<PostProvider, PackProvider>(
-                  builder: (context, postProvider, packProvider, _) {
-                    final productsCount = _isOwnerView
-                        ? postProvider.myPosts.length
-                        : postProvider.storePosts.length;
-                    final offersCount = _isOwnerView
-                        ? postProvider.myOffers.length
-                        : postProvider.storeOffers.length;
-                    final packsCount = _isOwnerView
-                        ? packProvider.myPacks.length
-                        : packProvider.storePacks.length;
-
-                    final postsCount = productsCount + offersCount + packsCount;
-
-                    return ProfilePostFilter(
-                      selectedIndex: _selectedFilterIndex,
-                      postsCount: postsCount,
-                      onFilterChanged: (index) {
-                        setState(() {
-                          _selectedFilterIndex = index;
-                          _profileVisibleCount = 12;
-                        });
-                      },
-                      searchController: _searchController,
-                      onSearchChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                          _profileVisibleCount = 12;
-                        });
-                      },
-                    );
-                  },
+              title: Text(
+                _userName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
-              SliverToBoxAdapter(
-                child: _buildMerchantPosts(
-                    type: _getFilterType(_selectedFilterIndex)),
+              centerTitle: true,
+              actions: [
+                IconButton(
+                  tooltip: context.tr('Share Store'),
+                  onPressed: _showShareProfileOptions,
+                  icon: const Icon(Icons.share_outlined),
+                ),
+              ],
+            ),
+      floatingActionButton: _isOwnerView
+          ? FloatingActionButton(
+              onPressed: _showPublishMenu,
+              backgroundColor: AppColors.primaryColor,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
+      body: RefreshIndicator(
+        onRefresh: _refreshProfile,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildMerchantHeader(primaryColor, primaryGradient),
+            ),
+            SliverToBoxAdapter(
+              child: Consumer2<PostProvider, PackProvider>(
+                builder: (context, postProvider, packProvider, _) {
+                  final productsCount = _isOwnerView
+                      ? postProvider.myPosts.length
+                      : postProvider.storePosts.length;
+                  final offersCount = _isOwnerView
+                      ? postProvider.myOffers.length
+                      : postProvider.storeOffers.length;
+                  final packsCount = _isOwnerView
+                      ? packProvider.myPacks.length
+                      : packProvider.storePacks.length;
+
+                  final postsCount = productsCount + offersCount + packsCount;
+                  return ProfilePostFilter(
+                    selectedIndex: _selectedFilterIndex,
+                    postsCount: postsCount,
+                    onFilterChanged: (index) {
+                      setState(() {
+                        _selectedFilterIndex = index;
+                        _profileVisibleCount = 12;
+                      });
+                    },
+                    searchController: _searchController,
+                    onSearchChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                        _profileVisibleCount = 12;
+                      });
+                    },
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+            SliverToBoxAdapter(
+              child: _buildMerchantPosts(
+                  type: _getFilterType(_selectedFilterIndex)),
+            ),
+          ],
         ),
       ),
     );
@@ -1380,12 +1584,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.inventory_2_outlined,
+                children: [
+                  const Icon(Icons.inventory_2_outlined,
                       size: 60, color: AppColors.textHint),
-                  SizedBox(height: 12),
-                  Text('No content here yet',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 12),
+                  Text(context.tr('No content here yet'),
+                      style: const TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -1534,7 +1738,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     });
                   },
                   icon: const Icon(Icons.expand_more_rounded),
-                  label: const Text('Load more'),
+                  label: Text(context.tr('Load more')),
                 ),
               ),
           ],

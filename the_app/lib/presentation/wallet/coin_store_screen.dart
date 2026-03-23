@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/wallet_provider.dart';
@@ -61,7 +62,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
     if (packs.isEmpty) {
       return _sectionCard(
         title: title,
-        child: const Text('No packs available yet.'),
+        child: Text(context.tr('No packs available yet.')),
       );
     }
 
@@ -195,7 +196,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Buy'),
+                  child: Text(context.tr('Buy')),
                 ),
               ],
             ),
@@ -230,15 +231,15 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
   Widget _buildTransactions(List<Map<String, dynamic>> transactions) {
     if (transactions.isEmpty) {
       return _sectionCard(
-        title: 'Recent Transactions',
-        child: const Text('No transactions yet.'),
+        title: context.tr('Recent Transactions'),
+        child: Text(context.tr('No transactions yet.')),
       );
     }
 
     final items = transactions.take(_visibleTransactionsCount).toList();
 
     return _sectionCard(
-      title: 'Recent Transactions',
+      title: context.tr('Recent Transactions'),
       child: Column(
         children: items.map<Widget>((item) {
           final amount = _asInt(item['amount_signed']);
@@ -315,14 +316,14 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
   Widget _buildPurchases(List<Map<String, dynamic>> purchases) {
     if (purchases.isEmpty) {
       return _sectionCard(
-        title: 'Purchase Requests',
-        child: const Text('No purchase requests yet.'),
+        title: context.tr('Purchase Requests'),
+        child: Text(context.tr('No purchase requests yet.')),
       );
     }
 
     final items = purchases.take(_visiblePurchasesCount).toList();
     return _sectionCard(
-      title: 'Purchase Requests',
+      title: context.tr('Purchase Requests'),
       child: Column(
         children: items.map<Widget>((item) {
           final packId = (item['pack_id'] ?? '').toString();
@@ -398,7 +399,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryColor,
         ),
-        child: const Text('Show more'),
+        child: Text(context.tr('Show more')),
       ),
     );
   }
@@ -411,7 +412,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
     final adViewCost = _asInt(costs['ad_view']);
 
     return _sectionCard(
-      title: 'Publishing Costs',
+      title: context.tr('Publishing Costs'),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -518,7 +519,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Coin Store'),
+        title: Text(context.tr('Coin Store')),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -553,7 +554,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                 _buildCostChips(wallet.costs),
                 if (wallet.costs.isNotEmpty) const SizedBox(height: 16),
                 _buildPackList(
-                  title: 'Coin Packs',
+                  title: context.tr('Coin Packs'),
                   packs: packs,
                   isLoading: wallet.isLoading,
                 ),

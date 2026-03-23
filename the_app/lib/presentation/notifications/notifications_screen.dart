@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/services/api_service.dart';
@@ -241,7 +241,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final newCount = _notifications.where((n) => n.isNew).length;
 
     return Directionality(
-      textDirection: ui.TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -252,7 +252,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Notifications',
+            context.tr('Notifications'),
             style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
@@ -282,7 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'You have $newCount new notifications',
+                                '${context.tr('You have')} $newCount ${context.tr('new notifications')}',
                                 style: TextStyle(
                                   color: AppColors.primaryColor,
                                   fontWeight: FontWeight.w500,
@@ -290,7 +290,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             ),
                             AppTextButton(
-                              text: 'Mark all as read',
+                              text: context.tr('Mark all as read'),
                               onPressed: _markAllAsRead,
                             ),
                           ],
@@ -314,7 +314,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           size: 64, color: Colors.grey[300]),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'No notifications',
+                                        context.tr('No notifications'),
                                         style: TextStyle(
                                           color: Colors.grey[500],
                                           fontSize: 16,
@@ -386,8 +386,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               debugPrint("Error fetching item for notification: $e");
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('This item is no longer available.')),
+                  SnackBar(
+                    content:
+                        Text(context.tr('This item is no longer available.')),
+                  ),
                 );
               }
             }

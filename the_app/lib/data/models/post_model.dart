@@ -1,5 +1,5 @@
-import 'user_model.dart';
 import '../../core/config/api_config.dart';
+import 'user_model.dart';
 
 class ProductImageData {
   final int id;
@@ -58,6 +58,7 @@ class Post {
   final double? storeLatitude;
   final double? storeLongitude;
   final bool storeNearbyVisible;
+  final bool storeIsVerified;
   final bool deliveryAvailable;
   final List<String> deliveryWilayas;
 
@@ -87,6 +88,7 @@ class Post {
     this.storeLatitude,
     this.storeLongitude,
     this.storeNearbyVisible = true,
+    this.storeIsVerified = false,
     this.deliveryAvailable = false,
     this.deliveryWilayas = const [],
   });
@@ -118,6 +120,9 @@ class Post {
       storeAddress =
           (json['store_address'] ?? storeMap['address'])?.toString() ?? '';
     }
+    final bool storeIsVerified = json['store'] is Map
+        ? ((json['store'] as Map<String, dynamic>)['is_verified'] as bool? ?? false)
+        : (json['store_is_verified'] as bool? ?? false);
 
     // Parse store coordinates
     final double? storeLat = json['store_latitude'] != null
@@ -205,6 +210,7 @@ class Post {
       storeLatitude: storeLat,
       storeLongitude: storeLng,
       storeNearbyVisible: storeNearbyVisible,
+      storeIsVerified: storeIsVerified,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
@@ -294,6 +300,7 @@ class Post {
           DateTime.now(),
       images: images,
       storeNearbyVisible: json['store_nearby_visible'] as bool? ?? true,
+      storeIsVerified: json['store_is_verified'] as bool? ?? false,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );

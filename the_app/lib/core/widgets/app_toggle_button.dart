@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../theme/app_colors.dart';
 
 /// Single toggle button with icon support
@@ -94,19 +95,19 @@ class AppToggleButtonGroup extends StatelessWidget {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: _buildButtons(),
+          children: _buildButtons(context),
         ),
       );
     } else {
       return Wrap(
         spacing: 12,
         runSpacing: 12,
-        children: _buildButtons(),
+        children: _buildButtons(context),
       );
     }
   }
 
-  List<Widget> _buildButtons() {
+  List<Widget> _buildButtons(BuildContext context) {
     return List.generate(options.length, (index) {
       final option = options[index];
       return Padding(
@@ -114,7 +115,7 @@ class AppToggleButtonGroup extends StatelessWidget {
           right: index < options.length - 1 ? 12 : 0,
         ),
         child: AppToggleButton(
-          label: option.label,
+          label: context.tr(option.label),
           icon: option.icon,
           isSelected: selectedIndex == index,
           onTap: () => onChanged(index),

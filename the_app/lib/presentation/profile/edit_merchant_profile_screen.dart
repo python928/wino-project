@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -9,6 +9,7 @@ import '../../core/services/storage_service.dart';
 import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/helpers.dart';
+import '../common/location_permission_helper.dart';
 import '../common/location_picker_screen.dart';
 import '../../core/services/location_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -134,7 +135,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('Coordinates Locked'),
+                title: Text(context.tr('Coordinates Locked')),
                 content: Text(
                   'You can only change your GPS coordinates once every 60 days.\n\n'
                   '$remaining day(s) remaining before you can update.',
@@ -142,7 +143,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK'),
+                    child: Text(context.tr('OK')),
                   ),
                 ],
               ),
@@ -152,6 +153,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         }
       }
     }
+
+    final shouldContinue = await LocationPermissionHelper.ensureEducationShown(
+      context,
+      flow: LocationEducationFlow.storeGps,
+    );
+    if (!shouldContinue) return;
 
     setState(() => _isGettingLocation = true);
     try {
@@ -163,7 +170,10 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             _longitude = coords['longitude'];
           });
           if (mounted) {
-            Helpers.showSnackBar(context, 'Location updated successfully ✅');
+            Helpers.showSnackBar(
+              context,
+              context.tr('Location updated successfully ✅'),
+            );
           }
         }
       } else {
@@ -173,59 +183,22 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           _longitude = pos.longitude;
         });
         if (mounted) {
-          Helpers.showSnackBar(context, 'Location updated successfully ✅');
+          Helpers.showSnackBar(
+            context,
+            context.tr('Location updated successfully ✅'),
+          );
         }
       }
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      if (msg.contains('Location services are disabled')) {
-        await _showLocationDialog(
-          title: 'Enable GPS',
-          message:
-              'GPS is disabled. Please enable location services to continue.',
-          openSettings: Geolocator.openLocationSettings,
-        );
-      } else if (msg.contains('permanently denied')) {
-        await _showLocationDialog(
-          title: 'Permission Required',
-          message:
-              'Location permission is permanently denied. Please enable it from app settings.',
-          openSettings: Geolocator.openAppSettings,
-        );
-      } else {
-        Helpers.showSnackBar(context, 'Could not get location: $e');
-      }
+      await LocationPermissionHelper.handleLocationError(
+        context,
+        e,
+        fallbackMessage: context.tr('Could not get location'),
+      );
     } finally {
       if (mounted) setState(() => _isGettingLocation = false);
     }
-  }
-
-  Future<void> _showLocationDialog({
-    required String title,
-    required String message,
-    required Future<bool> Function() openSettings,
-  }) async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await openSettings();
-            },
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -266,20 +239,20 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     return showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose image source'),
+        title: Text(context.tr('Choose image source')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading:
                   const Icon(Icons.camera_alt, color: AppColors.primaryColor),
-              title: const Text('Camera'),
+              title: Text(context.tr('Camera')),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library,
                   color: AppColors.primaryColor),
-              title: const Text('Gallery'),
+              title: Text(context.tr('Gallery')),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
           ],
@@ -381,16 +354,17 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete profile image?'),
-        content: const Text('This will remove your current profile image.'),
+        title: Text(context.tr('Delete profile image?')),
+        content:
+            Text(context.tr('This will remove your current profile image.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ],
       ),
@@ -423,16 +397,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete cover image?'),
-        content: const Text('This will remove your current cover image.'),
+        title: Text(context.tr('Delete cover image?')),
+        content: Text(context.tr('This will remove your current cover image.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ],
       ),
@@ -545,18 +519,18 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Save Failed'),
+          title: Text(context.tr('Save Failed')),
           content: Text(errorMessage!),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
+              child: Text(context.tr('OK')),
             ),
           ],
         ),
       );
     } else {
-      Helpers.showSnackBar(context, '✅ Profile saved successfully');
+      Helpers.showSnackBar(context, context.tr('✅ Profile saved successfully'));
       Navigator.pop(context, true);
     }
   }
@@ -587,7 +561,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -601,12 +575,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                 color: AppColors.neutral100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_forward_ios,
+              child: const Icon(Icons.arrow_back,
                   size: 16, color: AppColors.textPrimary),
             ),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Edit Profile',
+          title: Text(context.tr('Edit Profile'),
               style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
           centerTitle: true,
           actions: [
@@ -617,7 +591,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _saveProfile,
                   icon: const Icon(Icons.save_outlined, size: 18),
-                  label: const Text('Save'),
+                  label: Text(context.tr('Save')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
@@ -647,16 +621,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                   // Form Fields
                   AppTextField(
                     controller: _nameController,
-                    label: 'Name',
-                    hint: 'Enter your name',
+                    label: context.tr('Name'),
+                    hint: context.tr('Enter your name'),
                     icon: Icons.person_rounded,
                     style: AppTextFieldStyle.profile,
                   ),
                   const SizedBox(height: 20),
                   AppTextField(
                     controller: _descriptionController,
-                    label: 'Description',
-                    hint: 'Describe your store...',
+                    label: context.tr('Description'),
+                    hint: context.tr('Describe your store...'),
                     icon: Icons.description_rounded,
                     maxLines: 3,
                     style: AppTextFieldStyle.profile,
@@ -666,11 +640,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     contentPadding: EdgeInsets.zero,
                     value: _showPhonePublic,
                     activeColor: AppColors.primaryColor,
-                    title: const Text('Show call button'),
+                    title: Text(context.tr('Show call button')),
                     subtitle: Text(
                       _showPhonePublic
-                          ? 'Customers can call you'
-                          : 'Call button will be hidden',
+                          ? context.tr('Customers can call you')
+                          : context.tr('Call button will be hidden'),
                     ),
                     onChanged: (value) {
                       setState(() => _showPhonePublic = value);
@@ -682,7 +656,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                   const SizedBox(height: 28),
 
                   // Social Accounts Section
-                  Text('Social Accounts',
+                  Text(context.tr('Social Accounts'),
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
@@ -690,11 +664,11 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     contentPadding: EdgeInsets.zero,
                     value: _showSocialPublic,
                     activeColor: AppColors.primaryColor,
-                    title: const Text('Show WhatsApp/social buttons'),
+                    title: Text(context.tr('Show WhatsApp/social buttons')),
                     subtitle: Text(
                       _showSocialPublic
-                          ? 'Customers can contact you'
-                          : 'Buttons will be hidden',
+                          ? context.tr('Customers can contact you')
+                          : context.tr('Buttons will be hidden'),
                     ),
                     onChanged: (value) {
                       setState(() => _showSocialPublic = value);
@@ -851,9 +825,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
               ),
             ),
           ),
-          Positioned(
+          PositionedDirectional(
             bottom: 0,
-            left: 20,
+            start: 20,
             child: GestureDetector(
               onTap: _isUploadingImage ? null : _pickImage,
               behavior: HitTestBehavior.opaque,
@@ -956,7 +930,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Store Location',
+        Text(context.tr('Store Location'),
             style:
                 AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
@@ -1020,7 +994,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                           ],
                         )
                       : Text(
-                          'Tap to select location',
+                          context.tr('Tap to select location'),
                           style: AppTextStyles.bodyMedium
                               .copyWith(color: AppColors.textTertiary),
                         ),
@@ -1047,8 +1021,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
           ),
           child: Text(
-            'Important: Nearby filter needs GPS coordinates. If GPS is not set, your products will not appear in distance search. '
-            'Also, area search (Wilaya/Baladiya) depends on your address. If address is empty, your products will not appear in area filter.',
+            context.tr(
+              'Important: Nearby filter needs GPS coordinates. If GPS is not set, your products will not appear in distance search. Also, area search (Wilaya/Baladiya) depends on your address. If address is empty, your products will not appear in area filter.',
+            ),
             style: AppTextStyles.bodySmall.copyWith(
               color: Colors.orange.shade800,
               height: 1.35,
@@ -1085,8 +1060,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
               Expanded(
                 child: Text(
                   hasGpsCoordinates
-                      ? 'GPS coordinates selected'
-                      : 'GPS coordinates not selected yet',
+                      ? context.tr('GPS coordinates selected')
+                      : context.tr('GPS coordinates not selected yet'),
                   style: AppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w600,
                     color: hasGpsCoordinates
@@ -1115,13 +1090,15 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nearby search visibility',
+                context.tr('Nearby search visibility'),
                 style: AppTextStyles.bodyMedium
                     .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                'Nearby results use your GPS. Turn this on to show your store by distance. You can turn it off anytime.',
+                context.tr(
+                  'Nearby results use your GPS. Turn this on to show your store by distance. You can turn it off anytime.',
+                ),
                 style: AppTextStyles.bodySmall
                     .copyWith(color: AppColors.textSecondary),
               ),
@@ -1136,14 +1113,14 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
           contentPadding: EdgeInsets.zero,
           activeColor: AppColors.primaryColor,
           title: Text(
-            'Show my store in nearby results',
+            context.tr('Show my store in nearby results'),
             style:
                 AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
             _allowNearbyVisibility
-                ? 'Visible in nearby results'
-                : 'Hidden from nearby results',
+                ? context.tr('Visible in nearby results')
+                : context.tr('Hidden from nearby results'),
             style: AppTextStyles.bodySmall
                 .copyWith(color: AppColors.textSecondary),
           ),
@@ -1166,8 +1143,8 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.my_location, size: 18),
             label: Text(_latitude != null
-                ? 'GPS location is saved'
-                : 'Set GPS location'),
+                ? context.tr('GPS location is saved')
+                : context.tr('Set GPS location')),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               side: BorderSide(

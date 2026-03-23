@@ -18,16 +18,26 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
+from django.http import HttpResponseRedirect
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
-from rest_framework.routers import DefaultRouter
-from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
 
-router = DefaultRouter()
-router.register('devices', FCMDeviceAuthorizedViewSet)
+
+class AppSchemeRedirect(HttpResponseRedirect):
+    allowed_schemes = ['http', 'https', 'ftp', 'wino', 'toprice', 'intent']
+
+
+def store_short_link_redirect(request, store_id):
+    return AppSchemeRedirect(f'wino://store/{store_id}')
+
+
+def product_short_link_redirect(request, product_id):
+    return AppSchemeRedirect(f'wino://product/{product_id}')
 
 urlpatterns = [
+    path('s/<int:store_id>/', store_short_link_redirect, name='short_store_redirect'),
+    path('p/<int:product_id>/', product_short_link_redirect, name='short_product_redirect'),
     # Override logout to allow GET redirect instead of 405 when hit directly
     path('admin/logout/',
          type(
@@ -52,7 +62,7 @@ urlpatterns = [
     path('api/subscriptions/', include('subscriptions.urls')),
     path('api/wallet/', include('wallet.urls')),
     path('api/analytics/', include('analytics.urls')),
-    path('api/devices/', include(router.urls)),
+    path('api/feedback/', include('feedback.urls')),
 ]
 
 if settings.DEBUG:

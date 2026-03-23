@@ -1,5 +1,6 @@
 import re
 import json
+import random
 
 from django.conf import settings
 
@@ -129,6 +130,30 @@ def send_otp_message(phone: str, code: str) -> None:
 	# Temporary testing mode: disable Twilio delivery.
 	_ = phone, code
 	return
+
+
+def _username_base_from_name(name: str) -> str:
+	"""Build username base from full name: spaces -> dots, sanitized for Django username validator."""
+	raw = (name or '').strip().lower()
+	if not raw:
+		return 'user'
+	base = re.sub(r'\s+', '.', raw)
+	base = re.sub(r'[^a-z0-9._-]', '', base).strip('.')
+	return base or 'user'
+
+
+def generate_unique_username_from_name(name: str) -> str:
+	"""Generate unique username like: islam.ab1234, islam.ab1235, ..."""
+	from django.contrib.auth import get_user_model
+	User = get_user_model()
+
+	base = _username_base_from_name(name)
+	suffix = random.randint(1000, 9999)
+	username = f"{base}{suffix}"
+	while User.objects.filter(username=username).exists():
+		suffix += 1
+		username = f"{base}{suffix}"
+	return username
 
 from datetime import timedelta
 from django.utils import timezone

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../../core/widgets/app_toggle_button.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/theme/app_colors.dart';
@@ -60,7 +61,7 @@ class ProfilePostFilter extends StatelessWidget {
           if (searchController != null) ...[
             AppSearchField(
               controller: searchController!,
-              hintText: 'Search my posts...',
+              hintText: context.tr('Search my posts...'),
               onChanged: onSearchChanged,
               compact: true,
             ),

@@ -2,23 +2,25 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/home_provider.dart';
+import 'core/providers/locale_provider.dart';
 import 'core/providers/pack_provider.dart';
 import 'core/providers/post_provider.dart';
 import 'core/providers/store_provider.dart';
 import 'core/providers/wallet_provider.dart';
 import 'core/routing/route_generator.dart';
+import 'core/services/deep_link_service.dart';
 import 'core/services/notification_badge_service.dart';
 import 'core/services/pack_api_service.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/store_api_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/analytics/analytics_export.dart';
+import 'l10n/app_localizations.dart';
 import 'presentation/auth/splash_screen.dart';
 
 @pragma('vm:entry-point')
@@ -31,8 +33,8 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
-  'dz_local_channel',
-  'DZ Local Notifications',
+  'wino_channel',
+  'Wino Notifications',
   description: 'General notifications for Wino app',
   importance: Importance.high,
 );
@@ -88,23 +90,32 @@ void main() async {
   });
   FirebaseMessaging.onMessageOpenedApp.listen((_) {
     NotificationBadgeService.instance.refresh();
+    final deepLink = _.data['deep_link']?.toString();
+    if (deepLink != null && deepLink.isNotEmpty) {
+      DeepLinkService.handleFromString(deepLink);
+    }
   });
 
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null) {
     NotificationBadgeService.instance.refresh();
+    final deepLink = initialMessage.data['deep_link']?.toString();
+    if (deepLink != null && deepLink.isNotEmpty) {
+      DeepLinkService.handleFromString(deepLink);
+    }
   }
 
   // Initialize Storage Service
   await StorageService.init();
+  await DeepLinkService.init();
   await NotificationBadgeService.instance.refresh();
   await NotificationBadgeService.instance.syncMissedUnreadToShade();
 
-  runApp(const DzLocalApp());
+  runApp(const WinoApp());
 }
 
-class DzLocalApp extends StatelessWidget {
-  const DzLocalApp({super.key});
+class WinoApp extends StatelessWidget {
+  const WinoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +124,7 @@ class DzLocalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PostProvider()),
         ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(
             create: (_) => StoreProvider(apiService: StoreApiService())),
         ChangeNotifierProvider(
@@ -120,41 +132,33 @@ class DzLocalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
       ],
-      child: MaterialApp(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) => MaterialApp(
+          navigatorKey: DeepLinkService.navigatorKey,
+          title: AppConstants.appName,
+          debugShowCheckedModeBanner: false,
 
-        // Localization
-        locale: const Locale(
-          AppConstants.arabicLanguageCode,
-          AppConstants.algeriaCountryCode,
+          // Localization
+          locale: localeProvider.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+
+          // Theme
+          theme: AppTheme.lightTheme,
+
+          // Keep navigation callbacks without overriding app text direction.
+          builder: (context, child) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              DeepLinkService.flushPendingLink();
+            });
+            return child ?? const SizedBox.shrink();
+          },
+
+          onGenerateRoute: onGenerateRoute,
+
+          // Start with Splash Screen
+          home: const SplashScreen(),
         ),
-        supportedLocales: const [
-          Locale(
-              AppConstants.arabicLanguageCode, AppConstants.algeriaCountryCode),
-          Locale(AppConstants.englishLanguageCode, AppConstants.usCountryCode),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-
-        // Theme
-        theme: AppTheme.lightTheme,
-
-        // Force LTR across the full app UI.
-        builder: (context, child) {
-          return Directionality(
-            textDirection: TextDirection.ltr,
-            child: child ?? const SizedBox.shrink(),
-          );
-        },
-
-        onGenerateRoute: onGenerateRoute,
-
-        // Start with Splash Screen
-        home: const SplashScreen(),
       ),
     );
   }

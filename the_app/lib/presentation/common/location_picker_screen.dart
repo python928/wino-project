@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/app_button.dart';
@@ -73,10 +74,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (_selectedWilaya == null || _selectedBaladiya == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please select wilaya and baladiya'),
+          content: Text(context.tr('Please select wilaya and baladiya')),
           backgroundColor: AppColors.errorRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -96,7 +98,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
@@ -104,7 +106,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           elevation: 0,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, size: 18, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: AppColors.textPrimary,
+            ),
             onPressed: () {
               if (_selectedWilaya != null && _selectedBaladiya == null) {
                 setState(() {
@@ -118,7 +124,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             },
           ),
           title: Text(
-            _selectedWilaya == null ? 'Select Wilaya' : 'Select Baladiya',
+            _selectedWilaya == null
+                ? context.tr('Select Wilaya')
+                : context.tr('Select Baladiya'),
             style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
           ),
           centerTitle: true,
@@ -138,12 +146,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 onChanged: (value) => setState(() => _searchQuery = value),
                 style: AppTextStyles.bodyMedium,
                 decoration: InputDecoration(
-                  hintText: _selectedWilaya == null ? 'Search wilaya...' : 'Search baladiya...',
-                  hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                  hintText: _selectedWilaya == null
+                      ? context.tr('Search wilaya...')
+                      : context.tr('Search baladiya...'),
+                  hintStyle: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textTertiary),
+                  prefixIcon: Icon(Icons.search,
+                      color: AppColors.textSecondary, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.close, color: AppColors.textSecondary, size: 18),
+                          icon: Icon(Icons.close,
+                              color: AppColors.textSecondary, size: 18),
                           onPressed: () {
                             setState(() {
                               _searchQuery = '';
@@ -153,7 +166,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
             ),
@@ -165,7 +179,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -173,7 +188,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.location_city, size: 16, color: AppColors.primaryColor),
+                          Icon(Icons.location_city,
+                              size: 16, color: AppColors.primaryColor),
                           const SizedBox(width: 6),
                           Text(
                             _selectedWilaya!,
@@ -192,7 +208,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                                 _searchController.clear();
                               });
                             },
-                            child: Icon(Icons.close, size: 16, color: AppColors.primaryColor),
+                            child: Icon(Icons.close,
+                                size: 16, color: AppColors.primaryColor),
                           ),
                         ],
                       ),
@@ -205,7 +222,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
             // List
             Expanded(
-              child: _selectedWilaya == null ? _buildWilayaList() : _buildBaladiyaList(),
+              child: _selectedWilaya == null
+                  ? _buildWilayaList()
+                  : _buildBaladiyaList(),
             ),
 
             // Confirm button (only show when both selected)
@@ -246,7 +265,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           children: [
             Icon(Icons.search_off, size: 48, color: AppColors.textTertiary),
             const SizedBox(height: 12),
-            Text('No wilaya found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+            Text(context.tr('No wilaya found'),
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary)),
           ],
         ),
       );
@@ -306,16 +327,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                         children: [
                           Text(
                             wilaya,
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            '$baladiyaCount baladiyat',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                            '$baladiyaCount ${context.tr('baladiyat')}',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_back_ios, size: 14, color: AppColors.textTertiary),
+                    Icon(Icons.arrow_back_ios,
+                        size: 14, color: AppColors.textTertiary),
                   ],
                 ),
               ),
@@ -336,7 +360,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           children: [
             Icon(Icons.search_off, size: 48, color: AppColors.textTertiary),
             const SizedBox(height: 12),
-            Text('No baladiya found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+            Text(context.tr('No baladiya found'),
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary)),
           ],
         ),
       );
@@ -352,7 +378,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           child: Material(
-            color: isSelected ? AppColors.successGreen.withValues(alpha: 0.1) : Colors.white,
+            color: isSelected
+                ? AppColors.successGreen.withValues(alpha: 0.1)
+                : Colors.white,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               onTap: () => setState(() => _selectedBaladiya = baladiya),
@@ -362,7 +390,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppColors.successGreen : AppColors.neutral200,
+                    color: isSelected
+                        ? AppColors.successGreen
+                        : AppColors.neutral200,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -380,7 +410,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       child: Center(
                         child: Icon(
                           isSelected ? Icons.check : Icons.location_city,
-                          color: isSelected ? AppColors.successGreen : AppColors.textSecondary,
+                          color: isSelected
+                              ? AppColors.successGreen
+                              : AppColors.textSecondary,
                           size: 18,
                         ),
                       ),
@@ -390,13 +422,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       child: Text(
                         baladiya,
                         style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.successGreen : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? AppColors.successGreen
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ),
                     if (isSelected)
-                      Icon(Icons.check_circle, color: AppColors.successGreen, size: 20),
+                      Icon(Icons.check_circle,
+                          color: AppColors.successGreen, size: 20),
                   ],
                 ),
               ),

@@ -64,6 +64,8 @@ class _AppTextFieldState extends State<AppTextField> {
             widget.textInputAction == TextInputAction.newline)
         ? TextInputType.multiline
         : (widget.keyboardType ?? TextInputType.text);
+    final resolvedDirection =
+        widget.textDirection ?? Directionality.of(context);
 
     final field = TextFormField(
       controller: widget.controller,
@@ -71,10 +73,8 @@ class _AppTextFieldState extends State<AppTextField> {
       keyboardType: resolvedKeyboardType,
       textInputAction: widget.textInputAction ?? TextInputAction.next,
       obscureText: widget.obscureText && !_isPasswordVisible,
-      textDirection: widget.textDirection ?? TextDirection.ltr,
-      textAlign: widget.textDirection == TextDirection.ltr
-          ? TextAlign.left
-          : TextAlign.start,
+      textDirection: resolvedDirection,
+      textAlign: TextAlign.start,
       maxLines: widget.maxLines,
       style: AppTextStyles.bodyLarge
           .copyWith(fontSize: 18, color: AppColors.textPrimary),
@@ -104,7 +104,7 @@ class _AppTextFieldState extends State<AppTextField> {
             ),
     );
 
-    Widget content = Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
