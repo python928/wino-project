@@ -1,14 +1,20 @@
-# AI Programming Context (Toprice/Wino)
+# AI Programming Context (Wino)
 
 ## Purpose
 This file is a quick high-signal context pack for AI coding agents working on this repository.
 
 ## Monorepo overview
-- `app-backend/`: Django + DRF backend.
-- `the_app/`: Flutter Android client.
+- `app-backend/`: Django + DRF backend
+- `the_app/`: Flutter Android client
 
 ## Critical domain rule
-- `Store == User` everywhere.
+- `Store == User` everywhere
+
+## Current brand / naming reality
+- Visible product brand: `Wino`
+- App root widget: `WinoApp`
+- Android notification channel: `wino_channel`
+- Internal package/config names may still contain legacy `dzlocal_shop` or `dzlocal` values
 
 ## Backend quick map
 - Main urls: `app-backend/backend/urls.py`
@@ -19,6 +25,7 @@ This file is a quick high-signal context pack for AI coding agents working on th
 - Subscriptions: `app-backend/subscriptions/*`
 - Analytics/trust signals: `app-backend/analytics/*`
 - Feedback: `app-backend/feedback/*`
+- Notifications/devices: `app-backend/notifications/*`
 
 ## Frontend quick map
 - App entry: `the_app/lib/main.dart`
@@ -26,24 +33,35 @@ This file is a quick high-signal context pack for AI coding agents working on th
 - Config: `the_app/lib/core/config/api_config.dart`
 - Locale management: `the_app/lib/core/providers/locale_provider.dart`
 - Deep links: `the_app/lib/core/services/deep_link_service.dart`
+- Location UX helper: `the_app/lib/presentation/common/location_permission_helper.dart`
 
 ## Routing conventions
-- Product details route accepts `Post` or product id (loader fallback exists).
-- Store route accepts store id.
-- Feedback routes exist (`feedbackSend`, `feedbackMy`, `qrScan`).
+- Product details route accepts `Post` or product id (loader fallback exists)
+- Store route accepts store id
+- Feedback routes exist (`feedbackSend`, `feedbackMy`, `qrScan`)
+- Active navigation is named-route based, not `go_router`
 
 ## API consistency notes
-- App base URL currently points to local LAN IP.
-- Some endpoints may return paginated results or plain lists.
-- Keep backwards compatibility in parser logic.
+- App base URL currently points to local LAN IP
+- Some endpoints may return paginated results or plain lists
+- Device registration path should be treated as `/api/notifications/devices/`
+- Subscription payment requests use `/api/subscriptions/payment-requests/` with compatibility alias still present in backend
+
+## Localization notes
+- Use ARB/generated localization for reusable or shared strings when possible
+- Keep runtime translations aligned for legacy screens still calling `context.tr(...)`
+- Do not assume new text is automatically covered by one layer only
 
 ## Coding guardrails
-- Preserve `Store == User` assumptions.
-- Avoid introducing a separate Store model unless explicitly requested.
-- Keep diffs focused; avoid mass refactors unless requested.
-- For Flutter localization, use ARB valid key names (camelCase, no dots).
+- Preserve `Store == User` assumptions
+- Avoid introducing a separate Store model unless explicitly requested
+- Keep diffs focused; avoid mass refactors unless requested
+- For Flutter localization, use valid ARB keys and regenerate localizations when needed
+- If you change product/promotion/pack detail behavior, inspect the sibling detail screens too
 
 ## Release-risk checklist (short)
-- Verify routes between app config and backend urls.
-- Run `python manage.py check` for backend changes.
-- Run `flutter analyze` for affected Dart files.
+- Verify routes between app config and backend urls
+- Verify localization changes in both layers when applicable
+- Verify doc updates if architecture or API contracts changed
+- Run `python manage.py check` for backend changes
+- Run `flutter analyze` for affected Dart files

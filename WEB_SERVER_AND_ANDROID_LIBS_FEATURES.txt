@@ -47,7 +47,9 @@ Infrastructure helpers
 - unified store/profile model
 - followers
 - store reports
+- system settings
 - trust settings
+- abuse flags
 
 `catalog`
 - categories
@@ -61,6 +63,7 @@ Infrastructure helpers
 `ads`
 - ad campaigns
 - click registration
+- recommendation-aware boosting logic in campaign selection path
 
 `analytics`
 - recommendations endpoint
@@ -81,6 +84,7 @@ Infrastructure helpers
 - merchant subscription access status
 - merchant dashboard
 - payment requests with proof images
+- compatibility alias route for `subscription-payment-requests`
 
 `feedback`
 - submit feedback
@@ -95,23 +99,23 @@ Infrastructure helpers
 4) Important backend capabilities
 ---------------------------------
 - JWT auth with refresh rotation + blacklist
-- Default authenticated API posture
-- Filtering/search/ordering/pagination
-- Scoped throttling for OTP, reviews, reports, analytics, feedback, payment flows
-- Request correlation id in responses
-- Trust/abuse scoring and moderation data
-- Short deep links:
+- default authenticated API posture with selected public routes
+- filtering/search/ordering/pagination
+- scoped throttling for OTP, reviews, reports, analytics, feedback, payment flows
+- request correlation id in responses
+- trust/abuse scoring and moderation data
+- short deep links:
   - `/s/{id}/`
   - `/p/{id}/`
 
 5) Important backend business rules
 -----------------------------------
 - `Store == User`
-- `SystemSettings` controls signup/daily coin policy
+- `SystemSettings` controls signup / daily coin policy
 - `TrustSettings` controls report/review abuse tuning and retention days
-- Review uniqueness is enforced per user/target
-- Report cooldowns and daily caps are enforced server-side
-
+- review uniqueness is enforced per user/target
+- report cooldowns and daily caps are enforced server-side
+- trust scoring weights seriousness and credibility rather than treating all reports equally
 
 ANDROID / FLUTTER APP (`the_app`)
 =================================
@@ -120,6 +124,8 @@ ANDROID / FLUTTER APP (`the_app`)
 -----------------
 - Android folder retained and active
 - iOS/Web/macOS/Linux/Windows removed from the repo
+- public-facing app brand is `Wino`
+- internal package naming still includes legacy `dzlocal_shop` identifiers in some places
 
 2) Main Flutter dependencies from `pubspec.yaml`
 ------------------------------------------------
@@ -130,6 +136,7 @@ Core / app
 - `http`
 - `intl`
 - `equatable`
+- `jwt_decoder`
 
 Device / platform
 - `image_picker`
@@ -140,18 +147,31 @@ Device / platform
 - `app_links`
 - `mobile_scanner`
 - `qr_flutter`
+- `haptic_feedback`
 
 Firebase / notifications
 - `firebase_core`
 - `firebase_messaging`
 - `flutter_local_notifications`
 
-UI / interaction
+UI / design system
 - `google_fonts`
 - `font_awesome_flutter`
-- `flutter_animate`
 - `cached_network_image`
 - `shimmer`
+- `glassmorphism`
+- `flutter_glow`
+- `flutter_neumorphic_plus`
+- `flutter_gradient_colors`
+
+Animations & effects
+- `flutter_animate`
+- `lottie`
+- `animated_text_kit`
+- `flutter_staggered_animations`
+- `spring`
+
+Lists, grids & interaction
 - `dropdown_button2`
 - `flutter_carousel_widget`
 - `smooth_page_indicator`
@@ -159,25 +179,31 @@ UI / interaction
 - `pull_to_refresh`
 - `flutter_slidable`
 - `flutter_staggered_grid_view`
+- `sticky_headers`
 - `visibility_detector`
+- `flutter_cache_manager`
+
+Media & image viewing
 - `extended_image`
 - `photo_view`
 - `flutter_blurhash`
-- `lottie`
-- `animated_text_kit`
 
 Navigation / localization
 - `go_router` (installed, not the active router)
 - `flutter_localizations`
 
+Commerce / helper UI
+- `flutter_otp_text_field`
+
 3) App architecture highlights
 ------------------------------
 - `main.dart` bootstraps Firebase, local notifications, providers, deep links
-- Active navigation is `RouteGenerator` + named routes
-- State management is `Provider` + `ChangeNotifier`
+- active app root widget is `WinoApp`
+- active navigation is `RouteGenerator` + named routes
+- state management is `Provider` + `ChangeNotifier`
 - API access goes through `ApiService`
-- Local language setting goes through `LocaleProvider` + `StorageService`
-- Localization is hybrid:
+- local language setting goes through `LocaleProvider` + `StorageService`
+- localization is hybrid:
   - ARB/generated strings
   - runtime translation bridge
 
@@ -191,10 +217,23 @@ Navigation / localization
 - merchant profile and publishing flows
 - wallet purchase flow
 - subscription plan and payment request flow
+- merchant ads dashboard
 - notifications
 - feedback screens
+- first-run language selection
+- shared GPS/location education and settings recovery dialogs
 
-5) Deep-link / Android manifest highlights
+5) Recent UX / product improvements that matter
+-----------------------------------------------
+- branding shifted in user-facing notification naming to `Wino Notifications`
+- Android local notification channel id is `wino_channel`
+- launch screen now includes visible language selection from first run
+- nearby/location flows now use a shared helper for permissions, education, and settings recovery
+- merchant ads dashboard now includes a clearer explainability card (“What these numbers mean”)
+- common strings increasingly resolve through ARB localizations before runtime fallback
+- report/review translations were expanded in Arabic and French
+
+6) Deep-link / Android manifest highlights
 ------------------------------------------
 Android manifest currently handles:
 - `wino://...`
@@ -203,14 +242,15 @@ Android manifest currently handles:
 - `http(s)://toprice.app/...`
 - `http://192.168.36.21/...`
 
-6) App configuration notes
+7) App configuration notes
 --------------------------
 - Base URL is currently hardcoded in `api_config.dart`
-- Notifications device endpoint used by the app:
+- notifications device endpoint used by the app:
   - `/api/notifications/devices/`
-- Store APIs are aliased to users APIs because of `Store == User`
+- store APIs are aliased to users APIs because of `Store == User`
+- subscriptions currently use `/api/subscriptions/payment-requests/` on the app side, with backend compatibility alias retained
 
-7) Product maturity summary
+8) Product maturity summary
 ---------------------------
 The codebase is no longer just a marketplace UI. It now has:
 - local discovery
@@ -219,5 +259,7 @@ The codebase is no longer just a marketplace UI. It now has:
 - feedback collection
 - deep linking and sharing
 - multilingual groundwork
+- onboarding / location education UX
+- early explainability improvements for merchant analytics
 
 This makes it technically rich enough for both real product iteration and academic analysis.

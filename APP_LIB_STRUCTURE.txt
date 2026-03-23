@@ -24,6 +24,8 @@ Last reviewed: 2026-03-23
 │   └── repositories
 ├── features
 │   ├── analytics
+│   │   ├── models
+│   │   └── widgets
 │   └── notifications
 ├── l10n
 ├── presentation
@@ -48,21 +50,24 @@ Last reviewed: 2026-03-23
 ----------------------------------
 `core/`
 - Cross-cutting infrastructure.
-- API config, routing, providers, app services, theme, utility helpers.
+- API config, routing, providers, app services, theme, localization, utilities.
 
 Important files
 - `core/config/api_config.dart`
+- `core/config/app_config.dart`
+- `core/constants/app_constants.dart`
 - `core/routing/route_generator.dart`
 - `core/routing/routes.dart`
 - `core/services/api_service.dart`
 - `core/services/storage_service.dart`
 - `core/services/deep_link_service.dart`
+- `core/services/notification_badge_service.dart`
 - `core/providers/locale_provider.dart`
 - `core/extensions/l10n_extension.dart`
 - `core/localization/runtime_translations.dart`
 
 `data/`
-- Models and repositories shared across screens/providers.
+- Shared models and repositories used by screens/providers.
 
 Important files
 - `data/models/post_model.dart`
@@ -72,38 +77,46 @@ Important files
 - `data/repositories/store_repository.dart`
 
 `features/`
-- Smaller reusable product logic that is not tied to a single screen tree.
+- Reusable logic that is somewhat feature-oriented rather than screen-oriented.
 - Currently active mainly in:
   - `features/analytics/`
   - `features/notifications/`
 
-Note
-- Some directories exist as architectural placeholders, but most product UI still lives under `presentation/`.
+Reality note
+- Older empty placeholders under `features/` were cleaned up.
+- Most user-facing feature work still lives under `presentation/`.
 
 `l10n/`
-- Generated/localized app strings from ARB files.
+- Generated app localizations from ARB files.
 - Current languages:
   - `app_en.arb`
   - `app_ar.arb`
   - `app_fr.arb`
 
+Generated-file note
+- Treat generated localization outputs as derived artifacts, not the primary place to edit strings.
+
 `presentation/`
 - Screen-first UI layer.
-- This is where most real feature work currently happens.
+- This is where most real product work currently happens.
 
 3) Presentation subfolders
 --------------------------
 `presentation/auth/`
-- login, register, OTP, splash, phone profile setup
+- splash, launch/onboarding, login, register, OTP, profile setup
+- `launch_screen.dart` now includes first-run language selection
 
 `presentation/home/`
-- home shell and home widgets
+- home shell, home widgets, nearby/category sections
+
+`presentation/search/`
+- search tab, filters, location mode logic, results widgets
 
 `presentation/product/`
 - product detail flow
 
 `presentation/promotion/`
-- promotion/discount detail flow
+- promotion / discount detail flow
 
 `presentation/pack/`
 - pack detail flow
@@ -111,19 +124,28 @@ Note
 `presentation/profile/`
 - merchant/customer profile
 - add/edit product/pack/promotion
-- profile widgets
+- merchant configuration including GPS/address visibility
 
-`presentation/search/`
-- search tab, category selection, results widgets
+`presentation/subscription/`
+- subscription plans
+- ads dashboard
+- merchant monetization views
+
+`presentation/wallet/`
+- wallet snapshot and purchase flows
 
 `presentation/feedback/`
 - send feedback
 - my feedback
 - QR scan
 
+`presentation/common/`
+- reusable shared screens/helpers used across flows
+- important recent addition: `location_permission_helper.dart`
+
 `presentation/shared_widgets/`
-- reusable UI pieces shared across many screens
-- includes report bottom sheet, QR dialog, image carousel, contact row, cards
+- reusable UI across many screens
+- includes report bottom sheet, QR dialog, contact row, app bars, shared cards
 
 4) Routing pattern actually used
 --------------------------------
@@ -138,7 +160,7 @@ There are two localization layers:
 
 1. Generated localization
 - `l10n/*.arb`
-- `app_localizations.dart`
+- generated `app_localizations*.dart`
 - Used for newer screens and strongly typed strings
 
 2. Runtime translation bridge
@@ -146,7 +168,8 @@ There are two localization layers:
 - Used through `context.tr(...)`
 - Helps migrate legacy hardcoded strings without blocking feature work
 
-This means both layers are important when updating text.
+Important current rule
+- Common/shared strings increasingly resolve through `AppLocalizations` first, then fall back to runtime translations for older paths.
 
 6) Deep-link pattern
 --------------------
@@ -164,10 +187,10 @@ Main file
 7) State management pattern
 ---------------------------
 - `Provider` + `ChangeNotifier`
-- Main app providers registered in `main.dart`
+- Main app providers are registered in `main.dart`
 - Feature-specific API services are injected into some providers
 
-Core providers currently registered
+Providers currently registered in `main.dart`
 - `AuthProvider`
 - `PostProvider`
 - `HomeProvider`
@@ -177,15 +200,25 @@ Core providers currently registered
 - `WalletProvider`
 - `AnalyticsProvider`
 
-8) Platform scope
+8) Notifications / app bootstrap notes
+--------------------------------------
+- App root widget: `WinoApp`
+- Android local notification channel:
+  - id: `wino_channel`
+  - name: `Wino Notifications`
+- Badge refresh and missed unread sync go through `NotificationBadgeService`
+
+9) Platform scope
 -----------------
 - The repository is Android-only at platform-folder level.
 - iOS, Web, macOS, Linux, and Windows folders were removed from the Flutter project tree.
+- Some internal identifiers still use legacy names such as `dzlocal_shop`; this is an implementation detail, not the current public brand.
 
-9) Practical editing note
--------------------------
-If you change one of these UI areas, check the related siblings too:
+10) Practical editing notes
+---------------------------
+If you change one of these UI areas, inspect the related siblings too:
 - product details <-> promotion details <-> pack details
 - review/report UI <-> translations
+- nearby/location UX <-> home/search/edit-profile
 - deep links <-> routes <-> Android manifest
-
+- merchant subscriptions <-> ads dashboard <-> wallet messaging

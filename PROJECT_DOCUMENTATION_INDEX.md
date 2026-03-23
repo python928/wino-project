@@ -13,36 +13,44 @@ This file tells you which document to open first depending on what you are tryin
 6. `MISSING_NOW_AND_NEXT_ACTIONS.txt`
 7. `Academic-and-Practical-Description.txt`
 8. `MEMOIRE_TECHNICAL_SUMMARY_2026-03.md`
-9. `Market-Analysis-Algeria.txt`
-10. `ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt`
+9. `MEMOIRE_RESEARCH_DOSSIER_2026-03.md`
+10. `Market-Analysis-Algeria.txt`
+11. `ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt`
 
 ## 2) Which file answers which question?
-### “What is this project academically and practically?”
+### What is this project academically and practically?
 - `Academic-and-Practical-Description.txt`
 - `MEMOIRE_TECHNICAL_SUMMARY_2026-03.md`
 
-### “What problem is Wino solving in Algeria?”
+### What problem is Wino solving in Algeria?
 - `Market-Analysis-Algeria.txt`
 - `ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt`
 
-### “Where are the APIs and what are the routes?”
+### Where are the APIs and what are the routes?
 - `API_LINKS_EXPLAINED.txt`
 - `CODEBASE_MAP_FOR_AI.md`
 
-### “How is the Flutter app organized?”
+### How is the Flutter app organized?
 - `APP_LIB_STRUCTURE.txt`
 - `AI_EDITING_GUIDE_FOR_WINO.md`
 
-### “How is the repository/backend organized?”
+### How is the repository/backend organized?
 - `SERVER_STRUCTURE.txt`
 - `CODEBASE_MAP_FOR_AI.md`
 
-### “What is still missing or risky?”
+### What is still missing or risky?
 - `MISSING_NOW_AND_NEXT_ACTIONS.txt`
 
-### “How should an AI assistant edit this repo safely?”
+### How should an AI assistant edit this repo safely?
 - `AI_EDITING_GUIDE_FOR_WINO.md`
 - `CODEBASE_MAP_FOR_AI.md`
+- `AI_PROGRAMMING_CONTEXT.md`
+
+### What should I use for university writing / memoire work?
+- `MEMOIRE_RESEARCH_DOSSIER_2026-03.md`
+- `Academic-and-Practical-Description.txt`
+- `MEMOIRE_TECHNICAL_SUMMARY_2026-03.md`
+- `PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md`
 
 ## 3) Recommended doc bundles by use case
 ### For programming
@@ -50,17 +58,21 @@ This file tells you which document to open first depending on what you are tryin
 - `API_LINKS_EXPLAINED.txt`
 - `APP_LIB_STRUCTURE.txt`
 - `AI_EDITING_GUIDE_FOR_WINO.md`
+- `AI_PROGRAMMING_CONTEXT.md`
 
 ### For memoire / university writing
+- `MEMOIRE_RESEARCH_DOSSIER_2026-03.md`
 - `Academic-and-Practical-Description.txt`
 - `MEMOIRE_TECHNICAL_SUMMARY_2026-03.md`
 - `Market-Analysis-Algeria.txt`
 - `ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt`
+- `PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md`
 
 ### For release / planning
 - `MISSING_NOW_AND_NEXT_ACTIONS.txt`
 - `SERVER_STRUCTURE.txt`
 - `WEB_SERVER_AND_ANDROID_LIBS_FEATURES.txt`
+- `MERCHANT_SUBSCRIPTION_PROMOTION_REDESIGN.md`
 
 ## 4) Maintenance rule
 When the codebase changes significantly in any of these areas, update the matching docs in the same workstream:
@@ -69,3 +81,5 @@ When the codebase changes significantly in any of these areas, update the matchi
 - platform scope
 - trust/analytics/monetization architecture
 - localization strategy
+- onboarding / nearby UX
+- public branding assumptions

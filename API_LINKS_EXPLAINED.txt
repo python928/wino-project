@@ -1,6 +1,8 @@
 API LINKS EXPLAINED
 ===================
 
+Last reviewed: 2026-03-23
+
 Project roots
 -------------
 - Backend: `/home/anti-problems/toprice/app-backend`
@@ -13,9 +15,10 @@ Base URL currently used by the Flutter app
 Important notes
 ---------------
 - All paths below are relative to the base URL.
-- `Store == User`, so many "store" routes are actually user routes.
+- `Store == User`, so many “store” routes are actually user routes.
 - Most list endpoints are paginated, but some screens still tolerate direct list responses.
 - The app is Android-first and deep links are wired to both custom schemes and HTTP short links.
+- Public-facing branding is now `Wino`, although some internal package/config names still use older legacy naming.
 
 1) AUTH
 -------
@@ -31,13 +34,17 @@ Important notes
 - `/api/users/change-password/` (POST)
 - `/api/users/logout/` (POST)
 - `/api/users/preferences/categories/` (POST)
-- `/api/users/users/` (GET, POST via router, plus list/retrieve APIs below)
-- `/api/users/users/` (GET list via `UserListView`)
-- `/api/users/users/{id}/` (GET, PATCH via `UserDetailView`)
+- `/api/users/users/` (GET, POST via router)
+- `/api/users/users/{id}/` (GET, PATCH)
 - `/api/users/followers/` (GET)
 - `/api/users/followers/toggle/` (POST)
-- `/api/users/store-reports/` (GET, POST, admin moderation actions via viewset)
+- `/api/users/store-reports/` (GET, POST, moderation actions via viewset)
 - `/api/users/moderation/high-risk/` (GET, admin snapshot)
+
+Users / store notes
+-------------------
+- Store details are fetched from the users API because `Store == User`.
+- The app should not assume a separate store table or store route family.
 
 3) CATALOG
 ----------
@@ -61,8 +68,9 @@ Important notes
 
 Catalog behavior notes
 ----------------------
-- Product reviews and store reviews share the same `reviews` domain model.
-- Reports are throttled and scored for seriousness/credibility.
+- Product reviews and store reviews share the broader reviews domain.
+- Review deletion is `DELETE /api/catalog/reviews/{id}/`.
+- Reports are throttled and scored for seriousness / credibility.
 - Favorites expose both `toggle` and `check` helpers for app UX.
 
 4) ADS
@@ -80,8 +88,8 @@ Catalog behavior notes
 Analytics notes
 ---------------
 - `events/` accepts one event or a batch.
-- `trust-signals/` is a parallel ingestion path for trust-related behavioral signals.
-- Analytics data also supports recommendation and moderation logic.
+- `trust-signals/` is a parallel ingestion path for trust-related signals.
+- Analytics data supports both recommendation logic and moderation / trust logic.
 
 6) FEEDBACK
 -----------
@@ -101,14 +109,13 @@ Feedback notes
 - `/api/notifications/notifications/{id}/mark-read/`
 - `/api/notifications/notifications/trigger/`
 - `/api/notifications/devices/`
-- `/api/devices/devices/`
 
 Device registration note
 ------------------------
-- The codebase currently exposes device registration through both:
-  - notifications router: `/api/notifications/devices/`
-  - root router: `/api/devices/devices/`
-- The Flutter app currently points to `/api/notifications/devices/`.
+- The active backend path for FCM device registration is:
+  - `/api/notifications/devices/`
+- The Flutter app points to the same path through `ApiConfig.devices`.
+- Older docs that mentioned `/api/devices/devices/` are now stale and should not be reused.
 
 8) SUBSCRIPTIONS
 ----------------
@@ -128,6 +135,7 @@ Subscriptions notes
 - `payment-requests/` is the alias used by the Flutter app.
 - `subscription-payment-requests/` points to the same backend viewset and exists for compatibility.
 - Payment requests support up to 3 proof images.
+- Merchant dashboard and access status are custom actions under `merchant-subscriptions/`.
 
 9) WALLET
 ---------
@@ -140,8 +148,8 @@ Subscriptions notes
 
 Wallet notes
 ------------
-- Wallet snapshot includes balances, recent transactions, recent purchases, and current costs.
-- Coin purchase approval is manual/admin-mediated in the current design.
+- Wallet snapshot includes balances, transactions, purchases, and current costs.
+- Coin purchase approval is still manual/admin-mediated in the current design.
 
 10) DEEP LINKS / SHORT LINKS
 ----------------------------
@@ -166,6 +174,13 @@ Android manifest currently also accepts
 - `stores == users`
 - store details are fetched from the users API
 - product and promotion reports both use catalog reporting endpoints
-- review deletion uses the same review endpoint with `DELETE /api/catalog/reviews/{id}/`
+- pack/product/promotion detail flows share some review/report widgets and localization paths
 
-Last reviewed: 2026-03-23.
+13) Integration reminders
+-------------------------
+If an endpoint changes, sync all of these:
+- backend `urls.py`
+- backend view / serializer if needed
+- `the_app/lib/core/config/api_config.dart`
+- app service / provider / screen
+- root docs that map APIs

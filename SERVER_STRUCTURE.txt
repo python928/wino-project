@@ -15,12 +15,23 @@ Top-level repository view
 ├── ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt
 ├── API_LINKS_EXPLAINED.txt
 ├── APP_LIB_STRUCTURE.txt
+├── AI_EDITING_GUIDE_FOR_WINO.md
+├── AI_PROGRAMMING_CONTEXT.md
 ├── CODEBASE_MAP_FOR_AI.md
 ├── Market-Analysis-Algeria.txt
+├── MEMOIRE_RESEARCH_DOSSIER_2026-03.md
 ├── MEMOIRE_TECHNICAL_SUMMARY_2026-03.md
 ├── MISSING_NOW_AND_NEXT_ACTIONS.txt
+├── PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md
+├── PROJECT_DOCUMENTATION_INDEX.md
+├── PROJECT_QUICKSTART.md
 ├── SERVER_STRUCTURE.txt
 └── WEB_SERVER_AND_ANDROID_LIBS_FEATURES.txt
+
+Repository reality
+------------------
+- This repo is both a codebase and a documentation knowledge base.
+- Root docs are part of the working architecture memory for developers, AI assistants, and memoire writing.
 
 Backend tree (`app-backend/`)
 -----------------------------
@@ -33,8 +44,8 @@ app-backend
 ├── manage.py
 ├── requirements.txt
 ├── backend/                # active Django project package
-├── config/                 # secondary/legacy config package still present
-├── common/                 # middleware + shared throttles/helpers
+├── config/                 # secondary / legacy config package still present
+├── common/                 # middleware + throttles + helpers
 ├── users/
 ├── catalog/
 ├── ads/
@@ -49,15 +60,17 @@ Important backend notes
 -----------------------
 - Active settings entrypoint: `app-backend/backend/settings.py`
 - Active root router: `app-backend/backend/urls.py`
-- `common/` is not a Django app in `INSTALLED_APPS`, but it is used by middleware/imports.
+- `common/` is not a major business app, but it is used by middleware/imports.
 - Root short-link routes live in backend root:
   - `/s/{id}/`
   - `/p/{id}/`
+- Active notifications device path is routed through:
+  - `/api/notifications/devices/`
 
 Backend module roles
 --------------------
 - `users/`
-  - auth, profile, OTP, followers, store reports, trust settings
+  - auth, profile, OTP, followers, store reports, system settings, trust settings, abuse flags
 - `catalog/`
   - categories, products, packs, promotions, reviews, favorites, product reports
 - `ads/`
@@ -69,7 +82,7 @@ Backend module roles
 - `wallet/`
   - coin packs, purchases, balances, approvals
 - `analytics/`
-  - recommendations, events, trust signals, interest profiles
+  - recommendations, events, trust signals, interest profiles, retention cleanup
 - `feedback/`
   - user feedback and admin review flow
 
@@ -97,10 +110,20 @@ Platform scope
 --------------
 - Android platform folder is retained.
 - iOS/Web/macOS/Linux/Windows folders were removed from the repo.
+- Some internal names still use legacy identifiers such as `dzlocal_shop`, but the current product-facing brand is `Wino`.
 
 Key architecture notes
 ----------------------
 - `Store == User` is the core backend domain rule.
 - The Flutter app uses named routes via `RouteGenerator`.
 - Localization is split between ARB-generated strings and runtime translations.
+- Wino branding is visible in `WinoApp` and the Android notification channel (`wino_channel`).
 - The repo now contains both technical docs and memoire-oriented docs at the root.
+
+Recent structure / product evolution to remember
+------------------------------------------------
+- first-run language onboarding is now a real product flow, not just a translation setting.
+- location permission education is centralized in shared Flutter helper code.
+- merchant ads dashboard now includes stronger explainability text.
+- empty placeholder directories under `the_app/lib/features/` were cleaned up.
+- API docs should no longer mention the removed duplicate devices route.

@@ -4,66 +4,69 @@ Last updated: 2026-03-23
 
 ## 1) Purpose of this file
 This file is a compact operational context for:
-- AI coding assistants (faster accurate code changes)
-- University memoire writing (clear architecture + implementation reality)
+- AI coding assistants
+- university memoire writing
+- contributors who need code truth without reading the whole repo
 
-It focuses on what is true now in code, not planned features.
+It focuses on what is true now in code, not only on planned features.
 
 ## 2) Core domain rules
-- Store == User.
-- There is no separate Store model.
-- Any endpoint/screen labeled "store" usually uses `users.User` ID.
+- `Store == User`
+- there is no separate Store model
+- any endpoint/screen labeled “store” usually uses `users.User` ID
+- public-facing brand is `Wino`
 
 ## 3) Backend apps and responsibilities
-- `users`: auth, profile, phone OTP, followers, store reports, system settings.
-- `catalog`: categories, products, packs, promotions, reviews, favorites, product reports.
-- `ads`: ad campaigns with audience/geo targeting and metrics.
-- `subscriptions`: merchant subscription status/dashboard.
-- `wallet`: coin balances, coin purchases, admin approval flow.
-- `analytics`: interaction logs, preference profiles, recommendations.
-- `notifications`: in-app notifications + FCM devices.
+- `users`: auth, profile, phone OTP, followers, store reports, system settings, trust settings
+- `catalog`: categories, products, packs, promotions, reviews, favorites, product reports
+- `ads`: ad campaigns with targeting and metrics
+- `subscriptions`: plans, access status, merchant dashboard, payment requests
+- `wallet`: coin balances, coin purchases, admin approval flow
+- `analytics`: interaction logs, trust signals, recommendations
+- `notifications`: in-app notifications + FCM devices
+- `feedback`: user feedback and admin review flow
 
 ## 4) Key recent implementation changes
-1. Daily coin top-up system:
-   - Triggered via `GET /api/users/me/`.
-   - Uses `users.SystemSettings.daily_login_coins`.
-   - Applies only if 24h passed and user balance is below target.
-2. First-login coin grant is server-configurable:
-   - `users.SystemSettings.first_login_coins`.
-3. Category parent is hidden from admin and no longer returned in Category API serializer.
-4. Ads and Wallet are now independent first-class modules.
-5. CI exists in `.github/workflows/ci.yml`.
-
-## 4.1) Auth/OTP reality (important for QA)
-- OTP generation is currently in dev/testing mode (fixed code) and delivery is effectively disabled in server code.
-- This must be switched to real delivery + secure verification rules before production.
+1. first-run launch screen now includes a visible language picker
+2. location/GPS explanation is now centralized in shared helper code
+3. nearby/location behavior is more consistent across home/search/edit-profile
+4. ads dashboard now includes better explainability text
+5. common localization increasingly resolves through ARB/localizations before runtime fallback
+6. device registration path was cleaned up to `/api/notifications/devices/`
+7. user-facing notification branding now uses `Wino Notifications`
 
 ## 5) API consistency notes (important)
-- App config contains subscription paths like:
+- App config contains subscription paths including:
   - `/api/subscriptions/plans/`
   - `/api/subscriptions/payment-requests/`
-- Current router in `subscriptions/urls.py` exposes only:
-  - `/api/subscriptions/merchant-subscriptions/` (+ custom actions)
-
-Action: align router and app config before production release.
+- Backend router currently exposes both:
+  - `/api/subscriptions/payment-requests/`
+  - `/api/subscriptions/subscription-payment-requests/`
+- Merchant dashboard remains under:
+  - `/api/subscriptions/merchant-subscriptions/merchant-dashboard/`
+- FCM device registration should be documented as:
+  - `/api/notifications/devices/`
 
 ## 6) Admin panel reality
-- "Stores" are managed under Users admin.
-- `SystemSettings` appears in Users admin as singleton settings.
-- Category admin add form does not require parent.
+- “Stores” are managed under Users admin because `Store == User`
+- `SystemSettings` and `TrustSettings` live under users-related admin concerns
+- category hierarchy is simplified compared to older assumptions in docs
 
 ## 7) Flutter architecture cues for contributors
-- Active routing style: custom `RouteGenerator` + named routes.
-- `go_router` exists in dependencies but is not the active router.
-- Prefer existing core services/providers/components before adding new patterns.
+- active routing style: custom `RouteGenerator` + named routes
+- `go_router` exists in dependencies but is not the active router
+- prefer existing core services/providers/components before adding new patterns
+- most real user-facing work still lives in `presentation/`
 
 ## 8) Memoire-ready narrative anchors
-- Academic problem: interpretable local discovery + personalization under practical constraints.
-- Engineering contribution: unified user/store model + modular backend + measurable monetization loop.
-- Business contribution: local O2O fit for Algerian market with targeted ads and coin economy.
+- academic problem: interpretable local discovery + personalization + trust under practical constraints
+- engineering contribution: unified user/store model + modular backend + measurable monetization loop
+- UX contribution: onboarding, location education, and merchant explainability improvements
+- business contribution: local O2O fit for Algerian market with targeted ads and gradual monetization
 
 ## 9) Production-readiness gaps to mention transparently
-- Security hardening in settings still required (`DEBUG`, `ALLOWED_HOSTS`, `CORS`, `SECRET_KEY`).
-- Broader tests needed for OTP, wallet approval, ad delivery/click flows, subscription route alignment.
-- Replace fixed OTP testing behavior with real OTP delivery + throttling + observability.
-- Observability stack (error tracking/APM) still pending.
+- security hardening in settings still required
+- base URL is still local/hardcoded in app config
+- broader tests are needed for OTP, wallet, subscriptions, deep links, and location UX
+- observability stack is still incomplete
+- some legacy naming remains in package/config values even after branding improvements

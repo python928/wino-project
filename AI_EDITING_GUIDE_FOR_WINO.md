@@ -10,6 +10,7 @@ This file is meant for AI assistants and programmers who need to edit the repo w
 3. Localization is hybrid, not single-source yet
 4. The repo is Android-only at platform-folder level
 5. Root docs are part of the project knowledge base and should be kept in sync with architectural changes
+6. Public-facing brand is `Wino`
 
 ## 2) What to inspect before editing by topic
 ### Auth / profile / store
@@ -36,6 +37,7 @@ This file is meant for AI assistants and programmers who need to edit the repo w
 ### Wallet / subscriptions / merchant growth
 - `app-backend/wallet/`
 - `app-backend/subscriptions/`
+- `app-backend/ads/`
 - `the_app/lib/presentation/wallet/`
 - `the_app/lib/presentation/subscription/`
 - `the_app/lib/core/config/api_config.dart`
@@ -50,6 +52,12 @@ This file is meant for AI assistants and programmers who need to edit the repo w
 - `the_app/lib/l10n/*.arb`
 - `the_app/lib/core/localization/runtime_translations.dart`
 - `the_app/lib/core/extensions/l10n_extension.dart`
+
+### Nearby / location UX
+- `the_app/lib/presentation/common/location_permission_helper.dart`
+- `the_app/lib/presentation/home/home_screen.dart`
+- `the_app/lib/presentation/search/search_tab_screen.dart`
+- `the_app/lib/presentation/profile/edit_merchant_profile_screen.dart`
 
 ## 3) Change propagation rules
 ### If you change a backend endpoint
@@ -79,12 +87,20 @@ Also update:
 - docs describing trust and moderation
 - any related app-side snackbars, labels, and report reasons
 
+### If you change branding-visible text
+Also inspect:
+- app constants/config
+- local notification channel naming
+- onboarding copy
+- docs that still mention older product names
+
 ## 4) Current architecture realities that are easy to get wrong
 1. `go_router` is installed but not active.
-2. Some list endpoints return paginated data, some code still tolerates direct lists.
-3. Device registration exists at more than one backend path.
+2. Some list endpoints return paginated data; some code still tolerates direct lists.
+3. Device registration should be treated as `/api/notifications/devices/`.
 4. Product/store trust logic spans both `users/` and `catalog/`.
 5. Most actual Flutter feature work still lives in `presentation/`, even though `features/` exists.
+6. Some internal names still use legacy values such as `dzlocal_shop`, but visible branding is `Wino`.
 
 ## 5) Safe mental model for the app
 - `core/` = infrastructure
@@ -102,16 +118,18 @@ Recommended order:
 4. `APP_LIB_STRUCTURE.txt`
 5. `SERVER_STRUCTURE.txt`
 6. `MISSING_NOW_AND_NEXT_ACTIONS.txt`
+7. `PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md`
 
 ## 7) Prompt context that helps an AI assistant
 Useful facts to include in prompts:
-- "Store == User"
-- "Android-only Flutter repo"
-- "Named routes via RouteGenerator"
-- "Hybrid localization: ARB + runtime_translations"
-- "Trust layer exists for reports/reviews"
-- "Wallet + subscriptions + ads are all active product areas"
-- "Docs at repo root should be updated when architecture changes"
+- `Store == User`
+- `Android-only Flutter repo`
+- `Named routes via RouteGenerator`
+- `Hybrid localization: ARB + runtime_translations`
+- `Trust layer exists for reports/reviews`
+- `Wallet + subscriptions + ads are all active product areas`
+- `Docs at repo root should be updated when architecture changes`
+- `Visible brand is Wino`
 
 ## 8) What counts as a good change in this repo
 A good change usually does all of the following:

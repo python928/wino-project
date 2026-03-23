@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-23
 
-This file is the shortest reliable map of “where to go first” in the Wino codebase.
+This file is the shortest reliable map of where to go first in the Wino codebase.
 
 ## 1) First truths to keep in mind
 - `Store == User`
@@ -12,6 +12,7 @@ This file is the shortest reliable map of “where to go first” in the Wino co
 - Localization is split between:
   - generated ARB localizations
   - `runtime_translations.dart`
+- Public-facing brand is `Wino`, even though some internal identifiers still use legacy names
 
 If an edit ignores one of those truths, it will usually drift away from how the project actually works.
 
@@ -48,6 +49,7 @@ Go here for
 - store reports
 - trust settings
 - verification status
+- daily / first-login coin policies
 
 ### Catalog
 - Models: `app-backend/catalog/models.py`
@@ -116,12 +118,15 @@ Go here for
 - `the_app/lib/presentation/`
 
 Important screen areas
+- onboarding / launch: `presentation/auth/`
+- home / nearby: `presentation/home/`
+- search / filters: `presentation/search/`
 - product: `presentation/product/`
 - promotion: `presentation/promotion/`
 - pack: `presentation/pack/`
 - profile / merchant flows: `presentation/profile/`
-- wallet: `presentation/wallet/`
 - subscriptions: `presentation/subscription/`
+- wallet: `presentation/wallet/`
 - feedback: `presentation/feedback/`
 
 ## 6) Shared app patterns
@@ -143,12 +148,23 @@ New UI text may need changes in more than one place:
 - `the_app/lib/core/localization/runtime_translations.dart`
 - `the_app/lib/core/extensions/l10n_extension.dart`
 
+Current migration rule
+- Prefer ARB/generated localization for reusable/common strings.
+- Keep runtime translations as fallback for older screens until migration is complete.
+
+### Nearby / location UX pattern
+If nearby or GPS behavior changes, inspect:
+- `presentation/common/location_permission_helper.dart`
+- `presentation/home/home_screen.dart`
+- `presentation/search/search_tab_screen.dart`
+- `presentation/profile/edit_merchant_profile_screen.dart`
+- `presentation/shared_widgets/unified_app_bar.dart`
+
 ### Deep-link pattern
 If a store/product route changes, inspect:
 - backend short links in `app-backend/backend/urls.py`
 - app parsing in `the_app/lib/core/services/deep_link_service.dart`
-- Android intent filters in
-  `the_app/android/app/src/main/AndroidManifest.xml`
+- Android intent filters in `the_app/android/app/src/main/AndroidManifest.xml`
 
 ## 7) API sync points
 If a backend endpoint changes, usually sync all of these:
@@ -170,7 +186,7 @@ Trust logic is split across modules:
   - `presentation/common/widgets/reviews_section.dart`
 
 ## 9) Monetization map
-Wallet and subscriptions are related but different:
+Wallet and subscriptions are related but different.
 
 Wallet
 - coin balances
@@ -183,19 +199,27 @@ Subscriptions
 - access status
 - merchant dashboard
 
-If a monetization change is requested, inspect both modules before assuming the feature belongs to only one.
+Ads
+- campaign creation
+- click registration
+- dashboard / performance interpretation
+
+If a monetization change is requested, inspect all three before assuming the feature belongs to only one.
 
 ## 10) Known gotchas
 1. Do not introduce a separate store domain model in the app or backend without a deliberate architecture change.
 2. Do not document `go_router` as the active router.
 3. Do not assume all text is already in ARB; runtime translations are still part of production behavior.
 4. Do not forget that Android is the only retained platform in the repo tree.
-5. Device registration currently appears in more than one backend path; the app uses `/api/notifications/devices/`.
+5. Device registration is now documented and used through `/api/notifications/devices/`.
+6. User-facing brand is `Wino`, but some internal names still use legacy identifiers.
 
 ## 11) Best companion docs
 Read these with this file:
+- `PROJECT_DOCUMENTATION_INDEX.md`
 - `API_LINKS_EXPLAINED.txt`
 - `APP_LIB_STRUCTURE.txt`
 - `SERVER_STRUCTURE.txt`
 - `MISSING_NOW_AND_NEXT_ACTIONS.txt`
 - `AI_EDITING_GUIDE_FOR_WINO.md`
+- `MEMOIRE_RESEARCH_DOSSIER_2026-03.md` if the task touches university writing
