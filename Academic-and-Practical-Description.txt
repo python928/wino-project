@@ -4,46 +4,37 @@
 
 ## 1) التعريف بالمشروع
 Wino منصة تجارة محلية رقمية (Local O2O Marketplace) تربط بين:
-- تطبيق Flutter للعميل.
+- تطبيق Flutter (Android-first حاليا).
 - Django + DRF API للخادم.
 
-المبدأ البنيوي: **Store == User**.
-اي مستخدم يمتلك ملفا موحدا يجمع هوية الحساب وبيانات المتجر.
+المبدأ البنيوي المركزي: **Store == User**.
+كل مستخدم يمكن تمثيله كتاجر بدون نموذج Store منفصل.
 
 ---
 
 ## 2) الاشكالية البحثية
-كيف نبني نظام بحث وتوصية محلي قابل للتفسير ويعمل بكفاءة تشغيلية ضمن:
-- قيود موقع جغرافي واقعي.
-- تنوع منتجات/اسعار.
-- تفاوت ثقة البائعين.
-- متطلبات قابلية التوسع مع كلفة تشغيل مناسبة.
+كيف نبني نظام بحث وتوصية محلي قابل للتفسير ويعمل بكفاءة ضمن:
+- قيود الموقع الجغرافي الواقعي.
+- تفاوت جودة المتاجر والثقة.
+- ضغط الأداء مع نمو البيانات.
+- الحاجة لطبقة monetization عملية للتجار (Ads/Wallet/Subscriptions).
 
 ---
 
 ## 3) الاهداف العلمية والتقنية
 1. تصميم معمارية معيارية تفصل Presentation / API / Domain Logic.
-2. تطبيق ترتيب متعدد العوامل للبحث المحلي.
-3. بناء توصية سلوكية هجينة قائمة على سجلات تفاعل فعلية.
-4. تفعيل تتبع تحليلي server-side مع حمل شبكي منخفض.
-5. دمج monetization عملي (ads + wallet + subscription constraints).
+2. تحسين البحث المحلي (Nearby + ولاية + ترتيب متعدد العوامل).
+3. بناء توصية سلوكية هجينة مدعومة بـ InteractionLog.
+4. تفعيل تحليلات تشغيلية قابلة للتوسع (events + trust signals).
+5. دمج monetization عملي: ads + wallet + subscription access.
 
 ---
 
-## 4) المنهجية
-تم اعتماد Prototype-driven Iteration:
-- بناء مسارات العمل الاساسية اولا (users, catalog).
-- اضافة analytics/recommendation تدريجيا.
-- اضافة ads وwallet والاشتراكات كطبقة تجارية فوق النواة.
-- تثبيت التحسينات عبر اختبارات تشغيلية وCI.
-
----
-
-## 5) المعمارية العامة
-### 5.1 backend
-- Django 5 + DRF
-- JWT auth (SimpleJWT)
-- apps الاساسية:
+## 4) المعمارية الحالية
+### 4.1 Backend (Django/DRF)
+- Django 5.0.6 + DRF 3.15.2
+- JWT عبر SimpleJWT
+- Apps الفعلية:
   - users
   - catalog
   - ads
@@ -51,112 +42,107 @@ Wino منصة تجارة محلية رقمية (Local O2O Marketplace) تربط 
   - subscriptions
   - wallet
   - analytics
+  - feedback
+  - common (middleware)
 
-### 5.2 frontend (Flutter)
+### 4.2 Frontend (Flutter)
 - Provider/ChangeNotifier
-- RouteGenerator + named routes
-- Firebase messaging/local notifications
-- طبقات واضحة: core, data, features, presentation
+- RouteGenerator + named routes (go_router موجود كاعتماد فقط)
+- Firebase Messaging + Local Notifications
+- Deep links عبر `app_links`
+- QR share/scan عبر `qr_flutter` + `mobile_scanner`
+- Android-only platforms في المشروع حاليا (تم حذف ios/web/macos/linux/windows)
 
-### 5.3 integration
-- REST API
-- MEDIA uploads
-- FCM
+### 4.3 Integration Layer
+- REST APIs تحت `/api/...`
+- Media upload (صور منتجات/حملات/دفعات/feedback)
+- FCM device registration
 
 ---
 
-## 6) النموذج المفاهيمي للبيانات
-### 6.1 كيانات رئيسية
-- User (يتضمن بيانات المتجر)
-- SystemSettings (اعدادات اقتصادية عامة)
+## 5) النموذج المفاهيمي للبيانات
+### 5.1 كيانات رئيسية
+- User (حساب + ملف متجر + حقول توثيق)
+- SystemSettings (first_login_coins / daily_login_coins)
+- TrustSettings + AbuseFlag
 - Category, Product, ProductImage
 - Pack, PackProduct, PackImage
 - Promotion, PromotionImage
-- AdCampaign, AdCampaignViewer
-- Follower, Review, Favorite, ProductReport, StoreReport
+- Review, Favorite, ProductReport, StoreReport
+- AdCampaign
+- SubscriptionPlan, MerchantSubscription, SubscriptionPaymentRequest
 - CoinPurchase, CoinTransaction, CoinPackPlan
 - InteractionLog, UserInterestProfile
+- Feedback
 
-### 6.2 قيود اتساق
-- Review واحد لكل مستخدم/منتج (او متجر عند غياب المنتج).
-- Favorite واحد لكل مستخدم/منتج.
-- ملكية صارمة للتعديل (owner checks).
-- Ad campaign يجب ان تستهدف اما product او pack فقط.
-- SystemSettings singleton (سجل واحد عبر admin).
-
----
-
-## 7) منطق ذكي منفذ فعليا
-1. Adaptive radius في البحث المحلي حسب scarcity.
-2. Weighted ranking (distance + price + reputation) مع تحسينات عملية.
-3. توصية هجينة (category, price, popularity, recency, trust).
-4. ads targeting:
-   - audience_mode (all/followers/nearby/wilaya)
-   - geo_mode (all/wilaya/radius)
-   - age/category constraints
-5. daily coin top-up:
-   - عند GET /api/users/me/
-   - اذا مر 24h والرصيد اقل من daily_login_coins يتم رفعه للحد
-   - تحديث last_daily_coin_grant وlast_login
+### 5.2 قيود اتساق مهمة
+- Review/Favorite uniqueness بقيود منطقية على مستوى المستخدم/الهدف.
+- Ownership checks في create/update/delete.
+- Anti-abuse throttling + cooldowns لبلاغات/مراجعات/OTP.
+- `SystemSettings` و`TrustSettings` كنماذج singleton تشغيلية.
 
 ---
 
-## 8) التحليلات
-- InteractionLog يجمع الاشارات السلوكية.
-- events endpoint متاح للدفع من التطبيق.
-- جزء من الاحداث يشتق server-side من استخدام endpoints.
-- ads clicks/impressions تدخل في دورة القياس التجاري.
+## 6) منطق ذكي منفذ فعليا
+1. توصية هجينة عبر `analytics/recommendations.py`.
+2. تتبع تفاعل عبر `/api/analytics/events/`.
+3. Trust signals عبر `/api/analytics/trust-signals/`.
+4. تقييم مصداقية البلاغات/المراجعات (trust scoring).
+5. شارات تحقق متجر (`is_verified`) مع تدفقات تقييم أهلية.
+6. Daily coin top-up في مسار profile حسب SystemSettings.
 
 ---
 
-## 9) الامان والحوكمة
-1. JWT access/refresh + blacklist.
-2. DRF permissions على مستوى ViewSet/APIView.
-3. منع spoofing للمتجر في بعض flows (store=request.user).
-4. تحقق صور الرفع (امتدادات/حجم) في wallet/subscriptions.
-
-ملاحظة تنفيذية مهمة:
-- اعدادات production hardening ما تزال مطلوبة (DEBUG, ALLOWED_HOSTS, CORS, SECRET_KEY env).
-
----
-
-## 10) المكدس التقني
-- Django + DRF
-- Flutter
-- SQLite (dev) / PostgreSQL (ready)
-- Firebase Admin + FCM
-- Celery + Redis
-- Twilio OTP (integration exists; current dev/testing mode uses fixed OTP and disables delivery)
+## 7) الواجهات والروابط التشغيلية
+- Auth: `/api/auth/token/`, `/api/auth/token/refresh/`
+- Users: `/api/users/...`
+- Catalog: `/api/catalog/...`
+- Ads: `/api/ads/campaigns/`
+- Analytics: `/api/analytics/recommendations/`, `/api/analytics/events/`, `/api/analytics/trust-signals/`
+- Feedback: `/api/feedback/`, `/api/feedback/my/`
+- Subscriptions: `/api/subscriptions/plans/`, `/api/subscriptions/payment-requests/`, `/api/subscriptions/merchant-subscriptions/...`
+- Wallet: `/api/wallet/...` مع approve/reject لطلبات الشراء
+- Short links: `/s/{id}/` و`/p/{id}/` مع redirect إلى scheme `wino://...`
 
 ---
 
-## 11) KPIs مقترحة للتقييم العلمي/العملي
-1. CTR/Conversion للتوصيات.
-2. CTR/Conversion لحملات ads.
-3. زمن استجابة البحث والتوصية.
-4. retention للمستخدمين والتجار.
-5. زمن الوصول لاول عملية مفيدة (first valuable action).
+## 8) الحوكمة والامن
+1. JWT rotation + blacklist.
+2. DRF permissions افتراضي IsAuthenticated.
+3. Scoped throttling (OTP/reports/reviews/analytics/feedback/payment).
+4. Request correlation id عبر `common.middleware.RequestIdMiddleware`.
+
+ملاحظة:
+- الإعدادات أصبحت env-driven، لكن القيم الافتراضية لا تزال development-friendly، وبالتالي يلزم production hardening قبل الإطلاق.
 
 ---
 
-## 12) الحدود الحالية
-1. التوصية rule/score-based وليست learning-to-rank كاملة.
-2. المراقبة التشغيلية (APM/Sentry) غير مفعلة بالكامل.
-3. بعض routes الاشتراكات في التطبيق تحتاج تطابقا ادق مع router الحالي.
+## 9) KPIs مقترحة للتقييم الاكاديمي/العملي
+1. CTR/Conversion للتوصيات والاعلانات.
+2. زمن الاستجابة (P95/P99) لمسارات search/recommendation.
+3. Retention للتاجر والمستخدم.
+4. نسبة نجاح تدفقات wallet/subscription.
+5. جودة الثقة: نسبة البلاغات منخفضة المصداقية مقابل البلاغات المفيدة.
 
 ---
 
-## 13) افاق التطوير البحثي
-1. Learning to Rank فوق النظام الحالي.
-2. Embeddings للمنتجات/المستخدمين.
-3. PostGIS عند التوسع الجغرافي.
-4. A/B testing رسمي للبحث والتوصية والاعلانات.
-5. Dashboard تحليلي لحظي للتاجر والمشرف.
+## 10) حدود النسخة الحالية
+1. النظام rule/score-based أكثر من كونه Learning-to-Rank كامل.
+2. لا تزال المراقبة الإنتاجية (Sentry/APM) غير مفعلة بالكامل.
+3. ترجمة الواجهة تحسنت (AR/EN/FR + locale switch) لكنها تحتاج تعميم كامل على كل النصوص.
 
 ---
 
-## 14) خلاصة
-Wino يقدم حالة متوازنة بين الطرح الاكاديمي والتطبيق الفعلي: 
-- نموذج بيانات موحد وسهل التوسعة.
-- دمج عملي بين local search + recommendation + monetization.
-- قابلية عالية للتطوير نحو نسخة انتاج ناضجة للسوق الجزائري.
+## 11) افاق التطوير البحثي
+1. Learning-to-rank / ranking calibration.
+2. Explainability dashboard للتوصيات والبلاغات.
+3. A/B testing منهجي على search/recommendation/ads.
+4. طبقة قياس أعمال للتاجر (funnel + cohort).
+
+---
+
+## 12) خلاصة
+Wino حاليا يمثل منصة O2O محلية ناضجة مع:
+- نواة domain متماسكة (Store==User).
+- بحث/توصية/ثقة/Monetization في منظومة واحدة.
+- قابلية تطوير عالية نحو نسخة إنتاج كاملة للسوق الجزائري.

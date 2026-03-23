@@ -2,193 +2,110 @@ API LINKS EXPLAINED
 ===================
 Project:
 - Backend: /home/anti-problems/toprice/app-backend
-- App config source: /home/anti-problems/toprice/the_app/lib/core/config/api_config.dart
+- App config: /home/anti-problems/toprice/the_app/lib/core/config/api_config.dart
 
-Base URL (from current app config)
------------------------------------
-- http://192.168.162.21:8000/
+Base URL (current in app)
+-------------------------
+- http://192.168.36.21:8000/
 
 Notes
 -----
-- Links below are relative API paths (prepend base URL).
-- {id}, {storeId}, {productId}, {purchase_id} are dynamic values.
-- Many list endpoints may return paginated `{results: [...]}` or direct lists depending on view settings.
+- All paths below are relative to base URL.
+- Many list APIs may return paginated `{results: [...]}` or direct list.
+- Store == User (important for route semantics).
 
 1) AUTH
 -------
-- /api/auth/token/
-  Method: POST
-  Purpose: JWT login (username/email + password)
-
-- /api/auth/token/refresh/
-  Method: POST
-  Purpose: refresh access token
+- /api/auth/token/ (POST)
+- /api/auth/token/refresh/ (POST)
 
 2) USERS / PROFILE
 ------------------
-- /api/users/register/
-  Method: POST
-  Purpose: create user and assign initial coins from `SystemSettings.first_login_coins`
-
-- /api/users/auth/phone/send-otp/
-  Method: POST
-  Purpose: send OTP to phone (with rate limiting)
-  Current dev/testing behavior: OTP is fixed and delivery is disabled in server code
-
-- /api/users/auth/phone/verify-otp/
-  Method: POST
-  Purpose: verify OTP and login/create user (new phone users get first_login_coins)
-  Current dev/testing behavior: verify expects the fixed code
-
-- /api/users/me/
-  Methods: GET, PUT, PATCH
-  Purpose: profile read/update
-  Extra behavior: GET triggers daily coin top-up check (24h logic + last_login update)
-
-- /api/users/change-password/
-  Method: POST
-- /api/users/logout/
-  Method: POST
-- /api/users/preferences/categories/
-  Method: POST
-
-- /api/users/users/
-  Methods: GET, POST, plus detail CRUD via router
-
-- /api/users/followers/
-  Method: GET
-- /api/users/followers/toggle/
-  Method: POST
-
-- /api/users/store-reports/
-  Methods: GET, POST, PATCH, DELETE (permission-dependent)
+- /api/users/register/ (POST)
+- /api/users/auth/phone/send-otp/ (POST)
+- /api/users/auth/phone/verify-otp/ (POST)
+- /api/users/me/ (GET/PUT/PATCH)
+- /api/users/change-password/ (POST)
+- /api/users/logout/ (POST)
+- /api/users/preferences/categories/ (POST)
+- /api/users/users/ (GET/POST)
+- /api/users/users/{id}/ (GET)
+- /api/users/followers/ (GET)
+- /api/users/followers/toggle/ (POST)
+- /api/users/store-reports/ (GET/POST/...)
+- /api/users/moderation/high-risk/ (GET, admin)
 
 3) CATALOG
 ----------
 - /api/catalog/categories/
-  Methods: GET, POST
-  Note: Category serializer now returns `id`, `name`, `icon` (no `parent` in API output)
-
 - /api/catalog/products/
-  Methods: GET, POST
 - /api/catalog/products/{id}/
-  Methods: GET, PUT, PATCH, DELETE
-
 - /api/catalog/product-images/
-  Methods: GET, POST
-
 - /api/catalog/packs/
-  Methods: GET, POST
 - /api/catalog/packs/{id}/
-  Methods: GET, PUT, PATCH, DELETE
-
 - /api/catalog/pack-products/
-  Methods: GET, POST
 - /api/catalog/pack-images/
-  Methods: GET, POST
-
 - /api/catalog/reviews/
-  Methods: GET, POST
 - /api/catalog/reviews/rate-store/
-  Method: POST
-
+- /api/catalog/reviews/my-store-rating/{storeId}/
 - /api/catalog/favorites/
-  Methods: GET, POST
 - /api/catalog/favorites/toggle/
-  Method: POST
 - /api/catalog/favorites/check/{productId}/
-  Method: GET
-
 - /api/catalog/promotions/
-  Methods: GET, POST
 - /api/catalog/promotion-images/
-  Methods: GET, POST
-
 - /api/catalog/product-reports/
-  Methods: GET, POST
 
 4) ADS
 ------
 - /api/ads/campaigns/
-  Methods: GET, POST
-  Purpose: ad campaign list/create with audience and targeting controls
-
 - /api/ads/campaigns/{id}/
-  Methods: GET, PUT, PATCH, DELETE
-
 - /api/ads/campaigns/{id}/register-click/
-  Method: POST
-  Purpose: register ad click and analytics signal
 
 5) ANALYTICS
 ------------
 - /api/analytics/recommendations/
-  Method: GET
-
 - /api/analytics/events/
-  Method: POST
+- /api/analytics/trust-signals/
 
-6) NOTIFICATIONS
+6) FEEDBACK
+-----------
+- /api/feedback/ (GET/POST)
+- /api/feedback/my/ (GET)
+
+7) NOTIFICATIONS
 ----------------
 - /api/notifications/notifications/
-  Method: GET
-
 - /api/notifications/notifications/unread-count/
-  Method: GET
-
 - /api/notifications/notifications/mark-all-read/
-  Method: POST
-
 - /api/notifications/notifications/{id}/mark-read/
-  Method: POST
-
 - /api/notifications/devices/
-  Methods: GET, POST (viewset actions depend on auth/permissions)
 
-7) SUBSCRIPTIONS
+8) SUBSCRIPTIONS
 ----------------
-Currently exposed in router:
+- /api/subscriptions/plans/
+- /api/subscriptions/plans/public-data/
+- /api/subscriptions/payment-requests/
+- /api/subscriptions/subscription-payment-requests/
 - /api/subscriptions/merchant-subscriptions/
-- /api/subscriptions/merchant-subscriptions/{id}/
 - /api/subscriptions/merchant-subscriptions/access-status/
 - /api/subscriptions/merchant-subscriptions/merchant-dashboard/
 
-Important note:
-- `subscriptions/views.py` contains `SubscriptionPlanViewSet` and `SubscriptionPaymentRequestViewSet`,
-  but current `subscriptions/urls.py` only registers `MerchantSubscriptionViewSet`.
-- If app uses `/api/subscriptions/plans/` or `/api/subscriptions/payment-requests/`, router registration must be added.
-
-8) WALLET / COINS
------------------
-- /api/wallet/
-  Method: GET
-  Purpose: wallet snapshot (balances + transactions + costs)
-
-- /api/wallet/packs/
-  Method: GET
-  Purpose: coin packs catalog
-
-- /api/wallet/buy/
-  Method: POST
-  Purpose: submit coin purchase request with payment proof images
-
-- /api/wallet/grant/
-  Method: POST (admin)
-  Purpose: manual coin grant
-
-- /api/wallet/purchases/{purchase_id}/approve/
-  Method: POST (admin)
-  Purpose: approve pending purchase and credit user
-
-9) DEVICE REGISTRATION (EXTRA ROOT)
-------------------------------------
-- /api/devices/
-- /api/devices/devices/
-  Purpose: FCM device registration endpoint group from root router
-
-10) MEDIA
+9) WALLET
 ---------
-- /media/{path}
-  Purpose: uploaded files served in DEBUG mode
+- /api/wallet/
+- /api/wallet/packs/
+- /api/wallet/buy/
+- /api/wallet/grant/
+- /api/wallet/purchases/{purchase_id}/approve/
+- /api/wallet/purchases/{purchase_id}/reject/
 
-Last reviewed: 2026-03-23 (updated to current code state).
+10) DEEP LINKS / SHORT LINKS
+----------------------------
+- /s/{store_id}/ -> redirects to wino://store/{store_id}
+- /p/{product_id}/ -> redirects to wino://product/{product_id}
+
+11) MEDIA
+---------
+- /media/{path} (served when DEBUG=True)
+
+Last reviewed: 2026-03-23.

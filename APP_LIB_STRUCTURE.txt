@@ -1,26 +1,15 @@
 .
 ├── core
 │   ├── components
-│   │   ├── blur_container.dart
-│   │   ├── check_mark.dart
-│   │   ├── custom_modal_bottom_sheet.dart
-│   │   ├── dot_indicators.dart
-│   │   ├── network_image_with_loader.dart
-│   │   ├── product
-│   │   │   ├── primary_product_card.dart
-│   │   │   └── secondary_product_card.dart
-│   │   └── skeleton_loader.dart
 │   ├── config
 │   │   ├── api_config.dart
 │   │   └── app_config.dart
 │   ├── constants
-│   │   ├── algeria_wilayas_baladiat.dart
-│   │   ├── app_constants.dart
-│   │   └── assets_paths.dart
 │   ├── providers
 │   │   ├── analytics_provider.dart
 │   │   ├── auth_provider.dart
 │   │   ├── home_provider.dart
+│   │   ├── locale_provider.dart
 │   │   ├── pack_provider.dart
 │   │   ├── post_provider.dart
 │   │   ├── store_provider.dart
@@ -32,6 +21,7 @@
 │   │   ├── analytics_api_service.dart
 │   │   ├── api_service.dart
 │   │   ├── auth_service.dart
+│   │   ├── deep_link_service.dart
 │   │   ├── favorites_change_notifier.dart
 │   │   ├── follow_change_notifier.dart
 │   │   ├── location_service.dart
@@ -43,65 +33,27 @@
 │   │   ├── subscription_service.dart
 │   │   └── wallet_service.dart
 │   ├── theme
-│   │   ├── app_colors.dart
-│   │   ├── app_constants.dart
-│   │   ├── app_decorations.dart
-│   │   ├── app_input_decorations.dart
-│   │   ├── app_text_styles.dart
-│   │   ├── app_theme.dart
-│   │   ├── button_styles.dart
-│   │   ├── card_dimensions.dart
-│   │   └── card_styles.dart
 │   ├── utils
-│   │   ├── app_logger.dart
-│   │   ├── geolocation_stub.dart
-│   │   ├── geolocation_web.dart
-│   │   ├── helpers.dart
-│   │   ├── jwt_validator.dart
-│   │   └── version_notifier.dart
 │   └── widgets
-│       ├── app_button.dart
-│       ├── app_text_field.dart
-│       ├── app_toggle_button.dart
-│       ├── cards
-│       │   └── base_item_card.dart
-│       └── premium_ui_components.dart
 ├── data
 │   ├── dummy
-│   │   ├── dummy_stores.dart
-│   │   └── store_model.dart
 │   ├── models
-│   │   ├── category_model.dart
-│   │   ├── offer_model.dart
-│   │   ├── pack_model.dart
-│   │   ├── post_model.dart
-│   │   ├── product_model.dart
-│   │   ├── review_model.dart
-│   │   ├── subscription_plan_model.dart
-│   │   └── user_model.dart
 │   └── repositories
-│       ├── auth_repository.dart
-│       ├── post_repository.dart
-│       └── store_repository.dart
 ├── features
 │   ├── analytics
-│   │   ├── analytics_export.dart
-│   │   ├── models
-│   │   │   └── recommendation_item.dart
-│   │   └── widgets
-│   │       ├── recommendations_list.dart
-│   │       ├── search_tracker.dart
-│   │       └── view_tracker.dart
 │   ├── catalog
-│   │   └── screens
 │   ├── notifications
-│   │   └── notification_screen.dart
 │   └── product
+├── l10n
+│   ├── app_ar.arb
+│   ├── app_en.arb
+│   └── app_fr.arb
 ├── main.dart
 └── presentation
     ├── auth
     ├── common
     ├── favorites
+    ├── feedback
     ├── home
     ├── notifications
     ├── pack
@@ -115,8 +67,10 @@
     └── wallet
 
 Notes:
-- Navigation style is still custom `RouteGenerator` + named routes.
-- `go_router` exists in dependencies but is not the active routing layer.
-- Wallet screens/services/providers are now part of the live app architecture.
+- Active navigation is custom RouteGenerator + named routes.
+- go_router is present in dependencies but not the active routing layer.
+- Locale switching (AR/EN/FR) is wired through LocaleProvider + StorageService.
+- Deep links handled by DeepLinkService (HTTP short-links + wino scheme).
+- Flutter project is now Android-only at platform folder level.
 
 Last reviewed: 2026-03-23.

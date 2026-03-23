@@ -2,23 +2,23 @@ WEB SERVER (app-backend)
 ========================
 Path: /home/anti-problems/toprice/app-backend
 
-1) Libraries (Python requirements)
+1) Libraries (requirements)
 - Django==5.0.6
 - djangorestframework==3.15.2
 - djangorestframework-simplejwt==5.3.1
 - django-filter==24.2
 - django-cors-headers==4.4.0
+- django-jazzmin==2.6.0
 - Pillow==10.3.0
 - pillow-heif==0.16.0
-- django-jazzmin==2.6.0
-- fcm-django==2.3.1
-- psycopg2-binary==2.9.9
 - celery==5.4.0
 - redis==5.0.3
+- fcm-django==2.3.1
 - firebase-admin==6.5.0
 - twilio==9.3.7
+- psycopg2-binary==2.9.9
 
-2) Installed app modules (features)
+2) Installed backend modules
 - users
 - catalog
 - ads
@@ -26,8 +26,10 @@ Path: /home/anti-problems/toprice/app-backend
 - subscriptions
 - wallet
 - analytics
+- feedback
+- common (middleware/helpers)
 
-3) API route groups (from backend/urls.py)
+3) API groups
 - /api/users/
 - /api/catalog/
 - /api/ads/
@@ -35,124 +37,72 @@ Path: /home/anti-problems/toprice/app-backend
 - /api/subscriptions/
 - /api/wallet/
 - /api/analytics/
+- /api/feedback/
 - /api/devices/
 - /api/auth/token/
 - /api/auth/token/refresh/
+- /s/{id}/ and /p/{id}/ short links
 
-4) Extra server capabilities configured
-- JWT authentication + token refresh rotation (SimpleJWT)
-- Filtering/search/ordering (django-filter + DRF filters)
-- FCM device registration (fcm-django)
-- Celery + Redis background tasks (task eager mode in DEBUG)
-- Firebase Admin SDK integration
-- Twilio OTP integration exists (WhatsApp/SMS)
-  - Current dev/testing mode: OTP delivery is disabled and OTP code is fixed in code
-- Coin economy + wallet purchase approvals
-- Daily login coin top-up logic controlled by admin settings
+4) Notable backend capabilities
+- JWT auth + refresh rotation
+- DRF filtering/search/ordering
+- Scoped rate throttling (OTP, reports, analytics, feedback, payment requests)
+- FCM device registration + notification support
+- Wallet purchases with admin approve/reject
+- Trust scoring + abuse signals + moderation snapshot
+- Feedback workflow with optional screenshot
 
-5) Important backend model notes
-- Store == User (no separate Store model)
-- Global runtime settings model: users.SystemSettings
-  - first_login_coins
-  - daily_login_coins
-- User has monetization fields:
-  - coins_balance
-  - post_coins
-  - ad_view_coins
-  - last_daily_coin_grant
+5) Backend model/business highlights
+- Store == User
+- SystemSettings controls coin policy
+- TrustSettings controls trust/abuse policy
+- User includes verification fields (`is_verified`, `verification_status`)
 
 
 ANDROID/FLUTTER APP (the_app)
 =============================
 Path: /home/anti-problems/toprice/the_app
 
-1) Flutter/Dart libraries (pubspec dependencies)
+1) Platform scope
+- Android-only project folders retained.
+- ios/web/macos/linux/windows folders removed.
+
+2) Main Flutter dependencies
 - flutter (sdk)
 - flutter_localizations (sdk)
-- cupertino_icons
-- equatable
 - intl
 - provider
 - shared_preferences
 - flutter_secure_storage
 - http
-- jwt_decoder
 - image_picker
 - geolocator
 - local_auth
 - url_launcher
 - share_plus
-- haptic_feedback
-- google_fonts
-- font_awesome_flutter
-- flutter_animate
-- cached_network_image
-- shimmer
-- glassmorphism
-- flutter_glow
-- flutter_neumorphic_plus
-- flutter_gradient_colors
-- lottie
-- animated_text_kit
-- flutter_staggered_animations
-- spring
-- dropdown_button2
-- flutter_carousel_widget
-- smooth_page_indicator
-- flutter_rating_bar
-- pull_to_refresh
-- flutter_slidable
-- flutter_staggered_grid_view
-- sticky_headers
-- visibility_detector
-- flutter_cache_manager
-- extended_image
-- photo_view
-- flutter_blurhash
-- go_router (in dependencies but project still uses custom route generator)
+- app_links
+- mobile_scanner
+- qr_flutter
 - firebase_core
 - firebase_messaging
 - flutter_local_notifications
-- flutter_otp_text_field
+- go_router (installed but not active router)
 
-2) Android-native/Gradle libraries and plugins
-- Plugin: com.google.gms.google-services (v4.4.4)
-- Firebase BoM: com.google.firebase:firebase-bom:34.9.0
-- Firebase Analytics: com.google.firebase:firebase-analytics
-- Desugaring: com.android.tools:desugar_jdk_libs:2.0.4
+3) Android/Gradle side
+- Plugin: com.google.gms.google-services
+- Firebase BoM + Analytics
+- desugar_jdk_libs enabled
 
-3) App feature modules (lib/features)
-- analytics
-- catalog
-- notifications
-- product
+4) Current app architecture highlights
+- core / data / features / presentation layering
+- custom RouteGenerator + named routes
+- locale provider (AR/EN/FR) persisted in storage
+- deep link service for `wino://` and short-link paths
+- feedback screens added (send/my/scan)
 
-4) App presentation feature areas (lib/presentation)
-- auth
-- common
-- favorites
-- home
-- notifications
-- pack
-- product
-- profile
-- promotion
-- search
-- shared_widgets
-- store
-- subscription
-- wallet
+5) App config notes
+- Base URL in `api_config.dart`: http://192.168.36.21:8000/
+- Store endpoints alias users endpoints (`stores == users`)
+- APIs now include feedback + trust signals + extended subscription/wallet flows
 
-5) Core app libraries/modules (lib)
-- core
-- data
-- features
-- presentation
-
-6) Important app config notes
-- API base URL currently in api_config.dart:
-  - http://192.168.162.21:8000/
-- App route alias keeps: stores == users endpoint
-- Wallet and ads endpoints are configured and used in app services/screens
-
-Last reviewed: 2026-03-23 (updated to match current backend/app implementation).
+Last reviewed: 2026-03-23.

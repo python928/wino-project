@@ -2,61 +2,48 @@
 آخر مراجعة: 23-03-2026
 
 ## 1) نواقص حرجة قبل النشر
-- إعدادات الإنتاج ما تزال غير آمنة في `backend/settings.py`:
-  - `DEBUG=True`
-  - `ALLOWED_HOSTS=["*"]`
-  - `CORS_ALLOW_ALL_ORIGINS=True`
-  - `SECRET_KEY` ثابت داخل الكود
-- لا يوجد فصل قوي بين إعدادات dev/prod (ملف إعداد إنتاج مستقل + env validation إلزامي).
-- لا توجد مراقبة أخطاء إنتاجية (Sentry/بديل) ولا trace/APM لزمن استجابة API.
-- لا يوجد runbook واضح للطوارئ (rotate keys, revoke tokens, restore DB).
-- OTP حاليا في وضع testing (كود ثابت + تعطيل الإرسال) ويجب تفعيله بشكل آمن قبل الإنتاج.
+- الإعدادات أصبحت env-driven في `backend/settings.py` لكن القيم الافتراضية ما زالت development-friendly:
+  - `DJANGO_DEBUG` default=True
+  - `ALLOWED_HOSTS` مرن في وضع debug
+  - `DJANGO_SECRET_KEY` fallback تطويري
+- OTP ما يزال في وضع dev/testing (بحسب منطق الخدمات الحالي).
+- غياب monitoring production متكامل (Sentry/APM/alerting).
+- لا يوجد runbook مكتمل للطوارئ (keys rotation / DB restore / incident process).
 
-## 2) ما تم تحسينه مؤخرا (بالمقارنة مع المراجعات السابقة)
-- تم إضافة CI فعلي في `.github/workflows/ci.yml`:
-  - `python manage.py check`
-  - `flutter analyze`
-- إضافة منظومة `wallet` (شراء/موافقة على شراء العملات).
-- إضافة منظومة `ads` كـ app مستقل بدل الاعتماد على promotions فقط.
-- إضافة `SystemSettings` في admin للتحكم بـ:
-  - عملات التسجيل الأول
-  - حد عملات تسجيل الدخول اليومي
-- إضافة top-up يومي للعملات في `/api/users/me/` كل 24 ساعة عند النزول تحت الحد.
+## 2) ما تم تحسينه مؤخرا
+- إضافة `feedback` app (API + screens).
+- إضافة `trust-signals` endpoint وطبقة trust scoring.
+- إضافة anti-abuse throttles/cooldowns.
+- إضافة short links `/s/{id}` و`/p/{id}`.
+- توحيد subscriptions routes: plans + payment-requests + merchant-subscriptions.
+- تحويل Flutter لمنصات Android-only (حذف ios/web/desktop folders).
+- تأسيس localization AR/EN/FR + `flutter generate` + l10n yaml.
 
-## 3) نواقص مهمة في الجودة والاتساق
-- تغطية الاختبارات ما تزال أقل من المطلوب مقارنة بحجم الميزات الجديدة (ads/wallet/subscriptions).
-- توجد احتمالية عدم اتساق بين app config والـ backend routes:
-  - التطبيق يستهلك مسارات اشتراك مثل `/plans/` و`/payment-requests/`
-  - لكن `subscriptions/urls.py` الحالي لا يعرّفها بعد
-- كثرة ملفات patch/debug المؤقتة في repo الجذر داخل `app-backend/` و`the_app/` تحتاج تنظيف.
-- تحتاج مراجعة migration history خاصة users/ads للتأكد من ترتيب نظيف قبل release.
+## 3) نواقص جودة واتساق
+- تغطية الاختبارات أقل من المطلوب مقارنة بحجم الميزات الجديدة.
+- لا تزال نصوص UI كثيرة hardcoded وتحتاج إكمال migration إلى ARB.
+- وجود Directionality/locale edge cases في بعض الشاشات يحتاج توحيد نهائي.
+- بعض ملفات التوثيق كانت متأخرة وتم تحديثها بهذه الدفعة.
 
-## 4) نواقص في تجربة المستخدم (جاهزية إنتاج)
-- تحسين رسائل الخطأ في حالات OTP (rate limit / expired / wrong code) لرفع الوضوح UX.
-- استكمال empty/loading/error states في بعض شاشات wallet/ads dashboard.
-- اختبار شامل لتزامن الرصيد (wallet + daily top-up + posting costs) عبر كل مسارات الاستخدام.
+## 4) نواقص UX
+- تحسين empty/loading/error states في wallet/ads/feedback وبعض تدفقات profile.
+- تبسيط رسائل أخطاء OTP/Permissions لرفع الوضوح.
+- تحسين first-run language experience قبل تسجيل الدخول.
 
-## 5) نواقص في التحليلات والتوصية
-- النظام جيد تشغيليا لكنه يحتاج إطار قياس رسمي:
-  - Precision@K / Recall@K / NDCG@K
-  - KPI dashboard لتأثير ads على CTR/Conversion
-- فصل أوضح بين events التي تأتي من التطبيق وevents المشتقة server-side للتتبع والتحليل.
+## 5) نواقص التحليلات
+- لا يوجد إطار KPI رسمي منشور داخل النظام (Precision@K/NDCG@K وغيرها).
+- حاجة إلى dashboard متابعة أداء ads + recommendation impact.
 
-## 6) أولويات التنفيذ المقترحة (مرتبة)
-1. إغلاق ثغرات إعدادات الإنتاج والأسرار (أولوية قصوى).
-2. إصلاح/توحيد routes الاشتراكات بين backend وFlutter config.
-3. توسيع الاختبارات الحرجة:
-   - Auth + OTP + JWT refresh
-   - Wallet buy/approve
-   - Ads create/list/click + limits
-   - Subscription access-status/dashboard
-4. إضافة مراقبة أخطاء وأداء (Sentry + basic APM/log correlation ids).
-5. تنظيف ملفات patch المؤقتة قبل أي tag/release.
+## 6) أولويات التنفيذ (مرتبة)
+1. Production hardening كامل + secrets policy.
+2. Monitoring + alerting + log correlation.
+3. توسيع الاختبارات الحرجة (Auth/OTP/Wallet/Ads/Subscriptions/Feedback).
+4. إكمال localization coverage على كل presentation layer.
+5. تحسين dashboard trader KPIs.
 
-## 7) تعريف "جاهز للنشر" (Definition of Done)
-- إعدادات الأمن الإنتاجية مفعلة بالكامل عبر env.
-- CI يمر بالكامل في كل Push/PR.
-- مسارات التطبيق والباك اند متطابقة ومثبتة باختبارات تكامل.
-- منظومة wallet/ads/subscription مدعومة باختبارات حرجة.
-- مراقبة الأخطاء والأداء فعّالة.
-- خطة نسخ احتياطي واسترجاع مجربة فعليا.
+## 7) Definition of Done للإطلاق
+- إعدادات أمان production مفعلة بالكامل عبر env.
+- CI يمر بالكامل على كل PR.
+- المسارات متطابقة ومثبتة باختبارات تكامل.
+- Monitoring فعّال مع baseline alerts.
+- توثيق تشغيلي محدث (runbook + recovery procedure).

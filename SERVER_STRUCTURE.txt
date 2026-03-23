@@ -5,117 +5,39 @@
 │   ├── copilot-instructions.md
 │   └── workflows
 │       └── ci.yml
-├── Dockerfile
-├── README.md
-├── ads
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations
-├── analytics
-│   ├── CHECKLIST.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── management
-│   │   └── commands
-│   │       ├── seed_analytics.py
-│   │       └── update_profiles.py
-│   ├── models.py
-│   ├── recommendations.py
-│   ├── scoring.py
-│   ├── serializers.py
-│   ├── signals.py
-│   ├── urls.py
-│   ├── utils.py
-│   ├── views.py
-│   └── migrations
-├── backend
-│   ├── asgi.py
-│   ├── celery.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── catalog
-│   ├── admin.py
-│   ├── apps.py
-│   ├── management
-│   │   └── commands
-│   │       └── verify_search.py
-│   ├── models.py
-│   ├── search_engine.py
-│   ├── serializers.py
-│   ├── tests.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations
-├── config
-│   ├── settings.py
-│   └── urls.py
-├── db.sqlite3
-├── docker-compose.yml
-├── firebase-adminsdk.json (local)
-├── manage.py
-├── media
-│   ├── products
-│   ├── subscriptions
-│   │   └── payment_proofs
-│   ├── users
-│   │   ├── covers
-│   │   └── profiles
-│   └── wallet
-├── notifications
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── services.py
-│   ├── tasks.py
-│   ├── tests.py
-│   ├── urls.py
-│   ├── utils.py
-│   ├── views.py
-│   └── migrations
-├── requirements.txt
-├── subscriptions
-│   ├── admin.py
-│   ├── apps.py
-│   ├── constants.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── services.py
-│   ├── static
-│   │   └── subscriptions
-│   │       ├── admin_tabs.css
-│   │       └── admin_tabs.js
-│   ├── tests.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations
-├── users
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── services.py
-│   ├── tests.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations
-└── wallet
-    ├── admin.py
-    ├── apps.py
-    ├── models.py
-    ├── serializers.py
-    ├── services.py
-    ├── urls.py
-    ├── views.py
-    └── migrations
+├── app-backend
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── db.sqlite3
+│   ├── docker-compose.yml
+│   ├── firebase-adminsdk.json (local)
+│   ├── backend/
+│   ├── config/
+│   ├── common/
+│   ├── users/
+│   ├── catalog/
+│   ├── ads/
+│   ├── notifications/
+│   ├── subscriptions/
+│   ├── wallet/
+│   ├── analytics/
+│   ├── feedback/
+│   └── media/
+└── the_app
+    ├── android/
+    ├── assets/
+    ├── lib/
+    ├── test/
+    ├── l10n.yaml
+    ├── pubspec.yaml
+    ├── pubspec.lock
+    └── README.md
 
 Key architecture notes (2026-03-23):
-- Store model is unified into users.User (Store == User).
-- Ads are a dedicated app (`ads`) and no longer only a promotions sub-mode.
-- Wallet/coins are a dedicated app (`wallet`) with purchase-approval flow.
-- CI workflow exists at `.github/workflows/ci.yml`.
+- Store model is unified into `users.User` (Store == User).
+- Ads, wallet, analytics, feedback are first-class apps.
+- Subscriptions routes include plans + payment-requests + merchant-subscriptions.
+- Short deep links exist at backend root: `/s/{id}` and `/p/{id}`.
+- Flutter project is Android-only at platform-folder level.
