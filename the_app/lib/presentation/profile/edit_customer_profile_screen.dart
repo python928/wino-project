@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/config/api_config.dart';
@@ -457,8 +457,8 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                         children: [
                           Text(
                             hasLocation
-                                ? '$_selectedBaladiya, $_selectedWilaya'
-                                : 'Select your location',
+                                ? '${context.tr(_selectedBaladiya!)}, ${context.tr(_selectedWilaya!)}'
+                                : context.tr('Select your location'),
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: hasLocation
                                   ? AppColors.textPrimary
@@ -468,8 +468,8 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
                           ),
                           Text(
                             hasLocation
-                                ? 'Tap to change'
-                                : 'Tap to choose location',
+                                ? context.tr('Tap to change')
+                                : context.tr('Tap to choose location'),
                             style: AppTextStyles.bodySmall
                                 .copyWith(color: AppColors.textSecondary),
                           ),

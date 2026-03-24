@@ -1,4 +1,6 @@
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
@@ -17,6 +19,17 @@ class HeaderLocationWidget extends StatelessWidget {
     this.onNotificationTap,
   });
 
+  String _localizedLocation(BuildContext context, String raw) {
+    if (raw.trim().isEmpty || raw.trim() == '/') return raw;
+    final parts = raw
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .map(context.tr)
+        .toList();
+    return parts.isEmpty ? context.tr(raw) : parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -29,7 +42,7 @@ class HeaderLocationWidget extends StatelessWidget {
         children: [
           // Notification Bell
           _buildNotificationButton(),
-          
+
           // Location Info
           Expanded(
             child: GestureDetector(
@@ -38,7 +51,7 @@ class HeaderLocationWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Your current location',
+                    context.tr('Your current location'),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textHint,
                     ),
@@ -55,7 +68,7 @@ class HeaderLocationWidget extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          currentLocation,
+                          _localizedLocation(context, currentLocation),
                           style: AppTextStyles.h4,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -66,9 +79,9 @@ class HeaderLocationWidget extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(width: AppTheme.spacing12),
-          
+
           // Location Icon Box
           Container(
             padding: const EdgeInsets.all(10),

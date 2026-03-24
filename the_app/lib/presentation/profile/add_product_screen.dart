@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -99,11 +99,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<void> _openCategoryPicker() async {
     if (_loadingCategories) {
-      Helpers.showSnackBar(context, 'Loading categories, please wait...');
+      Helpers.showSnackBar(
+        context,
+        context.tr('Loading categories, please wait...'),
+      );
       return;
     }
     if (_categories.isEmpty) {
-      Helpers.showSnackBar(context, 'No categories available');
+      Helpers.showSnackBar(context, context.tr('No categories available'));
       return;
     }
 
@@ -230,12 +233,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
     try {
       await context.read<PostProvider>().deletePost(product.id);
       if (mounted) {
-        Helpers.showSnackBar(context, 'Product deleted successfully');
+        Helpers.showSnackBar(
+          context,
+          context.tr('Product deleted successfully'),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to delete product: $e');
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete product')}: $e',
+          isError: true,
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -253,7 +263,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Error selecting images', isError: true);
+        Helpers.showSnackBar(
+          context,
+          context.tr('Error selecting images'),
+          isError: true,
+        );
       }
     }
   }
@@ -263,17 +277,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (!_hasProfileLocation()) {
       Helpers.showSnackBar(
         context,
-        'Set your location area or GPS in Edit Profile before posting.',
+        context.tr(
+            'Set your location area or GPS in Edit Profile before posting.'),
         isError: true,
       );
       return;
     }
     if (_images.isEmpty) {
-      Helpers.showSnackBar(context, 'Please add at least one image');
+      Helpers.showSnackBar(
+          context, context.tr('Please add at least one image'));
       return;
     }
     if (_selectedCategoryIds.isEmpty) {
-      Helpers.showSnackBar(context, 'Please select a category');
+      Helpers.showSnackBar(context, context.tr('Please select a category'));
       return;
     }
 
@@ -282,19 +298,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     // Resolve selected category name
     final selectedId =
         _selectedCategoryIds.isEmpty ? null : _selectedCategoryIds.first;
-    final selectedNames = selectedId == null
-        ? <String>[]
-        : [
-            () {
-              try {
-                return _categories.firstWhere((c) => c.id == selectedId).name;
-              } catch (_) {
-                return '';
-              }
-            }()
-          ].where((n) => n.isNotEmpty).toList();
-    final primaryCategoryName =
-        selectedNames.isNotEmpty ? selectedNames.first : '';
+    final primaryCategoryRef = selectedId?.toString() ?? '';
 
     try {
       final provider = Provider.of<PostProvider>(context, listen: false);
@@ -313,7 +317,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           title: _titleController.text,
           description: _descriptionController.text,
           price: price,
-          category: primaryCategoryName,
+          category: primaryCategoryRef,
           isAvailable: _isAvailable,
           hidePrice: !_showPrice,
           newImages: newFiles,
@@ -323,7 +327,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         );
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'Product updated successfully');
+          Helpers.showSnackBar(
+            context,
+            context.tr('Product updated successfully'),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -331,7 +338,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           title: _titleController.text,
           description: _descriptionController.text,
           price: price,
-          category: primaryCategoryName,
+          category: primaryCategoryRef,
           images: _images.whereType<XFile>().toList(),
           isAvailable: _isAvailable,
           isNegotiable: false,
@@ -342,7 +349,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
         if (mounted) {
           await context.read<WalletProvider>().fetchWallet();
-          Helpers.showSnackBar(context, 'Product published successfully');
+          Helpers.showSnackBar(
+            context,
+            context.tr('Product published successfully'),
+          );
           Navigator.pop(context, true);
         }
       }
@@ -359,7 +369,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         }
         Helpers.showSnackBar(
           context,
-          'Failed to ${_isEditMode ? 'update' : 'publish'} product: $e',
+          '${context.tr('Failed to')} ${context.tr(_isEditMode ? 'update' : 'publish')} ${context.tr('product')}: $e',
+          isError: true,
         );
       }
     } finally {
@@ -427,8 +438,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Image Section
-                      const Text(
-                        'Product Images',
+                      Text(
+                        context.tr('Product Images'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -440,7 +451,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       const SizedBox(height: 8),
                       Center(
                         child: Text(
-                          'You can add up to 5 product images',
+                          context.tr('You can add up to 5 product images'),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[500],
@@ -452,11 +463,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       // Product Name
                       AppTextField(
                         controller: _titleController,
-                        label: 'Product Name',
-                        hint: 'Enter product name',
+                        label: context.tr('Product Name'),
+                        hint: context.tr('Enter product name'),
                         icon: Icons.inventory_2_outlined,
                         validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter product name'
+                            ? context.tr('Please enter product name')
                             : null,
                       ),
                       const SizedBox(height: 16),
@@ -468,15 +479,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ignoring: !_showPrice,
                           child: AppTextField(
                             controller: _priceController,
-                            label: 'Price',
+                            label: context.tr('Price'),
                             hint: '0',
                             icon: Icons.payments_outlined,
                             keyboardType: TextInputType.number,
-                            suffixText: 'DZD',
+                            suffixText: context.tr('DZD'),
                             validator: (value) {
                               if (!_showPrice) return null;
                               if (value == null || value.isEmpty) {
-                                return 'Please enter price';
+                                return context.tr('Please enter price');
                               }
                               return null;
                             },
@@ -492,8 +503,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       // Description
                       AppTextField(
                         controller: _descriptionController,
-                        label: 'Description',
-                        hint: 'Add product description..',
+                        label: context.tr('Description'),
+                        hint: context.tr('Add product description..'),
                         icon: Icons.description_outlined,
                         maxLines: 3,
                         textInputAction: TextInputAction.newline,
@@ -503,8 +514,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(context.tr('Show Price')),
-                        subtitle: const Text(
-                          'Show price to customers in listings',
+                        subtitle: Text(
+                          context.tr('Show price to customers in listings'),
                         ),
                         value: _showPrice,
                         onChanged: (value) {
@@ -515,8 +526,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(context.tr('Available')),
-                        subtitle: const Text(
-                          'Is the product available for sale?',
+                        subtitle: Text(
+                          context.tr('Is the product available for sale?'),
                         ),
                         value: _isAvailable,
                         onChanged: (value) {
@@ -551,8 +562,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   width: double.infinity,
                   child: AppPrimaryButton(
                     text: _isLoading
-                        ? (_isEditMode ? 'Saving...' : 'Publishing...')
-                        : (_isEditMode ? 'Save Changes' : 'Publish Product'),
+                        ? (_isEditMode
+                            ? context.tr('Saving...')
+                            : context.tr('Publishing...'))
+                        : (_isEditMode
+                            ? context.tr('Save Changes')
+                            : context.tr('Publish Product')),
                     icon: Icons.add,
                     isLoading: _isLoading,
                     onPressed: _isLoading ? null : _submit,
@@ -782,7 +797,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Loading categories...',
+                          context.tr('Loading categories...'),
                           style: TextStyle(
                             color: Colors.grey[400],
                             fontSize: 14,
@@ -820,7 +835,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           }).toList(),
                         )
                       : Text(
-                          'Select category',
+                          context.tr('Select category'),
                           style:
                               TextStyle(color: Colors.grey[400], fontSize: 14),
                         ),
@@ -857,12 +872,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Add Images',
+                context.tr('Add Images'),
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
-                'Tap to upload',
+                context.tr('Tap to upload'),
                 style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
             ],
@@ -933,7 +948,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       children: [
                         Icon(Icons.add, size: 24, color: Colors.grey[500]),
                         Text(
-                          'Add',
+                          context.tr('Add'),
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,

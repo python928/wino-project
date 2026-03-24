@@ -717,10 +717,14 @@ class ApiService {
           // If it's a list of errors (DRF standard)
           final buffer = StringBuffer();
           error.forEach((key, value) {
+            final isNonField =
+                key == 'non_field_errors' || key == '__all__' || key == 'non_field_error';
             if (value is List) {
-              buffer.writeln('$key: ${value.join(", ")}');
+              final line = value.map((v) => v.toString()).join(', ');
+              buffer.writeln(isNonField ? line : '$key: $line');
             } else {
-              buffer.writeln('$key: $value');
+              final line = value.toString();
+              buffer.writeln(isNonField ? line : '$key: $line');
             }
           });
           if (buffer.isNotEmpty) {

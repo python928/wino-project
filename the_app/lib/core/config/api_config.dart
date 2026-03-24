@@ -1,13 +1,14 @@
 import 'dart:io';
 
+import 'package:dzlocal_shop/core/services/storage_service.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.254.21:8000/';
-    if (Platform.isAndroid) return 'http://192.168.254.21:8000/';
-    return 'http://192.168.254.21:8000/';
+    if (kIsWeb) return 'http://192.168.184.21:8000/';
+    if (Platform.isAndroid) return 'http://192.168.184.21:8000/';
+    return 'http://192.168.184.21:8000/';
   }
 
   // API prefix
@@ -134,9 +135,11 @@ class ApiConfig {
 
   // Headers
   static Map<String, String> getHeaders({String? token}) {
+    final appLanguage = StorageService.getLanguage();
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Accept-Language': appLanguage,
     };
 
     if (token != null && token.isNotEmpty) {
@@ -147,8 +150,10 @@ class ApiConfig {
   }
 
   static Map<String, String> getMultipartHeaders({String? token}) {
+    final appLanguage = StorageService.getLanguage();
     final headers = {
       'Accept': 'application/json',
+      'Accept-Language': appLanguage,
     };
 
     if (token != null && token.isNotEmpty) {

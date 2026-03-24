@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/services/notification_badge_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -36,6 +36,17 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onRadiusChanged,
     this.isNearbyLoading = false,
   });
+
+  String _localizedLocation(BuildContext context, String raw) {
+    if (raw.trim().isEmpty || raw.trim() == '/') return raw;
+    final parts = raw
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .map(context.tr)
+        .toList();
+    return parts.isEmpty ? context.tr(raw) : parts.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +97,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                         cityLabel: (location != null &&
                                 location!.isNotEmpty &&
                                 location != '/')
-                            ? location!
+                            ? _localizedLocation(context, location!)
                             : context.tr('City'),
                         nearbyLabel: radiusKm != null
                             ? '${radiusKm!.toInt()} ${context.tr('km')}'

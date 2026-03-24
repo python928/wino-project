@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
 
@@ -40,8 +41,7 @@ class ContactActionRow extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
                 foregroundColor: Colors.white,
-                padding:
-                    EdgeInsets.symmetric(vertical: buttonVerticalPadding),
+                padding: EdgeInsets.symmetric(vertical: buttonVerticalPadding),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -61,8 +61,7 @@ class ContactActionRow extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.green.shade700,
                 side: BorderSide(color: Colors.green.shade400),
-                padding:
-                    EdgeInsets.symmetric(vertical: buttonVerticalPadding),
+                padding: EdgeInsets.symmetric(vertical: buttonVerticalPadding),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -78,7 +77,7 @@ class ContactActionRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
+          context.tr(title),
           style: titleStyle ??
               const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),

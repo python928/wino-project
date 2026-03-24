@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -194,7 +194,11 @@ class _AddPackScreenState extends State<AddPackScreen> {
   void _addProductToPack(Post product) {
     final provider = context.read<PackProvider>();
     if (provider.selectedProducts.any((p) => p.id == product.id)) {
-      Helpers.showSnackBar(context, 'This product already exists in the pack');
+      Helpers.showSnackBar(
+        context,
+        context.tr('This product already exists in the pack'),
+        isError: true,
+      );
       return;
     }
     HapticFeedback.lightImpact();
@@ -238,34 +242,34 @@ class _AddPackScreenState extends State<AddPackScreen> {
     final provider = context.read<PackProvider>();
     setState(() => _formError = null);
     if (!_hasProfileLocation()) {
-      setState(() => _formError =
-          'Set your location area or GPS in Edit Profile before posting.');
+      setState(() => _formError = context
+          .tr('Set your location area or GPS in Edit Profile before posting.'));
       return;
     }
     if (provider.selectedProducts.isEmpty) {
-      setState(() => _formError = 'Select pack products first');
+      setState(() => _formError = context.tr('Select pack products first'));
       return;
     }
     if (_packNameController.text.trim().isEmpty) {
-      setState(() => _formError = 'Enter pack name');
+      setState(() => _formError = context.tr('Enter pack name'));
       return;
     }
     if (_packPriceController.text.isEmpty ||
         double.tryParse(_packPriceController.text) == null) {
-      setState(() => _formError = 'Enter pack sale price');
+      setState(() => _formError = context.tr('Enter pack sale price'));
       return;
     }
     final enteredPrice = double.tryParse(_packPriceController.text) ?? 0.0;
     if (enteredPrice >= provider.totalPrice) {
-      setState(() => _formError =
-          'Pack price must be less than the total price of products');
+      setState(() => _formError = context
+          .tr('Pack price must be less than the total price of products'));
       return;
     }
     final auth = context.read<AuthProvider>();
     final userId = auth.user?.id;
 
     if (userId == null) {
-      setState(() => _formError = 'Must login first');
+      setState(() => _formError = context.tr('Must login first'));
       return;
     }
 
@@ -275,7 +279,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
       final store = await storeProvider.getMyStore(userId);
 
       if (store == null) {
-        setState(() => _formError = 'No store found for this user');
+        setState(() => _formError = context.tr('No store found for this user'));
         return;
       }
 
@@ -296,7 +300,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
         );
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'Pack updated successfully');
+          Helpers.showSnackBar(
+              context, context.tr('Pack updated successfully'));
           Navigator.pop(context, true);
         }
       } else {
@@ -311,7 +316,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
         );
         if (mounted) {
           await context.read<WalletProvider>().fetchWallet();
-          Helpers.showSnackBar(context, 'Pack published successfully');
+          Helpers.showSnackBar(
+              context, context.tr('Pack published successfully'));
           Navigator.pop(context, true);
         }
       }
@@ -327,7 +333,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
           return;
         }
         setState(() => _formError =
-            'Error during publishing: ${provider.error ?? e.toString()}');
+            '${context.tr('Error during publishing')}: ${provider.error ?? e.toString()}');
       }
     }
   }
@@ -378,21 +384,22 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     },
                   ),
                   if (selected.isEmpty)
-                    const Center(
+                    Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_basket_outlined,
+                          const Icon(Icons.shopping_basket_outlined,
                               size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
-                            'You haven\'t added any products to the pack yet',
-                            style: TextStyle(color: Colors.grey),
+                            context.tr(
+                                'You haven\'t added any products to the pack yet'),
+                            style: const TextStyle(color: Colors.grey),
                             textAlign: TextAlign.center,
                           ),
                           Text(
-                            'Use the search above to add products',
-                            style: TextStyle(color: Colors.grey),
+                            context.tr('Use the search above to add products'),
+                            style: const TextStyle(color: Colors.grey),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -505,7 +512,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
               Expanded(
                 flex: 2,
                 child: Text(
-                  '${total.toStringAsFixed(0)} DZD',
+                  '${total.toStringAsFixed(0)} ${context.tr('DZD')}',
                   textAlign: TextAlign.end,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 12),
@@ -544,8 +551,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                 children: [
                   AppTextField(
                     controller: _packNameController,
-                    label: 'Pack Name *',
-                    hint: 'Enter pack name',
+                    label: context.tr('Pack Name *'),
+                    hint: context.tr('Enter pack name'),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -565,10 +572,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
                       Expanded(
                         child: AppTextField(
                           controller: _packPriceController,
-                          label: 'Pack Sale Price',
+                          label: context.tr('Pack Sale Price'),
                           hint: '0',
                           keyboardType: TextInputType.number,
-                          suffixText: 'DZD',
+                          suffixText: context.tr('DZD'),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -620,8 +627,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                         label: Text(
                           _deliveryAreas != null &&
                                   _deliveryAreas!.selectedWilayas.isNotEmpty
-                              ? 'Delivery areas: ${_deliveryAreas!.selectedWilayas.join(", ")}'
-                              : 'Select delivery areas (optional)',
+                              ? '${context.tr('Delivery areas')}: ${_deliveryAreas!.displayTextFor(context)}'
+                              : context.tr('Select delivery areas (optional)'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -649,7 +656,8 @@ class _AddPackScreenState extends State<AddPackScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            'No areas selected — your store address will be used by default',
+                            context.tr(
+                                'No areas selected — your store address will be used by default'),
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
                           ),
@@ -668,8 +676,12 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   const SizedBox(height: 16),
                   AppPrimaryButton(
                     text: provider.isSubmitting
-                        ? (_isEditMode ? 'Saving...' : 'Publishing...')
-                        : (_isEditMode ? 'Save Changes' : 'Publish Pack'),
+                        ? (_isEditMode
+                            ? context.tr('Saving...')
+                            : context.tr('Publishing...'))
+                        : (_isEditMode
+                            ? context.tr('Save Changes')
+                            : context.tr('Publish Pack')),
                     onPressed: _submit,
                     isLoading: provider.isSubmitting,
                   ),

@@ -156,18 +156,18 @@ class _LaunchScreenState extends State<LaunchScreen> {
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
-                        children: const [
+                        children: [
                           _LanguageOptionChip(
                             languageCode: AppConstants.arabicLanguageCode,
-                            label: 'العربية',
+                            label: context.tr('العربية'),
                           ),
                           _LanguageOptionChip(
                             languageCode: AppConstants.frenchLanguageCode,
-                            label: 'Francais',
+                            label: context.tr('Français'),
                           ),
                           _LanguageOptionChip(
                             languageCode: AppConstants.englishLanguageCode,
-                            label: 'English',
+                            label: context.tr('English'),
                           ),
                         ].map((chip) {
                           return _LanguageOptionChip(

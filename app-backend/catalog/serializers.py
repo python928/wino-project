@@ -6,10 +6,63 @@ from .models import Category, Pack, PackImage, PackProduct, Product, ProductImag
 
 class CategorySerializer(serializers.ModelSerializer):
     icon = serializers.SerializerMethodField()
+    localized_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'icon']
+        fields = ['id', 'name', 'name_ar', 'name_fr', 'name_en', 'localized_name', 'icon']
+        extra_kwargs = {
+            'name': {'required': False, 'allow_blank': True},
+            'name_ar': {'required': False, 'allow_blank': True},
+            'name_fr': {'required': False, 'allow_blank': True},
+            'name_en': {'required': False, 'allow_blank': True},
+        }
+
+    def validate(self, attrs):
+        name = (attrs.get('name') or '').strip()
+        name_en = (attrs.get('name_en') or '').strip()
+        name_fr = (attrs.get('name_fr') or '').strip()
+        name_ar = (attrs.get('name_ar') or '').strip()
+
+        effective_name = name or name_en or name_fr or name_ar
+        if not effective_name:
+            raise serializers.ValidationError(
+                'Provide at least one category name (name/name_en/name_fr/name_ar).'
+            )
+
+        # Keep legacy `name` populated for compatibility with existing flows.
+        attrs['name'] = effective_name
+        if not name_en:
+            attrs['name_en'] = effective_name
+        return attrs
+
+    def _resolve_lang(self):
+        request = self.context.get('request')
+        if request is None:
+            return 'en'
+
+        raw = str(request.META.get('HTTP_ACCEPT_LANGUAGE', '')).strip().lower()
+        if not raw:
+            return 'en'
+
+        lang = raw.split(',')[0].split('-')[0].strip()
+        return lang if lang in {'ar', 'fr', 'en'} else 'en'
+
+    def get_localized_name(self, obj):
+        lang = self._resolve_lang()
+        if lang == 'ar' and obj.name_ar:
+            return obj.name_ar
+        if lang == 'fr' and obj.name_fr:
+            return obj.name_fr
+        if obj.name_en:
+            return obj.name_en
+        return obj.name
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Keep backward compatibility: clients using "name" automatically receive localized value.
+        data['name'] = data.get('localized_name') or data.get('name')
+        return data
 
     def get_icon(self, obj):
         if not obj.icon_code_point:

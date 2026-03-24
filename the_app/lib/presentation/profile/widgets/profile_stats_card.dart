@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/card_styles.dart';
@@ -30,15 +31,17 @@ class ProfileStatsCard extends StatelessWidget {
               child: _buildStatItem(
                 icon: Icons.people_outline,
                 value: _formatCount(followersCount),
-                label: 'Followers',
+                label: context.tr('Followers'),
               ),
             ),
             Container(width: 1, height: 40, color: Colors.grey[200]),
             Expanded(
               child: _buildStatItem(
                 icon: Icons.star_outline,
-                value: averageRating > 0 ? averageRating.toStringAsFixed(1) : '0.0',
-                label: 'Rating',
+                value: averageRating > 0
+                    ? averageRating.toStringAsFixed(1)
+                    : '0.0',
+                label: context.tr('Rating'),
               ),
             ),
             Container(width: 1, height: 40, color: Colors.grey[200]),

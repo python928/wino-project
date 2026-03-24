@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import '../../../core/config/api_config.dart';
@@ -478,7 +478,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
             itemBuilder: (context, index) {
               final review = _reviews[index];
               final dateText = review.createdAt != null
-                  ? Helpers.formatDate(review.createdAt!)
+                  ? Helpers.formatDate(review.createdAt!, context: context)
                   : '';
 
               return Column(

@@ -1,3 +1,4 @@
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 
@@ -82,16 +83,17 @@ class _DateTimePickerFieldState extends State<DateTimePickerField> {
   static const _pickerLocale = Locale('en', 'US');
 
   String _formatValue(DateTime? dt) {
-    if (dt == null) return widget.hint;
+    if (dt == null) return context.tr(widget.hint);
 
     try {
       String result = intl.DateFormat(widget.dateFormat, 'en').format(dt);
       if (widget.showTime) {
-        result += ' at ${intl.DateFormat(widget.timeFormat, 'en').format(dt)}';
+        result +=
+            ' ${context.tr('at')} ${intl.DateFormat(widget.timeFormat, 'en').format(dt)}';
       }
       return result;
     } catch (e) {
-      return widget.hint;
+      return context.tr(widget.hint);
     }
   }
 

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -70,6 +70,17 @@ class ProfileMerchantHeader extends StatelessWidget {
     this.tiktok,
     this.youtube,
   });
+
+  String _localizedLocation(BuildContext context, String raw) {
+    if (raw.trim().isEmpty || raw.trim() == '/') return raw;
+    final parts = raw
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .map(context.tr)
+        .toList();
+    return parts.isEmpty ? context.tr(raw) : parts.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +288,7 @@ class ProfileMerchantHeader extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      location,
+                      _localizedLocation(context, location),
                       style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

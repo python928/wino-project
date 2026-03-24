@@ -1,6 +1,9 @@
 import 'dart:math' as math;
+
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'app_logger.dart';
 
 class Helpers {
@@ -67,20 +70,54 @@ class Helpers {
   // Show snackbar
   static void showSnackBar(BuildContext context, String message,
       {bool isError = false}) {
+    final translatedMessage = _translateMessage(context, message);
+    final effectiveIsError = isError || _looksLikeError(translatedMessage);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          message,
+          translatedMessage,
           textAlign: TextAlign.right,
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
         ),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: effectiveIsError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: effectiveIsError ? 6 : 2),
       ),
     );
+  }
+
+  static bool _looksLikeError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('error') ||
+        lower.contains('failed') ||
+        lower.contains('invalid') ||
+        lower.contains('required') ||
+        lower.contains('unable') ||
+        lower.contains('expired') ||
+        lower.contains('denied') ||
+        lower.contains('not available') ||
+        lower.contains('fشل') ||
+        lower.contains('خطأ');
+  }
+
+  static String _translateMessage(BuildContext context, String message) {
+    final normalized = formatError(message);
+    final direct = context.tr(normalized);
+    if (direct != normalized) return direct;
+
+    final splitIndex = normalized.indexOf(':');
+    if (splitIndex > 0) {
+      final prefix = normalized.substring(0, splitIndex).trim();
+      final suffix = normalized.substring(splitIndex + 1).trim();
+      final translatedPrefix = context.tr(prefix);
+      if (translatedPrefix != prefix) {
+        return '$translatedPrefix: $suffix';
+      }
+    }
+    return normalized;
   }
 
   static String formatError(Object error) {
@@ -122,29 +159,44 @@ class Helpers {
     }
   }
 
-  // Format date in Arabic style
-  static String formatDate(DateTime date) {
+  // Format relative date/time with optional localization context.
+  static String formatDate(DateTime date, {BuildContext? context}) {
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {
         if (difference.inMinutes == 0) {
-          return 'now';
+          return context?.tr('now') ?? 'now';
         }
-        return '${difference.inMinutes} minutes ago';
+        final unit = difference.inMinutes == 1
+            ? (context?.tr('minute ago') ?? 'minute ago')
+            : (context?.tr('minutes ago') ?? 'minutes ago');
+        return '${difference.inMinutes} $unit';
       }
-      return '${difference.inHours} hours ago';
+      final unit = difference.inHours == 1
+          ? (context?.tr('hour ago') ?? 'hour ago')
+          : (context?.tr('hours ago') ?? 'hours ago');
+      return '${difference.inHours} $unit';
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return context?.tr('Yesterday') ?? 'Yesterday';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+      final unit = difference.inDays == 1
+          ? (context?.tr('day ago') ?? 'day ago')
+          : (context?.tr('days ago') ?? 'days ago');
+      return '${difference.inDays} $unit';
     } else if (difference.inDays < 30) {
       final weeks = (difference.inDays / 7).floor();
-      return '$weeks weeks ago';
+      final unit = weeks == 1
+          ? (context?.tr('week ago') ?? 'week ago')
+          : (context?.tr('weeks ago') ?? 'weeks ago');
+      return '$weeks $unit';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
-      return '$months months ago';
+      final unit = months == 1
+          ? (context?.tr('month ago') ?? 'month ago')
+          : (context?.tr('months ago') ?? 'months ago');
+      return '$months $unit';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

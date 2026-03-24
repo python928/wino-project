@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 
 import '../../../core/components/custom_modal_bottom_sheet.dart';
 import '../../../core/theme/app_colors.dart';
@@ -114,7 +114,7 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        widget.title,
+                        context.tr(widget.title),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -140,10 +140,11 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'No products found',
-                          style: TextStyle(color: AppColors.textSecondary),
+                          context.tr('No products found'),
+                          style:
+                              const TextStyle(color: AppColors.textSecondary),
                         ),
                       )
                     : ListView.separated(

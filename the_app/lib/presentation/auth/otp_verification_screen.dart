@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -10,8 +10,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_button.dart';
-import 'phone_profile_setup_screen.dart';
 import '../home/main_navigation_screen.dart';
+import 'phone_profile_setup_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
@@ -74,7 +74,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _verifyOtp() async {
     if (_otpCode.length != 6) {
-      Helpers.showSnackBar(context, 'Enter the 6-digit code');
+      Helpers.showSnackBar(context, context.tr('Enter the 6-digit code'),
+          isError: true);
       return;
     }
 
@@ -100,13 +101,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           );
         }
       } else {
-        Helpers.showSnackBar(
-            context, authProvider.error ?? 'OTP verification failed.');
+        Helpers.showSnackBar(context,
+            authProvider.error ?? context.tr('OTP verification failed.'),
+            isError: true);
       }
     } catch (_) {
       if (mounted) {
         Helpers.showSnackBar(
-            context, 'Server connection failed. Please try again.');
+            context, context.tr('Server connection failed. Please try again.'),
+            isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -122,15 +125,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       if (ok) {
         _startResendCooldown(60);
-        Helpers.showSnackBar(context, 'Verification code resent');
+        Helpers.showSnackBar(context, context.tr('Verification code resent'));
       } else {
-        final msg = authProvider.error ?? 'Failed to resend code';
+        final msg = authProvider.error ?? context.tr('Failed to resend code');
         final match = RegExp(r'(\d+)').firstMatch(msg);
         if (match != null) {
           final sec = int.tryParse(match.group(1)!);
           if (sec != null && sec > 0) _startResendCooldown(sec);
         }
-        Helpers.showSnackBar(context, msg);
+        Helpers.showSnackBar(context, msg, isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -169,7 +172,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'We sent a 6-digit code to',
+                  context.tr('We sent a 6-digit code to'),
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium
                       .copyWith(color: AppColors.textSecondary),
@@ -252,7 +255,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
                 const SizedBox(height: 26),
                 AppPrimaryButton(
-                  text: 'Verify',
+                  text: context.tr('Verify'),
                   onPressed: _verifyOtp,
                   isLoading: _isLoading,
                   height: 52,
@@ -260,15 +263,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 const SizedBox(height: 12),
                 AppTextButton(
                   text: _remainingSeconds > 0
-                      ? 'Resend in ${_remainingSeconds}s'
-                      : 'Resend code',
+                      ? '${context.tr('Resend in')} ${_remainingSeconds}s'
+                      : context.tr('Resend code'),
                   onPressed: (_remainingSeconds > 0 || _isLoading)
                       ? null
                       : _resendCode,
                 ),
                 const SizedBox(height: 6),
                 AppTextButton(
-                  text: 'Skip (Prototype)',
+                  text: context.tr('Skip (Prototype)'),
                   onPressed: _isLoading ? null : _skipWithPrototypeCode,
                 ),
               ],

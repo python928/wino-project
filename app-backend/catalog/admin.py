@@ -15,8 +15,8 @@ from .models import (
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-	list_display = ('name', 'icon_preview')
-	search_fields = ('name',)
+	list_display = ('name', 'name_ar', 'name_fr', 'name_en', 'icon_preview')
+	search_fields = ('name', 'name_ar', 'name_fr', 'name_en')
 
 	def icon_preview(self, obj):
 		from django.utils.html import format_html
@@ -33,7 +33,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 	fieldsets = (
 		(None, {
-			'fields': ('name', 'icon_code_point', 'icon_font_family', 'icon_font_package'),
+			'fields': ('name', 'name_ar', 'name_fr', 'name_en', 'icon_code_point', 'icon_font_family', 'icon_font_package'),
 			'description': (
 				'<b>icon_code_point</b>: Enter the hex code from '
 				'<a href="https://fonts.google.com/icons?selected=Material+Icons" target="_blank">'

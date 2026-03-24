@@ -1,7 +1,7 @@
+import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/home_provider.dart';
@@ -64,14 +64,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   // Selected type
   String _selectedType = 'All';
   final List<ToggleOption> _typeOptions = const [
-    ToggleOption(label: 'All', icon: Icons.grid_view_rounded, value: 'All'),
-    ToggleOption(
-        label: 'Products', icon: Icons.shopping_bag_rounded, value: 'Products'),
-    ToggleOption(
-        label: 'Discounts', icon: Icons.percent_rounded, value: 'Discounts'),
-    ToggleOption(
-        label: 'Packs', icon: Icons.inventory_2_rounded, value: 'Packs'),
-    ToggleOption(label: 'Stores', icon: Icons.store_rounded, value: 'Stores'),
+    ToggleOption(label: 'All', value: 'All'),
+    ToggleOption(label: 'Products', value: 'Products'),
+    ToggleOption(label: 'Discounts', value: 'Discounts'),
+    ToggleOption(label: 'Packs', value: 'Packs'),
+    ToggleOption(label: 'Stores', value: 'Stores'),
   ];
 
   // Filters
@@ -111,6 +108,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     'Lowest Price',
     'Highest Price',
   ];
+
+  String _localizedLocationLabel(String raw) {
+    if (raw.trim().isEmpty || raw.trim() == '/') return raw;
+    final parts = raw
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .map(context.tr)
+        .toList();
+    return parts.isEmpty ? context.tr(raw) : parts.join(', ');
+  }
 
   @override
   void initState() {
@@ -335,7 +343,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       setState(() {
         _selectedWilaya = result.wilaya;
         _selectedBaladiya = result.baladiya;
-        _selectedLocation = result.address;
+        _selectedLocation =
+            '${context.tr(result.baladiya)}, ${context.tr(result.wilaya)}';
         _distanceKm = null; // location mode active → clear distance
         _resetVisibleCounts();
       });
@@ -812,7 +821,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               cityLabel: (!distanceActive &&
                       _selectedLocation.isNotEmpty &&
                       _selectedLocation != '/')
-                  ? _selectedLocation
+                  ? _localizedLocationLabel(_selectedLocation)
                   : context.tr('City'),
               nearbyLabel: distanceActive
                   ? '${_distanceKm!.toInt()} ${context.tr('km')}'
@@ -1178,8 +1187,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   if (_selectedWilaya != null)
                     _buildFilterTag(
                       _selectedLocation.isNotEmpty && _selectedLocation != '/'
-                          ? _selectedLocation
-                          : _selectedWilaya!,
+                          ? _localizedLocationLabel(_selectedLocation)
+                          : context.tr(_selectedWilaya!),
                       Icons.location_on_rounded,
                     ),
                   if (_distanceKm != null)

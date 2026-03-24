@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/auth_provider.dart';
@@ -78,13 +78,17 @@ class _LoginScreenState extends State<LoginScreen>
       } else {
         Helpers.showSnackBar(
           context,
-          authProvider.error ?? 'Failed to send verification code.',
+          authProvider.error ?? context.tr('Failed to send verification code.'),
+          isError: true,
         );
       }
     } catch (_) {
       if (mounted) {
         Helpers.showSnackBar(
-            context, 'Server connection failed. Please try again.');
+          context,
+          context.tr('Server connection failed. Please try again.'),
+          isError: true,
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -138,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Sign in with phone number',
+                  context.tr('Sign in with phone number'),
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 15,
@@ -159,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Sign In With Phone',
+            context.tr('Sign In With Phone'),
             textAlign: TextAlign.center,
             style: AppTextStyles.h3.copyWith(
               fontWeight: FontWeight.w700,
@@ -168,14 +172,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Enter your Algerian number (0XXXXXXXXX)',
+            context.tr('Enter your Algerian number (0XXXXXXXXX)'),
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium
                 .copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 32),
           Text(
-            'Phone Number',
+            context.tr('Phone Number'),
             style: AppTextStyles.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -194,16 +198,19 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             validator: (value) {
               final text = _normalizeDigits((value ?? '').trim());
-              if (text.isEmpty) return 'Please enter your phone number';
+              if (text.isEmpty) {
+                return context.tr('Please enter your phone number');
+              }
               if (!RegExp(r'^0[567]\d{8}$').hasMatch(text)) {
-                return 'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX';
+                return context
+                    .tr('Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX');
               }
               return null;
             },
           ),
           const SizedBox(height: 24),
           AppPrimaryButton(
-            text: 'Send Code',
+            text: context.tr('Send Code'),
             onPressed: _sendOtp,
             isLoading: _isLoading,
             height: 52,

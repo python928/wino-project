@@ -117,11 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (parts.length >= 2) {
       _selectedBaladiya = parts.first;
       _selectedWilaya = parts.last;
+      _selectedLocation = '${parts.first}, ${parts.last}';
     } else {
       _selectedWilaya = parts.first;
       _selectedBaladiya = null;
+      _selectedLocation = parts.first;
     }
-    _selectedLocation = rawAddress;
   }
 
   Future<void> _activateNearby(double km) async {
@@ -189,7 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _selectedWilaya = result.wilaya;
         _selectedBaladiya = result.baladiya;
-        _selectedLocation = result.address;
+        _selectedLocation =
+            '${context.tr(result.baladiya)}, ${context.tr(result.wilaya)}';
         _radiusKm = null; // address mode active → clear distance
       });
       _logFilterWilaya(result.wilaya, result.baladiya);

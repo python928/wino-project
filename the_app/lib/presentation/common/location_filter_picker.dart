@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/theme/app_text_styles.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/constants/algeria_wilayas_baladiat.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
 
 class LocationFilterResult {
   final List<String> selectedWilayas;
@@ -31,12 +32,7 @@ class LocationFilterResult {
     }
 
     if (totalBaladiyat > 0) {
-      if (selectedWilayas.length == 1) {
-        if (totalBaladiyat == 1) {
-          return selectedBaladiyat.values.first.first;
-        }
-        return '$totalBaladiyat areas in ${selectedWilayas.first}';
-      }
+      if (selectedWilayas.length == 1) return '$totalBaladiyat areas';
       return '$totalBaladiyat areas';
     }
 
@@ -56,14 +52,14 @@ class LocationFilterResult {
     if (totalBaladiyat > 0) {
       if (selectedWilayas.length == 1) {
         if (totalBaladiyat == 1) {
-          return selectedBaladiyat.values.first.first;
+          return context.tr(selectedBaladiyat.values.first.first);
         }
-        return '$totalBaladiyat ${context.tr('areas')} ${context.tr('in')} ${selectedWilayas.first}';
+        return '$totalBaladiyat ${context.tr('areas')} ${context.tr('in')} ${context.tr(selectedWilayas.first)}';
       }
       return '$totalBaladiyat ${context.tr('areas')}';
     }
 
-    if (selectedWilayas.length == 1) return selectedWilayas.first;
+    if (selectedWilayas.length == 1) return context.tr(selectedWilayas.first);
     return '${selectedWilayas.length} ${context.tr('wilayas')}';
   }
 }
@@ -208,7 +204,9 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _currentWilaya ?? context.tr('Filter by Location'),
+                    _currentWilaya != null
+                        ? context.tr(_currentWilaya!)
+                        : context.tr('Filter by Location'),
                     style: AppTextStyles.bodyLarge
                         .copyWith(fontWeight: FontWeight.w700),
                   ),
@@ -268,7 +266,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                       child: Text(
                         _selectedBaladiyat[_currentWilaya]?.isNotEmpty == true
                             ? '${_selectedBaladiyat[_currentWilaya]!.length} ${context.tr('baladiyat selected')}'
-                            : '${context.tr('All baladiyat in')} $_currentWilaya',
+                            : '${context.tr('All baladiyat in')} ${context.tr(_currentWilaya!)}',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.w500,
@@ -515,7 +513,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                   children: [
                     Expanded(
                       child: Text(
-                        wilaya,
+                        context.tr(wilaya),
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -620,8 +618,8 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                 Expanded(
                   child: Text(
                     wilayaSelected
-                        ? '${context.tr('Deselect')} $_currentWilaya'
-                        : '${context.tr('Select all')} $_currentWilaya',
+                        ? '${context.tr('Deselect')} ${context.tr(_currentWilaya!)}'
+                        : '${context.tr('Select all')} ${context.tr(_currentWilaya!)}',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
                       color: wilayaSelected
@@ -695,7 +693,7 @@ class _LocationFilterPickerState extends State<LocationFilterPicker> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        baladiya,
+                        context.tr(baladiya),
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -783,10 +781,10 @@ class _LocationChipsWidgetState extends State<LocationChipsWidget> {
       final bals = widget.filter.selectedBaladiyat[wilaya];
       if (bals != null && bals.isNotEmpty) {
         for (final b in bals) {
-          labels.add('$b, $wilaya');
+          labels.add('${context.tr(b)}, ${context.tr(wilaya)}');
         }
       } else {
-        labels.add(wilaya);
+        labels.add(context.tr(wilaya));
       }
     }
     return labels;

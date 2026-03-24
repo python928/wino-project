@@ -133,12 +133,18 @@ def send_otp_message(phone: str, code: str) -> None:
 
 
 def _username_base_from_name(name: str) -> str:
-	"""Build username base from full name: spaces -> dots, sanitized for Django username validator."""
+	"""Build username base with rule: name.replace(' ', '.')"""
 	raw = (name or '').strip().lower()
 	if not raw:
 		return 'user'
-	base = re.sub(r'\s+', '.', raw)
-	base = re.sub(r'[^a-z0-9._-]', '', base).strip('.')
+
+	# Keep requested behavior: replace spaces with dots.
+	base = raw.replace(' ', '.')
+	# Also normalize any other whitespace runs to dots.
+	base = re.sub(r'\s+', '.', base)
+	# Keep only characters accepted by Django's username validator.
+	base = re.sub(r'[^\w.@+-]', '', base, flags=re.UNICODE)
+	base = re.sub(r'\.{2,}', '.', base).strip('.')
 	return base or 'user'
 
 

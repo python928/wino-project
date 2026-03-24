@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
+
+import '../../core/constants/algeria_wilayas_baladiat.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/constants/algeria_wilayas_baladiat.dart';
 
 class LocationResult {
   final String wilaya;
@@ -84,7 +85,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       return;
     }
 
-    final address = '$_selectedBaladiya, $_selectedWilaya';
+    final address =
+        '${context.tr(_selectedBaladiya!)}, ${context.tr(_selectedWilaya!)}';
     Navigator.pop(
       context,
       LocationResult(
@@ -192,7 +194,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                               size: 16, color: AppColors.primaryColor),
                           const SizedBox(width: 6),
                           Text(
-                            _selectedWilaya!,
+                            context.tr(_selectedWilaya!),
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primaryColor,
                               fontWeight: FontWeight.w600,
@@ -243,7 +245,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
                 child: SafeArea(
                   child: AppPrimaryButton(
-                    text: '$_selectedBaladiya, $_selectedWilaya',
+                    text:
+                        '${context.tr(_selectedBaladiya!)}, ${context.tr(_selectedWilaya!)}',
                     onPressed: _confirmLocation,
                     icon: Icons.check_circle,
                   ),
@@ -326,7 +329,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            wilaya,
+                            context.tr(wilaya),
                             style: AppTextStyles.bodyMedium
                                 .copyWith(fontWeight: FontWeight.w600),
                           ),
@@ -420,7 +423,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        baladiya,
+                        context.tr(baladiya),
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,

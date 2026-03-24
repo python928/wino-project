@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/wallet_provider.dart';
@@ -110,7 +110,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$coins coins',
+                        '$coins ${context.tr('coins')}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
@@ -283,14 +283,14 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        reason.replaceAll('_', ' '),
+                        context.tr(reason.replaceAll('_', ' ')),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         createdAt != null
-                            ? Helpers.formatDate(createdAt)
-                            : 'Just now',
+                            ? Helpers.formatDate(createdAt, context: context)
+                            : context.tr('Just now'),
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ],
@@ -359,14 +359,14 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$coins Coins · $packId',
+                        '$coins ${context.tr('Coins')} · $packId',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         createdAt != null
-                            ? Helpers.formatDate(createdAt)
-                            : 'Just now',
+                            ? Helpers.formatDate(createdAt, context: context)
+                            : context.tr('Just now'),
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ],
@@ -417,10 +417,10 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          _chip('Product Post', productCost),
-          _chip('Pack Post', packCost),
-          _chip('Promotion Post', promotionCost),
-          _chip('Ad View', adViewCost),
+          _chip(context.tr('Product Post'), productCost),
+          _chip(context.tr('Pack Post'), packCost),
+          _chip(context.tr('Promotion Post'), promotionCost),
+          _chip(context.tr('Ad View'), adViewCost),
         ],
       ),
     );
@@ -453,10 +453,12 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Your Coins',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              Text(
+                context.tr('Your Coins'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               Text(
                 '$coins',
@@ -505,8 +507,8 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You need $requiredCoins coins. '
-              'Balance: $balance. Missing: $shortfall.',
+              '${context.tr('You need')} $requiredCoins ${context.tr('coins')}. '
+              '${context.tr('Balance')}: $balance. ${context.tr('Missing')}: $shortfall.',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

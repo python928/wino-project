@@ -555,7 +555,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         size: 18,
                       ),
                       const SizedBox(width: 10),
-                      Text(_isFavorited ? 'Remove Favorite' : 'Add Favorite'),
+                      Text(context.tr(
+                          _isFavorited ? 'Remove Favorite' : 'Add Favorite')),
                     ],
                   ),
                 ),

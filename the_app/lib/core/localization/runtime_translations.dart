@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../constants/algeria_wilayas_baladiat.dart';
 
 typedef _GeneratedResolver = String Function(AppLocalizations l10n);
 
@@ -18,10 +19,169 @@ class RuntimeTranslations {
       return _fr[text] ?? text;
     }
     if (languageCode == 'ar') {
-      return _ar[text] ?? text;
+            final mapped = _ar[text];
+            if (mapped != null) return mapped;
+
+            // Fallback: auto-arabize Algerian wilaya/baladiya names so every
+            // commune in the constants file is display-translated without
+            // requiring a huge manual dictionary.
+            if (_algeriaLocationNames.contains(text)) {
+                return _arabizeAlgeriaName(text);
+            }
+            return text;
     }
     return text;
   }
+
+    static final Set<String> _algeriaLocationNames = {
+        ...algeriaWilayasBaladiat.keys,
+        ...algeriaWilayasBaladiat.values.expand((v) => v),
+    };
+
+    static String _arabizeAlgeriaName(String raw) {
+        final normalized = raw
+                .replaceAll("'", ' ')
+                .replaceAll('-', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+        if (normalized.isEmpty) return raw;
+
+        final words = normalized.split(' ');
+        final converted = words.map(_arabizeToken).where((w) => w.isNotEmpty);
+        return converted.join(' ');
+    }
+
+    static String _arabizeToken(String token) {
+        final cleaned = _stripDiacritics(token);
+        final lower = cleaned.toLowerCase();
+
+        // Common Algerian place-name morphemes.
+        const lexicon = {
+            'ain': 'عين',
+            'ouled': 'أولاد',
+            'oued': 'وادي',
+            'sidi': 'سيدي',
+            'beni': 'بني',
+            'ben': 'بن',
+            'bir': 'بئر',
+            'el': 'ال',
+            'bou': 'بو',
+            'hassi': 'حاسي',
+            'bordj': 'برج',
+            'ksar': 'قصر',
+            'djebel': 'جبل',
+            'oum': 'أم',
+            'ainn': 'عين',
+            'in': 'إن',
+        };
+
+        final direct = lexicon[lower];
+        if (direct != null) return direct;
+
+        return _transliterateLatinWord(cleaned);
+    }
+
+    static String _stripDiacritics(String input) {
+        return input
+                .replaceAll('é', 'e')
+                .replaceAll('è', 'e')
+                .replaceAll('ê', 'e')
+                .replaceAll('ë', 'e')
+                .replaceAll('à', 'a')
+                .replaceAll('â', 'a')
+                .replaceAll('î', 'i')
+                .replaceAll('ï', 'i')
+                .replaceAll('ô', 'o')
+                .replaceAll('ö', 'o')
+                .replaceAll('û', 'u')
+                .replaceAll('ü', 'u')
+                .replaceAll('ç', 'c')
+                .replaceAll('É', 'E')
+                .replaceAll('È', 'E')
+                .replaceAll('Ê', 'E')
+                .replaceAll('Ë', 'E')
+                .replaceAll('À', 'A')
+                .replaceAll('Â', 'A')
+                .replaceAll('Î', 'I')
+                .replaceAll('Ï', 'I')
+                .replaceAll('Ô', 'O')
+                .replaceAll('Ö', 'O')
+                .replaceAll('Û', 'U')
+                .replaceAll('Ü', 'U')
+                .replaceAll('Ç', 'C');
+    }
+
+    static String _transliterateLatinWord(String input) {
+        if (input.isEmpty) return input;
+        final s = input.toLowerCase();
+        final out = StringBuffer();
+        var i = 0;
+
+        while (i < s.length) {
+            String? take;
+            String? mapped;
+
+            if (i + 2 <= s.length) {
+                final d = s.substring(i, i + 2);
+                const digraph = {
+                    'ch': 'ش',
+                    'gh': 'غ',
+                    'kh': 'خ',
+                    'sh': 'ش',
+                    'th': 'ث',
+                    'dh': 'ذ',
+                    'ou': 'و',
+                    'aa': 'ا',
+                    'ee': 'ي',
+                    'oo': 'و',
+                    'ph': 'ف',
+                    'gn': 'ني',
+                    'dj': 'ج',
+                };
+                mapped = digraph[d];
+                if (mapped != null) take = d;
+            }
+
+            if (mapped == null) {
+                final c = s[i];
+                const single = {
+                    'a': 'ا',
+                    'b': 'ب',
+                    'c': 'ك',
+                    'd': 'د',
+                    'e': 'ي',
+                    'f': 'ف',
+                    'g': 'غ',
+                    'h': 'ه',
+                    'i': 'ي',
+                    'j': 'ج',
+                    'k': 'ك',
+                    'l': 'ل',
+                    'm': 'م',
+                    'n': 'ن',
+                    'o': 'و',
+                    'p': 'ب',
+                    'q': 'ق',
+                    'r': 'ر',
+                    's': 'س',
+                    't': 'ت',
+                    'u': 'و',
+                    'v': 'ف',
+                    'w': 'و',
+                    'x': 'كس',
+                    'y': 'ي',
+                    'z': 'ز',
+                };
+                mapped = single[c] ?? c;
+                take = c;
+            }
+
+            out.write(mapped);
+            i += take!.length;
+        }
+
+        return out.toString();
+    }
 
   static final Map<String, _GeneratedResolver> _generated = {
     'Back to home': (l10n) => l10n.commonBackToHome,
@@ -64,6 +224,9 @@ class RuntimeTranslations {
     'Coin Store': 'Boutique de pièces',
     'Coins': 'Pièces',
     'coins': 'pièces',
+    'You need': 'Vous avez besoin de',
+    'Balance': 'Solde',
+    'Missing': 'Manquant',
     'DZD': 'DZD',
     'km': 'km',
     'Coordinates Locked': 'Coordonnées verrouillées',
@@ -71,6 +234,107 @@ class RuntimeTranslations {
     'Copy number': 'Copier le numéro',
     'Create New Pack': 'Créer un nouveau pack',
     'Create Sponsored Ad': 'Créer une annonce sponsorisée',
+    'Edit Sponsored Ad': 'Modifier l\'annonce sponsorisée',
+    'Edit Discount': 'Modifier la réduction',
+    'Select Pack to Sponsor': 'Sélectionner un pack à sponsoriser',
+    'Select Discount to Sponsor': 'Sélectionner une réduction à sponsoriser',
+    'Tap to select product...': 'Touchez pour sélectionner un produit...',
+    'Tap to select pack to sponsor...':
+        'Touchez pour sélectionner un pack à sponsoriser...',
+    'Tap to select a product with active discount...':
+        'Touchez pour sélectionner un produit avec réduction active...',
+    'Tap to select product to sponsor...':
+        'Touchez pour sélectionner le produit à sponsoriser...',
+    'Ad Active': 'Annonce active',
+    'Show this sponsored ad to customers':
+        'Afficher cette annonce sponsorisée aux clients',
+    'Show this discount to customers':
+        'Afficher cette réduction aux clients',
+    'Saving...': 'Enregistrement...',
+    'Save Changes': 'Enregistrer les modifications',
+    'Launch Sponsored Ad': 'Lancer l\'annonce sponsorisée',
+    'Apply Discount': 'Appliquer la réduction',
+    'Delete Sponsored Ad?': 'Supprimer l\'annonce sponsorisée ?',
+    'Delete Discount?': 'Supprimer la réduction ?',
+    'This will remove the sponsored ad from this product.':
+        'Cela supprimera l\'annonce sponsorisée de ce produit.',
+    'This will remove the discount from this product.':
+        'Cela supprimera la réduction de ce produit.',
+    'Sponsored ad deleted successfully':
+        'Annonce sponsorisée supprimée avec succès',
+    'Discount deleted successfully': 'Réduction supprimée avec succès',
+    'Failed to delete sponsored ad':
+        'Échec de la suppression de l\'annonce sponsorisée',
+    'Failed to delete discount': 'Échec de la suppression de la réduction',
+    'Sponsored ad updated successfully':
+        'Annonce sponsorisée mise à jour avec succès',
+    'Discount edited successfully': 'Réduction modifiée avec succès',
+    'Sponsored ad created successfully':
+        'Annonce sponsorisée créée avec succès',
+    'Discount added successfully': 'Réduction ajoutée avec succès',
+    'No active discounts found. Create a discount first.':
+        'Aucune réduction active trouvée. Créez d\'abord une réduction.',
+    'Please enter the number of ad impressions':
+        'Veuillez saisir le nombre d\'impressions publicitaires',
+    'Insufficient Ad View Coins. Need \$extraNeeded more impressions budget, available \$affordable.':
+        'Pièces de vues pub insuffisantes. Il faut \$extraNeeded impressions de plus, disponible : \$affordable.',
+    'am': 'h',
+    'pm': 'h',
+    'No hour selected': 'Aucune heure sélectionnée',
+    'All day': 'Toute la journée',
+    'Business hours': 'Heures de bureau',
+    'All day (24h)': 'Toute la journée (24h)',
+    'Business hours (8AM-7PM)': 'Heures de bureau (8h-19h)',
+    'Select at least one hour': 'Sélectionnez au moins une heure',
+    'Existing Sponsored Ad': 'Annonce sponsorisée existante',
+    'Existing Discount': 'Réduction existante',
+    'This product already has an ad campaign. Do you want to edit it?':
+        'Ce produit a déjà une campagne publicitaire. Voulez-vous la modifier ?',
+    'This product already has a discount. Do you want to edit it?':
+        'Ce produit a déjà une réduction. Voulez-vous la modifier ?',
+    'Start Date & Time': 'Date et heure de début',
+    'End Date & Time': 'Date et heure de fin',
+    'Please select a pack': 'Veuillez sélectionner un pack',
+    'Please select a product': 'Veuillez sélectionner un produit',
+    'Age range is invalid': 'La tranche d\'âge est invalide',
+    'Select at least one hour to show your ad':
+        'Sélectionnez au moins une heure pour afficher votre annonce',
+    'Discount target requires a product with active discount.':
+        'La cible réduction nécessite un produit avec une réduction active.',
+    'Select at least one target wilaya':
+        'Sélectionnez au moins une wilaya cible',
+    'Choose target radius in km': 'Choisissez le rayon cible en km',
+    'End time must be after start time':
+        'L\'heure de fin doit être après l\'heure de début',
+    'Duration exceeds the current limit (\$maxDays days).':
+        'La durée dépasse la limite actuelle (\$maxDays jours).',
+    'Failed to': 'Échec de',
+    'save': 'enregistrer',
+    'create': 'créer',
+    'sponsored ad': 'annonce sponsorisée',
+    'discount': 'réduction',
+    'This discount is not available': 'Cette réduction n\'est pas disponible',
+    'Sponsored Pack Summary': 'Résumé du pack sponsorisé',
+    'Sponsored Discount Summary': 'Résumé de la réduction sponsorisée',
+    'Sponsored Product Summary': 'Résumé du produit sponsorisé',
+    'Current Price': 'Prix actuel',
+    'Discount Percentage (%)': 'Pourcentage de réduction (%)',
+    'Required': 'Obligatoire',
+    'Invalid': 'Invalide',
+    'Ad Impressions': 'Impressions publicitaires',
+    'e.g. 5000': 'ex. 5000',
+    'Current ad impressions to activate:':
+        'Impressions pub actuelles à activer :',
+    'Age From': 'Âge de',
+    'Age To': 'Âge à',
+    'Choose Radius (km)': 'Choisir le rayon (km)',
+    'Sponsored ad will stay active until impressions are exhausted.':
+        'L\'annonce sponsorisée restera active jusqu\'à épuisement des impressions.',
+    'Select Product to Sponsor': 'Sélectionner un produit à sponsoriser',
+    'Select products to sponsor': 'Sélectionner des produits à sponsoriser',
+    'Select Product': 'Sélectionner un produit',
+    'Select Target Wilayas': 'Sélectionner les wilayas cibles',
+    'wilayas selected': 'wilayas sélectionnées',
     'Current Plan': 'Plan actuel',
     'Delete': 'Supprimer',
     'Delete Product?': 'Supprimer le produit ?',
@@ -104,9 +368,16 @@ class RuntimeTranslations {
     'Latest Products': 'Derniers produits',
     'Load more': 'Voir plus',
     'Location': 'Localisation',
+    'Select your location': 'Sélectionnez votre emplacement',
+    'Tap to change': 'Touchez pour modifier',
+    'Tap to choose location': 'Touchez pour choisir un emplacement',
     'Logout': 'Se déconnecter',
     'Mark all as read': 'Tout marquer comme lu',
     'New Price:': 'Nouveau prix :',
+    'New Price': 'Nouveau prix',
+    'Schedule': 'Calendrier',
+    'Tap to select date': 'Touchez pour sélectionner une date',
+    'at': 'à',
     'New Product': 'Nouveau produit',
     'No ads found in this period.':
         'Aucune annonce trouvée pour cette période.',
@@ -141,6 +412,15 @@ class RuntimeTranslations {
     'Product': 'Produit',
     'Product Details': 'Détails du produit',
     'Products': 'Produits',
+    'Posts': 'Publications',
+    'Followers': 'Abonnés',
+    'Rating': 'Note',
+    'Contact Store': 'Contacter le magasin',
+    'Add Favorite': 'Ajouter aux favoris',
+    'Remove Favorite': 'Retirer des favoris',
+    'Added to favorites': 'Ajouté aux favoris',
+    'Removed from favorites': 'Retiré des favoris',
+    'Failed to update favorite': 'Échec de mise à jour des favoris',
     'Products with Discounts': 'Produits avec réductions',
     'Profile': 'Profil',
     'Promotion Details': 'Détails de la promotion',
@@ -176,6 +456,29 @@ class RuntimeTranslations {
     'Search products, stores...': 'Rechercher des produits, magasins...',
     'Search products...': 'Rechercher des produits...',
     'Search Radius': 'Rayon de recherche',
+    'Your Coins': 'Vos pièces',
+    'Publishing Costs': 'Coûts de publication',
+    'Purchase Requests': 'Demandes d\'achat',
+    'Recent Transactions': 'Transactions récentes',
+    'Product Post': 'Publication produit',
+    'Pack Post': 'Publication pack',
+    'Promotion Post': 'Publication promotion',
+    'coin': 'pièce',
+    'Impressions': 'Impressions',
+    'Clicks': 'Clics',
+    'Active Ads': 'Annonces actives',
+    'Advertised': 'Sponsorisé',
+    'Views': 'Vues',
+    '14D': '14J',
+    'Ad View Coins balance:': 'Solde de pièces de vues pub :',
+    'Ad View:': 'Vue pub :',
+    'ad View:': 'Vue pub :',
+    'ad view': 'vue pub',
+    'Cost per impression:': 'Coût par impression :',
+    'Current max impressions you can activate:': 'Nombre maximal d\'impressions activables :',
+    'Selected hours': 'Heures sélectionnées',
+    'Product Create': 'Créer un produit',
+    'product create': 'créer un produit',
     'See All': 'Voir tout',
     'View All': 'Voir tout',
     'Select Hours': 'Sélectionner les heures',
@@ -218,6 +521,41 @@ class RuntimeTranslations {
         'Téléchargez 1 à 3 images. Votre demande sera examinée par l’administrateur.',
     'Verified': 'Vérifié',
     'Verify Code': 'Vérifier le code',
+    'Verify': 'Vérifier',
+    'Sign in with phone number': 'Se connecter avec un numéro de téléphone',
+    'Sign In With Phone': 'Se connecter avec téléphone',
+    'Enter your Algerian number (0XXXXXXXXX)':
+        'Entrez votre numéro algérien (0XXXXXXXXX)',
+    'Phone Number': 'Numéro de téléphone',
+    'Please enter your phone number': 'Veuillez entrer votre numéro de téléphone',
+    'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX':
+        'Utilisez le format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX',
+    'Send Code': 'Envoyer le code',
+    'Failed to send verification code.':
+        'Échec de l\'envoi du code de vérification.',
+    'Server connection failed. Please try again.':
+        'Échec de connexion au serveur. Veuillez réessayer.',
+    'Enter the 6-digit code': 'Entrez le code à 6 chiffres',
+    'OTP verification failed.': 'La vérification du code OTP a échoué.',
+    'Verification code resent': 'Code de vérification renvoyé',
+    'Failed to resend code': 'Échec du renvoi du code',
+    'We sent a 6-digit code to': 'Nous avons envoyé un code à 6 chiffres à',
+    'Resend in': 'Renvoyer dans',
+    'Resend code': 'Renvoyer le code',
+    'Skip (Prototype)': 'Passer (Prototype)',
+    'Your current location': 'Votre position actuelle',
+    'Algeria': 'Algérie',
+    'Session expired. Please login again.':
+        'Session expirée. Veuillez vous reconnecter.',
+    'No internet connection or server is unreachable':
+        'Aucune connexion Internet ou serveur injoignable',
+    'Connection timed out. Please try again.':
+        'Délai de connexion dépassé. Veuillez réessayer.',
+    'Server error. Please try again later.':
+        'Erreur serveur. Veuillez réessayer plus tard.',
+    'Invalid response format from server':
+        'Format de réponse serveur invalide',
+    'Request failed': 'La requête a échoué',
     'We are reviewing your image...': 'Nous examinons votre image...',
     'WhatsApp': 'WhatsApp',
     'Write your review...': 'Écrivez votre avis...',
@@ -245,6 +583,64 @@ class RuntimeTranslations {
     'Packs': 'Packs',
     'Select Wilaya': 'Sélectionner la wilaya',
     'Select Baladiya': 'Sélectionner la baladiya',
+    'Adrar': 'Adrar',
+    'Chlef': 'Chlef',
+    'Laghouat': 'Laghouat',
+    'Oum El Bouaghi': 'Oum El Bouaghi',
+    'Batna': 'Batna',
+    'Béjaïa': 'Béjaïa',
+    'Biskra': 'Biskra',
+    'Béchar': 'Béchar',
+    'Blida': 'Blida',
+    'Bouira': 'Bouira',
+    'Tamanrasset': 'Tamanrasset',
+    'Tébessa': 'Tébessa',
+    'Tlemcen': 'Tlemcen',
+    'Tiaret': 'Tiaret',
+    'Tizi Ouzou': 'Tizi Ouzou',
+    'Algiers': 'Alger',
+    'Djelfa': 'Djelfa',
+    'Jijel': 'Jijel',
+    'Sétif': 'Sétif',
+    'Saïda': 'Saïda',
+    'Skikda': 'Skikda',
+    'Sidi Bel Abbès': 'Sidi Bel Abbès',
+    'Annaba': 'Annaba',
+    'Guelma': 'Guelma',
+    'Constantine': 'Constantine',
+    'Médéa': 'Médéa',
+    'Mostaganem': 'Mostaganem',
+    'M\'Sila': 'M\'Sila',
+    'Mascara': 'Mascara',
+    'Ouargla': 'Ouargla',
+    'Oran': 'Oran',
+    'El Bayadh': 'El Bayadh',
+    'Illizi': 'Illizi',
+    'Bordj Bou Arreridj': 'Bordj Bou Arréridj',
+    'Boumerdès': 'Boumerdès',
+    'El Tarf': 'El Tarf',
+    'Tindouf': 'Tindouf',
+    'Tissemsilt': 'Tissemsilt',
+    'El Oued': 'El Oued',
+    'Khenchela': 'Khenchela',
+    'Souk Ahras': 'Souk Ahras',
+    'Tipaza': 'Tipaza',
+    'Mila': 'Mila',
+    'Aïn Defla': 'Aïn Defla',
+    'Naâma': 'Naâma',
+    'Aïn Témouchent': 'Aïn Témouchent',
+    'Ghardaïa': 'Ghardaïa',
+    'Relizane': 'Relizane',
+    'Timimoun': 'Timimoun',
+    'Bordj Badji Mokhtar': 'Bordj Badji Mokhtar',
+    'Ouled Djellal': 'Ouled Djellal',
+    'Béni Abbès': 'Béni Abbès',
+    'In Salah': 'In Salah',
+    'In Guezzam': 'In Guezzam',
+    'Touggourt': 'Touggourt',
+    'Djanet': 'Djanet',
+    'El M\'Ghair': 'El M\'Ghair',
+    'El Meniaa': 'El Meniaa',
     'Search wilaya...': 'Rechercher une wilaya...',
     'Search baladiya...': 'Rechercher une baladiya...',
     'Search wilayas...': 'Rechercher des wilayas...',
@@ -282,6 +678,78 @@ class RuntimeTranslations {
     'Failed to get current GPS location':
         'Échec de récupération de la position GPS actuelle',
     'Categories': 'Catégories',
+    'Select Category': 'Sélectionner une catégorie',
+    'Select category': 'Sélectionner une catégorie',
+    'No products found': 'Aucun produit trouvé',
+    'Just now': 'À l’instant',
+    'minute ago': 'minute plus tôt',
+    'minutes ago': 'minutes plus tôt',
+    'hour ago': 'heure plus tôt',
+    'hours ago': 'heures plus tôt',
+    'day ago': 'jour plus tôt',
+    'days ago': 'jours plus tôt',
+    'week ago': 'semaine plus tôt',
+    'weeks ago': 'semaines plus tôt',
+    'month ago': 'mois plus tôt',
+    'months ago': 'mois plus tôt',
+    'Confirm': 'Confirmer',
+    'No categories found': 'Aucune catégorie trouvée',
+    'Loading categories, please wait...':
+        'Chargement des catégories, veuillez patienter...',
+    'Loading categories...': 'Chargement des catégories...',
+    'No categories available': 'Aucune catégorie disponible',
+    'Product Images': 'Images du produit',
+    'You can add up to 5 product images':
+        'Vous pouvez ajouter jusqu\'à 5 images du produit',
+    'Product Name': 'Nom du produit',
+    'Enter product name': 'Entrez le nom du produit',
+    'Please enter product name': 'Veuillez entrer le nom du produit',
+    'Price': 'Prix',
+    'Please enter price': 'Veuillez entrer le prix',
+    'Add product description..': 'Ajoutez la description du produit..',
+    'Show price to customers in listings':
+        'Afficher le prix aux clients dans les listes',
+    'Is the product available for sale?':
+        'Le produit est-il disponible à la vente ?',
+    'Publish Product': 'Publier le produit',
+    'Add Images': 'Ajouter des images',
+    'Tap to upload': 'Touchez pour téléverser',
+    'Please add at least one image': 'Veuillez ajouter au moins une image',
+    'Please select a category': 'Veuillez sélectionner une catégorie',
+    'Failed to delete product': 'Échec de la suppression du produit',
+    'Product updated successfully': 'Produit mis à jour avec succès',
+    'Product published successfully': 'Produit publié avec succès',
+    'Error selecting images': 'Erreur lors de la sélection des images',
+    'Set your location area or GPS in Edit Profile before posting.':
+        'Définissez votre zone ou votre GPS dans Modifier le profil avant de publier.',
+    'update': 'mettre à jour',
+    'publish': 'publier',
+    'product': 'produit',
+    'This product already exists in the pack':
+        'Ce produit existe déjà dans le pack',
+    'Select pack products first': 'Sélectionnez d\'abord les produits du pack',
+    'Enter pack name': 'Entrez le nom du pack',
+    'Enter pack sale price': 'Entrez le prix de vente du pack',
+    'Pack price must be less than the total price of products':
+        'Le prix du pack doit être inférieur au prix total des produits',
+    'Must login first': 'Vous devez vous connecter d\'abord',
+    'No store found for this user':
+        'Aucun magasin trouvé pour cet utilisateur',
+    'Pack updated successfully': 'Pack mis à jour avec succès',
+    'Pack published successfully': 'Pack publié avec succès',
+    'Error during publishing': 'Erreur lors de la publication',
+    'You haven\'t added any products to the pack yet':
+        'Vous n\'avez encore ajouté aucun produit au pack',
+    'Use the search above to add products':
+        'Utilisez la recherche ci-dessus pour ajouter des produits',
+    'Pack Name *': 'Nom du pack *',
+    'Pack Sale Price': 'Prix de vente du pack',
+    'Delivery areas': 'Zones de livraison',
+    'Select delivery areas (optional)':
+        'Sélectionner les zones de livraison (optionnel)',
+    'No areas selected — your store address will be used by default':
+        'Aucune zone sélectionnée — l\'adresse de votre magasin sera utilisée par défaut',
+    'Publish Pack': 'Publier le pack',
     'km radius': 'km de rayon',
     'Filters': 'Filtres',
     'Reset': 'Réinitialiser',
@@ -437,6 +905,9 @@ class RuntimeTranslations {
     'Coin Store': 'متجر العملات',
     'Coins': 'عملات',
     'coins': 'عملة',
+    'You need': 'تحتاج',
+    'Balance': 'الرصيد',
+    'Missing': 'الناقص',
     'DZD': 'دج',
     'km': 'كم',
     'Coordinates Locked': 'الإحداثيات مقفلة',
@@ -444,6 +915,99 @@ class RuntimeTranslations {
     'Copy number': 'نسخ الرقم',
     'Create New Pack': 'إنشاء باك جديد',
     'Create Sponsored Ad': 'إنشاء إعلان ممول',
+    'Edit Sponsored Ad': 'تعديل الإعلان الممول',
+    'Edit Discount': 'تعديل التخفيض',
+    'Select Pack to Sponsor': 'اختر الباك للإعلان الممول',
+    'Select Discount to Sponsor': 'اختر التخفيض للإعلان الممول',
+    'Tap to select product...': 'اضغط لاختيار منتج...',
+    'Tap to select pack to sponsor...': 'اضغط لاختيار باك للإعلان الممول...',
+    'Tap to select a product with active discount...':
+        'اضغط لاختيار منتج لديه تخفيض نشط...',
+    'Tap to select product to sponsor...':
+        'اضغط لاختيار المنتج المراد ترويجه...',
+    'Ad Active': 'الإعلان نشط',
+    'Show this sponsored ad to customers': 'اعرض هذا الإعلان الممول للزبائن',
+    'Show this discount to customers': 'اعرض هذا التخفيض للزبائن',
+    'Saving...': 'جارٍ الحفظ...',
+    'Save Changes': 'حفظ التغييرات',
+    'Launch Sponsored Ad': 'إطلاق الإعلان الممول',
+    'Apply Discount': 'تطبيق التخفيض',
+    'Delete Sponsored Ad?': 'حذف الإعلان الممول؟',
+    'Delete Discount?': 'حذف التخفيض؟',
+    'This will remove the sponsored ad from this product.':
+        'سيؤدي هذا إلى إزالة الإعلان الممول من هذا المنتج.',
+    'This will remove the discount from this product.':
+        'سيؤدي هذا إلى إزالة التخفيض من هذا المنتج.',
+    'Sponsored ad deleted successfully': 'تم حذف الإعلان الممول بنجاح',
+    'Discount deleted successfully': 'تم حذف التخفيض بنجاح',
+    'Failed to delete sponsored ad': 'فشل حذف الإعلان الممول',
+    'Failed to delete discount': 'فشل حذف التخفيض',
+    'Sponsored ad updated successfully': 'تم تحديث الإعلان الممول بنجاح',
+    'Discount edited successfully': 'تم تعديل التخفيض بنجاح',
+    'Sponsored ad created successfully': 'تم إنشاء الإعلان الممول بنجاح',
+    'Discount added successfully': 'تمت إضافة التخفيض بنجاح',
+    'No active discounts found. Create a discount first.':
+        'لا توجد تخفيضات نشطة. أنشئ تخفيضًا أولًا.',
+    'Please enter the number of ad impressions':
+        'يرجى إدخال عدد مرات ظهور الإعلان',
+    'Insufficient Ad View Coins. Need \$extraNeeded more impressions budget, available \$affordable.':
+        'عملات مشاهدات الإعلان غير كافية. تحتاج إلى \$extraNeeded من ميزانية الظهور، المتاح \$affordable.',
+    'am': 'ص',
+    'pm': 'م',
+    'No hour selected': 'لم يتم اختيار أي ساعة',
+    'All day': 'كل اليوم',
+    'Business hours': 'ساعات العمل',
+    'All day (24h)': 'كل اليوم (24 ساعة)',
+    'Business hours (8AM-7PM)': 'ساعات العمل (8ص-7م)',
+    'Select at least one hour': 'اختر ساعة واحدة على الأقل',
+    'Existing Sponsored Ad': 'إعلان ممول موجود',
+    'Existing Discount': 'تخفيض موجود',
+    'This product already has an ad campaign. Do you want to edit it?':
+        'هذا المنتج لديه حملة إعلانية بالفعل. هل تريد تعديلها؟',
+    'This product already has a discount. Do you want to edit it?':
+        'هذا المنتج لديه تخفيض بالفعل. هل تريد تعديله؟',
+    'Start Date & Time': 'تاريخ ووقت البداية',
+    'End Date & Time': 'تاريخ ووقت النهاية',
+    'Please select a pack': 'يرجى اختيار باك',
+    'Please select a product': 'يرجى اختيار منتج',
+    'Age range is invalid': 'نطاق العمر غير صالح',
+    'Select at least one hour to show your ad':
+        'اختر ساعة واحدة على الأقل لعرض إعلانك',
+    'Discount target requires a product with active discount.':
+        'استهداف التخفيض يتطلب منتجًا بتخفيض نشط.',
+    'Select at least one target wilaya': 'اختر ولاية مستهدفة واحدة على الأقل',
+    'Choose target radius in km': 'اختر نصف القطر المستهدف بالكيلومتر',
+    'End time must be after start time':
+        'يجب أن يكون وقت النهاية بعد وقت البداية',
+    'Duration exceeds the current limit (\$maxDays days).':
+        'المدة تتجاوز الحد الحالي (\$maxDays يومًا).',
+    'Failed to': 'فشل في',
+    'save': 'الحفظ',
+    'create': 'الإنشاء',
+    'sponsored ad': 'الإعلان الممول',
+    'discount': 'التخفيض',
+    'This discount is not available': 'هذا التخفيض غير متاح',
+    'Sponsored Pack Summary': 'ملخص الباك الممول',
+    'Sponsored Discount Summary': 'ملخص التخفيض الممول',
+    'Sponsored Product Summary': 'ملخص المنتج الممول',
+    'Current Price': 'السعر الحالي',
+    'Discount Percentage (%)': 'نسبة التخفيض (%)',
+    'Required': 'مطلوب',
+    'Invalid': 'غير صالح',
+    'Ad Impressions': 'مرات ظهور الإعلان',
+    'e.g. 5000': 'مثال: 5000',
+    'Current ad impressions to activate:':
+        'مرات الظهور الحالية للتفعيل:',
+    'Age From': 'العمر من',
+    'Age To': 'العمر إلى',
+    'Choose Radius (km)': 'اختر نصف القطر (كم)',
+    'Sponsored ad will stay active until impressions are exhausted.':
+        'سيبقى الإعلان الممول نشطًا حتى تنفد مرات الظهور.',
+    'Select Product to Sponsor': 'اختر المنتج للإعلان الممول',
+    'Select products to sponsor': 'اختر منتجات للإعلان الممول',
+    'Select Product': 'اختر المنتج',
+    'Select Target Wilayas': 'اختر الولايات المستهدفة',
+    'wilayas selected': 'ولايات محددة',
     'Current Plan': 'الخطة الحالية',
     'Delete': 'حذف',
     'Delete Product?': 'حذف المنتج؟',
@@ -476,9 +1040,16 @@ class RuntimeTranslations {
     'Latest Products': 'أحدث المنتجات',
     'Load more': 'عرض المزيد',
     'Location': 'الموقع',
+    'Select your location': 'اختر موقعك',
+    'Tap to change': 'اضغط للتغيير',
+    'Tap to choose location': 'اضغط لاختيار الموقع',
     'Logout': 'تسجيل الخروج',
     'Mark all as read': 'تحديد الكل كمقروء',
     'New Price:': 'السعر الجديد:',
+    'New Price': 'السعر الجديد',
+    'Schedule': 'الجدولة',
+    'Tap to select date': 'اضغط لاختيار التاريخ',
+    'at': 'على',
     'New Product': 'منتج جديد',
     'No ads found in this period.': 'لم يتم العثور على إعلانات في هذه الفترة.',
     'No baladiya found': 'لم يتم العثور على بلدية',
@@ -510,6 +1081,15 @@ class RuntimeTranslations {
     'Product': 'منتج',
     'Product Details': 'تفاصيل المنتج',
     'Products': 'المنتجات',
+    'Posts': 'المنشورات',
+    'Followers': 'المتابعون',
+    'Rating': 'التقييم',
+    'Contact Store': 'التواصل مع المتجر',
+    'Add Favorite': 'إضافة إلى المفضلة',
+    'Remove Favorite': 'إزالة من المفضلة',
+    'Added to favorites': 'تمت الإضافة إلى المفضلة',
+    'Removed from favorites': 'تمت الإزالة من المفضلة',
+    'Failed to update favorite': 'تعذر تحديث المفضلة',
     'Products with Discounts': 'منتجات بتخفيضات',
     'Profile': 'الملف الشخصي',
     'Promotion Details': 'تفاصيل العرض',
@@ -543,6 +1123,29 @@ class RuntimeTranslations {
     'Search products, stores...': 'ابحث عن المنتجات والمتاجر...',
     'Search products...': 'ابحث عن المنتجات...',
     'Search Radius': 'نطاق البحث',
+    'Your Coins': 'عملاتك',
+    'Publishing Costs': 'تكاليف النشر',
+    'Product Post': 'نشر منتج',
+    'Pack Post': 'نشر باك',
+    'Promotion Post': 'نشر عرض',
+    'Purchase Requests': 'طلبات الشراء',
+    'Recent Transactions': 'آخر المعاملات',
+    'coin': 'عملة',
+    'Impressions': 'مرات الظهور',
+    'Clicks': 'النقرات',
+    'Active Ads': 'الإعلانات النشطة',
+    'Advertised': 'ممول',
+    'Views': 'المشاهدات',
+    '14D': '14ي',
+    'Ad View Coins balance:': 'رصيد عملات مشاهدات الإعلان:',
+    'Ad View:': 'مشاهدة إعلان:',
+    'ad View:': 'مشاهدة إعلان:',
+    'ad view': 'مشاهدة إعلان',
+    'Cost per impression:': 'تكلفة كل ظهور:',
+    'Current max impressions you can activate:': 'أقصى عدد ظهور يمكنك تفعيله الآن:',
+    'Selected hours': 'الساعات المحددة',
+    'Product Create': 'إنشاء منتج',
+    'product create': 'إنشاء منتج',
     'See All': 'عرض الكل',
     'View All': 'عرض الكل',
     'Select Hours': 'اختر الساعات',
@@ -584,6 +1187,41 @@ class RuntimeTranslations {
         'قم برفع من 1 إلى 3 صور. سيتم مراجعة طلبك من طرف المشرف.',
     'Verified': 'موثّق',
     'Verify Code': 'تحقق من الرمز',
+    'Verify': 'تحقق',
+    'Sign in with phone number': 'تسجيل الدخول برقم الهاتف',
+    'Sign In With Phone': 'تسجيل الدخول بالهاتف',
+    'Enter your Algerian number (0XXXXXXXXX)':
+        'أدخل رقمك الجزائري (0XXXXXXXXX)',
+    'Phone Number': 'رقم الهاتف',
+    'Please enter your phone number': 'يرجى إدخال رقم هاتفك',
+    'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX':
+        'استخدم الصيغة 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX',
+    'Send Code': 'إرسال الرمز',
+    'Failed to send verification code.':
+        'فشل في إرسال رمز التحقق.',
+    'Server connection failed. Please try again.':
+        'فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+    'Enter the 6-digit code': 'أدخل الرمز المكون من 6 أرقام',
+    'OTP verification failed.': 'فشل التحقق من رمز OTP.',
+    'Verification code resent': 'تمت إعادة إرسال رمز التحقق',
+    'Failed to resend code': 'فشل في إعادة إرسال الرمز',
+    'We sent a 6-digit code to': 'لقد أرسلنا رمزًا من 6 أرقام إلى',
+    'Resend in': 'إعادة الإرسال خلال',
+    'Resend code': 'إعادة إرسال الرمز',
+    'Skip (Prototype)': 'تخطي (نسخة تجريبية)',
+    'Your current location': 'موقعك الحالي',
+    'Algeria': 'الجزائر',
+    'Session expired. Please login again.':
+        'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+    'No internet connection or server is unreachable':
+        'لا يوجد اتصال بالإنترنت أو الخادم غير متاح',
+    'Connection timed out. Please try again.':
+        'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.',
+    'Server error. Please try again later.':
+        'خطأ في الخادم. يرجى المحاولة لاحقًا.',
+    'Invalid response format from server':
+        'تنسيق استجابة الخادم غير صالح',
+    'Request failed': 'فشل الطلب',
     'We are reviewing your image...': 'نحن نراجع صورتك...',
     'WhatsApp': 'واتساب',
     'Write your review...': 'اكتب تقييمك...',
@@ -608,6 +1246,64 @@ class RuntimeTranslations {
     'Packs': 'الباقات',
     'Select Wilaya': 'اختر الولاية',
     'Select Baladiya': 'اختر البلدية',
+    'Adrar': 'أدرار',
+    'Chlef': 'الشلف',
+    'Laghouat': 'الأغواط',
+    'Oum El Bouaghi': 'أم البواقي',
+    'Batna': 'باتنة',
+    'Béjaïa': 'بجاية',
+    'Biskra': 'بسكرة',
+    'Béchar': 'بشار',
+    'Blida': 'البليدة',
+    'Bouira': 'البويرة',
+    'Tamanrasset': 'تمنراست',
+    'Tébessa': 'تبسة',
+    'Tlemcen': 'تلمسان',
+    'Tiaret': 'تيارت',
+    'Tizi Ouzou': 'تيزي وزو',
+    'Algiers': 'الجزائر',
+    'Djelfa': 'الجلفة',
+    'Jijel': 'جيجل',
+    'Sétif': 'سطيف',
+    'Saïda': 'سعيدة',
+    'Skikda': 'سكيكدة',
+    'Sidi Bel Abbès': 'سيدي بلعباس',
+    'Annaba': 'عنابة',
+    'Guelma': 'قالمة',
+    'Constantine': 'قسنطينة',
+    'Médéa': 'المدية',
+    'Mostaganem': 'مستغانم',
+    'M\'Sila': 'المسيلة',
+    'Mascara': 'معسكر',
+    'Ouargla': 'ورقلة',
+    'Oran': 'وهران',
+    'El Bayadh': 'البيض',
+    'Illizi': 'إليزي',
+    'Bordj Bou Arreridj': 'برج بوعريريج',
+    'Boumerdès': 'بومرداس',
+    'El Tarf': 'الطارف',
+    'Tindouf': 'تندوف',
+    'Tissemsilt': 'تيسمسيلت',
+    'El Oued': 'الوادي',
+    'Khenchela': 'خنشلة',
+    'Souk Ahras': 'سوق أهراس',
+    'Tipaza': 'تيبازة',
+    'Mila': 'ميلة',
+    'Aïn Defla': 'عين الدفلى',
+    'Naâma': 'النعامة',
+    'Aïn Témouchent': 'عين تموشنت',
+    'Ghardaïa': 'غرداية',
+    'Relizane': 'غليزان',
+    'Timimoun': 'تيميمون',
+    'Bordj Badji Mokhtar': 'برج باجي مختار',
+    'Ouled Djellal': 'أولاد جلال',
+    'Béni Abbès': 'بني عباس',
+    'In Salah': 'عين صالح',
+    'In Guezzam': 'عين قزام',
+    'Touggourt': 'تقرت',
+    'Djanet': 'جانت',
+    'El M\'Ghair': 'المغير',
+    'El Meniaa': 'المنيعة',
     'Search wilaya...': 'ابحث عن ولاية...',
     'Search baladiya...': 'ابحث عن بلدية...',
     'Search wilayas...': 'ابحث عن الولايات...',
@@ -643,6 +1339,71 @@ class RuntimeTranslations {
     'Location permission denied': 'تم رفض إذن الموقع',
     'Failed to get current GPS location': 'فشل الحصول على موقع GPS الحالي',
     'Categories': 'الفئات',
+    'Select Category': 'اختر الفئة',
+    'Select category': 'اختر الفئة',
+    'No products found': 'لم يتم العثور على منتجات',
+    'Just now': 'الآن',
+    'minute ago': 'دقيقة مضت',
+    'minutes ago': 'دقائق مضت',
+    'hour ago': 'ساعة مضت',
+    'hours ago': 'ساعات مضت',
+    'day ago': 'يوم مضى',
+    'days ago': 'أيام مضت',
+    'week ago': 'أسبوع مضى',
+    'weeks ago': 'أسابيع مضت',
+    'month ago': 'شهر مضى',
+    'months ago': 'أشهر مضت',
+    'Confirm': 'تأكيد',
+    'No categories found': 'لم يتم العثور على فئات',
+    'Loading categories, please wait...': 'جارٍ تحميل الفئات، يرجى الانتظار...',
+    'Loading categories...': 'جارٍ تحميل الفئات...',
+    'No categories available': 'لا توجد فئات متاحة',
+    'Product Images': 'صور المنتج',
+    'You can add up to 5 product images': 'يمكنك إضافة حتى 5 صور للمنتج',
+    'Product Name': 'اسم المنتج',
+    'Enter product name': 'أدخل اسم المنتج',
+    'Please enter product name': 'يرجى إدخال اسم المنتج',
+    'Price': 'السعر',
+    'Please enter price': 'يرجى إدخال السعر',
+    'Add product description..': 'أضف وصف المنتج..',
+    'Show price to customers in listings': 'إظهار السعر للزبائن في القوائم',
+    'Is the product available for sale?': 'هل المنتج متاح للبيع؟',
+    'Publish Product': 'نشر المنتج',
+    'Add Images': 'إضافة صور',
+    'Tap to upload': 'اضغط للرفع',
+    'Please add at least one image': 'يرجى إضافة صورة واحدة على الأقل',
+    'Please select a category': 'يرجى اختيار فئة',
+    'Failed to delete product': 'فشل حذف المنتج',
+    'Product updated successfully': 'تم تحديث المنتج بنجاح',
+    'Product published successfully': 'تم نشر المنتج بنجاح',
+    'Error selecting images': 'حدث خطأ أثناء اختيار الصور',
+    'Set your location area or GPS in Edit Profile before posting.':
+        'حدد منطقتك أو GPS في تعديل الملف قبل النشر.',
+    'update': 'تحديث',
+    'publish': 'نشر',
+    'product': 'منتج',
+    'This product already exists in the pack': 'هذا المنتج موجود بالفعل في الباك',
+    'Select pack products first': 'اختر منتجات الباك أولًا',
+    'Enter pack name': 'أدخل اسم الباك',
+    'Enter pack sale price': 'أدخل سعر بيع الباك',
+    'Pack price must be less than the total price of products':
+        'يجب أن يكون سعر الباك أقل من السعر الإجمالي للمنتجات',
+    'Must login first': 'يجب تسجيل الدخول أولًا',
+    'No store found for this user': 'لم يتم العثور على متجر لهذا المستخدم',
+    'Pack updated successfully': 'تم تحديث الباك بنجاح',
+    'Pack published successfully': 'تم نشر الباك بنجاح',
+    'Error during publishing': 'خطأ أثناء النشر',
+    'You haven\'t added any products to the pack yet':
+        'لم تقم بإضافة أي منتجات إلى الباك بعد',
+    'Use the search above to add products':
+        'استخدم البحث أعلاه لإضافة المنتجات',
+    'Pack Name *': 'اسم الباك *',
+    'Pack Sale Price': 'سعر بيع الباك',
+    'Delivery areas': 'مناطق التوصيل',
+    'Select delivery areas (optional)': 'اختر مناطق التوصيل (اختياري)',
+    'No areas selected — your store address will be used by default':
+        'لم يتم اختيار مناطق — سيتم استخدام عنوان متجرك افتراضيًا',
+    'Publish Pack': 'نشر الباك',
     'km radius': 'كم نطاق',
     'Filters': 'الفلاتر',
     'Reset': 'إعادة تعيين',

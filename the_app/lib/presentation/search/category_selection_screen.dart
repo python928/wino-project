@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 
-import '../../data/models/category_model.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_text_field.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../data/models/category_model.dart';
 
 class CategorySelectionScreen extends StatefulWidget {
   final List<Category> categories;
@@ -88,7 +88,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          widget.singleSelection ? 'Select Category' : 'Categories',
+          widget.singleSelection
+              ? context.tr('Select Category')
+              : context.tr('Categories'),
           style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
         ),
         leading: IconButton(
@@ -99,7 +101,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           TextButton(
             onPressed: () => setState(() => _selectedIds.clear()),
             child: Text(
-              'Clear',
+              context.tr('Clear'),
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.primaryColor,
                 fontWeight: FontWeight.w600,
@@ -125,7 +127,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             child: categories.isEmpty
                 ? Center(
                     child: Text(
-                      'No categories found',
+                      context.tr('No categories found'),
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -159,7 +161,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             child: SafeArea(
               top: false,
               child: AppPrimaryButton(
-                text: 'Confirm',
+                text: context.tr('Confirm'),
                 icon: Icons.check_circle_outline_rounded,
                 onPressed: () => Navigator.pop<Set<int>>(context, _selectedIds),
               ),

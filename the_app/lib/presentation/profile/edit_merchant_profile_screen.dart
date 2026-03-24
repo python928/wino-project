@@ -1,20 +1,22 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../../core/config/api_config.dart';
+import '../../core/services/api_service.dart';
+import '../../core/services/location_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/services/storage_service.dart';
-import '../../core/services/api_service.dart';
-import '../../core/config/api_config.dart';
-import '../../core/utils/helpers.dart';
-import '../common/location_permission_helper.dart';
-import '../common/location_picker_screen.dart';
-import '../../core/services/location_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../core/utils/geolocation_stub.dart'
     if (dart.library.html) '../../core/utils/geolocation_web.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../common/location_permission_helper.dart';
+import '../common/location_picker_screen.dart';
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
@@ -981,13 +983,13 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _selectedBaladiya!,
+                              context.tr(_selectedBaladiya!),
                               style: AppTextStyles.bodyMedium
                                   .copyWith(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _selectedWilaya!,
+                              context.tr(_selectedWilaya!),
                               style: AppTextStyles.bodySmall
                                   .copyWith(color: AppColors.textSecondary),
                             ),

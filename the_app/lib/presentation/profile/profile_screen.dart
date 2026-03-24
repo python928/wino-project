@@ -719,8 +719,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case 'edit':
         _navigateToEditProfile();
         break;
-      case 'share':
-        _showShareProfileOptions();
+      case 'store':
+        if (_userId != null) {
+          Navigator.pushNamed(context, Routes.store, arguments: _userId);
+        }
         break;
       case 'ads':
         Navigator.push(
@@ -730,14 +732,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
         break;
-      case 'language':
-        _showLanguagePicker();
+      case 'share':
+        _showShareProfileOptions();
         break;
       case 'scan_qr':
         Navigator.pushNamed(context, Routes.qrScan);
         break;
       case 'feedback_send':
         Navigator.pushNamed(context, Routes.feedbackSend);
+        break;
+      case 'language':
+        _showLanguagePicker();
         break;
       case 'logout':
         _handleLogout();
@@ -1333,6 +1338,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     PopupMenuItem<String>(
+                      value: 'store',
+                      child: Row(
+                        children: [
+                          Icon(Icons.storefront_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.tr('Store')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'ads',
+                      child: Row(
+                        children: [
+                          Icon(Icons.campaign_outlined,
+                              color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.profileTooltipAds),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
                       value: 'share',
                       child: Row(
                         children: [
@@ -1362,17 +1389,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppColors.primaryColor, size: 20),
                           const SizedBox(width: 12),
                           Text(context.l10n.profileSettingsSendFeedback),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'ads',
-                      child: Row(
-                        children: [
-                          Icon(Icons.campaign_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileTooltipAds),
                         ],
                       ),
                     ),

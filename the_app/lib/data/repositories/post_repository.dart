@@ -147,7 +147,20 @@ class PostRepository {
     }
   }
 
-  static Future<int> _ensureCategory(String categoryName) async {
+  static Future<int> _ensureCategory(String categoryRef) async {
+    final asId = int.tryParse(categoryRef.trim());
+    if (asId != null && asId > 0) return asId;
+
+    final categoryName = categoryRef.trim();
+    if (categoryName.isEmpty) {
+      final categories = await _loadCategoriesById();
+      final firstId = categories.keys.isNotEmpty ? categories.keys.first : null;
+      if (firstId != null) return firstId;
+      final created =
+          await ApiService.post(ApiConfig.categories, {'name': 'General'});
+      return created['id'];
+    }
+
     final categories = await _loadCategoriesById();
     final existing = categories.entries.firstWhere(
       (entry) => entry.value.toLowerCase() == categoryName.toLowerCase(),
@@ -188,8 +201,7 @@ class PostRepository {
     List<String> deliveryWilayas = const [],
   }) async {
     try {
-      final categoryId =
-          await _ensureCategory(category.isEmpty ? 'General' : category);
+      final categoryId = await _ensureCategory(category);
       final userId = await _ensureStoreForCurrentUser();
 
       final productPayload = {
@@ -268,8 +280,7 @@ class PostRepository {
     List<String> deliveryWilayas = const [],
   }) async {
     try {
-      final categoryId =
-          await _ensureCategory(category.isEmpty ? 'General' : category);
+      final categoryId = await _ensureCategory(category);
       final fields = {
         'name': title,
         'description': description,

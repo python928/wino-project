@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
-import '../../../core/widgets/app_toggle_button.dart';
-import '../../../core/widgets/app_text_field.dart';
+import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_text_field.dart';
+import '../../../core/widgets/app_toggle_button.dart';
 
 /// Filter widget for profile posts with toggle buttons
 class ProfilePostFilter extends StatelessWidget {
@@ -30,9 +31,9 @@ class ProfilePostFilter extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Posts',
-                style: TextStyle(
+              Text(
+                context.tr('Posts'),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),

@@ -4,6 +4,9 @@ from django.db import models
 
 class Category(models.Model):
 	name = models.CharField(max_length=255)
+	name_ar = models.CharField(max_length=255, blank=True, default='')
+	name_fr = models.CharField(max_length=255, blank=True, default='')
+	name_en = models.CharField(max_length=255, blank=True, default='')
 	parent = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, null=True, related_name='subcategories')
 	# Material Icons fields — served to Flutter as a JSON object
 	icon_code_point = models.CharField(max_length=10, blank=True, default='', help_text='Hex codePoint from fonts.google.com/icons, e.g. e027, e532')
