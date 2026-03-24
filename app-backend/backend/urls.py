@@ -18,7 +18,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
@@ -35,7 +35,35 @@ def store_short_link_redirect(request, store_id):
 def product_short_link_redirect(request, product_id):
     return AppSchemeRedirect(f'wino://product/{product_id}')
 
+
+def download_app_index(request):
+    apk_url = 'https://wino.pythonanywhere.com/media/downloads/wino-app-release.apk'
+    html = f'''<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wino Android App Download</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 2rem; line-height: 1.5; }}
+        .card {{ max-width: 680px; border: 1px solid #ddd; border-radius: 12px; padding: 1.2rem; }}
+        .btn {{ display: inline-block; margin-top: 0.8rem; background: #0d6efd; color: #fff; text-decoration: none; padding: 0.7rem 1rem; border-radius: 8px; }}
+        code {{ background: #f5f5f5; padding: 0.1rem 0.3rem; border-radius: 4px; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Wino Android App</h1>
+        <p>Download the latest APK:</p>
+        <p><a class="btn" href="{apk_url}">Download APK</a></p>
+        <p>Direct link: <code>{apk_url}</code></p>
+    </div>
+</body>
+</html>'''
+    return HttpResponse(html)
+
 urlpatterns = [
+    path('download/', download_app_index, name='download_app_index'),
     path('s/<int:store_id>/', store_short_link_redirect, name='short_store_redirect'),
     path('p/<int:product_id>/', product_short_link_redirect, name='short_product_redirect'),
     # Override logout to allow GET redirect instead of 405 when hit directly
