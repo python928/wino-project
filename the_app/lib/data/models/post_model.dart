@@ -121,7 +121,8 @@ class Post {
           (json['store_address'] ?? storeMap['address'])?.toString() ?? '';
     }
     final bool storeIsVerified = json['store'] is Map
-        ? ((json['store'] as Map<String, dynamic>)['is_verified'] as bool? ?? false)
+        ? ((json['store'] as Map<String, dynamic>)['is_verified'] as bool? ??
+            false)
         : (json['store_is_verified'] as bool? ?? false);
 
     // Parse store coordinates
@@ -226,6 +227,12 @@ class Post {
 
   static List<String> _parseWilayas(dynamic value) {
     if (value == null) return [];
+    if (value is List) {
+      return value
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
     if (value is String && value.trim().isNotEmpty) {
       return value
           .split(',')

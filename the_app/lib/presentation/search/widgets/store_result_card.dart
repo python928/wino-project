@@ -52,36 +52,50 @@ class StoreResultCard extends StatelessWidget {
         child: Row(
           children: [
             // Store Avatar
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryColor.withOpacity(0.1),
-                    AppColors.primaryColor.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: (store.profileImage != null && store.profileImage!.isNotEmpty)
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        store.profileImage!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
+            Stack(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primaryColor.withOpacity(0.1),
+                        AppColors.primaryColor.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: (store.profileImage != null && store.profileImage!.isNotEmpty)
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(
+                            store.profileImage!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.storefront_rounded,
+                              color: AppColors.primaryColor,
+                              size: 28,
+                            ),
+                          ),
+                        )
+                      : Icon(
                           Icons.storefront_rounded,
                           color: AppColors.primaryColor,
                           size: 28,
                         ),
-                      ),
-                    )
-                  : Icon(
-                      Icons.storefront_rounded,
-                      color: AppColors.primaryColor,
-                      size: 28,
+                ),
+                if (store.isVerified)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: Colors.green,
                     ),
+                  ),
+              ],
             ),
             const SizedBox(width: 14),
 
@@ -90,13 +104,27 @@ class StoreResultCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    store.fullName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      if (store.isVerified) ...[
+                        const Icon(
+                          Icons.verified,
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        child: Text(
+                          store.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   if (store.storeDescription.isNotEmpty)

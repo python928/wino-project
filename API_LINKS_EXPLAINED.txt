@@ -10,7 +10,7 @@ Project roots
 
 Base URL currently used by the Flutter app
 ------------------------------------------
-- `http://192.168.36.21:8000/`
+- `http://192.168.133.21:8000/`
 
 Important notes
 ---------------
@@ -162,7 +162,7 @@ Android manifest currently also accepts
 - `toprice://...`
 - `http(s)://wino.app/s/{id}`
 - `http(s)://toprice.app/s/{id}`
-- `http://192.168.36.21/s/{id}`
+- `http://192.168.133.21/s/{id}`
 - same pattern for `/p/{id}`
 
 11) MEDIA

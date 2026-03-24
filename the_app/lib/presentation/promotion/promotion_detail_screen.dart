@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/routing/routes.dart';
-import '../../data/models/offer_model.dart';
-import '../../core/services/api_service.dart';
-import '../../core/services/storage_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/config/api_config.dart';
-import '../../core/utils/helpers.dart';
+import '../../core/routing/routes.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../data/models/offer_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
 import '../shared_widgets/contact_action_row.dart';
@@ -323,27 +324,41 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                   // Store information with follow and favorite buttons
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor:
-                            AppColors.primaryColor.withOpacity(0.1),
-                        backgroundImage: (_storeImageUrl != null &&
-                                _storeImageUrl!.trim().isNotEmpty)
-                            ? NetworkImage(_storeImageUrl!)
-                            : null,
-                        onBackgroundImageError: (_storeImageUrl != null &&
-                                _storeImageUrl!.trim().isNotEmpty)
-                            ? (_, __) {
-                                if (mounted) {
-                                  setState(() => _storeImageUrl = null);
-                                }
-                              }
-                            : null,
-                        child: (_storeImageUrl == null ||
-                                _storeImageUrl!.trim().isEmpty)
-                            ? Icon(Icons.store,
-                                color: AppColors.primaryColor, size: 16)
-                            : null,
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor:
+                                AppColors.primaryColor.withOpacity(0.1),
+                            backgroundImage: (_storeImageUrl != null &&
+                                    _storeImageUrl!.trim().isNotEmpty)
+                                ? NetworkImage(_storeImageUrl!)
+                                : null,
+                            onBackgroundImageError: (_storeImageUrl != null &&
+                                    _storeImageUrl!.trim().isNotEmpty)
+                                ? (_, __) {
+                                    if (mounted) {
+                                      setState(() => _storeImageUrl = null);
+                                    }
+                                  }
+                                : null,
+                            child: (_storeImageUrl == null ||
+                                    _storeImageUrl!.trim().isEmpty)
+                                ? Icon(Icons.store,
+                                    color: AppColors.primaryColor, size: 16)
+                                : null,
+                          ),
+                          if (widget.promotion.product.storeIsVerified)
+                            const Positioned(
+                              top: -2,
+                              left: -2,
+                              child: Icon(
+                                Icons.verified,
+                                color: Colors.green,
+                                size: 14,
+                              ),
+                            ),
+                        ],
                       ),
                       SizedBox(width: 8),
                       Expanded(
@@ -355,14 +370,30 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                               arguments: widget.promotion.product.storeId,
                             );
                           },
-                          child: Text(
-                            widget.promotion.product.storeName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primaryColor,
-                              decoration: TextDecoration.underline,
-                            ),
+                          child: Row(
+                            children: [
+                              if (widget.promotion.product.storeIsVerified) ...[
+                                const Icon(
+                                  Icons.verified,
+                                  color: Colors.green,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.promotion.product.storeName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.primaryColor,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

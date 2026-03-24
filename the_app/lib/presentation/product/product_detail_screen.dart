@@ -660,38 +660,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               arguments: widget.product.storeId,
                             );
                           },
-                          child: Text(
-                            widget.product.storeName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primaryColor,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (widget.product.storeIsVerified)
-                        Container(
-                          margin: const EdgeInsetsDirectional.only(start: 6),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.verified,
-                                  color: Colors.green, size: 14),
-                              const SizedBox(width: 4),
-                              Text(context.tr('Verified'),
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.green)),
+                              if (widget.product.storeIsVerified) ...[
+                                const Icon(
+                                  Icons.verified,
+                                  color: Colors.green,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.product.storeName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.primaryColor,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
+                      ),
                       if (!_isOwnStore) ...[
                         SizedBox(width: 8),
                         // Follow button

@@ -224,37 +224,31 @@ class ProfileMerchantHeader extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        if (isVerified) ...[
+                          const Icon(
+                            Icons.verified,
+                            size: 20,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Expanded(
+                          child: Text(
+                            userName,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (isVerified)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.verified,
-                              size: 14, color: Colors.green),
-                          const SizedBox(width: 4),
-                          Text(context.tr('Verified'),
-                              style: const TextStyle(
-                                  color: Colors.green, fontSize: 11)),
-                        ],
-                      ),
-                    ),
                   const SizedBox(width: 12),
                   Row(
                     mainAxisSize: MainAxisSize.min,

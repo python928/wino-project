@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+
 import '../../core/config/api_config.dart';
 
 class Pack extends Equatable {
@@ -16,6 +17,7 @@ class Pack extends Equatable {
   final double? merchantLatitude;
   final double? merchantLongitude;
   final bool merchantNearbyVisible;
+  final bool merchantIsVerified;
   final bool deliveryAvailable;
   final List<String> deliveryWilayas;
 
@@ -34,6 +36,7 @@ class Pack extends Equatable {
     this.merchantLatitude,
     this.merchantLongitude,
     this.merchantNearbyVisible = true,
+    this.merchantIsVerified = false,
     this.deliveryAvailable = false,
     this.deliveryWilayas = const [],
   });
@@ -51,6 +54,7 @@ class Pack extends Equatable {
 
     // Extract merchant name from various possible sources
     String merchantName = '';
+    bool merchantIsVerified = false;
 
     // 1. Try merchant_name field
     if (json['merchant_name'] != null &&
@@ -65,6 +69,13 @@ class Pack extends Equatable {
     else if (storesById != null && merchantId > 0) {
       merchantName = storesById[merchantId] ?? '';
     }
+
+    if (json['merchant'] is Map<String, dynamic>) {
+      merchantIsVerified =
+          (json['merchant']['is_verified'] as bool?) ?? merchantIsVerified;
+    }
+    merchantIsVerified =
+        (json['merchant_is_verified'] as bool?) ?? merchantIsVerified;
 
     return Pack(
       id: json['id'] as int,
@@ -91,6 +102,7 @@ class Pack extends Equatable {
           ? double.tryParse(json['merchant_longitude'].toString())
           : null,
       merchantNearbyVisible: json['merchant_nearby_visible'] as bool? ?? true,
+      merchantIsVerified: merchantIsVerified,
       deliveryAvailable: json['delivery_available'] as bool? ?? false,
       deliveryWilayas: _parseWilayas(json['delivery_wilayas']),
     );
@@ -105,6 +117,12 @@ class Pack extends Equatable {
 
   static List<String> _parseWilayas(dynamic value) {
     if (value == null) return [];
+    if (value is List) {
+      return value
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
     if (value is String && value.trim().isNotEmpty) {
       return value
           .split(',')
@@ -131,6 +149,7 @@ class Pack extends Equatable {
       'merchant_latitude': merchantLatitude,
       'merchant_longitude': merchantLongitude,
       'merchant_nearby_visible': merchantNearbyVisible,
+      'merchant_is_verified': merchantIsVerified,
       'delivery_available': deliveryAvailable,
       'delivery_wilayas': deliveryWilayas.join(','),
     };
@@ -152,6 +171,7 @@ class Pack extends Equatable {
         merchantLatitude,
         merchantLongitude,
         merchantNearbyVisible,
+        merchantIsVerified,
         deliveryAvailable,
         deliveryWilayas,
       ];

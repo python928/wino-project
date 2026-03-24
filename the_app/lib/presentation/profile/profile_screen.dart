@@ -735,9 +735,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case 'share':
         _showShareProfileOptions();
         break;
-      case 'scan_qr':
-        Navigator.pushNamed(context, Routes.qrScan);
-        break;
       case 'feedback_send':
         Navigator.pushNamed(context, Routes.feedbackSend);
         break;
@@ -1367,17 +1364,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppColors.primaryColor, size: 20),
                           const SizedBox(width: 12),
                           Text(context.l10n.profileTooltipShare),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'scan_qr',
-                      child: Row(
-                        children: [
-                          Icon(Icons.qr_code_scanner,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileSettingsScanQr),
                         ],
                       ),
                     ),

@@ -240,7 +240,7 @@ Android manifest currently handles:
 - `toprice://...`
 - `http(s)://wino.app/...`
 - `http(s)://toprice.app/...`
-- `http://192.168.36.21/...`
+- `http://192.168.133.21/...`
 
 7) App configuration notes
 --------------------------

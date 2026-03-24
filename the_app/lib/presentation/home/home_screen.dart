@@ -232,12 +232,51 @@ class _HomeScreenState extends State<HomeScreen> {
     return true;
   }
 
+  bool _deliveryCoversSelectedWilaya({
+    required bool deliveryAvailable,
+    required List<String> deliveryWilayas,
+  }) {
+    if (!_isCityFilterActive) return true;
+    if (!deliveryAvailable) return false;
+    if (deliveryWilayas.isEmpty) {
+      // Backend treats empty delivery_wilayas as dynamic/fallback coverage.
+      return true;
+    }
+    final selected = _selectedWilaya!.toLowerCase();
+    return deliveryWilayas.map((w) => w.toLowerCase()).contains(selected);
+  }
+
+  bool _postMatchesCity(Post p) {
+    if (!_isCityFilterActive) return true;
+    if (_addressMatchesSelectedLocation(p.storeAddress)) return true;
+    return _deliveryCoversSelectedWilaya(
+      deliveryAvailable: p.deliveryAvailable,
+      deliveryWilayas: p.deliveryWilayas,
+    );
+  }
+
+  bool _offerMatchesCity(Offer o) {
+    if (!_isCityFilterActive) return true;
+    if (_addressMatchesSelectedLocation(o.product.storeAddress)) return true;
+    return _deliveryCoversSelectedWilaya(
+      deliveryAvailable: o.product.deliveryAvailable,
+      deliveryWilayas: o.product.deliveryWilayas,
+    );
+  }
+
+  bool _packMatchesCity(Pack p) {
+    if (!_isCityFilterActive) return true;
+    return _deliveryCoversSelectedWilaya(
+      deliveryAvailable: p.deliveryAvailable,
+      deliveryWilayas: p.deliveryWilayas,
+    );
+  }
+
   List<Post> _filterPostsForActiveLocation(List<Post> products) {
     if (_radiusKm != null) return _filterByRadius(products);
     if (_isCityFilterActive) {
-      return products
-          .where((p) => _addressMatchesSelectedLocation(p.storeAddress))
-          .toList();
+      final filtered = products.where(_postMatchesCity).toList();
+      return filtered.isEmpty ? products : filtered;
     }
     return products;
   }
@@ -254,9 +293,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
     if (_isCityFilterActive) {
-      return offers
-          .where((o) => _addressMatchesSelectedLocation(o.product.storeAddress))
-          .toList();
+      final filtered = offers.where(_offerMatchesCity).toList();
+      return filtered.isEmpty ? offers : filtered;
     }
     return offers;
   }
@@ -264,11 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Pack> _filterPacksForActiveLocation(List<Pack> packs) {
     if (_radiusKm != null) return _filterPacksByRadius(packs);
     if (_isCityFilterActive) {
-      return packs
-          .where((p) => p.deliveryWilayas
-              .map((w) => w.toLowerCase())
-              .contains(_selectedWilaya!.toLowerCase()))
-          .toList();
+      final filtered = packs.where(_packMatchesCity).toList();
+      return filtered.isEmpty ? packs : filtered;
     }
     return packs;
   }
@@ -880,6 +915,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 name: u.fullName,
                 rating: u.averageRating,
                 followersCount: u.followersCount,
+                isVerified: u.isVerified,
                 onTap: () => Navigator.pushNamed(
                   context,
                   Routes.store,

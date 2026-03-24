@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
-import '../../data/models/pack_model.dart';
-import '../../core/routing/routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/services/api_service.dart';
-import '../../core/services/storage_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/config/api_config.dart';
-import '../../core/utils/helpers.dart';
+import '../../core/routing/routes.dart';
+import '../../core/services/api_service.dart';
 import '../../core/services/favorites_change_notifier.dart';
 import '../../core/services/follow_change_notifier.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../data/models/pack_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
 import '../shared_widgets/contact_action_row.dart';
@@ -555,27 +556,46 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                   // Store information with follow and favorite buttons
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor:
-                            AppColors.primaryColor.withOpacity(0.1),
-                        backgroundImage: (_storeImageUrl != null &&
-                                _storeImageUrl!.trim().isNotEmpty)
-                            ? NetworkImage(_storeImageUrl!)
-                            : null,
-                        onBackgroundImageError: (_storeImageUrl != null &&
-                                _storeImageUrl!.trim().isNotEmpty)
-                            ? (_, __) {
-                                if (mounted) {
-                                  setState(() => _storeImageUrl = null);
-                                }
-                              }
-                            : null,
-                        child: (_storeImageUrl == null ||
-                                _storeImageUrl!.trim().isEmpty)
-                            ? Icon(Icons.store,
-                                color: AppColors.primaryColor, size: 16)
-                            : null,
+                      SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor:
+                                  AppColors.primaryColor.withOpacity(0.1),
+                              backgroundImage: (_storeImageUrl != null &&
+                                      _storeImageUrl!.trim().isNotEmpty)
+                                  ? NetworkImage(_storeImageUrl!)
+                                  : null,
+                              onBackgroundImageError: (_storeImageUrl != null &&
+                                      _storeImageUrl!.trim().isNotEmpty)
+                                  ? (_, __) {
+                                      if (mounted) {
+                                        setState(() => _storeImageUrl = null);
+                                      }
+                                    }
+                                  : null,
+                              child: (_storeImageUrl == null ||
+                                      _storeImageUrl!.trim().isEmpty)
+                                  ? Icon(Icons.store,
+                                      color: AppColors.primaryColor, size: 16)
+                                  : null,
+                            ),
+                            if (widget.pack.merchantIsVerified)
+                              const Positioned(
+                                right: -1,
+                                bottom: -1,
+                                child: Icon(
+                                  Icons.verified,
+                                  size: 15,
+                                  color: Color(0xFF1DA1F2),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                       SizedBox(width: 8),
                       Expanded(
@@ -587,14 +607,30 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                               arguments: widget.pack.merchantId,
                             );
                           },
-                          child: Text(
-                            widget.pack.merchantName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primaryColor,
-                              decoration: TextDecoration.underline,
-                            ),
+                          child: Row(
+                            children: [
+                              if (widget.pack.merchantIsVerified) ...[
+                                const Icon(
+                                  Icons.verified,
+                                  size: 15,
+                                  color: Color(0xFF1DA1F2),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.pack.merchantName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.primaryColor,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

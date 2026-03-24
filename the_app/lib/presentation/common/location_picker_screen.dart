@@ -71,6 +71,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     super.dispose();
   }
 
+  void _goToWilayaStep() {
+    setState(() {
+      _selectedWilaya = null;
+      _selectedBaladiya = null;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
   void _confirmLocation() {
     if (_selectedWilaya == null || _selectedBaladiya == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,12 +123,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               color: AppColors.textPrimary,
             ),
             onPressed: () {
-              if (_selectedWilaya != null && _selectedBaladiya == null) {
-                setState(() {
-                  _selectedWilaya = null;
-                  _searchQuery = '';
-                  _searchController.clear();
-                });
+              // If user is in baladiya step, always go back to wilaya list.
+              if (_selectedWilaya != null) {
+                _goToWilayaStep();
               } else {
                 Navigator.pop(context);
               }
@@ -202,14 +208,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedWilaya = null;
-                                _selectedBaladiya = null;
-                                _searchQuery = '';
-                                _searchController.clear();
-                              });
-                            },
+                            onTap: _goToWilayaStep,
                             child: Icon(Icons.close,
                                 size: 16, color: AppColors.primaryColor),
                           ),

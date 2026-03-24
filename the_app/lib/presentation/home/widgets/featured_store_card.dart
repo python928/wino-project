@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/card_styles.dart';
 import '../../../core/utils/helpers.dart';
@@ -62,30 +63,44 @@ class FeaturedStoreCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Avatar
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
+                  Stack(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: store.profileImage != null && store.profileImage!.isNotEmpty
-                          ? Image.network(
-                              store.profileImage!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildDefaultAvatar();
-                              },
-                            )
-                          : _buildDefaultAvatar(),
-                    ),
+                        child: ClipOval(
+                          child: store.profileImage != null && store.profileImage!.isNotEmpty
+                              ? Image.network(
+                                  store.profileImage!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildDefaultAvatar();
+                                  },
+                                )
+                              : _buildDefaultAvatar(),
+                        ),
+                      ),
+                      if (store.isVerified)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          child: Icon(
+                            Icons.verified,
+                            size: 14,
+                            color: Colors.green,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 6),
 
@@ -93,6 +108,14 @@ class FeaturedStoreCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      if (store.isVerified) ...[
+                        const Icon(
+                          Icons.verified,
+                          size: 12,
+                          color: AppColors.primaryPurple,
+                        ),
+                        const SizedBox(width: 3),
+                      ],
                       Flexible(
                         child: Text(
                           store.fullName,
@@ -105,14 +128,6 @@ class FeaturedStoreCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (store.isVerified) ...[
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.verified,
-                          size: 12,
-                          color: AppColors.primaryPurple,
-                        ),
-                      ],
                     ],
                   ),
 
@@ -369,6 +384,16 @@ class StoreListCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (store.isVerified)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                  ),
               ],
             ),
           ],

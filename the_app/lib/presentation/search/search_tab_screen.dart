@@ -1925,6 +1925,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                             name: store.fullName,
                             rating: store.averageRating,
                             followersCount: store.followersCount,
+                            isVerified: store.isVerified,
                             onTap: () => Navigator.pushNamed(
                               context,
                               Routes.store,
@@ -2371,6 +2372,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       name: store.fullName,
                       rating: store.averageRating,
                       followersCount: store.followersCount,
+                      isVerified: store.isVerified,
                       onTap: () => Navigator.pushNamed(
                         context,
                         Routes.store,

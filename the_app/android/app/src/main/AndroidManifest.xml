@@ -65,7 +65,7 @@
                 <data android:scheme="https" android:host="toprice.app" android:pathPrefix="/s/" />
                 <data android:scheme="http" android:host="wino.app" android:pathPrefix="/s/" />
                 <data android:scheme="http" android:host="toprice.app" android:pathPrefix="/s/" />
-                <data android:scheme="http" android:host="192.168.36.21" android:pathPrefix="/s/" />
+                <data android:scheme="http" android:host="192.168.133.21" android:pathPrefix="/s/" />
             </intent-filter>
 
             <intent-filter>
@@ -76,7 +76,7 @@
                 <data android:scheme="https" android:host="toprice.app" android:pathPrefix="/p/" />
                 <data android:scheme="http" android:host="wino.app" android:pathPrefix="/p/" />
                 <data android:scheme="http" android:host="toprice.app" android:pathPrefix="/p/" />
-                <data android:scheme="http" android:host="192.168.36.21" android:pathPrefix="/p/" />
+                <data android:scheme="http" android:host="192.168.133.21" android:pathPrefix="/p/" />
             </intent-filter>
         </activity>
 

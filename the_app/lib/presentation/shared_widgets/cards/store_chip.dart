@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -9,6 +10,7 @@ class StoreChip extends StatelessWidget {
   final String name;
   final double rating;
   final int followersCount;
+  final bool isVerified;
   final VoidCallback? onTap;
 
   const StoreChip({
@@ -17,6 +19,7 @@ class StoreChip extends StatelessWidget {
     required this.name,
     required this.rating,
     required this.followersCount,
+    this.isVerified = false,
     this.onTap,
   });
 
@@ -30,41 +33,84 @@ class StoreChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // ── Circle avatar ──────────────────────────────────────────────
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryColor.withOpacity(0.08),
-                border: Border.all(
-                  color: AppColors.primaryColor.withOpacity(0.25),
-                  width: 1.5,
-                ),
-              ),
-              child: ClipOval(
-                child: imageUrl != null && imageUrl!.isNotEmpty
-                    ? Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _defaultAvatar(),
-                      )
-                    : _defaultAvatar(),
+            SizedBox(
+              width: 74,
+              height: 74,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primaryColor.withOpacity(0.08),
+                        border: Border.all(
+                          color: AppColors.primaryColor.withOpacity(0.25),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: imageUrl != null && imageUrl!.isNotEmpty
+                            ? Image.network(
+                                imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _defaultAvatar(),
+                              )
+                            : _defaultAvatar(),
+                      ),
+                    ),
+                  ),
+                  if (isVerified)
+                    Positioned(
+                      right: -1,
+                      bottom: -1,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(1),
+                        child: const Icon(
+                          Icons.verified,
+                          size: 17,
+                          color: Color(0xFF1DA1F2),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
             const SizedBox(height: 6),
 
             // ── Store name ─────────────────────────────────────────────────
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isVerified) ...[
+                  const Icon(
+                    Icons.verified,
+                    size: 13,
+                    color: Color(0xFF1DA1F2),
+                  ),
+                  const SizedBox(width: 3),
+                ],
+                Flexible(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 3),

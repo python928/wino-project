@@ -225,6 +225,7 @@ class PackSerializer(serializers.ModelSerializer):
     merchant_latitude = serializers.SerializerMethodField()
     merchant_longitude = serializers.SerializerMethodField()
     merchant_nearby_visible = serializers.SerializerMethodField()
+    merchant_is_verified = serializers.SerializerMethodField()
     discount_price = serializers.DecimalField(source='discount', max_digits=10, decimal_places=2)
     total_price = serializers.SerializerMethodField()
     # Effective delivery areas (same dynamic fallback as Product)
@@ -233,7 +234,7 @@ class PackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pack
         fields = ['id', 'merchant_id', 'merchant_name', 'name', 'description',
-                  'merchant_latitude', 'merchant_longitude', 'merchant_nearby_visible',
+                  'merchant_latitude', 'merchant_longitude', 'merchant_nearby_visible', 'merchant_is_verified',
                   'discount_price', 'total_price', 'available_status',
                   'delivery_available', 'delivery_wilayas', 'delivery_areas',
                   'created_at', 'pack_products', 'images', 'products']
@@ -258,6 +259,9 @@ class PackSerializer(serializers.ModelSerializer):
 
     def get_merchant_nearby_visible(self, obj):
         return bool(getattr(obj.merchant, 'allow_nearby_visibility', True))
+
+    def get_merchant_is_verified(self, obj):
+        return bool(getattr(obj.merchant, 'is_verified', False))
 
     def validate_products(self, value):
         """Ensure packs can only contain the current merchant's own products."""

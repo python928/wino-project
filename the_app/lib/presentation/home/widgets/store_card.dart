@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+
 // carousel import removed - not used
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/card_styles.dart';
-import '../../../data/models/user_model.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../data/models/user_model.dart';
 
 class StoreCard extends StatelessWidget {
   final User store;
@@ -41,14 +42,29 @@ class StoreCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Store Name
-                  Text(
-                    store.fullName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  // Store Name + verification
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (store.isVerified) ...[
+                        const Icon(
+                          Icons.verified,
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(
+                          store.fullName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   
                   // Category
@@ -166,6 +182,16 @@ class StoreCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (store.isVerified)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                  ),
               ],
             ),
           ],
