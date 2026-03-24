@@ -18,14 +18,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
 
 
+GOOGLE_DRIVE_FILE_ID = '1xPKPUBkh3yX_Zjdovny0XeTMhVGEoEja'
+GOOGLE_DRIVE_VIEW_URL = f'https://drive.google.com/file/d/{GOOGLE_DRIVE_FILE_ID}/view'
 GOOGLE_DRIVE_DOWNLOAD_URL = (
-    'https://drive.google.com/file/d/1xPKPUBkh3yX_Zjdovny0XeTMhVGEoEja/view'
+    f'https://drive.google.com/uc?export=download&id={GOOGLE_DRIVE_FILE_ID}'
 )
 
 
@@ -41,11 +43,38 @@ def product_short_link_redirect(request, product_id):
     return AppSchemeRedirect(f'wino://product/{product_id}')
 
 
+def host_index(request):
+    html = f'''<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wino App Download</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 2rem; line-height: 1.5; }}
+        .card {{ max-width: 720px; border: 1px solid #ddd; border-radius: 12px; padding: 1.2rem; }}
+        .btn {{ display: inline-block; margin-top: 0.8rem; background: #0d6efd; color: #fff; text-decoration: none; padding: 0.7rem 1rem; border-radius: 8px; }}
+        code {{ background: #f5f5f5; padding: 0.1rem 0.3rem; border-radius: 4px; word-break: break-all; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Wino Android App</h1>
+        <p>Click the button to download the APK from Google Drive.</p>
+        <p><a class="btn" href="{GOOGLE_DRIVE_DOWNLOAD_URL}" target="_blank" rel="noopener">Download APK</a></p>
+        <p>If download does not start, open this page: <a href="{GOOGLE_DRIVE_VIEW_URL}" target="_blank" rel="noopener">Google Drive File</a></p>
+        <p>Direct URL: <code>{GOOGLE_DRIVE_DOWNLOAD_URL}</code></p>
+    </div>
+</body>
+</html>'''
+    return HttpResponse(html)
+
+
 def download_app_index(request):
     return HttpResponseRedirect(GOOGLE_DRIVE_DOWNLOAD_URL)
 
 urlpatterns = [
-    path('', download_app_index, name='host_index'),
+    path('', host_index, name='host_index'),
     path('download/', download_app_index, name='download_app_index'),
     path('s/<int:store_id>/', store_short_link_redirect, name='short_store_redirect'),
     path('p/<int:product_id>/', product_short_link_redirect, name='short_product_redirect'),
