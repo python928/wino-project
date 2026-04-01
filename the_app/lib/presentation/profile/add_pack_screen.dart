@@ -19,6 +19,7 @@ import '../../data/models/pack_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
 import '../common/location_filter_picker.dart';
+import '../shared_widgets/app_switch_tile.dart';
 import '../subscription/subscription_gate.dart';
 import 'widgets/product_picker_sheet.dart';
 
@@ -596,11 +597,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(context.tr('Available')),
-                    subtitle: Text(context
-                        .tr('Show this pack to customers in your store')),
+                  AppSwitchTile(
+                    title: context.tr('Available'),
+                    subtitle:
+                        context.tr('Show this pack to customers in your store'),
                     value: _isAvailable,
                     onChanged: (value) {
                       setState(() => _isAvailable = value);
@@ -608,13 +608,10 @@ class _AddPackScreenState extends State<AddPackScreen> {
                   ),
                   const SizedBox(height: 4),
                   // ─── Delivery Section ─────────────────────────────────────
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(context.tr('Delivery Available')),
-                    subtitle:
-                        Text(context.tr('Enable home delivery for this pack')),
+                  AppSwitchTile(
+                    title: context.tr('Delivery Available'),
+                    subtitle: context.tr('Enable home delivery for this pack'),
                     value: _deliveryAvailable,
-                    activeColor: AppColors.primary,
                     onChanged: (value) {
                       setState(() => _deliveryAvailable = value);
                     },
@@ -722,7 +719,7 @@ class _AddPackScreenState extends State<AddPackScreen> {
                       child: AppSearchField(
                         controller: _searchController,
                         hintText: context.tr('Select product to add...'),
-                        compact: false,
+                        compact: true,
                         showClearButton: false,
                       ),
                     ),

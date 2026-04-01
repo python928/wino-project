@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/providers/wallet_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../shared_widgets/wino_coin_badge.dart';
 import 'coin_payment_screen.dart';
 
 class CoinStoreScreen extends StatefulWidget {
@@ -83,11 +84,12 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isPromoted ? const Color(0xFFFFF7E8) : Colors.white,
+              color: isPromoted ? const Color(0xFFEFF5FF) : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color:
-                    isPromoted ? const Color(0xFFFFD38A) : Colors.grey.shade200,
+                color: isPromoted
+                    ? const Color(0xFFC7DAFF)
+                    : Colors.grey.shade200,
               ),
             ),
             child: Row(
@@ -96,12 +98,27 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFE08A),
+                    color: const Color(0xFFE3EEFF),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.toll_outlined,
-                    color: Color(0xFF8A5A00),
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1F6FFF),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'W',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        height: 1,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -134,7 +151,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                         Text(
                           'Save ${percentSaved.toStringAsFixed(0)}%',
                           style: const TextStyle(
-                            color: Color(0xFFB46900),
+                            color: Color(0xFF1F6FFF),
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -145,7 +162,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFE4B8),
+                            color: const Color(0xFFE3EEFF),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -153,7 +170,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF9C5F00),
+                              color: Color(0xFF1F6FFF),
                             ),
                           ),
                         ),
@@ -432,7 +449,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFB23F), Color(0xFFFFD16A)],
+          colors: [Color(0xFF2F80FF), Color(0xFF1F6FFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -445,9 +462,18 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.32),
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.toll_outlined, color: Colors.white),
+            alignment: Alignment.center,
+            child: const Text(
+              'W',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                height: 1,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Column(
@@ -498,12 +524,12 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warningAmber.withOpacity(0.15),
+        color: const Color(0xFFEAF2FF),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: AppColors.warningAmber),
+          const Icon(Icons.info_outline, color: Color(0xFF1F6FFF)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -525,6 +551,14 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          Consumer<WalletProvider>(
+            builder: (context, wallet, _) => WinoCoinBadge(
+              coins: wallet.coinsBalance,
+              margin: const EdgeInsetsDirectional.only(end: 10),
+            ),
+          ),
+        ],
       ),
       body: Consumer<WalletProvider>(
         builder: (context, wallet, _) {

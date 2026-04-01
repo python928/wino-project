@@ -1,7 +1,13 @@
 WEB SERVER AND ANDROID/FLUTTER LIBS + FEATURES
 ==============================================
 
-Last reviewed: 2026-03-23
+Last reviewed: 2026-04-01
+
+Project stage note
+------------------
+- The repository now reflects a broad, serious technical product.
+- The strongest truthful label is advanced pre-production / pilot-ready direction.
+- The codebase should not yet be documented as a fully production-hardened commercial release.
 
 WEB SERVER (`app-backend`)
 ==========================
@@ -232,6 +238,8 @@ Commerce / helper UI
 - merchant ads dashboard now includes a clearer explainability card (“What these numbers mean”)
 - common strings increasingly resolve through ARB localizations before runtime fallback
 - report/review translations were expanded in Arabic and French
+- auth registration and phone-profile setup now share stronger flow primitives
+- category picking is now more reusable and context-aware across multiple flows
 
 6) Deep-link / Android manifest highlights
 ------------------------------------------
@@ -240,7 +248,7 @@ Android manifest currently handles:
 - `toprice://...`
 - `http(s)://wino.app/...`
 - `http(s)://toprice.app/...`
-- `http://192.168.133.21/...`
+- `http://192.168.177.21/...`
 
 7) App configuration notes
 --------------------------
@@ -263,3 +271,6 @@ The codebase is no longer just a marketplace UI. It now has:
 - early explainability improvements for merchant analytics
 
 This makes it technically rich enough for both real product iteration and academic analysis.
+- Shared auth-flow building blocks now live in `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+- `register_screen.dart` and `phone_profile_setup_screen.dart` now share a clearer structure, stronger inline validation, and more consistent category-picking behavior.
+- `the_app/lib/presentation/search/category_selection_screen.dart` now functions as a reusable primitive for auth interests, search filters, and product publishing selection.

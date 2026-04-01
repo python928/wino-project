@@ -31,6 +31,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   void _loadUserFromStorage() {
+    if (!StorageService.isLoggedIn()) {
+      _user = null;
+      return;
+    }
     final userData = StorageService.getUserData();
     if (userData != null) {
       try {
@@ -49,6 +53,11 @@ class AuthProvider with ChangeNotifier {
 
   /// Reload user data from storage
   void reloadFromStorage() {
+    if (!StorageService.isLoggedIn()) {
+      _user = null;
+      notifyListeners();
+      return;
+    }
     final userData = StorageService.getUserData();
     if (userData != null) {
       try {
@@ -57,6 +66,9 @@ class AuthProvider with ChangeNotifier {
       } catch (e) {
         print('AuthProvider: Error reloading user from storage: $e');
       }
+    } else {
+      _user = null;
+      notifyListeners();
     }
   }
 
@@ -135,6 +147,9 @@ class AuthProvider with ChangeNotifier {
       final userObj = response['user'];
       _user = userObj is User ? userObj : User.fromJson(userObj);
       await StorageService.saveUserData(_user!.toJson());
+      await StorageService.setPhoneProfileSetupPending(
+        _lastPhoneAuthIsNewUser,
+      );
       _syncFcmToken();
 
       _isLoading = false;
@@ -152,6 +167,7 @@ class AuthProvider with ChangeNotifier {
     required String fullName,
     required String gender,
     required DateTime birthday,
+    required String address,
     List<int> preferredCategoryIds = const [],
   }) async {
     _isLoading = true;
@@ -162,12 +178,14 @@ class AuthProvider with ChangeNotifier {
         'name': fullName.trim(),
         'gender': gender,
         'birthday': birthday.toIso8601String().split('T').first,
+        'address': address.trim(),
       });
       if (preferredCategoryIds.isNotEmpty) {
         await AuthRepository.updatePreferredCategories(preferredCategoryIds);
       }
       _user = updated;
       await StorageService.saveUserData(updated.toJson());
+      await StorageService.setPhoneProfileSetupPending(false);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -214,13 +232,22 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> loadProfile() async {
-    if (!isAuthenticated) return;
+    final accessToken = await StorageService.getAccessToken();
+    if (accessToken == null) {
+      if (_user != null) {
+        _user = null;
+        notifyListeners();
+      }
+      return;
+    }
 
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
       _user = await AuthRepository.getProfile();
+      await StorageService.saveUserData(_user!.toJson());
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -239,6 +266,7 @@ class AuthProvider with ChangeNotifier {
       debugPrint('Logout error: $e');
     } finally {
       _user = null;
+      _lastPhoneAuthIsNewUser = false;
       _isLoading = false;
       notifyListeners();
     }

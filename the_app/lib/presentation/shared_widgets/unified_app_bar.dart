@@ -2,11 +2,11 @@ import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/services/notification_badge_service.dart';
-import '../../core/theme/app_colors.dart';
 import '../common/location_permission_helper.dart';
 import '../common/radius_picker_sheet.dart';
 import '../notifications/notifications_screen.dart';
 import '../search/search_tab_screen.dart';
+import 'app_icon_action_button.dart';
 import 'location_mode_switcher.dart';
 
 /// Unified app bar — Travo style
@@ -73,20 +73,8 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
               Row(
                 children: [
                   if (Navigator.canPop(context)) ...[
-                    GestureDetector(
+                    AppBackActionButton(
                       onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          size: 20,
-                          color: Colors.black,
-                        ),
-                      ),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -127,7 +115,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   const SizedBox(width: 8),
 
                   // Search icon button
-                  _IconBtn(
+                  AppIconActionButton(
                     icon: Icons.search_rounded,
                     onTap: onSearchTap ??
                         () {
@@ -145,7 +133,7 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ValueListenableBuilder<int>(
                       valueListenable:
                           NotificationBadgeService.instance.unreadCount,
-                      builder: (context, unread, _) => _IconBtn(
+                      builder: (context, unread, _) => AppIconActionButton(
                         icon: Icons.notifications_outlined,
                         badgeCount: unread > 0 ? unread : null,
                         onTap: onNotificationTap ??
@@ -172,65 +160,4 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(68);
-}
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final int? badgeCount;
-  const _IconBtn({
-    required this.icon,
-    required this.onTap,
-    this.badgeCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0EEFF),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Align(
-              alignment: Alignment.center,
-              child: Icon(icon, color: AppColors.primaryColor, size: 20),
-            ),
-            if (badgeCount != null && badgeCount! > 0)
-              Positioned(
-                right: -3,
-                top: -3,
-                child: Container(
-                  constraints:
-                      const BoxConstraints(minWidth: 16, minHeight: 16),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white, width: 1),
-                  ),
-                  child: Text(
-                    badgeCount! > 99 ? '99+' : badgeCount.toString(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }

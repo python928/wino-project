@@ -47,7 +47,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final unread = results.where((e) => !(e['is_read'] ?? true)).length;
         setState(() {
           _notifications = results.map<NotificationItem>((json) {
-            final title = json['title']?.toString() ?? 'Notification';
+            final title =
+                json['title']?.toString() ?? context.tr('Notification');
             final body = json['body']?.toString() ?? '';
             final extraData = json['extra_data'] is Map<String, dynamic>
                 ? json['extra_data'] as Map<String, dynamic>

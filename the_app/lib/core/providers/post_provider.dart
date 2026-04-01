@@ -105,13 +105,13 @@ class PostProvider with ChangeNotifier {
     ]);
   }
 
-  Future<void> loadOffers() async {
+  Future<void> loadOffers({bool fetchAllPages = false}) async {
     _isLoadingPromotions = true;
     _offersError = null;
     notifyListeners();
 
     try {
-      _offers = await PostRepository.getOffers();
+      _offers = await PostRepository.getOffers(fetchAllPages: fetchAllPages);
     } catch (e) {
       _offersError = e.toString();
       _error = _offersError;
@@ -121,7 +121,13 @@ class PostProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadAdOffers({String? wilayaCode}) async {
+  Future<void> loadAdOffers({
+    String? wilayaCode,
+    String? placement,
+    double? userLat,
+    double? userLng,
+    bool singleRandomized = false,
+  }) async {
     _isLoadingAds = true;
     _offersError = null;
     notifyListeners();
@@ -130,6 +136,10 @@ class PostProvider with ChangeNotifier {
       _adOffers = await PostRepository.getOffers(
         kind: 'advertising',
         wilayaCode: wilayaCode,
+        placement: placement,
+        userLat: userLat,
+        userLng: userLng,
+        singleRandomized: singleRandomized,
       );
     } catch (e) {
       _offersError = e.toString();
@@ -337,6 +347,7 @@ class PostProvider with ChangeNotifier {
     String? search,
     int? storeId,
     int? categoryId,
+    bool fetchAllPages = false,
   }) async {
     _isLoadingPosts = true;
     _postsError = null;
@@ -347,6 +358,7 @@ class PostProvider with ChangeNotifier {
         search: search,
         storeId: storeId,
         categoryId: categoryId,
+        fetchAllPages: fetchAllPages,
       );
     } catch (e) {
       _postsError = e.toString();
@@ -363,8 +375,8 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Fetch posts for the current user's store to ensure visibility even if author id in response differs
-      final storeId = await PostRepository.getOrCreateMyStoreId();
+      final storeId =
+          int.tryParse(authorId) ?? await PostRepository.getOrCreateMyStoreId();
       final posts =
           await PostRepository.getPosts(storeId: storeId, availableOnly: false);
       _myPosts = posts;

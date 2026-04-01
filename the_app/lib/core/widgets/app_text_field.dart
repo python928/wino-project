@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_input_decorations.dart';
 import '../theme/app_text_styles.dart';
@@ -31,6 +32,10 @@ class AppTextField extends StatefulWidget {
   final int maxLines;
   final AppTextFieldStyle style;
   final String? suffixText;
+  final AutovalidateMode? autovalidateMode;
+  final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
+  final bool enabled;
 
   const AppTextField({
     super.key,
@@ -49,6 +54,10 @@ class AppTextField extends StatefulWidget {
     this.maxLines = 1,
     this.style = AppTextFieldStyle.form,
     this.suffixText,
+    this.autovalidateMode,
+    this.autofillHints,
+    this.inputFormatters,
+    this.enabled = true,
   });
 
   @override
@@ -74,8 +83,11 @@ class _AppTextFieldState extends State<AppTextField> {
       textInputAction: widget.textInputAction ?? TextInputAction.next,
       obscureText: widget.obscureText && !_isPasswordVisible,
       textDirection: resolvedDirection,
-      textAlign: TextAlign.start,
       maxLines: widget.maxLines,
+      enabled: widget.enabled,
+      autofillHints: widget.autofillHints,
+      inputFormatters: widget.inputFormatters,
+      autovalidateMode: widget.autovalidateMode,
       style: AppTextStyles.bodyLarge
           .copyWith(fontSize: 18, color: AppColors.textPrimary),
       onFieldSubmitted: widget.onFieldSubmitted,
@@ -148,7 +160,7 @@ class AppSearchField extends StatelessWidget {
     this.focusNode,
     this.showClearButton = true,
     this.showFilterButton = false,
-    this.compact = false,
+    this.compact = true,
   });
 
   @override
@@ -160,7 +172,7 @@ class AppSearchField extends StatelessWidget {
       suffixWidget = IconButton(
         icon: Icon(
           compact ? Icons.close : Icons.clear,
-          color: AppColors.textSecondary.withOpacity(0.3),
+          color: AppColors.textSecondary.withValues(alpha: 0.3),
           size: compact ? 16 : 20,
         ),
         onPressed: () {
@@ -172,7 +184,7 @@ class AppSearchField extends StatelessWidget {
     } else if (showFilterButton && onFilterTap != null) {
       suffixWidget = IconButton(
         icon: Icon(Icons.tune_rounded,
-            color: AppColors.textSecondary.withOpacity(0.3), size: 26),
+            color: AppColors.textSecondary.withValues(alpha: 0.3), size: 26),
         onPressed: onFilterTap,
       );
     }

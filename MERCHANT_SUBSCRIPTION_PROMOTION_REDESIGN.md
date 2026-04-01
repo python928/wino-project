@@ -1,8 +1,14 @@
 # Merchant Subscription, Payment, and Promotions Redesign Blueprint
 
-Date: 2026-03-23
+Date: 2026-04-01
 Project: Wino (Django + Flutter)
 Audience: Product, Engineering, Design, Growth, Merchant Operations
+
+## 0. Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+This blueprint should be read as redesign work for a strong pilot-oriented product, not for a fully production-finished commercial platform.
 
 ## 1. Why This Redesign Still Matters
 The current implementation now has a stronger base than when this blueprint started, but merchant experience is still operationally heavier than it should be in three places:
@@ -130,3 +136,4 @@ This redesign is no longer a greenfield plan. It is now a mixed roadmap:
 - part of it is already reflected in the code,
 - part of it remains an implementation backlog,
 - and its next stage should focus less on raw UI polish and more on merchant confidence and decision support.
+

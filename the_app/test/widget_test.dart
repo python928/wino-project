@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dzlocal_shop/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:dzlocal_shop/core/services/storage_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets('App smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await StorageService.init();
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const WinoApp());
 

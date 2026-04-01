@@ -20,6 +20,7 @@ import '../../core/services/notification_badge_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/jwt_validator.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/models/pack_model.dart';
 import '../../data/models/post_model.dart';
@@ -27,12 +28,16 @@ import '../../data/models/user_model.dart';
 import '../auth/splash_screen.dart';
 import '../common/constants/card_constants.dart';
 import '../notifications/notifications_screen.dart';
+import '../shared_widgets/app_dropdown_menu.dart';
+import '../shared_widgets/app_icon_action_button.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
+import '../shared_widgets/directions_button.dart';
 import '../shared_widgets/qr_payload_dialog.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
 import '../shared_widgets/shimmer_loading.dart';
+import '../shared_widgets/wino_coin_badge.dart';
 import '../subscription/ads_dashboard_screen.dart';
 import '../wallet/coin_store_screen.dart';
 import 'add_pack_screen.dart';
@@ -44,7 +49,13 @@ import 'widgets/profile_post_filter.dart';
 
 class ProfileScreen extends StatefulWidget {
   final int? storeId;
-  const ProfileScreen({super.key, this.storeId});
+  final bool isActive;
+
+  const ProfileScreen({
+    super.key,
+    this.storeId,
+    this.isActive = true,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -96,6 +107,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double _rating = 0.0;
   bool _showReviewForm = false;
   bool _isProfileContentLoading = true;
+  int _profileLoadVersion = 0;
+
+  List<AppDropdownAction<String>> _buildSettingsActions(BuildContext context) {
+    return [
+      AppDropdownAction(
+        value: 'edit',
+        icon: Icons.edit_outlined,
+        label: context.l10n.profileSettingsEdit,
+      ),
+      AppDropdownAction(
+        value: 'ads',
+        icon: Icons.campaign_outlined,
+        label: context.l10n.profileTooltipAds,
+      ),
+      AppDropdownAction(
+        value: 'share',
+        icon: Icons.share_outlined,
+        label: context.l10n.profileTooltipShare,
+      ),
+      AppDropdownAction(
+        value: 'feedback_send',
+        icon: Icons.feedback_outlined,
+        label: context.l10n.profileSettingsSendFeedback,
+      ),
+      AppDropdownAction(
+        value: 'language',
+        icon: Icons.language_outlined,
+        label: context.l10n.profileSettingsLanguage,
+      ),
+      AppDropdownAction(
+        value: 'logout',
+        icon: Icons.logout,
+        label: context.l10n.profileSettingsLogout,
+        destructive: true,
+        showDividerAbove: true,
+      ),
+    ];
+  }
 
   void _showPublishMenu() {
     showModalBottomSheet<void>(
@@ -215,27 +264,160 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _primeProfileShell();
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text);
     });
-    _loadUserData();
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isActive) {
+          _loadUserData();
+        }
+      });
+    }
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // no profile-type switching anymore
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final becameActive = !oldWidget.isActive && widget.isActive;
+    if (oldWidget.storeId != widget.storeId || becameActive) {
+      _loadUserData();
+    }
   }
 
-  Future<void> _fetchStoreData() async {
-    if (_userId == null) return;
+  int? _parseUserId(dynamic rawId) {
+    if (rawId is int) return rawId;
+    return int.tryParse(rawId?.toString() ?? '');
+  }
+
+  bool get _isOwnProfileRoute => widget.storeId == null;
+
+  bool _isActiveProfileLoad(int loadVersion) {
+    return mounted && loadVersion == _profileLoadVersion;
+  }
+
+  String _trOrFallback(String key, String fallback) {
     try {
-      final resp = await ApiService.get('${ApiConfig.users}$_userId/');
+      return context.tr(key);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  Future<void> _runSafeProfileLoadStep(
+    String label,
+    Future<void> Function() task,
+  ) async {
+    try {
+      await task();
+    } catch (e, st) {
+      debugPrint('Profile load step failed ($label): $e');
+      debugPrint('$st');
+    }
+  }
+
+  User? _getCachedUser({
+    required AuthProvider authProvider,
+    Map<String, dynamic>? userData,
+  }) {
+    final providerUser = authProvider.user;
+    if (providerUser != null) {
+      return providerUser;
+    }
+
+    final raw = userData ?? StorageService.getUserData();
+    if (raw == null) return null;
+
+    try {
+      return User.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _applyUserSnapshot(User user, {bool updateIdentity = false}) {
+    if (updateIdentity) {
+      _currentUserId = user.id;
+      _userId = user.id;
+      _storeId = user.id;
+    }
+
+    _userName = user.fullName;
+    _location = user.address.isNotEmpty ? user.address : _location;
+    _avatarUrl = user.profileImage;
+    _storeDescription = user.storeDescription;
+    _storeCoverUrl = user.coverImage;
+    _phoneNumber = (user.phone ?? '').toString();
+    _followersCount = user.followersCount;
+    _averageRating = user.averageRating;
+    _isVerifiedStore = user.isVerified;
+    _facebook = user.facebook;
+    _instagram = user.instagram;
+    _whatsapp = user.whatsapp;
+    _tiktok = user.tiktok;
+    _youtube = user.youtube;
+    _showPhonePublic = user.showPhonePublic;
+    _showSocialPublic = user.showSocialPublic;
+    _latitude = user.latitude;
+    _longitude = user.longitude;
+  }
+
+  void _primeProfileShell() {
+    final authProvider = context.read<AuthProvider>();
+    final cachedUser = _getCachedUser(authProvider: authProvider);
+    final currentUserId = cachedUser?.id ??
+        _parseUserId(StorageService.getUserData()?['id']) ??
+        authProvider.user?.id;
+
+    _currentUserId = currentUserId;
+    _userId = _isOwnProfileRoute ? currentUserId : widget.storeId;
+    _storeId = _userId;
+
+    if (cachedUser != null &&
+        (_isOwnProfileRoute || cachedUser.id == widget.storeId)) {
+      _applyUserSnapshot(cachedUser, updateIdentity: _isOwnProfileRoute);
+    }
+  }
+
+  Future<int?> _resolveCurrentUserId(
+    AuthProvider authProvider, {
+    Map<String, dynamic>? userData,
+  }) async {
+    final fromStorage = _parseUserId(userData?['id']);
+    if (fromStorage != null) return fromStorage;
+
+    final fromProvider = authProvider.user?.id;
+    if (fromProvider != null) return fromProvider;
+
+    final accessToken = await StorageService.getAccessToken();
+    final fromToken = _parseUserId(
+        accessToken == null ? null : JWTValidator.getUserId(accessToken));
+    if (fromToken != null) return fromToken;
+
+    try {
+      await authProvider.loadProfile();
+    } catch (_) {
+      // best-effort: the caller will handle unresolved identity.
+    }
+
+    return authProvider.user?.id;
+  }
+
+  Future<void> _fetchStoreData({int? userId, int? loadVersion}) async {
+    final requestedUserId = userId ?? _userId;
+    final expectedLoadVersion = loadVersion ?? _profileLoadVersion;
+    if (requestedUserId == null) return;
+    try {
+      final resp = await ApiService.get('${ApiConfig.users}$requestedUserId/');
       if (resp is! Map) return;
 
       final u = User.fromJson(Map<String, dynamic>.from(resp));
 
-      if (!mounted) return;
+      if (!_isActiveProfileLoad(expectedLoadVersion) ||
+          _userId != requestedUserId) {
+        return;
+      }
       setState(() {
         _storeId = u.id; // userId == storeId
         _userName = u.fullName;
@@ -255,6 +437,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _youtube = u.youtube;
         _showPhonePublic = u.showPhonePublic;
         _showSocialPublic = u.showSocialPublic;
+        _latitude = u.latitude;
+        _longitude = u.longitude;
       });
     } catch (e) {
       debugPrint('Error fetching unified profile: $e');
@@ -262,6 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   bool get _isOwnerView {
+    if (_isOwnProfileRoute) return true;
     if (_currentUserId == null || _userId == null) return false;
     return _currentUserId == _userId;
   }
@@ -392,11 +577,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _fetchStoreData();
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'Cover image updated successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Cover image updated successfully'));
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to update cover image: $e');
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to update cover image')}: $e',
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploadingCover = false);
@@ -432,11 +621,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       await _fetchStoreData();
       if (mounted) {
-        Helpers.showSnackBar(context, 'Cover image deleted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Cover image deleted successfully'));
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to delete cover image: $e');
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete cover image')}: $e',
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploadingCover = false);
@@ -472,11 +665,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loadUserData();
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'Profile image updated successfully');
+          Helpers.showSnackBar(
+              context, context.tr('Profile image updated successfully'));
         }
       } catch (e) {
         if (mounted) {
-          Helpers.showSnackBar(context, 'Failed to update image: $e');
+          Helpers.showSnackBar(
+            context,
+            '${context.tr('Failed to update image')}: $e',
+          );
         }
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
@@ -517,11 +714,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _loadUserData();
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Profile image deleted successfully'));
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to delete profile image: $e');
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete profile image')}: $e',
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
@@ -542,112 +743,173 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    if (mounted) {
-      setState(() {
-        _isProfileContentLoading = true;
-      });
-    }
+    final loadVersion = ++_profileLoadVersion;
+    final authProvider = context.read<AuthProvider>();
+    final postProvider = context.read<PostProvider>();
+    final packProvider = context.read<PackProvider>();
+    final selectLocationLabel =
+        _trOrFallback('Select Location', 'Select Location');
+    final loadingLabel = _trOrFallback('Loading...', 'Loading...');
 
-    // Clear previous store/profile lists to avoid flashing stale data
     try {
-      context.read<PostProvider>().clearMyData(notify: false);
-      context.read<PackProvider>().clearAllData(notify: false);
-    } catch (_) {
-      // best-effort
-    }
+      final userData = StorageService.getUserData();
+      final accessToken = await StorageService.getAccessToken();
+      if (userData == null && accessToken == null) {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const SplashScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      }
 
-    final userData = StorageService.getUserData();
-    if (userData == null) {
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const SplashScreen()),
-        (Route<dynamic> route) => false,
+      final currentUserId =
+          await _resolveCurrentUserId(authProvider, userData: userData);
+      final targetUserId = widget.storeId ?? currentUserId;
+      if (targetUserId == null) {
+        if (_isActiveProfileLoad(loadVersion)) {
+          setState(() {
+            _isProfileContentLoading = false;
+          });
+        }
+        return;
+      }
+      final isOwnerTarget =
+          currentUserId != null && currentUserId == targetUserId;
+      final cachedUser = _getCachedUser(
+        authProvider: authProvider,
+        userData: userData,
       );
-      return;
-    }
 
-    _currentUserId = userData['id'];
-    final targetUserId = widget.storeId ?? _currentUserId;
-    if (targetUserId == null) return;
+      if (mounted) {
+        setState(() {
+          _isProfileContentLoading = true;
+          _currentUserId = currentUserId;
+          _userId = targetUserId;
+          _storeId = targetUserId;
+          _isFollowingStore = false;
+          _isLoadingFollowState = false;
+          if (cachedUser != null &&
+              (_isOwnProfileRoute || cachedUser.id == targetUserId)) {
+            _applyUserSnapshot(cachedUser, updateIdentity: _isOwnProfileRoute);
+          } else {
+            _userName = loadingLabel;
+            _location = loadingLabel;
+            _storeDescription = '';
+            _avatarUrl = null;
+            _storeCoverUrl = null;
+            _phoneNumber = '';
+            _followersCount = 0;
+            _averageRating = 0.0;
+            _isVerifiedStore = false;
+            _facebook = null;
+            _instagram = null;
+            _whatsapp = null;
+            _tiktok = null;
+            _youtube = null;
+            _showPhonePublic = true;
+            _showSocialPublic = true;
+            _latitude = null;
+            _longitude = null;
+          }
+        });
+      }
 
-    String locationDisplay = 'Select Location';
-    final address =
-        (userData['address'] ?? userData['location'] ?? '').toString();
-    if (address.isNotEmpty && address != 'Algeria') locationDisplay = address;
+      // Clear previous store/profile lists to avoid flashing stale data
+      try {
+        postProvider.clearMyData(notify: false);
+        packProvider.clearAllData(notify: false);
+      } catch (_) {
+        // best-effort
+      }
 
-    if (targetUserId == _currentUserId) {
-      setState(() {
-        _userId = targetUserId;
-        _storeId = targetUserId; // unified
-        _userName = userData['name'] ?? userData['username'] ?? 'User';
-        _location = locationDisplay;
-        _phoneNumber = (userData['phone'] ?? '').toString();
-        _storeDescription = (userData['store_description'] ?? '').toString();
-        _avatarUrl = userData['profile_image'] ?? userData['avatar'];
-        _storeCoverUrl = userData['cover_image'];
-
-        _facebook = userData['facebook'];
-        _instagram = userData['instagram'];
-        _whatsapp = userData['whatsapp'];
-        _tiktok = userData['tiktok'];
-        _youtube = userData['youtube'];
-        _showPhonePublic = userData['show_phone_public'] as bool? ?? true;
-        _showSocialPublic = userData['show_social_public'] as bool? ?? true;
-
-        if (userData['latitude'] != null) {
-          _latitude = double.tryParse(userData['latitude'].toString());
+      if (isOwnerTarget) {
+        try {
+          await authProvider.loadProfile();
+        } catch (_) {
+          // If refresh fails, continue with cached data but do not block the UI.
         }
-        if (userData['longitude'] != null) {
-          _longitude = double.tryParse(userData['longitude'].toString());
+
+        if (!_isActiveProfileLoad(loadVersion) || _userId != targetUserId) {
+          return;
         }
-      });
-    } else {
-      setState(() {
-        _userId = targetUserId;
-        _storeId = targetUserId;
-        _userName = 'Loading...';
-        _location = 'Loading...';
-        _phoneNumber = '';
-        _storeDescription = '';
-        _avatarUrl = null;
-        _storeCoverUrl = null;
-        _followersCount = 0;
-        _averageRating = 0.0;
+        final freshUser = authProvider.user;
+        if (freshUser != null && freshUser.id == targetUserId) {
+          final locationDisplay = freshUser.address.isNotEmpty
+              ? freshUser.address
+              : selectLocationLabel;
+          setState(() {
+            _currentUserId = freshUser.id;
+            _userId = freshUser.id;
+            _storeId = freshUser.id;
+            _userName = freshUser.fullName;
+            _location = locationDisplay;
+            _phoneNumber = (freshUser.phone ?? '').toString();
+            _storeDescription = freshUser.storeDescription;
+            _avatarUrl = freshUser.profileImage;
+            _storeCoverUrl = freshUser.coverImage;
+            _followersCount = freshUser.followersCount;
+            _averageRating = freshUser.averageRating;
+            _isVerifiedStore = freshUser.isVerified;
+            _facebook = freshUser.facebook;
+            _instagram = freshUser.instagram;
+            _whatsapp = freshUser.whatsapp;
+            _tiktok = freshUser.tiktok;
+            _youtube = freshUser.youtube;
+            _showPhonePublic = freshUser.showPhonePublic;
+            _showSocialPublic = freshUser.showSocialPublic;
+            _latitude = freshUser.latitude;
+            _longitude = freshUser.longitude;
+          });
+        }
+      }
 
-        _facebook = null;
-        _instagram = null;
-        _whatsapp = null;
-        _tiktok = null;
-        _youtube = null;
-        _showPhonePublic = true;
-        _showSocialPublic = true;
-      });
-    }
+      await _fetchStoreData(userId: targetUserId, loadVersion: loadVersion);
 
-    await _fetchStoreData();
+      if (!_isActiveProfileLoad(loadVersion) || _userId != targetUserId) return;
 
-    if (!_isOwnerView) {
-      await _loadFollowState();
-    }
+      if (!isOwnerTarget) {
+        await _loadFollowState(storeId: targetUserId, loadVersion: loadVersion);
+      }
 
-    if (!mounted || _userId == null) return;
+      if (!_isActiveProfileLoad(loadVersion) || _userId == null) return;
 
-    try {
-      if (_isOwnerView) {
+      if (isOwnerTarget) {
         await Future.wait([
-          context.read<PostProvider>().loadMyPosts(_userId.toString()),
-          context.read<PostProvider>().loadMyOffers(_userId.toString()),
-          context.read<PackProvider>().loadMyPacks(_userId!),
+          _runSafeProfileLoadStep(
+            'my-posts',
+            () => postProvider.loadMyPosts(_userId.toString()),
+          ),
+          _runSafeProfileLoadStep(
+            'my-offers',
+            () => postProvider.loadMyOffers(_userId.toString()),
+          ),
+          _runSafeProfileLoadStep(
+            'my-packs',
+            () => packProvider.loadMyPacks(_userId!),
+          ),
         ]);
       } else {
         await Future.wait([
-          context.read<PostProvider>().loadStorePosts(_userId!),
-          context.read<PostProvider>().loadStoreOffers(_userId!),
-          context.read<PackProvider>().loadStorePacks(_userId!),
+          _runSafeProfileLoadStep(
+            'store-posts',
+            () => postProvider.loadStorePosts(_userId!),
+          ),
+          _runSafeProfileLoadStep(
+            'store-offers',
+            () => postProvider.loadStoreOffers(_userId!),
+          ),
+          _runSafeProfileLoadStep(
+            'store-packs',
+            () => packProvider.loadStorePacks(_userId!),
+          ),
         ]);
       }
+    } catch (e, st) {
+      debugPrint('Error loading profile data: $e');
+      debugPrint('$st');
     } finally {
-      if (mounted) {
+      if (_isActiveProfileLoad(loadVersion)) {
         setState(() {
           _isProfileContentLoading = false;
         });
@@ -656,22 +918,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _refreshProfile() async {
+    final walletProvider = context.read<WalletProvider>();
     await _loadUserData();
     if (_isOwnerView && mounted) {
-      await context.read<WalletProvider>().fetchWallet(notifyStart: false);
+      await walletProvider.fetchWallet(notifyStart: false);
     }
   }
 
   void _handleLogout() async {
+    final authProvider = context.read<AuthProvider>();
+    final postProvider = context.read<PostProvider>();
+    final packProvider = context.read<PackProvider>();
+    final homeProvider = context.read<HomeProvider>();
+    final storeProvider = context.read<StoreProvider>();
     try {
-      await context.read<AuthProvider>().logout();
+      await authProvider.logout();
     } catch (_) {
       // best-effort
     }
-    context.read<PostProvider>().clearAllData(notify: false);
-    context.read<PackProvider>().clearAllData(notify: false);
-    context.read<HomeProvider>().clearAllData(notify: false);
-    context.read<StoreProvider>().clear();
+    postProvider.clearAllData(notify: false);
+    packProvider.clearAllData(notify: false);
+    homeProvider.clearAllData(notify: false);
+    storeProvider.clear();
     NotificationBadgeService.instance.clear();
     await StorageService.clearAll();
     await StorageService
@@ -681,7 +949,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         MaterialPageRoute(builder: (context) => const SplashScreen()),
         (Route<dynamic> route) => false,
       );
-      Helpers.showSnackBar(context, 'Logged out successfully!');
+      Helpers.showSnackBar(context, context.tr('Logged out successfully!'));
     }
   }
 
@@ -810,7 +1078,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _handleFollow() {
     if (_storeId == null) return;
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in to follow stores', isError: true);
+      Helpers.showSnackBar(context, context.tr('Log in to follow stores'),
+          isError: true);
       return;
     }
 
@@ -831,21 +1100,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
-        isFollowing ? 'Followed store' : 'Unfollowed store',
+        isFollowing
+            ? context.tr('Followed store')
+            : context.tr('Unfollowed store'),
       );
     }).catchError((_) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update follow', isError: true);
+      Helpers.showSnackBar(context, context.tr('Failed to update follow'),
+          isError: true);
     });
   }
 
-  Future<void> _loadFollowState() async {
-    if (_storeId == null || _isOwnerView) return;
+  Future<void> _loadFollowState({int? storeId, int? loadVersion}) async {
+    final targetStoreId = storeId ?? _storeId;
+    final expectedLoadVersion = loadVersion ?? _profileLoadVersion;
+    if (targetStoreId == null) return;
+    if (_isOwnProfileRoute) return;
+    if (_currentUserId != null && _currentUserId == targetStoreId) return;
     if (!StorageService.isLoggedIn()) return;
     if (_isLoadingFollowState) return;
 
-    final cached = FollowChangeNotifier.getFollowState(_storeId!);
-    if (cached != null && mounted) {
+    final cached = FollowChangeNotifier.getFollowState(targetStoreId);
+    if (cached != null &&
+        _isActiveProfileLoad(expectedLoadVersion) &&
+        _storeId == targetStoreId) {
       setState(() => _isFollowingStore = cached);
     }
 
@@ -860,24 +1138,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       for (final item in list) {
         if (item is Map<String, dynamic>) {
           final followed = item['followed_user'];
-          if (followed is int && followed == _storeId) {
+          if (followed is int && followed == targetStoreId) {
             isFollowing = true;
             break;
           }
-          if (followed is Map && followed['id'] == _storeId) {
+          if (followed is Map && followed['id'] == targetStoreId) {
             isFollowing = true;
             break;
           }
         }
       }
 
-      if (!mounted) return;
+      if (!_isActiveProfileLoad(expectedLoadVersion) ||
+          _storeId != targetStoreId) {
+        return;
+      }
       setState(() => _isFollowingStore = isFollowing);
-      FollowChangeNotifier.setFollowState(_storeId!, isFollowing);
+      FollowChangeNotifier.setFollowState(targetStoreId, isFollowing);
     } catch (_) {
       // ignore
     } finally {
-      if (mounted) setState(() => _isLoadingFollowState = false);
+      if (_isActiveProfileLoad(expectedLoadVersion) &&
+          _storeId == targetStoreId) {
+        setState(() => _isLoadingFollowState = false);
+      }
     }
   }
 
@@ -939,7 +1223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onDeleteImage: _deleteProfileImage,
       onDeleteCoverImage: _deleteCoverImage,
       onSettingsTap: null,
-      onSettingsMenuSelected: null,
+      onSettingsMenuSelected: _isOwnerView ? _onSettingsMenuSelected : null,
       isOwnerView: _isOwnerView,
       isFollowing: _isFollowingStore,
       onFollowTap: !_isOwnerView ? _handleFollow : null,
@@ -947,6 +1231,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onReportTap: !_isOwnerView ? _showReportStoreSheet : null,
       isVerified: _isVerifiedStore,
       primaryGradient: primaryGradient,
+      directionsButton: DirectionsButton(
+        destinationLat: _latitude,
+        destinationLng: _longitude,
+        label: context.l10n.mapLabel,
+      ),
+      settingsActions: _isOwnerView ? _buildSettingsActions(context) : const [],
+      showImageEditActions: false,
+      showCoverSettingsAction: false,
       phoneNumber: (_isOwnerView || _showPhonePublic) ? _phoneNumber : '',
       facebook: (_isOwnerView || _showSocialPublic) ? _facebook : null,
       instagram: (_isOwnerView || _showSocialPublic) ? _instagram : null,
@@ -1086,12 +1378,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       await _fetchStoreData();
       if (mounted) {
-        Helpers.showSnackBar(context, 'Review submitted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Review submitted successfully'));
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Failed to submit review: $e',
-            isError: true);
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to submit review')}: $e',
+          isError: true,
+        );
       }
     } finally {
       if (mounted) setState(() => _isSubmittingReview = false);
@@ -1115,8 +1411,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Rate this store',
+              Text(
+                context.tr('Rate this store'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -1132,7 +1428,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     }
                   });
                 },
-                child: Text(_showReviewForm ? 'Cancel' : 'Write Review'),
+                child: Text(_showReviewForm
+                    ? context.tr('Cancel')
+                    : context.tr('Write Review')),
               ),
             ],
           ),
@@ -1206,11 +1504,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               elevation: 0,
               surfaceTintColor: Colors.transparent,
               centerTitle: true,
-              leadingWidth: 98,
+              leadingWidth: 80,
               leading: Consumer<WalletProvider>(
-                builder: (context, wallet, _) => Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 12),
-                  child: GestureDetector(
+                builder: (context, wallet, _) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: WinoCoinBadge(
+                    coins: wallet.coinsBalance,
+                    margin: const EdgeInsetsDirectional.only(start: 4),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -1219,31 +1519,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       );
                     },
-                    child: SizedBox(
-                      height: 38,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.toll_outlined,
-                            color: Color(0xFF8A5A00),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              '${wallet.coinsBalance}',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF8A5A00),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -1261,160 +1536,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       NotificationBadgeService.instance.unreadCount,
                   builder: (context, unread, _) => Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        IconButton(
-                          tooltip: context.l10n.profileTooltipNotifications,
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const NotificationsScreen(),
-                              ),
-                            );
-                            NotificationBadgeService.instance.refresh();
-                          },
-                          icon: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0EEFF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_outlined,
-                              color: AppColors.primaryColor,
-                              size: 20,
-                            ),
+                    child: AppIconActionButton(
+                      icon: Icons.notifications_outlined,
+                      badgeCount: unread > 0 ? unread : null,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen(),
                           ),
-                        ),
-                        if (unread > 0)
-                          Positioned(
-                            right: 6,
-                            top: 6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              constraints: const BoxConstraints(minWidth: 16),
-                              child: Text(
-                                unread > 99 ? '99+' : '$unread',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                        );
+                        NotificationBadgeService.instance.refresh();
+                      },
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
+                AppDropdownMenuButton<String>(
                   onSelected: _onSettingsMenuSelected,
                   offset: const Offset(0, 40),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  itemBuilder: (context) => [
-                    PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileSettingsEdit),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'store',
-                      child: Row(
-                        children: [
-                          Icon(Icons.storefront_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.tr('Store')),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'ads',
-                      child: Row(
-                        children: [
-                          Icon(Icons.campaign_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileTooltipAds),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'share',
-                      child: Row(
-                        children: [
-                          Icon(Icons.share_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileTooltipShare),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'feedback_send',
-                      child: Row(
-                        children: [
-                          Icon(Icons.feedback_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileSettingsSendFeedback),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'language',
-                      child: Row(
-                        children: [
-                          Icon(Icons.language_outlined,
-                              color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(context.l10n.profileSettingsLanguage),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.logout, color: Colors.red, size: 20),
-                          const SizedBox(width: 12),
-                          Text(
-                            context.l10n.profileSettingsLogout,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  actions: _buildSettingsActions(context),
                   child: Container(
-                    width: 38,
-                    height: 38,
                     margin: const EdgeInsets.only(right: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0EEFF),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.settings_outlined,
-                      color: AppColors.primaryColor,
-                      size: 20,
+                    child: const AppIconActionButton(
+                      icon: Icons.settings_outlined,
                     ),
                   ),
                 ),

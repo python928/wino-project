@@ -1,7 +1,7 @@
 API LINKS EXPLAINED
 ===================
 
-Last reviewed: 2026-03-23
+Last reviewed: 2026-04-01
 
 Project roots
 -------------
@@ -10,7 +10,7 @@ Project roots
 
 Base URL currently used by the Flutter app
 ------------------------------------------
-- `http://192.168.133.21:8000/`
+- `http://192.168.177.21:8000/`
 
 Important notes
 ---------------
@@ -19,6 +19,7 @@ Important notes
 - Most list endpoints are paginated, but some screens still tolerate direct list responses.
 - The app is Android-first and deep links are wired to both custom schemes and HTTP short links.
 - Public-facing branding is now `Wino`, although some internal package/config names still use older legacy naming.
+- Project stage note: this API map describes a real and broad technical platform, but not a fully production-hardened release yet.
 
 1) AUTH
 -------
@@ -162,7 +163,7 @@ Android manifest currently also accepts
 - `toprice://...`
 - `http(s)://wino.app/s/{id}`
 - `http(s)://toprice.app/s/{id}`
-- `http://192.168.133.21/s/{id}`
+- `http://192.168.177.21/s/{id}`
 - same pattern for `/p/{id}`
 
 11) MEDIA
@@ -184,3 +185,17 @@ If an endpoint changes, sync all of these:
 - `the_app/lib/core/config/api_config.dart`
 - app service / provider / screen
 - root docs that map APIs
+
+2026-03-30 Maps Directions Update:
+- The new external directions flow does not introduce a new backend API or Directions API dependency.
+- It depends on existing store/user latitude and longitude fields and launches Google Maps externally.
+- Main Flutter integration points: `the_app/lib/core/services/external_maps_service.dart`, `the_app/lib/core/services/location_service.dart`, `the_app/lib/presentation/shared_widgets/directions_button.dart`.
+
+2026-03-30 Home Ads Single-Random Update:
+- Homepage sponsored ads still use `the_app/lib/core/config/api_config.dart -> /api/ads/campaigns/`, but the client now requests `placement=home_top&single_random=true`.
+- The deciding logic now lives in `app-backend/ads/views.py`, not in Flutter list slicing.
+- Flutter passes current location context when nearby mode is active so the server can choose one eligible ad before the UI renders it.
+
+2026-04-01 Auth And Category Flow Note:
+- No new backend endpoint was introduced for the auth-flow and category-selection improvements.
+- The change is mainly in Flutter UX structure, validation clarity, and reuse of shared selection primitives.

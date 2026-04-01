@@ -135,6 +135,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get feedbackEmpty => 'Aucun avis envoye pour le moment.';
 
   @override
+  String get directionsToStore => 'Itineraire vers le magasin';
+
+  @override
+  String get mapLabel => 'Carte';
+
+  @override
+  String get openInGoogleMaps => 'Ouvrir dans Google Maps';
+
+  @override
+  String get locationDisabledTitle => 'La localisation est desactivee';
+
+  @override
+  String get locationDisabledMessage =>
+      'Activez le service de localisation (GPS) depuis les parametres pour utiliser l\'itineraire.';
+
+  @override
+  String get openSettings => 'Ouvrir les parametres';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
+  String get locationUnavailable => 'Aucune position disponible';
+
+  @override
+  String get unableToOpenGoogleMaps => 'Impossible d\'ouvrir Google Maps';
+
+  @override
   String get locationDisabled =>
       'La localisation est desactivee. Activez le GPS pour la recherche a proximite.';
 
@@ -304,4 +332,234 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get qrLinkOpened => 'Lien QR ouvert.';
+
+  @override
+  String get authRegisterHeaderTitle => 'Creez votre compte';
+
+  @override
+  String get authRegisterHeaderSubtitle =>
+      'Trois etapes rapides pour personnaliser le shopping et les offres proches.';
+
+  @override
+  String get authRegisterFooterPrompt => 'Vous avez deja un compte ?';
+
+  @override
+  String get authRegisterFooterAction => 'Se connecter';
+
+  @override
+  String get authProfileSetupHeaderTitle => 'Completez votre profil';
+
+  @override
+  String get authProfileSetupHeaderSubtitle =>
+      'Ajoutez quelques details pour personnaliser vos resultats.';
+
+  @override
+  String get authProfileSetupBodySubtitle =>
+      'Votre nom, votre date de naissance et vos centres d\'interet nous aident a adapter les produits, magasins et offres proches.';
+
+  @override
+  String get authStepPersonalTitle => 'Informations personnelles';
+
+  @override
+  String get authStepPersonalSubtitle =>
+      'Commencez par l\'essentiel pour avoir un compte complet des le debut.';
+
+  @override
+  String get authStepAccountTitle => 'Informations du compte';
+
+  @override
+  String get authStepAccountSubtitle =>
+      'Utilisez un numero joignable et un mot de passe securise.';
+
+  @override
+  String get authStepInterestsTitle => 'Centres d\'interet';
+
+  @override
+  String get authStepInterestsSubtitle =>
+      'Choisissez jusqu\'a 6 categories pour ameliorer les recommandations et la decouverte a proximite.';
+
+  @override
+  String get authFieldFirstName => 'Prenom';
+
+  @override
+  String get authFieldFirstNameHint => 'Entrez votre prenom';
+
+  @override
+  String get authFieldLastName => 'Nom';
+
+  @override
+  String get authFieldLastNameHint => 'Entrez votre nom';
+
+  @override
+  String get authFieldFullName => 'Nom complet';
+
+  @override
+  String get authFieldFullNameHint => 'Entrez votre nom complet';
+
+  @override
+  String get authFieldBirthday => 'Date de naissance';
+
+  @override
+  String get authFieldBirthdayHint =>
+      'Utilisez le jour, le mois et l\'annee tels qu\'ils figurent sur vos documents officiels.';
+
+  @override
+  String get authFieldDay => 'Jour';
+
+  @override
+  String get authFieldDayHint => 'JJ';
+
+  @override
+  String get authFieldMonth => 'Mois';
+
+  @override
+  String get authFieldMonthHint => 'MM';
+
+  @override
+  String get authFieldYear => 'Annee';
+
+  @override
+  String get authFieldYearHint => 'AAAA';
+
+  @override
+  String get authFieldGender => 'Genre';
+
+  @override
+  String get authGenderMale => 'Homme';
+
+  @override
+  String get authGenderFemale => 'Femme';
+
+  @override
+  String get authFieldPhone => 'Numero de telephone';
+
+  @override
+  String get authFieldPhoneHint => '0XXXXXXXXX';
+
+  @override
+  String get authFieldEmail => 'E-mail';
+
+  @override
+  String get authFieldEmailHint => 'Entrez votre adresse e-mail';
+
+  @override
+  String get authFieldPassword => 'Mot de passe';
+
+  @override
+  String get authFieldPasswordHint => 'Entrez votre mot de passe';
+
+  @override
+  String get authFieldConfirmPassword => 'Confirmer le mot de passe';
+
+  @override
+  String get authFieldConfirmPasswordHint =>
+      'Saisissez a nouveau votre mot de passe';
+
+  @override
+  String get authFieldCategories => 'Categories preferees';
+
+  @override
+  String get authFieldCategoriesHint =>
+      'Choisissez jusqu\'a 6 categories. Vous pourrez les modifier plus tard.';
+
+  @override
+  String get authCategoriesCta => 'Choisir vos categories preferees';
+
+  @override
+  String get authCategoriesRetry => 'Reessayer le chargement des categories';
+
+  @override
+  String get authCategoriesLoadError =>
+      'Impossible de charger les categories pour le moment. Veuillez reessayer.';
+
+  @override
+  String get authActionCreateAccount => 'Creer le compte';
+
+  @override
+  String get authActionPrevious => 'Precedent';
+
+  @override
+  String get authRegistrationFailed =>
+      'L\'inscription a echoue. Veuillez reessayer.';
+
+  @override
+  String get authProfileSaveError =>
+      'Impossible d\'enregistrer votre profil. Veuillez reessayer.';
+
+  @override
+  String get authErrorRequired => 'Champ requis';
+
+  @override
+  String get authErrorNameRequired => 'Entrez votre nom complet';
+
+  @override
+  String get authErrorBirthdayRequired => 'Entrez votre date de naissance';
+
+  @override
+  String get authErrorBirthdayInvalid => 'Entrez une date valide';
+
+  @override
+  String get authErrorMustBe13 => 'Vous devez avoir au moins 13 ans';
+
+  @override
+  String get authErrorPhoneRequired => 'Entrez votre numero de telephone';
+
+  @override
+  String get authErrorPhoneInvalid =>
+      'Utilisez le format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX';
+
+  @override
+  String get authErrorEmailRequired => 'Entrez votre adresse e-mail';
+
+  @override
+  String get authErrorEmailInvalid => 'Entrez une adresse e-mail valide';
+
+  @override
+  String get authErrorPasswordRequired => 'Entrez un mot de passe';
+
+  @override
+  String get authErrorPasswordMin => 'Utilisez au moins 6 caracteres';
+
+  @override
+  String get authErrorConfirmPasswordRequired => 'Confirmez votre mot de passe';
+
+  @override
+  String get authErrorPasswordsDoNotMatch =>
+      'Les mots de passe ne correspondent pas';
+
+  @override
+  String get authErrorCategoriesRequired => 'Choisissez au moins 1 categorie';
+
+  @override
+  String authStepProgress(int current, int total) {
+    return 'Etape $current sur $total';
+  }
+
+  @override
+  String categoriesPickerSelectionCount(int selected, int max) {
+    return '$selected sur $max selectionnees';
+  }
+
+  @override
+  String categoriesPickerMaxReached(int max) {
+    return 'Vous pouvez selectionner jusqu\'a $max categories.';
+  }
+
+  @override
+  String categoriesPickerMinRequired(int min) {
+    return 'Selectionnez au moins $min categories pour continuer.';
+  }
+
+  @override
+  String categoriesPickerMaxHint(int max) {
+    return 'Choisissez jusqu\'a $max categories.';
+  }
+
+  @override
+  String get categoryPickerSearchSubtitle =>
+      'Choisissez des categories pour affiner les resultats, ou laissez vide pour garder une recherche large.';
+
+  @override
+  String get categoryPickerProductSubtitle =>
+      'Choisissez la categorie unique qui correspond le mieux a ce produit.';
 }

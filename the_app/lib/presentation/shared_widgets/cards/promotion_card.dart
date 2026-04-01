@@ -100,8 +100,8 @@ class _PromotionItemCard extends BaseItemCard {
 
   _PromotionItemCard({
     required this.offer,
-    required bool showUnavailableOverlay,
     required bool showStoreName,
+    required bool showUnavailableOverlay,
     required double? userLat,
     required double? userLng,
     required super.onTap,
@@ -142,9 +142,6 @@ class _PromotionItemCard extends BaseItemCard {
   }
 
   @override
-  bool replaceDefaultMetaSection(BuildContext context) => true;
-
-  @override
   Widget? buildCustomImageOverlay(BuildContext context) {
     // Show duration on image for discounts (promotions) only.
     if (offer.kind == 'advertising') return null;
@@ -154,14 +151,11 @@ class _PromotionItemCard extends BaseItemCard {
 
     return Positioned(
       left: AppConstants.spacing8,
-      right: AppConstants.spacing8,
       bottom: AppConstants.spacing8,
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: _LiveDurationBadge(
-          start: offer.startDate,
-          end: end,
-        ),
+      right: AppConstants.spacing8,
+      child: _LiveDurationBadge(
+        start: offer.startDate,
+        end: end,
       ),
     );
   }
@@ -259,31 +253,31 @@ class _LiveDurationBadge extends StatelessWidget {
 
         return Container(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacing12,
-            vertical: AppConstants.spacing8,
+            horizontal: AppConstants.spacing8,
+            vertical: AppConstants.spacing6,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
+            borderRadius: BorderRadius.circular(AppConstants.radiusRound),
             gradient: AppColors.purpleGradient,
             boxShadow: AppColors.purpleShadow,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
               const Icon(
                 Icons.timer_outlined,
-                size: AppConstants.iconSmall,
+                size: 13,
                 color: Colors.white,
               ),
-              const SizedBox(width: AppConstants.spacing6),
-              Flexible(
+              const SizedBox(width: AppConstants.spacing4),
+              Expanded(
                 child: Text(
                   text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: AppConstants.fontSizeBody,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),

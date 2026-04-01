@@ -32,6 +32,7 @@ import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/store_chip.dart';
+import '../shared_widgets/app_icon_action_button.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/loading_indicator.dart';
 import '../shared_widgets/location_mode_switcher.dart';
@@ -100,6 +101,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   double? _userLng;
   bool _isNearbyLoading = false;
   final AnalyticsApiService _analyticsApiService = AnalyticsApiService();
+  HomeProvider? _sharedHomeProvider;
 
   final List<String> _sortOptions = [
     'Newest',
@@ -108,6 +110,47 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     'Lowest Price',
     'Highest Price',
   ];
+
+  String _normalizeText(String value) {
+    var normalized = value.toLowerCase().trim();
+    const replacements = {
+      'à': 'a',
+      'á': 'a',
+      'â': 'a',
+      'ä': 'a',
+      'ã': 'a',
+      'å': 'a',
+      'ç': 'c',
+      'è': 'e',
+      'é': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'ì': 'i',
+      'í': 'i',
+      'î': 'i',
+      'ï': 'i',
+      'ñ': 'n',
+      'ò': 'o',
+      'ó': 'o',
+      'ô': 'o',
+      'ö': 'o',
+      'õ': 'o',
+      'ù': 'u',
+      'ú': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ý': 'y',
+      'ÿ': 'y',
+      'œ': 'oe',
+      'æ': 'ae',
+    };
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+    normalized = normalized.replaceAll(RegExp(r"[’'`´]"), '');
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9\u0600-\u06FF]+'), ' ');
+    return normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
 
   String _localizedLocationLabel(String raw) {
     if (raw.trim().isEmpty || raw.trim() == '/') return raw;
@@ -136,12 +179,32 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
     }
+    _syncLocationFromSharedState(useSetState: false);
 
-    if (widget.autoSearchOnOpen) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _bootstrapSearchScreen();
+      if (widget.autoSearchOnOpen) {
         _performSearch();
-      });
+      }
+    });
+  }
+
+  void _bootstrapSearchScreen() {
+    final homeProvider = context.read<HomeProvider>();
+    if (homeProvider.categories.isEmpty && !homeProvider.isLoadingCategories) {
+      homeProvider.loadCategories();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextProvider = context.read<HomeProvider>();
+    if (!identical(_sharedHomeProvider, nextProvider)) {
+      _sharedHomeProvider?.removeListener(_onSharedLocationFilterChanged);
+      _sharedHomeProvider = nextProvider;
+      _sharedHomeProvider?.addListener(_onSharedLocationFilterChanged);
     }
   }
 
@@ -157,9 +220,54 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   @override
   void dispose() {
+    _sharedHomeProvider?.removeListener(_onSharedLocationFilterChanged);
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _onSharedLocationFilterChanged() {
+    if (!mounted) return;
+    _syncLocationFromSharedState(useSetState: true);
+  }
+
+  void _syncLocationFromSharedState({required bool useSetState}) {
+    final shared = context.read<HomeProvider>();
+    final hasChanges = _selectedLocation != shared.discoveryLocationLabel ||
+        _selectedWilaya != shared.discoveryWilaya ||
+        _selectedBaladiya != shared.discoveryBaladiya ||
+        _distanceKm != shared.discoveryRadiusKm ||
+        _userLat != shared.discoveryUserLat ||
+        _userLng != shared.discoveryUserLng;
+
+    if (!hasChanges) return;
+
+    void apply() {
+      _selectedLocation = shared.discoveryLocationLabel;
+      _selectedWilaya = shared.discoveryWilaya;
+      _selectedBaladiya = shared.discoveryBaladiya;
+      _distanceKm = shared.discoveryRadiusKm;
+      _userLat = shared.discoveryUserLat;
+      _userLng = shared.discoveryUserLng;
+      _resetVisibleCounts();
+    }
+
+    if (useSetState) {
+      setState(apply);
+    } else {
+      apply();
+    }
+  }
+
+  void _persistLocationToSharedState() {
+    context.read<HomeProvider>().setDiscoveryLocationFilter(
+          locationLabel: _selectedLocation,
+          wilaya: _selectedWilaya,
+          baladiya: _selectedBaladiya,
+          radiusKm: _distanceKm,
+          userLat: _userLat,
+          userLng: _userLng,
+        );
   }
 
   void _resetVisibleCounts() {
@@ -194,10 +302,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       search: _searchController.text.isNotEmpty ? _searchController.text : null,
       categoryId:
           _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null,
+      fetchAllPages: true,
     );
-    postProvider.loadOffers();
-    context.read<HomeProvider>().loadFeaturedPacks();
-    _searchStores();
+    postProvider.loadOffers(fetchAllPages: true);
+    context.read<HomeProvider>().loadFeaturedPacks(limit: null);
+    _searchStores(fetchAllPages: true);
     _logSearchEvent();
   }
 
@@ -218,10 +327,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         categoryId: _selectedCategoryIds.length == 1
             ? _selectedCategoryIds.first
             : null,
+        fetchAllPages: true,
       ),
-      postProvider.loadOffers(),
-      homeProvider.loadFeaturedPacks(),
-      _searchStores(),
+      postProvider.loadOffers(fetchAllPages: true),
+      homeProvider.loadFeaturedPacks(limit: null),
+      _searchStores(fetchAllPages: true),
     ]);
     _logSearchEvent();
   }
@@ -286,12 +396,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  Future<void> _searchStores() async {
+  Future<void> _searchStores({bool fetchAllPages = false}) async {
     setState(() => _isLoadingStores = true);
     try {
       final stores = await StoreRepository.searchStores(
         query:
             _searchController.text.isNotEmpty ? _searchController.text : null,
+        fetchAllPages: fetchAllPages,
       );
       if (mounted) {
         setState(() {
@@ -316,6 +427,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         builder: (context) => CategorySelectionScreen(
           categories: categories,
           initialSelectedCategoryIds: _selectedCategoryIds,
+          subtitle: context.l10n.categoryPickerSearchSubtitle,
         ),
       ),
     );
@@ -348,6 +460,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _distanceKm = null; // location mode active → clear distance
         _resetVisibleCounts();
       });
+      _persistLocationToSharedState();
       _logFilterWilaya(result.wilaya, result.baladiya);
     }
   }
@@ -372,6 +485,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _distanceKm = null;
         _resetVisibleCounts();
       });
+      _persistLocationToSharedState();
       return;
     }
 
@@ -407,6 +521,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _selectedLocation = '';
         _resetVisibleCounts();
       });
+      _persistLocationToSharedState();
       _logFilterDistance(km);
     } catch (e) {
       if (!mounted) return;
@@ -625,6 +740,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _distanceKm = null;
       _resetVisibleCounts();
     });
+    _persistLocationToSharedState();
   }
 
   bool get _hasActiveFilters =>
@@ -642,6 +758,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return {for (final c in homeProvider.categories) c.id: c.name};
   }
 
+  Set<String> _selectedCategoryNames(Map<int, String> categoriesById) {
+    return _selectedCategoryIds
+        .map((id) => categoriesById[id])
+        .whereType<String>()
+        .map(_normalizeText)
+        .where((value) => value.isNotEmpty)
+        .toSet();
+  }
+
   bool _postMatchesSelectedCategories(
       Post post, Map<int, String> categoriesById) {
     if (_selectedCategoryIds.isEmpty) return true;
@@ -652,21 +777,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
 
     // Fallback: match by name if API didn't provide categoryId
-    final selectedNames = _selectedCategoryIds
-        .map((id) => categoriesById[id])
-        .whereType<String>()
-        .map((e) => e.toLowerCase())
-        .toSet();
+    final selectedNames = _selectedCategoryNames(categoriesById);
     if (selectedNames.isEmpty) return true;
-    return selectedNames.contains(post.category.toLowerCase());
+    return selectedNames.contains(_normalizeText(post.category));
   }
 
-  String get _normalizedQuery => _searchController.text.trim().toLowerCase();
+  String get _normalizedQuery => _normalizeText(_searchController.text);
 
   bool _matchesQueryText(String value) {
     final query = _normalizedQuery;
     if (query.isEmpty) return true;
-    return value.toLowerCase().contains(query);
+    return _normalizeText(value).contains(query);
   }
 
   bool _postMatchesQuery(Post post) {
@@ -699,8 +820,171 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     final query = _normalizedQuery;
     if (query.isEmpty) return true;
     return _matchesQueryText(store.fullName) ||
+        _matchesQueryText(store.storeDescription) ||
         _matchesQueryText(store.address) ||
-        _matchesQueryText(store.city ?? '');
+        _matchesQueryText(store.city ?? '') ||
+        _matchesQueryText(store.country ?? '') ||
+        store.categories.any(_matchesQueryText);
+  }
+
+  bool _packMatchesSelectedCategories(
+    Pack pack,
+    Map<int, String> categoriesById,
+    List<Post> posts,
+  ) {
+    if (_selectedCategoryIds.isEmpty) return true;
+    final packProductIds =
+        pack.products.map((product) => product.productId).toSet();
+    if (packProductIds.isEmpty) return false;
+
+    return posts.any(
+      (post) =>
+          packProductIds.contains(post.id) &&
+          _postMatchesSelectedCategories(post, categoriesById),
+    );
+  }
+
+  Iterable<Post> _matchingProductsForStore(
+    User store,
+    List<Post> posts,
+    Map<int, String> categoriesById,
+  ) {
+    return posts.where(
+      (post) =>
+          post.storeId == store.id &&
+          _postMatchesQuery(post) &&
+          _postMatchesSelectedCategories(post, categoriesById),
+    );
+  }
+
+  Iterable<Offer> _matchingOffersForStore(
+    User store,
+    List<Offer> offers,
+    Map<int, String> categoriesById,
+  ) {
+    return offers.where(
+      (offer) =>
+          offer.product.storeId == store.id &&
+          _offerMatchesQuery(offer) &&
+          _postMatchesSelectedCategories(offer.product, categoriesById),
+    );
+  }
+
+  Iterable<Pack> _matchingPacksForStore(
+    User store,
+    List<Pack> packs,
+    List<Post> posts,
+    Map<int, String> categoriesById,
+  ) {
+    return packs.where(
+      (pack) =>
+          pack.merchantId == store.id &&
+          _packMatchesQuery(pack) &&
+          _packMatchesSelectedCategories(pack, categoriesById, posts),
+    );
+  }
+
+  bool _storeMatchesSelectedCategories(
+    User store,
+    Map<int, String> categoriesById, {
+    required List<Post> posts,
+    required List<Offer> offers,
+    required List<Pack> packs,
+  }) {
+    if (_selectedCategoryIds.isEmpty) return true;
+
+    final selectedNames = _selectedCategoryNames(categoriesById);
+    final storeCategories =
+        store.categories.map(_normalizeText).where((value) => value.isNotEmpty);
+    if (storeCategories.any(selectedNames.contains)) {
+      return true;
+    }
+
+    return _matchingProductsForStore(store, posts, categoriesById).isNotEmpty ||
+        _matchingOffersForStore(store, offers, categoriesById).isNotEmpty ||
+        _matchingPacksForStore(store, packs, posts, categoriesById).isNotEmpty;
+  }
+
+  List<double> _storeCandidatePrices(
+    User store, {
+    required List<Post> posts,
+    required List<Offer> offers,
+    required List<Pack> packs,
+    required Map<int, String> categoriesById,
+  }) {
+    final prices = <double>[
+      ..._matchingProductsForStore(store, posts, categoriesById)
+          .map((product) => product.price),
+      ..._matchingOffersForStore(store, offers, categoriesById)
+          .map(_offerEffectivePrice),
+      ..._matchingPacksForStore(store, packs, posts, categoriesById)
+          .map(_packEffectivePrice),
+    ];
+    return prices.where((price) => price > 0).toList();
+  }
+
+  bool _storeMatchesPriceFilter(
+    User store, {
+    required List<Post> posts,
+    required List<Offer> offers,
+    required List<Pack> packs,
+    required Map<int, String> categoriesById,
+  }) {
+    if (!(_priceRange.start > 0 || _priceRange.end < 100000)) return true;
+    final prices = _storeCandidatePrices(
+      store,
+      posts: posts,
+      offers: offers,
+      packs: packs,
+      categoriesById: categoriesById,
+    );
+    if (prices.isEmpty) return false;
+    return prices.any(_matchesPriceFilter);
+  }
+
+  List<User> _sortStores(
+    List<User> stores, {
+    required List<Post> posts,
+    required List<Offer> offers,
+    required List<Pack> packs,
+    required Map<int, String> categoriesById,
+  }) {
+    double priceMetric(User store, {required bool highest}) {
+      final prices = _storeCandidatePrices(
+        store,
+        posts: posts,
+        offers: offers,
+        packs: packs,
+        categoriesById: categoriesById,
+      );
+      if (prices.isEmpty) {
+        return highest ? double.negativeInfinity : double.infinity;
+      }
+      return highest
+          ? prices.reduce((a, b) => a > b ? a : b)
+          : prices.reduce((a, b) => a < b ? a : b);
+    }
+
+    switch (_selectedSort) {
+      case 'Oldest':
+        return List<User>.from(stores)
+          ..sort((a, b) => a.dateJoined.compareTo(b.dateJoined));
+      case 'Highest Rated':
+        return List<User>.from(stores)
+          ..sort((a, b) => b.averageRating.compareTo(a.averageRating));
+      case 'Lowest Price':
+        return List<User>.from(stores)
+          ..sort((a, b) => priceMetric(a, highest: false)
+              .compareTo(priceMetric(b, highest: false)));
+      case 'Highest Price':
+        return List<User>.from(stores)
+          ..sort((a, b) => priceMetric(b, highest: true)
+              .compareTo(priceMetric(a, highest: true)));
+      case 'Newest':
+      default:
+        return List<User>.from(stores)
+          ..sort((a, b) => b.dateJoined.compareTo(a.dateJoined));
+    }
   }
 
   double _offerEffectivePrice(Offer offer) {
@@ -729,40 +1013,19 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: AppPrimaryButton(
-              text: context.tr('Search'),
-              icon: Icons.search_rounded,
-              onPressed: _performSearch,
-            ),
-          ),
-        ),
         body: SafeArea(
           child: Column(
             children: [
-              // App bar (back + location mode only)
+              // Compact header: back + search + buttons
               _buildHeader(),
 
-              // Search input + filters section
-              _buildSearchControls(),
+              // City + Nearby on their own line
+              _buildLocationRow(),
 
-              // Type Toggle Buttons
+              // Type tabs: All / Products / Discounts / Packs / Stores
               _buildTypeToggleButtons(),
 
-              // Categories
+              // Compact categories with "show more"
               _buildCategoriesSection(),
 
               // Active Filters
@@ -783,16 +1046,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildHeader() {
-    final distanceActive = _distanceKm != null;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -800,67 +1061,31 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       child: Row(
         children: [
           // Back button
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.blackColor5,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: AppColors.textPrimary, size: 20),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Location Toggle
-          Expanded(
-            child: LocationModeSwitcher(
-              distanceActive: distanceActive,
-              cityLabel: (!distanceActive &&
-                      _selectedLocation.isNotEmpty &&
-                      _selectedLocation != '/')
-                  ? _localizedLocationLabel(_selectedLocation)
-                  : context.tr('City'),
-              nearbyLabel: distanceActive
-                  ? '${_distanceKm!.toInt()} ${context.tr('km')}'
-                  : context.tr('Nearby'),
-              onCityTap: _showLocationPicker,
-              onNearbyTap: _showDistancePicker,
-              isLoadingNearby: _isNearbyLoading,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchControls() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
+          AppBackActionButton(onTap: () => Navigator.pop(context)),
+          const SizedBox(width: 8),
+          // Search field
           Expanded(
             child: SizedBox(
-              height: 46,
+              height: 38,
               child: AppSearchField(
                 controller: _searchController,
                 focusNode: _searchFocus,
                 hintText: context.tr('Search products, stores...'),
                 onChanged: (_) => setState(() {}),
-                onSubmitted: () => _searchFocus.unfocus(),
+                onSubmitted: _performSearch,
                 onClear: () => setState(() {}),
+                compact: true,
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          _buildHeaderButton(
+          const SizedBox(width: 6),
+          AppIconActionButton(
+            icon: Icons.search_rounded,
+            onTap: _performSearch,
+          ),
+          const SizedBox(width: 6),
+          AppIconActionButton(
             icon: Icons.tune_rounded,
-            isActive: _minRating > 0 ||
-                _priceRange.start > 0 ||
-                _priceRange.end < 100000,
             onTap: _showFiltersSheet,
           ),
         ],
@@ -868,61 +1093,30 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
-  Widget _buildHeaderButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isActive = false,
-    String? badge,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primaryColor.withOpacity(0.1)
-              : const Color(0xFFF5F6F8),
-          borderRadius: BorderRadius.circular(16),
-          border: isActive
-              ? Border.all(color: AppColors.primaryColor, width: 1.5)
-              : null,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              icon,
-              color:
-                  isActive ? AppColors.primaryColor : AppColors.textSecondary,
-              size: 24,
-            ),
-            if (badge != null)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    badge,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+  // ── Location row: City + Nearby chips on their own line ──────────────
+  Widget _buildLocationRow() {
+    final distanceActive = _distanceKm != null;
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      child: LocationModeSwitcher(
+        distanceActive: distanceActive,
+        cityLabel: (!distanceActive &&
+                _selectedLocation.isNotEmpty &&
+                _selectedLocation != '/')
+            ? _localizedLocationLabel(_selectedLocation)
+            : context.tr('City'),
+        nearbyLabel: distanceActive
+            ? '${_distanceKm!.toInt()} ${context.tr('km')}'
+            : context.tr('Nearby'),
+        onCityTap: _showLocationPicker,
+        onNearbyTap: _showDistancePicker,
+        isLoadingNearby: _isNearbyLoading,
       ),
     );
   }
 
+  // ── Type tabs: All / Products / Discounts / Packs / Stores ────────────
   Widget _buildTypeToggleButtons() {
     final selectedIndex =
         _typeOptions.indexWhere((o) => o.value == _selectedType);
@@ -930,7 +1124,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
       child: AppToggleButtonGroup(
         options: _typeOptions,
         selectedIndex: safeSelectedIndex,
@@ -961,84 +1155,67 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return Consumer<HomeProvider>(
       builder: (context, homeProvider, child) {
         final categories = homeProvider.categories;
+        if (homeProvider.isLoadingCategories && categories.isEmpty) {
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(
+                  5,
+                  (index) => Container(
+                    width: 72,
+                    height: 32,
+                    margin: const EdgeInsetsDirectional.only(end: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1EFF8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
         if (categories.isEmpty) return const SizedBox.shrink();
+
+        // Show first 5 as chips, then a "more" button
+        const maxVisible = 5;
+        final visible = categories.length > maxVisible
+            ? categories.sublist(0, maxVisible)
+            : categories;
 
         return Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ─── Row 1: "Categories" title + "See all →" ───
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                child: Row(
-                  children: [
-                    Text(
-                      context.tr('Categories'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _openCategoryPicker,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            context.tr('See All'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primaryColor,
-                            ),
-                          ),
-                          Icon(
-                            Icons.keyboard_arrow_right_rounded,
-                            size: 16,
-                            color: AppColors.primaryColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // "All" chip
+                _buildCategoryChip(
+                  label: context.tr('All'),
+                  isSelected: _selectedCategoryIds.isEmpty,
+                  color: AppColors.primaryColor,
+                  onTap: () => setState(() {
+                    _selectedCategoryIds = {};
+                    _resetVisibleCounts();
+                  }),
                 ),
-              ),
-
-              // ─── Row 3: Horizontal category cards (5 items only) ───
-              SizedBox(
-                height: 90,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount:
-                      (categories.length > 5 ? 5 : categories.length) + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildCategoryCard(
-                        icon: Icons.grid_view_rounded,
-                        label: context.tr('All'),
-                        color: AppColors.primaryColor,
-                        isSelected: _selectedCategoryIds.isEmpty,
-                        onTap: () => setState(() {
-                          _selectedCategoryIds = {};
-                          _resetVisibleCounts();
-                        }),
-                      );
-                    }
-                    final cat = categories[index - 1];
-                    final color =
-                        _categoryPalette[(index - 1) % _categoryPalette.length];
-                    final isSelected = _selectedCategoryIds.contains(cat.id);
-                    return _buildCategoryCard(
-                      icon: cat.iconData,
+                const SizedBox(width: 6),
+                // Visible category chips
+                ...visible.asMap().entries.map((entry) {
+                  final cat = entry.value;
+                  final color =
+                      _categoryPalette[entry.key % _categoryPalette.length];
+                  final isSelected = _selectedCategoryIds.contains(cat.id);
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: _buildCategoryChip(
                       label: cat.name,
-                      color: color,
                       isSelected: isSelected,
+                      color: color,
                       onTap: () => setState(() {
                         if (isSelected) {
                           _selectedCategoryIds.remove(cat.id);
@@ -1047,117 +1224,81 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                         }
                         _resetVisibleCounts();
                       }),
-                    );
-                  },
-                ),
-              ),
-            ],
+                    ),
+                  );
+                }),
+                // "More" button if there are extra categories
+                if (categories.length > maxVisible)
+                  GestureDetector(
+                    onTap: _openCategoryPicker,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppColors.primaryColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '+ ${categories.length - maxVisible}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 14, color: AppColors.primaryColor),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildCategoryCard({
-    required IconData icon,
+  Widget _buildCategoryChip({
     required String label,
-    required Color color,
     required bool isSelected,
+    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? color.withOpacity(0.22)
-                    : color.withOpacity(0.10),
-                shape: BoxShape.circle,
-                border: isSelected ? Border.all(color: color, width: 2) : null,
-              ),
-              child: Icon(icon, color: color, size: 26),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? color : AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNonRemovableCategoryChip({required String name}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.neutral200, width: 1),
-      ),
-      child: Text(
-        name,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectedCategoryChip({
-    required String name,
-    required VoidCallback? onRemove,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primaryColor, width: 1.2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryColor,
-            ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.withOpacity(0.3),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onRemove,
-            child: Icon(Icons.close_rounded,
-                size: 18, color: AppColors.primaryColor),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textSecondary,
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildActiveFilters() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.primaryColor.withOpacity(0.05),
         border: Border(
@@ -1167,14 +1308,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: AppColors.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.filter_list_rounded,
-              size: 16,
+              size: 14,
               color: AppColors.primaryColor,
             ),
           ),
@@ -1218,7 +1359,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           GestureDetector(
             onTap: _clearAllFilters,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: AppColors.errorRed.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -1240,8 +1381,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
   Widget _buildFilterTag(String label, IconData icon) {
     return Container(
-      margin: const EdgeInsetsDirectional.only(end: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: const EdgeInsetsDirectional.only(end: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -1255,7 +1396,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.primaryColor,
             ),
@@ -1582,40 +1723,41 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   // Location filter helpers
-  bool _storeMatchesLocationFilter(String address) {
+  bool _storeMatchesLocationFilter(User store) {
     if (_selectedWilaya == null) return true;
-    if (address.isEmpty) return false;
+    final normalizedLocation = _normalizeText([
+      store.address,
+      store.city ?? '',
+      store.country ?? '',
+    ].join(' '));
+    if (normalizedLocation.isEmpty) return false;
 
-    final addressLower = address.toLowerCase();
-
-    if (!addressLower.contains(_selectedWilaya!.toLowerCase())) {
+    if (!normalizedLocation.contains(_normalizeText(_selectedWilaya!))) {
       return false;
     }
     if (_selectedBaladiya != null &&
-        !addressLower.contains(_selectedBaladiya!.toLowerCase())) {
+        _selectedBaladiya!.isNotEmpty &&
+        !normalizedLocation.contains(_normalizeText(_selectedBaladiya!))) {
       return false;
     }
 
     return true;
   }
 
-  String? _getLocationBadgeCount() {
-    if (_selectedWilaya == null) return null;
-    return '1';
-  }
-
-  List<User> _getLocationFilteredStores() {
-    final baseStores = _searchedStores.where(_storeMatchesQuery).toList();
+  List<User> _getLocationFilteredStores({bool applyQuery = true}) {
+    final baseStores = applyQuery
+        ? _searchedStores.where(_storeMatchesQuery).toList()
+        : _searchedStores.toList();
     if (_selectedWilaya == null) {
       return baseStores;
     }
-    return baseStores
-        .where((store) => _storeMatchesLocationFilter(store.address))
-        .toList();
+    return baseStores.where(_storeMatchesLocationFilter).toList();
   }
 
-  List<User> _getDistanceFilteredStores() {
-    final baseStores = _searchedStores.where(_storeMatchesQuery).toList();
+  List<User> _getDistanceFilteredStores({bool applyQuery = true}) {
+    final baseStores = applyQuery
+        ? _searchedStores.where(_storeMatchesQuery).toList()
+        : _searchedStores.toList();
     if (_distanceKm == null || _userLat == null || _userLng == null) {
       return baseStores;
     }
@@ -1627,15 +1769,73 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }).toList();
   }
 
-  List<User> _getActiveFilteredStores() {
-    if (_distanceKm != null) return _getDistanceFilteredStores();
-    if (_selectedWilaya != null) return _getLocationFilteredStores();
-    return _searchedStores;
+  List<User> _getFilteredStores({
+    required Map<int, String> categoriesById,
+    required List<Post> posts,
+    required List<Offer> offers,
+    required List<Pack> packs,
+  }) {
+    List<User> stores;
+    if (_distanceKm != null) {
+      stores = _getDistanceFilteredStores();
+    } else if (_selectedWilaya != null) {
+      stores = _getLocationFilteredStores();
+    } else {
+      stores = _searchedStores.where(_storeMatchesQuery).toList();
+    }
+
+    if (_selectedCategoryIds.isNotEmpty) {
+      stores = stores
+          .where(
+            (store) => _storeMatchesSelectedCategories(
+              store,
+              categoriesById,
+              posts: posts,
+              offers: offers,
+              packs: packs,
+            ),
+          )
+          .toList();
+    }
+
+    if (_minRating > 0) {
+      stores =
+          stores.where((store) => store.averageRating >= _minRating).toList();
+    }
+
+    if (_priceRange.start > 0 || _priceRange.end < 100000) {
+      stores = stores
+          .where(
+            (store) => _storeMatchesPriceFilter(
+              store,
+              posts: posts,
+              offers: offers,
+              packs: packs,
+              categoriesById: categoriesById,
+            ),
+          )
+          .toList();
+    }
+
+    return _sortStores(
+      stores,
+      posts: posts,
+      offers: offers,
+      packs: packs,
+      categoriesById: categoriesById,
+    );
   }
 
   Set<int> _getValidStoreIds() {
     if (!_hasAnyLocationFilter) return {};
-    return _getActiveFilteredStores().map((s) => s.id).toSet();
+    if (_distanceKm != null) {
+      return _getDistanceFilteredStores(applyQuery: false)
+          .map((store) => store.id)
+          .toSet();
+    }
+    return _getLocationFilteredStores(applyQuery: false)
+        .map((store) => store.id)
+        .toSet();
   }
 
   Widget _buildAllContent() {
@@ -1730,8 +1930,17 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           filteredPacks =
               filteredPacks.where((p) => p.merchantNearbyVisible).toList();
         }
+        filteredPacks = filteredPacks
+            .where((p) =>
+                _packMatchesSelectedCategories(p, categoriesById, products))
+            .toList();
         filteredPacks =
             filteredPacks.where((p) => _packMatchesQuery(p)).toList();
+        if (_minRating > 0) {
+          filteredPacks = filteredPacks
+              .where((p) => p.merchantRating >= _minRating)
+              .toList();
+        }
         filteredPacks = filteredPacks
             .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
             .toList();
@@ -1750,6 +1959,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
               ..sort((a, b) => b.rating.compareTo(a.rating));
             filteredOffers = List.from(filteredOffers)
               ..sort((a, b) => b.product.rating.compareTo(a.product.rating));
+            filteredPacks = List.from(filteredPacks)
+              ..sort((a, b) => b.merchantRating.compareTo(a.merchantRating));
             break;
           case 'Lowest Price':
             filteredProducts = List.from(filteredProducts)
@@ -1782,7 +1993,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             break;
         }
 
-        final filteredStores = _getActiveFilteredStores();
+        final filteredStores = _getFilteredStores(
+          categoriesById: categoriesById,
+          posts: products,
+          offers: offers,
+          packs: packs,
+        );
 
         final hasProducts = filteredProducts.isNotEmpty;
         final hasOffers = filteredOffers.isNotEmpty;
@@ -1831,7 +2047,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1862,7 +2078,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1881,7 +2097,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                       _allVisibleCount += _pageSize;
                     });
                   }),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
               ],
               if (hasStores) ...[
                 Row(
@@ -1910,7 +2126,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 12,
                   runSpacing: 16,
@@ -1920,12 +2136,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                           : filteredStores.take(_storesVisibleCount > 6
                               ? 6
                               : _storesVisibleCount))
-                      .map((store) => StoreChip(
-                            imageUrl: store.profileImage ?? '',
-                            name: store.fullName,
-                            rating: store.averageRating,
-                            followersCount: store.followersCount,
-                            isVerified: store.isVerified,
+                      .map((store) => StoreChip.fromUser(
+                            store: store,
                             onTap: () => Navigator.pushNamed(
                               context,
                               Routes.store,
@@ -1948,66 +2160,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSectionHeader(String title, int count, VoidCallback onViewAll) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        GestureDetector(
-          onTap: onViewAll,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  context.tr('View All'),
-                  style: TextStyle(
-                    color: AppColors.primaryColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 16,
-                  color: AppColors.primaryColor,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -2258,14 +2410,16 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildPacksContent() {
-    return Consumer<HomeProvider>(
-      builder: (context, homeProvider, child) {
+    return Consumer2<HomeProvider, PostProvider>(
+      builder: (context, homeProvider, postProvider, child) {
         if (!_hasSearched) {
           return _buildPreSearchState();
         }
         var packs = homeProvider.packs.toList();
+        final products = postProvider.posts.toList();
 
-        if (homeProvider.isLoadingPacks) {
+        if (homeProvider.isLoadingPacks ||
+            (_selectedCategoryIds.isNotEmpty && postProvider.isLoadingPosts)) {
           return _buildGridShimmer();
         }
 
@@ -2280,7 +2434,15 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           packs = packs.where((p) => p.merchantNearbyVisible).toList();
         }
 
+        final categoriesById = _categoriesById(homeProvider);
+        packs = packs
+            .where((p) =>
+                _packMatchesSelectedCategories(p, categoriesById, products))
+            .toList();
         packs = packs.where((p) => _packMatchesQuery(p)).toList();
+        if (_minRating > 0) {
+          packs = packs.where((p) => p.merchantRating >= _minRating).toList();
+        }
         packs = packs
             .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
             .toList();
@@ -2289,6 +2451,10 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           case 'Oldest':
             packs = List.from(packs)
               ..sort((a, b) => _parsePackDate(a).compareTo(_parsePackDate(b)));
+            break;
+          case 'Highest Rated':
+            packs = List.from(packs)
+              ..sort((a, b) => b.merchantRating.compareTo(a.merchantRating));
             break;
           case 'Lowest Price':
             packs = List.from(packs)
@@ -2301,7 +2467,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   _packEffectivePrice(b).compareTo(_packEffectivePrice(a)));
             break;
           case 'Newest':
-          case 'Highest Rated':
           default:
             packs = List.from(packs)
               ..sort((a, b) => _parsePackDate(b).compareTo(_parsePackDate(a)));
@@ -2348,47 +2513,55 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
   }
 
   Widget _buildStoresContent() {
-    if (_isLoadingStores) {
-      return const LoadingIndicator();
-    }
+    return Consumer2<PostProvider, HomeProvider>(
+      builder: (context, postProvider, homeProvider, child) {
+        if (_isLoadingStores ||
+            postProvider.isLoadingPosts ||
+            postProvider.isLoadingOffers ||
+            homeProvider.isLoadingPacks) {
+          return const LoadingIndicator();
+        }
 
-    final filteredStores = _getActiveFilteredStores();
+        final filteredStores = _getFilteredStores(
+          categoriesById: _categoriesById(homeProvider),
+          posts: postProvider.posts,
+          offers: postProvider.offers,
+          packs: homeProvider.packs,
+        );
 
-    if (filteredStores.isEmpty) {
-      return _buildEmptyState();
-    }
+        if (filteredStores.isEmpty) {
+          return _buildEmptyState();
+        }
 
-    final visibleStores = filteredStores.take(_storesVisibleCount).toList();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 16,
-            children: visibleStores
-                .map((store) => StoreChip(
-                      imageUrl: store.profileImage ?? '',
-                      name: store.fullName,
-                      rating: store.averageRating,
-                      followersCount: store.followersCount,
-                      isVerified: store.isVerified,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        Routes.store,
-                        arguments: store.id,
-                      ),
-                    ))
-                .toList(),
+        final visibleStores = filteredStores.take(_storesVisibleCount).toList();
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 16,
+                children: visibleStores
+                    .map((store) => StoreChip.fromUser(
+                          store: store,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            Routes.store,
+                            arguments: store.id,
+                          ),
+                        ))
+                    .toList(),
+              ),
+              if (filteredStores.length > visibleStores.length)
+                _buildLoadMoreButton(() {
+                  setState(() {
+                    _storesVisibleCount += _pageSize;
+                  });
+                }),
+            ],
           ),
-          if (filteredStores.length > visibleStores.length)
-            _buildLoadMoreButton(() {
-              setState(() {
-                _storesVisibleCount += _pageSize;
-              });
-            }),
-        ],
-      ),
+        );
+      },
     );
   }
 

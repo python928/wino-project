@@ -18,6 +18,8 @@ import '../../data/models/offer_model.dart';
 import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../common/radius_picker_sheet.dart';
+import '../shared_widgets/app_switch_tile.dart';
+import '../shared_widgets/wino_coin_badge.dart';
 import '../subscription/subscription_gate.dart';
 import '../wallet/coin_store_screen.dart';
 import 'widgets/pack_picker_sheet.dart';
@@ -456,18 +458,61 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
     return '$h12$suffix';
   }
 
-  String _selectedHoursLabel(BuildContext context) {
-    if (_displayHours.isEmpty) {
-      return context.tr('No hour selected');
-    }
+  String _selectedHoursSummary(BuildContext context) {
+    if (_displayHours.isEmpty) return context.tr('No hour selected');
     final sorted = List<int>.from(_displayHours)..sort();
-    if (sorted.length == 24) {
-      return context.tr('All day (24h)');
-    }
+    if (sorted.length == 24) return context.tr('All day (24h)');
     if (_isBusinessHoursOnly(sorted)) {
       return context.tr('Business hours (8AM-7PM)');
     }
-    return sorted.map((hour) => _formatHourLabel(context, hour)).join(', ');
+    return '${sorted.length}/24';
+  }
+
+  Widget _buildSelectedHoursPreview(BuildContext context) {
+    if (_displayHours.isEmpty) return const SizedBox.shrink();
+    final sorted = List<int>.from(_displayHours)..sort();
+    final visible = sorted.take(8).toList(growable: false);
+    final remaining = sorted.length - visible.length;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        ...visible.map(
+          (hour) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _formatHourLabel(context, hour),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryColor,
+              ),
+            ),
+          ),
+        ),
+        if (remaining > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '+$remaining',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   bool _isBusinessHoursOnly(List<int> hours) {
@@ -493,7 +538,17 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        '${context.tr('Selected hours')}: ${temp.length}/24',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -518,26 +573,37 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                               });
                             },
                           ),
+                          AppCompactActionButton(
+                            label: context.tr('Clear'),
+                            onTap: () {
+                              setModalState(() {
+                                temp.clear();
+                              });
+                            },
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      ...List<Widget>.generate(24, (hour) {
-                        return CheckboxListTile(
-                          dense: true,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          value: temp.contains(hour),
-                          title: Text(_formatHourLabel(context, hour)),
-                          onChanged: (checked) {
-                            setModalState(() {
-                              if (checked == true) {
-                                temp.add(hour);
-                              } else {
-                                temp.remove(hour);
-                              }
-                            });
-                          },
-                        );
-                      }),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: List<Widget>.generate(24, (hour) {
+                          final selectedHour = temp.contains(hour);
+                          return FilterChip(
+                            selected: selectedHour,
+                            label: Text(_formatHourLabel(context, hour)),
+                            onSelected: (checked) {
+                              setModalState(() {
+                                if (checked) {
+                                  temp.add(hour);
+                                } else {
+                                  temp.remove(hour);
+                                }
+                              });
+                            },
+                          );
+                        }),
+                      ),
                     ],
                   ),
                 ),
@@ -897,54 +963,30 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: _isAvailable
-                    ? AppColors.primaryColor.withOpacity(0.12)
-                    : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.toggle_on_outlined,
-                size: 18,
-                color: _isAvailable
-                    ? AppColors.primaryColor
-                    : Colors.grey.shade500,
-              ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: AppSwitchTile(
+          title: context.tr(_availabilityTitle),
+          subtitle: context.tr(_availabilitySubtitle),
+          value: _isAvailable,
+          onChanged:
+              _isLoading ? null : (v) => setState(() => _isAvailable = v),
+          showContainer: false,
+          padding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: _isAvailable
+                  ? AppColors.primaryColor.withOpacity(0.12)
+                  : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.tr(_availabilityTitle),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    context.tr(_availabilitySubtitle),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
+            child: Icon(
+              Icons.toggle_on_outlined,
+              size: 18,
+              color:
+                  _isAvailable ? AppColors.primaryColor : Colors.grey.shade500,
             ),
-            Switch(
-              value: _isAvailable,
-              onChanged:
-                  _isLoading ? null : (v) => setState(() => _isAvailable = v),
-              activeColor: AppColors.primaryColor,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1157,41 +1199,16 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
           actions: [
             if (_isAdMode)
               Consumer<WalletProvider>(
-                builder: (context, wallet, _) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CoinStoreScreen(),
-                        ),
-                      );
-                    },
-                    child: SizedBox(
-                      height: 38,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.toll_outlined,
-                            color: Color(0xFF8A5A00),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${wallet.coinsBalance}',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF8A5A00),
-                            ),
-                          ),
-                        ],
+                builder: (context, wallet, _) => WinoCoinBadge(
+                  coins: wallet.coinsBalance,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CoinStoreScreen(),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             if (_isEditMode && _existingOffer != null)
@@ -1530,9 +1547,9 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF6E8),
+                        color: const Color(0xFFEFF5FF),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFFFD8A8)),
+                        border: Border.all(color: const Color(0xFFC7DAFF)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1570,14 +1587,18 @@ class _AddPromotionScreenState extends State<AddPromotionScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _pickDisplayHours,
                             icon: const Icon(Icons.access_time),
-                            label: Text(context.tr('Select Hours')),
+                            label: Text(
+                              '${context.tr('Select Hours')} (${_displayHours.length}/24)',
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '${context.tr('Selected hours')}: ${_selectedHoursLabel(context)}',
+                          '${context.tr('Selected hours')}: ${_selectedHoursSummary(context)}',
                           style: TextStyle(color: Colors.grey.shade700),
                         ),
+                        const SizedBox(height: 8),
+                        _buildSelectedHoursPreview(context),
                       ],
                     ),
                     const SizedBox(height: 12),

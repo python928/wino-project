@@ -19,187 +19,195 @@ class RuntimeTranslations {
       return _fr[text] ?? text;
     }
     if (languageCode == 'ar') {
-            final mapped = _ar[text];
-            if (mapped != null) return mapped;
+      final mapped = _ar[text];
+      if (mapped != null) return mapped;
 
-            // Fallback: auto-arabize Algerian wilaya/baladiya names so every
-            // commune in the constants file is display-translated without
-            // requiring a huge manual dictionary.
-            if (_algeriaLocationNames.contains(text)) {
-                return _arabizeAlgeriaName(text);
-            }
-            return text;
+      // Fallback: auto-arabize Algerian wilaya/baladiya names so every
+      // commune in the constants file is display-translated without
+      // requiring a huge manual dictionary.
+      if (_algeriaLocationNames.contains(text)) {
+        return _arabizeAlgeriaName(text);
+      }
+      return text;
     }
     return text;
   }
 
-    static final Set<String> _algeriaLocationNames = {
-        ...algeriaWilayasBaladiat.keys,
-        ...algeriaWilayasBaladiat.values.expand((v) => v),
+  static final Set<String> _algeriaLocationNames = {
+    ...algeriaWilayasBaladiat.keys,
+    ...algeriaWilayasBaladiat.values.expand((v) => v),
+  };
+
+  static String _arabizeAlgeriaName(String raw) {
+    final normalized = raw
+        .replaceAll("'", ' ')
+        .replaceAll('-', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (normalized.isEmpty) return raw;
+
+    final words = normalized.split(' ');
+    final converted = words.map(_arabizeToken).where((w) => w.isNotEmpty);
+    return converted.join(' ');
+  }
+
+  static String _arabizeToken(String token) {
+    final cleaned = _stripDiacritics(token);
+    final lower = cleaned.toLowerCase();
+
+    // Common Algerian place-name morphemes.
+    const lexicon = {
+      'ain': 'عين',
+      'ouled': 'أولاد',
+      'oued': 'وادي',
+      'sidi': 'سيدي',
+      'beni': 'بني',
+      'ben': 'بن',
+      'bir': 'بئر',
+      'el': 'ال',
+      'bou': 'بو',
+      'hassi': 'حاسي',
+      'bordj': 'برج',
+      'ksar': 'قصر',
+      'djebel': 'جبل',
+      'oum': 'أم',
+      'ainn': 'عين',
+      'in': 'إن',
     };
 
-    static String _arabizeAlgeriaName(String raw) {
-        final normalized = raw
-                .replaceAll("'", ' ')
-                .replaceAll('-', ' ')
-                .replaceAll(RegExp(r'\s+'), ' ')
-                .trim();
-        if (normalized.isEmpty) return raw;
+    final direct = lexicon[lower];
+    if (direct != null) return direct;
 
-        final words = normalized.split(' ');
-        final converted = words.map(_arabizeToken).where((w) => w.isNotEmpty);
-        return converted.join(' ');
-    }
+    return _transliterateLatinWord(cleaned);
+  }
 
-    static String _arabizeToken(String token) {
-        final cleaned = _stripDiacritics(token);
-        final lower = cleaned.toLowerCase();
+  static String _stripDiacritics(String input) {
+    return input
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('ë', 'e')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('î', 'i')
+        .replaceAll('ï', 'i')
+        .replaceAll('ô', 'o')
+        .replaceAll('ö', 'o')
+        .replaceAll('û', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll('É', 'E')
+        .replaceAll('È', 'E')
+        .replaceAll('Ê', 'E')
+        .replaceAll('Ë', 'E')
+        .replaceAll('À', 'A')
+        .replaceAll('Â', 'A')
+        .replaceAll('Î', 'I')
+        .replaceAll('Ï', 'I')
+        .replaceAll('Ô', 'O')
+        .replaceAll('Ö', 'O')
+        .replaceAll('Û', 'U')
+        .replaceAll('Ü', 'U')
+        .replaceAll('Ç', 'C');
+  }
 
-        // Common Algerian place-name morphemes.
-        const lexicon = {
-            'ain': 'عين',
-            'ouled': 'أولاد',
-            'oued': 'وادي',
-            'sidi': 'سيدي',
-            'beni': 'بني',
-            'ben': 'بن',
-            'bir': 'بئر',
-            'el': 'ال',
-            'bou': 'بو',
-            'hassi': 'حاسي',
-            'bordj': 'برج',
-            'ksar': 'قصر',
-            'djebel': 'جبل',
-            'oum': 'أم',
-            'ainn': 'عين',
-            'in': 'إن',
+  static String _transliterateLatinWord(String input) {
+    if (input.isEmpty) return input;
+    final s = input.toLowerCase();
+    final out = StringBuffer();
+    var i = 0;
+
+    while (i < s.length) {
+      String? take;
+      String? mapped;
+
+      if (i + 2 <= s.length) {
+        final d = s.substring(i, i + 2);
+        const digraph = {
+          'ch': 'ش',
+          'gh': 'غ',
+          'kh': 'خ',
+          'sh': 'ش',
+          'th': 'ث',
+          'dh': 'ذ',
+          'ou': 'و',
+          'aa': 'ا',
+          'ee': 'ي',
+          'oo': 'و',
+          'ph': 'ف',
+          'gn': 'ني',
+          'dj': 'ج',
         };
+        mapped = digraph[d];
+        if (mapped != null) take = d;
+      }
 
-        final direct = lexicon[lower];
-        if (direct != null) return direct;
+      if (mapped == null) {
+        final c = s[i];
+        const single = {
+          'a': 'ا',
+          'b': 'ب',
+          'c': 'ك',
+          'd': 'د',
+          'e': 'ي',
+          'f': 'ف',
+          'g': 'غ',
+          'h': 'ه',
+          'i': 'ي',
+          'j': 'ج',
+          'k': 'ك',
+          'l': 'ل',
+          'm': 'م',
+          'n': 'ن',
+          'o': 'و',
+          'p': 'ب',
+          'q': 'ق',
+          'r': 'ر',
+          's': 'س',
+          't': 'ت',
+          'u': 'و',
+          'v': 'ف',
+          'w': 'و',
+          'x': 'كس',
+          'y': 'ي',
+          'z': 'ز',
+        };
+        mapped = single[c] ?? c;
+        take = c;
+      }
 
-        return _transliterateLatinWord(cleaned);
+      out.write(mapped);
+      i += take!.length;
     }
 
-    static String _stripDiacritics(String input) {
-        return input
-                .replaceAll('é', 'e')
-                .replaceAll('è', 'e')
-                .replaceAll('ê', 'e')
-                .replaceAll('ë', 'e')
-                .replaceAll('à', 'a')
-                .replaceAll('â', 'a')
-                .replaceAll('î', 'i')
-                .replaceAll('ï', 'i')
-                .replaceAll('ô', 'o')
-                .replaceAll('ö', 'o')
-                .replaceAll('û', 'u')
-                .replaceAll('ü', 'u')
-                .replaceAll('ç', 'c')
-                .replaceAll('É', 'E')
-                .replaceAll('È', 'E')
-                .replaceAll('Ê', 'E')
-                .replaceAll('Ë', 'E')
-                .replaceAll('À', 'A')
-                .replaceAll('Â', 'A')
-                .replaceAll('Î', 'I')
-                .replaceAll('Ï', 'I')
-                .replaceAll('Ô', 'O')
-                .replaceAll('Ö', 'O')
-                .replaceAll('Û', 'U')
-                .replaceAll('Ü', 'U')
-                .replaceAll('Ç', 'C');
-    }
-
-    static String _transliterateLatinWord(String input) {
-        if (input.isEmpty) return input;
-        final s = input.toLowerCase();
-        final out = StringBuffer();
-        var i = 0;
-
-        while (i < s.length) {
-            String? take;
-            String? mapped;
-
-            if (i + 2 <= s.length) {
-                final d = s.substring(i, i + 2);
-                const digraph = {
-                    'ch': 'ش',
-                    'gh': 'غ',
-                    'kh': 'خ',
-                    'sh': 'ش',
-                    'th': 'ث',
-                    'dh': 'ذ',
-                    'ou': 'و',
-                    'aa': 'ا',
-                    'ee': 'ي',
-                    'oo': 'و',
-                    'ph': 'ف',
-                    'gn': 'ني',
-                    'dj': 'ج',
-                };
-                mapped = digraph[d];
-                if (mapped != null) take = d;
-            }
-
-            if (mapped == null) {
-                final c = s[i];
-                const single = {
-                    'a': 'ا',
-                    'b': 'ب',
-                    'c': 'ك',
-                    'd': 'د',
-                    'e': 'ي',
-                    'f': 'ف',
-                    'g': 'غ',
-                    'h': 'ه',
-                    'i': 'ي',
-                    'j': 'ج',
-                    'k': 'ك',
-                    'l': 'ل',
-                    'm': 'م',
-                    'n': 'ن',
-                    'o': 'و',
-                    'p': 'ب',
-                    'q': 'ق',
-                    'r': 'ر',
-                    's': 'س',
-                    't': 'ت',
-                    'u': 'و',
-                    'v': 'ف',
-                    'w': 'و',
-                    'x': 'كس',
-                    'y': 'ي',
-                    'z': 'ز',
-                };
-                mapped = single[c] ?? c;
-                take = c;
-            }
-
-            out.write(mapped);
-            i += take!.length;
-        }
-
-        return out.toString();
-    }
+    return out.toString();
+  }
 
   static final Map<String, _GeneratedResolver> _generated = {
     'Back to home': (l10n) => l10n.commonBackToHome,
     'Cancel': (l10n) => l10n.commonCancel,
-    'Close': (l10n) => l10n.commonClose,
+    'Close': (l10n) => l10n.close,
     'Continue': (l10n) => l10n.commonContinue,
+    'Directions to store': (l10n) => l10n.directionsToStore,
     'Language': (l10n) => l10n.commonLanguage,
     'Loading...': (l10n) => l10n.commonLoading,
+    'Map': (l10n) => l10n.mapLabel,
     'Next': (l10n) => l10n.commonNext,
+    'No location available': (l10n) => l10n.locationUnavailable,
     'Not now': (l10n) => l10n.commonNotNow,
     'Open App Settings': (l10n) => l10n.settingsOpenApp,
     'Open Location Settings': (l10n) => l10n.settingsOpenLocation,
-    'Open Settings': (l10n) => l10n.commonOpenSettings,
+    'Open Settings': (l10n) => l10n.openSettings,
+    'Open in Google Maps': (l10n) => l10n.openInGoogleMaps,
     'Retry': (l10n) => l10n.commonRetry,
     'Save': (l10n) => l10n.commonSave,
     'Search': (l10n) => l10n.commonSearch,
     'Skip': (l10n) => l10n.commonSkip,
     'Start': (l10n) => l10n.commonStart,
+    'Location is disabled': (l10n) => l10n.locationDisabledTitle,
+    'Enable location service (GPS) from settings to use directions.': (l10n) =>
+        l10n.locationDisabledMessage,
+    'Unable to open Google Maps': (l10n) => l10n.unableToOpenGoogleMaps,
   };
 
   static const Map<String, String> _fr = {
@@ -230,6 +238,13 @@ class RuntimeTranslations {
     'DZD': 'DZD',
     'km': 'km',
     'Coordinates Locked': 'Coordonnées verrouillées',
+    'Complete Your Profile': 'Complétez votre profil',
+    'Name, birthday, gender and categories':
+        'Nom, date de naissance, genre et catégories',
+    'Male': 'Homme',
+    'Female': 'Femme',
+    'Select categories': 'Sélectionner des catégories',
+    'selected': 'sélectionné',
     'Copy link': 'Copier le lien',
     'Copy number': 'Copier le numéro',
     'Create New Pack': 'Créer un nouveau pack',
@@ -248,8 +263,7 @@ class RuntimeTranslations {
     'Ad Active': 'Annonce active',
     'Show this sponsored ad to customers':
         'Afficher cette annonce sponsorisée aux clients',
-    'Show this discount to customers':
-        'Afficher cette réduction aux clients',
+    'Show this discount to customers': 'Afficher cette réduction aux clients',
     'Saving...': 'Enregistrement...',
     'Save Changes': 'Enregistrer les modifications',
     'Launch Sponsored Ad': 'Lancer l\'annonce sponsorisée',
@@ -271,6 +285,8 @@ class RuntimeTranslations {
     'Discount edited successfully': 'Réduction modifiée avec succès',
     'Sponsored ad created successfully':
         'Annonce sponsorisée créée avec succès',
+    'Sponsored': 'Sponsorisé',
+    'View deal': 'Voir l\'offre',
     'Discount added successfully': 'Réduction ajoutée avec succès',
     'No active discounts found. Create a discount first.':
         'Aucune réduction active trouvée. Créez d\'abord une réduction.',
@@ -397,7 +413,10 @@ class RuntimeTranslations {
     'Nearby': 'À proximité',
     'new notifications': 'nouvelles notifications',
     'Notifications': 'Notifications',
+    'Notification': 'Notification',
     'Notifications coming soon': 'Notifications bientôt disponibles',
+    'Filters coming soon': 'Filtres bientôt disponibles',
+    'New User Offer': 'Offre nouvel utilisateur',
     'OK': 'OK',
     'Open Settings': 'Ouvrir les paramètres',
     'Original Price:': 'Prix initial :',
@@ -419,9 +438,58 @@ class RuntimeTranslations {
     'Add Favorite': 'Ajouter aux favoris',
     'Remove Favorite': 'Retirer des favoris',
     'Added to favorites': 'Ajouté aux favoris',
+    'Cover image updated successfully':
+        'Image de couverture mise à jour avec succès',
+    'Failed to update cover image':
+        'Échec de la mise à jour de l\'image de couverture',
+    'Cover image deleted successfully':
+        'Image de couverture supprimée avec succès',
+    'Failed to delete cover image':
+        'Échec de la suppression de l\'image de couverture',
+    'Profile image updated successfully':
+        'Image de profil mise à jour avec succès',
+    'Failed to update image': 'Échec de la mise à jour de l\'image',
+    'Profile image deleted successfully':
+        'Image de profil supprimée avec succès',
+    'Failed to delete profile image':
+        'Échec de la suppression de l\'image de profil',
+    'Logged out successfully!': 'Déconnexion réussie !',
+    'Log in to follow stores': 'Connectez-vous pour suivre les magasins',
+    'Followed store': 'Magasin suivi',
+    'Unfollowed store': 'Magasin non suivi',
+    'Failed to update follow': 'Échec de la mise à jour du suivi',
+    'Rate this store': 'Évaluer ce magasin',
+    'Write Review': 'Écrire un avis',
     'Removed from favorites': 'Retiré des favoris',
     'Failed to update favorite': 'Échec de mise à jour des favoris',
+    'Failed to update favorites': 'Échec de la mise à jour des favoris',
+    'Log in to save favorites': 'Connectez-vous pour enregistrer les favoris',
     'Products with Discounts': 'Produits avec réductions',
+    'Product link copied': 'Lien du produit copié',
+    'Review submitted successfully': 'Avis envoyé avec succès',
+    'Failed to submit review': 'Échec de l\'envoi de l\'avis',
+    'Please upload at least one payment proof.':
+        'Veuillez télécharger au moins une preuve de paiement.',
+    'Payment request': 'Demande de paiement',
+    'is pending server approval.':
+        'est en attente de validation par le serveur.',
+    'Coins are added after approval.':
+        'Les pièces sont ajoutées après approbation.',
+    'Removed pack products from favorites':
+        'Produits du pack retirés des favoris',
+    'Added pack products to favorites': 'Produits du pack ajoutés aux favoris',
+    'An error occurred': 'Une erreur est survenue',
+    'No image selected': 'Aucune image sélectionnée',
+    'Profile picture updated successfully':
+        'Photo de profil mise à jour avec succès',
+    'Failed to delete image': 'Échec de la suppression de l\'image',
+    'Please fill in all required fields':
+        'Veuillez remplir tous les champs obligatoires',
+    'Data saved successfully': 'Données enregistrées avec succès',
+    'Error saving data': 'Erreur lors de l\'enregistrement des données',
+    'Failed to update cover': 'Échec de la mise à jour de la couverture',
+    'Failed to delete cover': 'Échec de la suppression de la couverture',
+    'Please enter your name': 'Veuillez saisir votre nom',
     'Profile': 'Profil',
     'Promotion Details': 'Détails de la promotion',
     'Quantity': 'Quantité',
@@ -475,7 +543,8 @@ class RuntimeTranslations {
     'ad View:': 'Vue pub :',
     'ad view': 'vue pub',
     'Cost per impression:': 'Coût par impression :',
-    'Current max impressions you can activate:': 'Nombre maximal d\'impressions activables :',
+    'Current max impressions you can activate:':
+        'Nombre maximal d\'impressions activables :',
     'Selected hours': 'Heures sélectionnées',
     'Product Create': 'Créer un produit',
     'product create': 'créer un produit',
@@ -527,7 +596,8 @@ class RuntimeTranslations {
     'Enter your Algerian number (0XXXXXXXXX)':
         'Entrez votre numéro algérien (0XXXXXXXXX)',
     'Phone Number': 'Numéro de téléphone',
-    'Please enter your phone number': 'Veuillez entrer votre numéro de téléphone',
+    'Please enter your phone number':
+        'Veuillez entrer votre numéro de téléphone',
     'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX':
         'Utilisez le format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX',
     'Send Code': 'Envoyer le code',
@@ -553,8 +623,7 @@ class RuntimeTranslations {
         'Délai de connexion dépassé. Veuillez réessayer.',
     'Server error. Please try again later.':
         'Erreur serveur. Veuillez réessayer plus tard.',
-    'Invalid response format from server':
-        'Format de réponse serveur invalide',
+    'Invalid response format from server': 'Format de réponse serveur invalide',
     'Request failed': 'La requête a échoué',
     'We are reviewing your image...': 'Nous examinons votre image...',
     'WhatsApp': 'WhatsApp',
@@ -569,8 +638,6 @@ class RuntimeTranslations {
     'Please select a rating': 'Veuillez sélectionner une note',
     'Report submitted. Thank you.': 'Signalement envoyé. Merci.',
     'Failed to send report': 'Échec de l’envoi du signalement',
-    'Review submitted successfully': 'Avis envoyé avec succès',
-    'Failed to submit review': 'Échec de l’envoi de l’avis',
     'Review deleted successfully': 'Avis supprimé avec succès',
     'Failed to delete review': 'Échec de la suppression de l’avis',
     'You have': 'Vous avez',
@@ -580,6 +647,9 @@ class RuntimeTranslations {
     'Add products to your favorites to find them here easily':
         'Ajoutez des produits à vos favoris pour les retrouver ici facilement',
     'Explore Products': 'Explorer les produits',
+    'Empty pack': 'Pack vide',
+    'An error occurred while loading favorites':
+        'Une erreur est survenue lors du chargement des favoris',
     'Packs': 'Packs',
     'Select Wilaya': 'Sélectionner la wilaya',
     'Select Baladiya': 'Sélectionner la baladiya',
@@ -733,8 +803,7 @@ class RuntimeTranslations {
     'Pack price must be less than the total price of products':
         'Le prix du pack doit être inférieur au prix total des produits',
     'Must login first': 'Vous devez vous connecter d\'abord',
-    'No store found for this user':
-        'Aucun magasin trouvé pour cet utilisateur',
+    'No store found for this user': 'Aucun magasin trouvé pour cet utilisateur',
     'Pack updated successfully': 'Pack mis à jour avec succès',
     'Pack published successfully': 'Pack publié avec succès',
     'Error during publishing': 'Erreur lors de la publication',
@@ -775,6 +844,21 @@ class RuntimeTranslations {
     'Nearby search visibility': 'Visibilité dans la recherche à proximité',
     'Nearby results use your GPS. Turn this on to show your store by distance. You can turn it off anytime.':
         'Les résultats à proximité utilisent votre GPS. Activez ceci pour afficher votre magasin par distance. Vous pouvez le désactiver à tout moment.',
+    'Store location': 'Emplacement du magasin',
+    'Store location (optional)': 'Emplacement du magasin (optionnel)',
+    'Select wilaya and baladiya': 'Sélectionnez la wilaya et la baladiya',
+    'Select wilaya and baladiya (optional)':
+        'Sélectionnez la wilaya et la baladiya (optionnel)',
+    'Please choose wilaya and baladiya':
+        'Veuillez choisir la wilaya et la baladiya',
+    'People searching in that baladiya will see your posts unless you enable delivery.':
+        'Les personnes qui recherchent dans cette baladiya verront vos publications, sauf si vous activez la livraison.',
+    'Choose the wilaya and baladiya where your store is based. If you do not support delivery, your posts will mainly appear to people searching in that baladiya.':
+        'Choisissez la wilaya et la baladiya où se situe votre magasin. Si vous ne proposez pas la livraison, vos publications apparaîtront surtout aux personnes qui recherchent dans cette baladiya.',
+    'You can skip this step for now. Add your wilaya and baladiya later if you want better local search visibility.':
+        'Vous pouvez ignorer cette étape pour le moment. Ajoutez votre wilaya et votre baladiya plus tard si vous voulez une meilleure visibilité dans la recherche locale.',
+    'Location is optional. If you add it, your posts can appear more accurately to people searching in that wilaya or baladiya.':
+        'L’emplacement est facultatif. Si vous l’ajoutez, vos publications peuvent apparaître plus précisément aux personnes qui recherchent dans cette wilaya ou cette baladiya.',
     'Show my store in nearby results':
         'Afficher mon magasin dans les résultats à proximité',
     'Visible in nearby results': 'Visible dans les résultats à proximité',
@@ -911,6 +995,13 @@ class RuntimeTranslations {
     'DZD': 'دج',
     'km': 'كم',
     'Coordinates Locked': 'الإحداثيات مقفلة',
+    'Complete Your Profile': 'أكمل ملفك الشخصي',
+    'Name, birthday, gender and categories':
+        'الاسم وتاريخ الميلاد والجنس والفئات',
+    'Male': 'ذكر',
+    'Female': 'أنثى',
+    'Select categories': 'اختر الفئات',
+    'selected': 'محدد',
     'Copy link': 'نسخ الرابط',
     'Copy number': 'نسخ الرقم',
     'Create New Pack': 'إنشاء باك جديد',
@@ -945,6 +1036,8 @@ class RuntimeTranslations {
     'Sponsored ad updated successfully': 'تم تحديث الإعلان الممول بنجاح',
     'Discount edited successfully': 'تم تعديل التخفيض بنجاح',
     'Sponsored ad created successfully': 'تم إنشاء الإعلان الممول بنجاح',
+    'Sponsored': 'ممَوَّل',
+    'View deal': 'عرض العرض',
     'Discount added successfully': 'تمت إضافة التخفيض بنجاح',
     'No active discounts found. Create a discount first.':
         'لا توجد تخفيضات نشطة. أنشئ تخفيضًا أولًا.',
@@ -996,8 +1089,7 @@ class RuntimeTranslations {
     'Invalid': 'غير صالح',
     'Ad Impressions': 'مرات ظهور الإعلان',
     'e.g. 5000': 'مثال: 5000',
-    'Current ad impressions to activate:':
-        'مرات الظهور الحالية للتفعيل:',
+    'Current ad impressions to activate:': 'مرات الظهور الحالية للتفعيل:',
     'Age From': 'العمر من',
     'Age To': 'العمر إلى',
     'Choose Radius (km)': 'اختر نصف القطر (كم)',
@@ -1067,7 +1159,10 @@ class RuntimeTranslations {
     'Nearby': 'بالقرب',
     'new notifications': 'إشعارات جديدة',
     'Notifications': 'الإشعارات',
+    'Notification': 'إشعار',
     'Notifications coming soon': 'الإشعارات قريباً',
+    'Filters coming soon': 'الفلاتر قريباً',
+    'New User Offer': 'عرض مستخدم جديد',
     'OK': 'موافق',
     'Open Settings': 'فتح الإعدادات',
     'Original Price:': 'السعر الأصلي:',
@@ -1088,9 +1183,47 @@ class RuntimeTranslations {
     'Add Favorite': 'إضافة إلى المفضلة',
     'Remove Favorite': 'إزالة من المفضلة',
     'Added to favorites': 'تمت الإضافة إلى المفضلة',
+    'Cover image updated successfully': 'تم تحديث صورة الغلاف بنجاح',
+    'Failed to update cover image': 'فشل تحديث صورة الغلاف',
+    'Cover image deleted successfully': 'تم حذف صورة الغلاف بنجاح',
+    'Failed to delete cover image': 'فشل حذف صورة الغلاف',
+    'Profile image updated successfully': 'تم تحديث صورة الملف الشخصي بنجاح',
+    'Failed to update image': 'فشل تحديث الصورة',
+    'Profile image deleted successfully': 'تم حذف صورة الملف الشخصي بنجاح',
+    'Failed to delete profile image': 'فشل حذف صورة الملف الشخصي',
+    'Logged out successfully!': 'تم تسجيل الخروج بنجاح!',
+    'Log in to follow stores': 'سجل الدخول لمتابعة المتاجر',
+    'Followed store': 'تمت متابعة المتجر',
+    'Unfollowed store': 'تم إلغاء متابعة المتجر',
+    'Failed to update follow': 'فشل تحديث المتابعة',
+    'Rate this store': 'قيّم هذا المتجر',
+    'Write Review': 'اكتب تقييماً',
     'Removed from favorites': 'تمت الإزالة من المفضلة',
     'Failed to update favorite': 'تعذر تحديث المفضلة',
+    'Failed to update favorites': 'تعذر تحديث المفضلات',
+    'Log in to save favorites': 'سجل الدخول لحفظ المفضلة',
     'Products with Discounts': 'منتجات بتخفيضات',
+    'Product link copied': 'تم نسخ رابط المنتج',
+    'Review submitted successfully': 'تم إرسال التقييم بنجاح',
+    'Failed to submit review': 'فشل إرسال التقييم',
+    'Please upload at least one payment proof.':
+        'يرجى رفع إثبات دفع واحد على الأقل.',
+    'Payment request': 'طلب الدفع',
+    'is pending server approval.': 'قيد انتظار موافقة الخادم.',
+    'Coins are added after approval.': 'تتم إضافة العملات بعد الموافقة.',
+    'Removed pack products from favorites':
+        'تمت إزالة منتجات الباقة من المفضلة',
+    'Added pack products to favorites': 'تمت إضافة منتجات الباقة إلى المفضلة',
+    'An error occurred': 'حدث خطأ',
+    'No image selected': 'لم يتم اختيار صورة',
+    'Profile picture updated successfully': 'تم تحديث صورة الملف بنجاح',
+    'Failed to delete image': 'فشل حذف الصورة',
+    'Please fill in all required fields': 'يرجى ملء جميع الحقول المطلوبة',
+    'Data saved successfully': 'تم حفظ البيانات بنجاح',
+    'Error saving data': 'خطأ أثناء حفظ البيانات',
+    'Failed to update cover': 'فشل تحديث الغلاف',
+    'Failed to delete cover': 'فشل حذف الغلاف',
+    'Please enter your name': 'يرجى إدخال اسمك',
     'Profile': 'الملف الشخصي',
     'Promotion Details': 'تفاصيل العرض',
     'Quantity': 'الكمية',
@@ -1142,7 +1275,8 @@ class RuntimeTranslations {
     'ad View:': 'مشاهدة إعلان:',
     'ad view': 'مشاهدة إعلان',
     'Cost per impression:': 'تكلفة كل ظهور:',
-    'Current max impressions you can activate:': 'أقصى عدد ظهور يمكنك تفعيله الآن:',
+    'Current max impressions you can activate:':
+        'أقصى عدد ظهور يمكنك تفعيله الآن:',
     'Selected hours': 'الساعات المحددة',
     'Product Create': 'إنشاء منتج',
     'product create': 'إنشاء منتج',
@@ -1197,8 +1331,7 @@ class RuntimeTranslations {
     'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX':
         'استخدم الصيغة 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX',
     'Send Code': 'إرسال الرمز',
-    'Failed to send verification code.':
-        'فشل في إرسال رمز التحقق.',
+    'Failed to send verification code.': 'فشل في إرسال رمز التحقق.',
     'Server connection failed. Please try again.':
         'فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
     'Enter the 6-digit code': 'أدخل الرمز المكون من 6 أرقام',
@@ -1219,8 +1352,7 @@ class RuntimeTranslations {
         'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.',
     'Server error. Please try again later.':
         'خطأ في الخادم. يرجى المحاولة لاحقًا.',
-    'Invalid response format from server':
-        'تنسيق استجابة الخادم غير صالح',
+    'Invalid response format from server': 'تنسيق استجابة الخادم غير صالح',
     'Request failed': 'فشل الطلب',
     'We are reviewing your image...': 'نحن نراجع صورتك...',
     'WhatsApp': 'واتساب',
@@ -1232,8 +1364,6 @@ class RuntimeTranslations {
     'Please select a rating': 'يرجى اختيار تقييم',
     'Report submitted. Thank you.': 'تم إرسال البلاغ. شكرًا لك.',
     'Failed to send report': 'فشل إرسال البلاغ',
-    'Review submitted successfully': 'تم إرسال التقييم بنجاح',
-    'Failed to submit review': 'فشل إرسال التقييم',
     'Review deleted successfully': 'تم حذف التقييم بنجاح',
     'Failed to delete review': 'فشل حذف التقييم',
     'You have': 'لديك',
@@ -1243,6 +1373,8 @@ class RuntimeTranslations {
     'Add products to your favorites to find them here easily':
         'أضف منتجات إلى المفضلة لتجدها هنا بسهولة',
     'Explore Products': 'استكشاف المنتجات',
+    'Empty pack': 'باقة فارغة',
+    'An error occurred while loading favorites': 'حدث خطأ أثناء تحميل المفضلة',
     'Packs': 'الباقات',
     'Select Wilaya': 'اختر الولاية',
     'Select Baladiya': 'اختر البلدية',
@@ -1382,7 +1514,8 @@ class RuntimeTranslations {
     'update': 'تحديث',
     'publish': 'نشر',
     'product': 'منتج',
-    'This product already exists in the pack': 'هذا المنتج موجود بالفعل في الباك',
+    'This product already exists in the pack':
+        'هذا المنتج موجود بالفعل في الباك',
     'Select pack products first': 'اختر منتجات الباك أولًا',
     'Enter pack name': 'أدخل اسم الباك',
     'Enter pack sale price': 'أدخل سعر بيع الباك',
@@ -1505,6 +1638,19 @@ class RuntimeTranslations {
         'إعلاناتك تحصل على مشاهدات ونقرات. حافظ على الميزانية للمنتجات الأسرع حركة.',
     'Nearby performance improves when both your store GPS and address are complete.':
         'أداء القرب يتحسن عندما يكون GPS المتجر والعنوان مكتملين.',
+    'Store location': 'موقع المتجر',
+    'Store location (optional)': 'موقع المتجر (اختياري)',
+    'Select wilaya and baladiya': 'اختر الولاية والبلدية',
+    'Select wilaya and baladiya (optional)': 'اختر الولاية والبلدية (اختياري)',
+    'Please choose wilaya and baladiya': 'يرجى اختيار الولاية والبلدية',
+    'People searching in that baladiya will see your posts unless you enable delivery.':
+        'الأشخاص الذين يبحثون في تلك البلدية سيرون منشوراتك ما لم تفعّل التوصيل.',
+    'Choose the wilaya and baladiya where your store is based. If you do not support delivery, your posts will mainly appear to people searching in that baladiya.':
+        'اختر الولاية والبلدية التي يقع فيها متجرك. إذا كنت لا تدعم التوصيل، فستظهر منشوراتك أساسا للأشخاص الذين يبحثون في تلك البلدية.',
+    'You can skip this step for now. Add your wilaya and baladiya later if you want better local search visibility.':
+        'يمكنك تخطي هذه الخطوة الآن. أضف الولاية والبلدية لاحقا إذا أردت ظهورا أفضل في البحث المحلي.',
+    'Location is optional. If you add it, your posts can appear more accurately to people searching in that wilaya or baladiya.':
+        'الموقع اختياري. إذا أضفته، يمكن أن تظهر منشوراتك بدقة أكبر للأشخاص الذين يبحثون في تلك الولاية أو البلدية.',
     'Change the dates or create a new ad to start collecting results.':
         'غيّر التواريخ أو أنشئ إعلانا جديدا لبدء جمع النتائج.',
     'Campaign': 'حملة',

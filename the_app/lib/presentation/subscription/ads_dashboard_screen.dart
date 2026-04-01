@@ -16,6 +16,8 @@ import '../../data/repositories/post_repository.dart';
 import 'add_ad_screen.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/error_state_widget.dart';
+import '../shared_widgets/wino_coin_badge.dart';
+import '../wallet/coin_store_screen.dart';
 
 class AdsDashboardScreen extends StatefulWidget {
   const AdsDashboardScreen({super.key});
@@ -314,7 +316,7 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
     ];
 
     return _sectionCard(
-      title: 'What these numbers mean',
+      title: context.tr('What these numbers mean'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: insights
@@ -483,34 +485,21 @@ class _AdsDashboardScreenState extends State<AdsDashboardScreen> {
         backgroundColor: const Color(0xFFF7F8FC),
         appBar: AppBar(
           title: Text(context.tr('Ads')),
-          leadingWidth: 96,
-          leading: Consumer<WalletProvider>(
-            builder: (context, wallet, _) => Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: SizedBox(
-                height: 34,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.toll_outlined,
-                      color: Color(0xFF8A5A00),
-                      size: 17,
+          actions: [
+            Consumer<WalletProvider>(
+              builder: (context, wallet, _) => WinoCoinBadge(
+                coins: wallet.coinsBalance,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CoinStoreScreen(),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${wallet.coinsBalance}',
-                      style: const TextStyle(
-                        color: Color(0xFF8A5A00),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
-          ),
+          ],
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,

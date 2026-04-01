@@ -1,12 +1,19 @@
 the_app/lib
 ===========
 
-Last reviewed: 2026-03-23
+Last reviewed: 2026-04-01
+
+Current status note
+-------------------
+- This app library is materially stronger than it was in March 2026.
+- The codebase now has clearer shared UI primitives, stronger location flows, and better auth/category UX.
+- The overall product is still best described as advanced pre-production, not full production release.
 
 1) High-level structure
 -----------------------
 .
 ├── core
+│   ├── accessibility
 │   ├── components
 │   ├── config
 │   ├── constants
@@ -51,6 +58,7 @@ Last reviewed: 2026-03-23
 `core/`
 - Cross-cutting infrastructure.
 - API config, routing, providers, app services, theme, localization, utilities.
+- Also now includes explicit accessibility helpers and a broader shared UI system.
 
 Important files
 - `core/config/api_config.dart`
@@ -61,10 +69,13 @@ Important files
 - `core/services/api_service.dart`
 - `core/services/storage_service.dart`
 - `core/services/deep_link_service.dart`
+- `core/services/external_maps_service.dart`
 - `core/services/notification_badge_service.dart`
 - `core/providers/locale_provider.dart`
 - `core/extensions/l10n_extension.dart`
 - `core/localization/runtime_translations.dart`
+- `core/accessibility/semantic_helpers.dart`
+- `core/theme/app_typography.dart`
 
 `data/`
 - Shared models and repositories used by screens/providers.
@@ -105,12 +116,14 @@ Generated-file note
 `presentation/auth/`
 - splash, launch/onboarding, login, register, OTP, profile setup
 - `launch_screen.dart` now includes first-run language selection
+- shared auth shell primitives now live in `presentation/auth/widgets/auth_flow_components.dart`
 
 `presentation/home/`
 - home shell, home widgets, nearby/category sections
 
 `presentation/search/`
 - search tab, filters, location mode logic, results widgets
+- `category_selection_screen.dart` is now a reusable selection surface across auth, search, and publishing
 
 `presentation/product/`
 - product detail flow
@@ -146,6 +159,7 @@ Generated-file note
 `presentation/shared_widgets/`
 - reusable UI across many screens
 - includes report bottom sheet, QR dialog, contact row, app bars, shared cards
+- also now includes `directions_button.dart`, `app_dropdown_menu.dart`, `app_switch_tile.dart`, and other shared UX/system primitives
 
 4) Routing pattern actually used
 --------------------------------

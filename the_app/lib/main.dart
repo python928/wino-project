@@ -144,7 +144,7 @@ class WinoApp extends StatelessWidget {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
 
           // Theme
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightThemeFor(localeProvider.locale),
 
           // Keep navigation callbacks without overriding app text direction.
           builder: (context, child) {

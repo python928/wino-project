@@ -14,6 +14,9 @@ class Pack extends Equatable {
   final String updatedAt;
   final int merchantId;
   final String merchantName;
+  final String merchantAddress;
+  final double merchantRating;
+  final int merchantReviewCount;
   final double? merchantLatitude;
   final double? merchantLongitude;
   final bool merchantNearbyVisible;
@@ -33,6 +36,9 @@ class Pack extends Equatable {
     required this.updatedAt,
     required this.merchantId,
     required this.merchantName,
+    this.merchantAddress = '',
+    this.merchantRating = 0.0,
+    this.merchantReviewCount = 0,
     this.merchantLatitude,
     this.merchantLongitude,
     this.merchantNearbyVisible = true,
@@ -54,6 +60,9 @@ class Pack extends Equatable {
 
     // Extract merchant name from various possible sources
     String merchantName = '';
+    String merchantAddress = '';
+    double merchantRating = 0.0;
+    int merchantReviewCount = 0;
     bool merchantIsVerified = false;
 
     // 1. Try merchant_name field
@@ -71,11 +80,48 @@ class Pack extends Equatable {
     }
 
     if (json['merchant'] is Map<String, dynamic>) {
+      final merchant = json['merchant'] as Map<String, dynamic>;
+      merchantAddress =
+          (merchant['address'] ?? merchant['city'] ?? '').toString().trim();
+      merchantRating = _parseDouble(
+          merchant['average_rating'] ?? merchant['rating'] ?? merchantRating);
+      merchantReviewCount =
+          int.tryParse((merchant['review_count'] ?? '').toString()) ??
+              merchantReviewCount;
       merchantIsVerified =
           (json['merchant']['is_verified'] as bool?) ?? merchantIsVerified;
     }
+    if (json['store'] is Map<String, dynamic>) {
+      final store = json['store'] as Map<String, dynamic>;
+      if (merchantAddress.isEmpty) {
+        merchantAddress =
+            (store['address'] ?? store['city'] ?? '').toString().trim();
+      }
+      if (merchantRating <= 0) {
+        merchantRating =
+            _parseDouble(store['average_rating'] ?? store['rating']);
+      }
+      merchantReviewCount =
+          int.tryParse((store['review_count'] ?? '').toString()) ??
+              merchantReviewCount;
+      merchantIsVerified =
+          (store['is_verified'] as bool?) ?? merchantIsVerified;
+    }
     merchantIsVerified =
         (json['merchant_is_verified'] as bool?) ?? merchantIsVerified;
+    merchantAddress =
+        (json['merchant_address'] ?? json['store_address'] ?? merchantAddress)
+            .toString()
+            .trim();
+    merchantRating = _parseDouble(
+      json['merchant_average_rating'] ??
+          json['average_rating'] ??
+          json['merchant_rating'] ??
+          merchantRating,
+    );
+    merchantReviewCount =
+        int.tryParse((json['merchant_review_count'] ?? '').toString()) ??
+            merchantReviewCount;
 
     return Pack(
       id: json['id'] as int,
@@ -95,6 +141,9 @@ class Pack extends Equatable {
       updatedAt: json['updated_at'] as String? ?? '',
       merchantId: merchantId,
       merchantName: merchantName,
+      merchantAddress: merchantAddress,
+      merchantRating: merchantRating,
+      merchantReviewCount: merchantReviewCount,
       merchantLatitude: json['merchant_latitude'] != null
           ? double.tryParse(json['merchant_latitude'].toString())
           : null,
@@ -146,6 +195,9 @@ class Pack extends Equatable {
       'updated_at': updatedAt,
       'merchant_id': merchantId,
       'merchant_name': merchantName,
+      'merchant_address': merchantAddress,
+      'merchant_average_rating': merchantRating,
+      'merchant_review_count': merchantReviewCount,
       'merchant_latitude': merchantLatitude,
       'merchant_longitude': merchantLongitude,
       'merchant_nearby_visible': merchantNearbyVisible,
@@ -168,6 +220,9 @@ class Pack extends Equatable {
         updatedAt,
         merchantId,
         merchantName,
+        merchantAddress,
+        merchantRating,
+        merchantReviewCount,
         merchantLatitude,
         merchantLongitude,
         merchantNearbyVisible,

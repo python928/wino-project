@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/routing/routes.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../data/models/pack_model.dart';
 import '../../../core/widgets/cards/base_item_card.dart';
 import '../../common/widgets/stacked_product_images.dart';
@@ -9,10 +10,16 @@ import '../../common/widgets/stacked_product_images.dart';
 /// Displays packs with custom image widget and specialized content
 class PackCard extends BaseItemCard {
   final Pack pack;
+  final double? userLat;
+  final double? userLng;
+  final bool showStoreName;
 
   PackCard({
     super.key,
     required this.pack,
+    this.userLat,
+    this.userLng,
+    this.showStoreName = true,
     VoidCallback? onTap,
     VoidCallback? onEditTap,
     bool isUnavailable = false,
@@ -26,6 +33,12 @@ class PackCard extends BaseItemCard {
               pack.totalPrice > pack.discountPrice ? pack.totalPrice : null,
           discountPercentage: _calculateDiscountPercent(pack),
           customBadge: _buildBadge(pack),
+          rating: pack.merchantId > 0 ? pack.merchantRating : null,
+          reviewCount:
+              pack.merchantReviewCount > 0 ? pack.merchantReviewCount : null,
+          bottomLeftText:
+              _buildLocationText(pack, showStoreName, userLat, userLng),
+          bottomLeftIcon: showStoreName ? Icons.location_on_outlined : null,
           isUnavailable: isUnavailable,
           showUnavailableOverlay: showUnavailableOverlay,
           onTap: onTap,
@@ -50,12 +63,33 @@ class PackCard extends BaseItemCard {
         .round();
   }
 
-  static String _buildBadge(Pack pack) {
+  static String? _buildBadge(Pack pack) {
     final discountPercent = _calculateDiscountPercent(pack);
     if (discountPercent != null && discountPercent > 0) {
       return 'Pack -$discountPercent%';
     }
     return 'Pack';
+  }
+
+  static String? _buildLocationText(
+    Pack pack,
+    bool showStoreName,
+    double? userLat,
+    double? userLng,
+  ) {
+    if (!showStoreName) return null;
+
+    final dist = Helpers.haversineDistance(
+      userLat,
+      userLng,
+      pack.merchantLatitude,
+      pack.merchantLongitude,
+    );
+    if (dist != null) return Helpers.formatDistance(dist);
+
+    if (pack.merchantAddress.trim().isNotEmpty) return pack.merchantAddress;
+    if (pack.merchantName.trim().isNotEmpty) return pack.merchantName;
+    return null;
   }
 
   @override
@@ -68,6 +102,10 @@ class PackCard extends BaseItemCard {
       oldPrice: oldPrice,
       discountPercentage: discountPercentage,
       customBadge: customBadge,
+      rating: rating,
+      reviewCount: reviewCount,
+      bottomLeftText: bottomLeftText,
+      bottomLeftIcon: bottomLeftIcon,
       isUnavailable: isUnavailable,
       showUnavailableOverlay: showUnavailableOverlay,
       onTap: onTap ??
@@ -75,6 +113,12 @@ class PackCard extends BaseItemCard {
             Navigator.pushNamed(context, Routes.packDetails, arguments: pack);
           },
       onEditTap: onEditTap,
+      onBottomLeftTap: pack.merchantId > 0
+          ? () {
+              Navigator.pushNamed(context, Routes.store,
+                  arguments: pack.merchantId);
+            }
+          : null,
     );
   }
 }

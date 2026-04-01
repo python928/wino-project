@@ -17,7 +17,7 @@ class CardConstants {
   static const double gridCrossAxisSpacing = 14.0;
   static const double gridMainAxisSpacing = 14.0;
   // Smaller value => taller tiles (width/height)
-  static const double gridChildAspectRatio = 0.72;
+  static const double gridChildAspectRatio = 0.62;
 
   // Typography
   static const double titleFontSize = 13.0;

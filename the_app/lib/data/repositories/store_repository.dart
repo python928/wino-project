@@ -11,6 +11,32 @@ class StoreRepository {
     return [];
   }
 
+  static Future<List<dynamic>> _fetchList(
+    String url, {
+    bool fetchAllPages = false,
+  }) async {
+    final items = <dynamic>[];
+    final visitedUrls = <String>{};
+    String? nextUrl = url;
+
+    while (nextUrl != null && nextUrl.isNotEmpty && visitedUrls.add(nextUrl)) {
+      final response = await ApiService.get(nextUrl);
+      items.addAll(_extractList(response));
+
+      if (!fetchAllPages || response is! Map) {
+        break;
+      }
+
+      final next = response['next']?.toString();
+      if (next == null || next.isEmpty) {
+        break;
+      }
+      nextUrl = next;
+    }
+
+    return items;
+  }
+
   static String userDetail(int id) => '${ApiConfig.users}$id/';
 
   static Future<User?> getStore(int userId) async {
@@ -35,14 +61,21 @@ class StoreRepository {
   }
 
   /// Search users/stores by query
-  static Future<List<User>> searchStores({String? query}) async {
+  static Future<List<User>> searchStores({
+    String? query,
+    bool fetchAllPages = false,
+  }) async {
     try {
-      final url = query != null && query.isNotEmpty
-          ? '${ApiConfig.users}?search=$query&has_posts=true'
-          : '${ApiConfig.users}?has_posts=true';
+      final queryParams = <String, String>{
+        'has_posts': 'true',
+      };
+      if (query != null && query.isNotEmpty) {
+        queryParams['search'] = query;
+      }
+      final url =
+          '${ApiConfig.users}?${Uri(queryParameters: queryParams).query}';
 
-      final resp = await ApiService.get(url);
-      final list = _extractList(resp);
+      final list = await _fetchList(url, fetchAllPages: fetchAllPages);
 
       return list.whereType<Map<String, dynamic>>().map(User.fromJson).toList();
     } catch (_) {

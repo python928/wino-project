@@ -18,6 +18,33 @@ class PostRepository {
     return [];
   }
 
+  static Future<List<dynamic>> _fetchList(
+    String url, {
+    bool fetchAllPages = false,
+  }) async {
+    final items = <dynamic>[];
+    final visitedUrls = <String>{};
+    String? nextUrl = url;
+
+    while (nextUrl != null && nextUrl.isNotEmpty && visitedUrls.add(nextUrl)) {
+      final response = await ApiService.get(nextUrl);
+      final pageItems = _extractList(response);
+      items.addAll(pageItems);
+
+      if (!fetchAllPages || response is! Map) {
+        break;
+      }
+
+      final next = response['next']?.toString();
+      if (next == null || next.isEmpty) {
+        break;
+      }
+      nextUrl = next;
+    }
+
+    return items;
+  }
+
   static String _toUtcIso(DateTime value) {
     // Always send UTC with Z suffix to avoid server interpreting local naive time as UTC.
     return value.toUtc().toIso8601String();
@@ -105,6 +132,7 @@ class PostRepository {
     int? storeId,
     int? categoryId,
     bool availableOnly = true,
+    bool fetchAllPages = false,
   }) async {
     try {
       final queryParams = <String, String>{};
@@ -115,13 +143,13 @@ class PostRepository {
       if (availableOnly) queryParams['available_status'] = 'available';
 
       final queryString = queryParams.isNotEmpty
-          ? '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}'
+          ? '?${Uri(queryParameters: queryParams).query}'
           : '';
 
-      final productsResp =
-          await ApiService.get('${ApiConfig.products}$queryString');
-
-      final list = _extractList(productsResp);
+      final list = await _fetchList(
+        '${ApiConfig.products}$queryString',
+        fetchAllPages: fetchAllPages && page == null,
+      );
       return list
           .map((item) => Post.fromJson(item as Map<String, dynamic>))
           .toList();
@@ -339,6 +367,10 @@ class PostRepository {
     String? kind,
     String? placement,
     String? wilayaCode,
+    double? userLat,
+    double? userLng,
+    bool singleRandomized = false,
+    bool fetchAllPages = false,
   }) async {
     try {
       final requestedKind = (kind ?? '').trim().toLowerCase();
@@ -356,11 +388,18 @@ class PostRepository {
       }
       if (!isAdsRequest && kind != null && kind.isNotEmpty)
         query['kind'] = kind;
-      if (!isAdsRequest && placement != null && placement.isNotEmpty) {
+      if (placement != null && placement.isNotEmpty) {
         query['placement'] = placement;
       }
       if (wilayaCode != null && wilayaCode.isNotEmpty) {
         query['wilaya_code'] = wilayaCode;
+      }
+      if (isAdsRequest && userLat != null && userLng != null) {
+        query['lat'] = userLat.toStringAsFixed(6);
+        query['lng'] = userLng.toStringAsFixed(6);
+      }
+      if (isAdsRequest && singleRandomized) {
+        query['single_random'] = 'true';
       }
       final baseUrl =
           isAdsRequest ? ApiConfig.adsCampaigns : ApiConfig.promotions;
@@ -369,9 +408,7 @@ class PostRepository {
           : '$baseUrl?${Uri(queryParameters: query).query}';
       AppLogger.info(
           'Repository: getOffers request url=$url kind=$requestedKind includeInactive=$includeInactive storeId=$filterStoreId');
-      final promotionsResp = await ApiService.get(url);
-      AppLogger.info('Repository: Promotions response: $promotionsResp');
-      final promos = _extractList(promotionsResp);
+      final promos = await _fetchList(url, fetchAllPages: fetchAllPages);
       AppLogger.info('Repository: Found ${promos.length} promotions');
       if (promos.isEmpty) return [];
 

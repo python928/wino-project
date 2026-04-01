@@ -69,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initLocationFromProfile();
+    _syncSharedDiscoveryLocation(notify: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final analyticsProvider = context.read<AnalyticsProvider>();
 
     // Fetch in top-to-bottom screen order to keep section loading predictable.
-    await postProvider.loadAdOffers(wilayaCode: _selectedWilaya);
+    await _reloadHomeTopAd();
     await postProvider.loadOffers();
     await homeProvider.loadRecentProducts();
     await homeProvider.loadFeaturedPacks();
@@ -99,6 +100,17 @@ class _HomeScreenState extends State<HomeScreen> {
         _isInitialHomeLoad = false;
       });
     }
+  }
+
+  Future<void> _reloadHomeTopAd() async {
+    if (!mounted) return;
+    await context.read<PostProvider>().loadAdOffers(
+          wilayaCode: _selectedWilaya,
+          placement: 'home_top',
+          userLat: _radiusKm != null ? _userLat : null,
+          userLng: _radiusKm != null ? _userLng : null,
+          singleRandomized: false,
+        );
   }
 
   void _initLocationFromProfile() {
@@ -125,12 +137,26 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _syncSharedDiscoveryLocation({bool notify = true}) {
+    context.read<HomeProvider>().setDiscoveryLocationFilter(
+          locationLabel: _selectedLocation,
+          wilaya: _selectedWilaya,
+          baladiya: _selectedBaladiya,
+          radiusKm: _radiusKm,
+          userLat: _userLat,
+          userLng: _userLng,
+          notify: notify,
+        );
+  }
+
   Future<void> _activateNearby(double km) async {
     if (km <= 0) {
       setState(() {
         _radiusKm = null;
         _selectedLocation = 'Algiers, Algeria';
       });
+      _syncSharedDiscoveryLocation();
+      await _reloadHomeTopAd();
       return;
     }
 
@@ -150,7 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
       if (lat == null || lng == null) {
-        Helpers.showSnackBar(context, 'Could not get current GPS location');
+        Helpers.showSnackBar(
+            context, context.tr('Could not get current GPS location'));
         return;
       }
 
@@ -160,7 +187,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _radiusKm = km;
         _selectedLocation = '/';
       });
+      _syncSharedDiscoveryLocation();
       _logFilterDistance(km);
+      await _reloadHomeTopAd();
     } catch (e) {
       if (!mounted) return;
       await LocationPermissionHelper.handleLocationError(
@@ -194,7 +223,9 @@ class _HomeScreenState extends State<HomeScreen> {
             '${context.tr(result.baladiya)}, ${context.tr(result.wilaya)}';
         _radiusKm = null; // address mode active → clear distance
       });
+      _syncSharedDiscoveryLocation();
       _logFilterWilaya(result.wilaya, result.baladiya);
+      await _reloadHomeTopAd();
     }
   }
 
@@ -449,7 +480,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAdBannerBlock() {
     return Consumer<PostProvider>(
       builder: (context, postProvider, child) {
-        final ads = _filterOffersForActiveLocation(postProvider.adOffers);
+        final ads = postProvider.adOffers;
         final hasAds = ads.isNotEmpty;
         final isLoading = postProvider.isLoadingOffers;
         if (!hasAds && !isLoading) return const SizedBox.shrink();
@@ -910,12 +941,8 @@ class _HomeScreenState extends State<HomeScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final u = stores[index];
-              return StoreChip(
-                imageUrl: u.profileImage,
-                name: u.fullName,
-                rating: u.averageRating,
-                followersCount: u.followersCount,
-                isVerified: u.isVerified,
+              return StoreChip.fromUser(
+                store: u,
                 onTap: () => Navigator.pushNamed(
                   context,
                   Routes.store,
@@ -1348,7 +1375,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAdBannerSection() {
     return Consumer<PostProvider>(
       builder: (context, postProvider, child) {
-        final ads = _filterOffersForActiveLocation(postProvider.adOffers);
+        final ads = postProvider.adOffers;
         if (postProvider.isLoadingOffers && ads.isEmpty) {
           return _buildAdBannerShimmer();
         }
@@ -1448,7 +1475,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     BorderRadius.circular(999),
                                               ),
                                               child: Text(
-                                                'Sponsored',
+                                                context.tr('Sponsored'),
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: compact ? 10 : 11,
@@ -1638,7 +1665,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
-                                                  'View deal',
+                                                  context.tr('View deal'),
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontWeight: FontWeight.w800,
@@ -1868,7 +1895,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showFilters() {
-    Helpers.showSnackBar(context, 'Filters coming soon');
+    Helpers.showSnackBar(context, context.tr('Filters coming soon'));
   }
 
   void _navigateToCategory(int categoryId, String categoryName) {
@@ -1880,7 +1907,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showPromoDetails() {
-    Helpers.showSnackBar(context, 'New User Offer');
+    Helpers.showSnackBar(context, context.tr('New User Offer'));
   }
 
   void _navigateToProductDetails(Post product) {
@@ -1998,11 +2025,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleFavorite(Post product) {
-    Helpers.showSnackBar(context, 'Added to favorites');
+    Helpers.showSnackBar(context, context.tr('Added to favorites'));
   }
 
   String _buildProductSummary(List<dynamic> products) {
-    if (products.isEmpty) return 'Empty pack';
+    if (products.isEmpty) return context.tr('Empty pack');
 
     const maxItems = 3;
     final itemsToShow = products.take(maxItems).toList();

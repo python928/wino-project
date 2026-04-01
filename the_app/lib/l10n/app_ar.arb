@@ -46,6 +46,15 @@
   "feedbackSubmitSuccess": "تم إرسال الملاحظات بنجاح.",
   "feedbackSubmitError": "تعذر إرسال الملاحظات",
   "feedbackEmpty": "لم يتم إرسال أي ملاحظات بعد.",
+  "directionsToStore": "الاتجاهات إلى المتجر",
+  "mapLabel": "الخريطة",
+  "openInGoogleMaps": "فتح في Google Maps",
+  "locationDisabledTitle": "الموقع غير مفعل",
+  "locationDisabledMessage": "فعّل خدمة الموقع (GPS) من الإعدادات لاستخدام الاتجاهات.",
+  "openSettings": "فتح الإعدادات",
+  "close": "إغلاق",
+  "locationUnavailable": "لا يوجد موقع",
+  "unableToOpenGoogleMaps": "تعذر فتح Google Maps",
   "locationDisabled": "خدمات الموقع متوقفة. يرجى تفعيل GPS لاستخدام البحث القريب.",
   "locationPermissionDeniedForever": "تم رفض إذن الموقع بشكل دائم. يرجى السماح به من إعدادات التطبيق.",
   "settingsOpenLocation": "فتح إعدادات الموقع",
@@ -102,5 +111,114 @@
   "feedbackStatusInReview": "قيد المراجعة",
   "feedbackStatusRejected": "مرفوض",
   "feedbackTypeDefault": "ملاحظة",
-  "qrLinkOpened": "تم فتح رابط QR."
+  "qrLinkOpened": "تم فتح رابط QR.",
+  "authRegisterHeaderTitle": "أنشئ حسابك",
+  "authRegisterHeaderSubtitle": "ثلاث خطوات سريعة لتخصيص التسوق والعروض القريبة.",
+  "authRegisterFooterPrompt": "لديك حساب بالفعل؟",
+  "authRegisterFooterAction": "تسجيل الدخول",
+  "authProfileSetupHeaderTitle": "أكمل ملفك الشخصي",
+  "authProfileSetupHeaderSubtitle": "أضف بعض التفاصيل لنخصص النتائج المناسبة لك.",
+  "authProfileSetupBodySubtitle": "اسمك وتاريخ ميلادك واهتماماتك تساعدنا على تخصيص المنتجات والمتاجر والعروض القريبة.",
+  "authStepPersonalTitle": "بياناتك الأساسية",
+  "authStepPersonalSubtitle": "ابدأ بالمعلومات الأساسية حتى يصبح حسابك جاهزًا من البداية.",
+  "authStepAccountTitle": "بيانات الحساب",
+  "authStepAccountSubtitle": "استخدم رقم هاتف متاحًا وكلمة مرور آمنة.",
+  "authStepInterestsTitle": "اهتمامات التسوق",
+  "authStepInterestsSubtitle": "اختر حتى 6 فئات لتحسين الاقتراحات والاكتشاف القريب.",
+  "authFieldFirstName": "الاسم الأول",
+  "authFieldFirstNameHint": "أدخل اسمك الأول",
+  "authFieldLastName": "اللقب",
+  "authFieldLastNameHint": "أدخل لقبك",
+  "authFieldFullName": "الاسم الكامل",
+  "authFieldFullNameHint": "أدخل اسمك الكامل",
+  "authFieldBirthday": "تاريخ الميلاد",
+  "authFieldBirthdayHint": "استخدم اليوم والشهر والسنة كما هي في وثائقك الرسمية.",
+  "authFieldDay": "اليوم",
+  "authFieldDayHint": "يوم",
+  "authFieldMonth": "الشهر",
+  "authFieldMonthHint": "شهر",
+  "authFieldYear": "السنة",
+  "authFieldYearHint": "سنة",
+  "authFieldGender": "الجنس",
+  "authGenderMale": "ذكر",
+  "authGenderFemale": "أنثى",
+  "authFieldPhone": "رقم الهاتف",
+  "authFieldPhoneHint": "0XXXXXXXXX",
+  "authFieldEmail": "البريد الإلكتروني",
+  "authFieldEmailHint": "أدخل بريدك الإلكتروني",
+  "authFieldPassword": "كلمة المرور",
+  "authFieldPasswordHint": "أدخل كلمة المرور",
+  "authFieldConfirmPassword": "تأكيد كلمة المرور",
+  "authFieldConfirmPasswordHint": "أعد إدخال كلمة المرور",
+  "authFieldCategories": "الفئات المفضلة",
+  "authFieldCategoriesHint": "اختر حتى 6 فئات. يمكنك تغييرها لاحقًا.",
+  "authCategoriesCta": "اختر فئاتك المفضلة",
+  "authCategoriesRetry": "أعد محاولة تحميل الفئات",
+  "authCategoriesLoadError": "تعذر تحميل الفئات الآن. يرجى المحاولة مرة أخرى.",
+  "authActionCreateAccount": "إنشاء الحساب",
+  "authActionPrevious": "السابق",
+  "authRegistrationFailed": "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
+  "authProfileSaveError": "تعذر حفظ ملفك الشخصي. يرجى المحاولة مرة أخرى.",
+  "authErrorRequired": "هذا الحقل مطلوب",
+  "authErrorNameRequired": "أدخل اسمك الكامل",
+  "authErrorBirthdayRequired": "أدخل تاريخ ميلادك",
+  "authErrorBirthdayInvalid": "أدخل تاريخًا صحيحًا",
+  "authErrorMustBe13": "يجب أن يكون عمرك 13 سنة على الأقل",
+  "authErrorPhoneRequired": "أدخل رقم هاتفك",
+  "authErrorPhoneInvalid": "استخدم الصيغة 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX",
+  "authErrorEmailRequired": "أدخل بريدك الإلكتروني",
+  "authErrorEmailInvalid": "أدخل بريدًا إلكترونيًا صحيحًا",
+  "authErrorPasswordRequired": "أدخل كلمة مرور",
+  "authErrorPasswordMin": "استخدم 6 أحرف على الأقل",
+  "authErrorConfirmPasswordRequired": "أكد كلمة المرور",
+  "authErrorPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين",
+  "authErrorCategoriesRequired": "اختر فئة واحدة على الأقل",
+  "authStepProgress": "الخطوة {current} من {total}",
+  "@authStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerSelectionCount": "{selected} من {max} محددة",
+  "@categoriesPickerSelectionCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxReached": "يمكنك اختيار حتى {max} فئات فقط.",
+  "@categoriesPickerMaxReached": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMinRequired": "اختر {min} فئات على الأقل للمتابعة.",
+  "@categoriesPickerMinRequired": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxHint": "يمكنك اختيار حتى {max} فئات.",
+  "@categoriesPickerMaxHint": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryPickerSearchSubtitle": "اختر فئات لتضييق النتائج، أو اتركها فارغة إذا كنت تريد بحثًا أوسع.",
+  "categoryPickerProductSubtitle": "اختر الفئة الواحدة الأنسب لهذا المنتج."
 }

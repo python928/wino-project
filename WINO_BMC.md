@@ -1,6 +1,16 @@
 # Wino Business Model Canvas (BMC)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+This BMC should be read against the current truthful stage:
+- technical scope is strong,
+- product scope is meaningful,
+- commercial proof is still emerging,
+- and the product is better described as advanced pre-production / pilot-ready direction than full production release.
 
 ## 1) Customer Segments
 ### Primary user segment
@@ -19,6 +29,7 @@ Last updated: 2026-03-23
 - nearby discovery instead of generic listing overload,
 - more confidence through reviews, reports, and trust cues,
 - easier comparison across products, packs, and promotions,
+- direct map directions to merchant locations when users decide to visit,
 - practical local buying paths through direct contact, sharing, and QR.
 
 ### For merchants

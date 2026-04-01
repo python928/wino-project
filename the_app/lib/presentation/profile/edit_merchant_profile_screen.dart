@@ -17,6 +17,7 @@ import '../../core/utils/helpers.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../common/location_permission_helper.dart';
 import '../common/location_picker_screen.dart';
+import '../shared_widgets/app_switch_tile.dart';
 
 class EditMerchantProfileScreen extends StatefulWidget {
   final String initialName;
@@ -271,7 +272,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile == null) {
-      if (mounted) Helpers.showSnackBar(context, 'No image selected');
+      if (mounted) {
+        Helpers.showSnackBar(context, context.tr('No image selected'));
+      }
       return;
     }
 
@@ -295,11 +298,15 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
         });
 
         if (mounted) {
-          Helpers.showSnackBar(context, 'Profile picture updated successfully');
+          Helpers.showSnackBar(
+              context, context.tr('Profile picture updated successfully'));
         }
       } catch (e) {
         if (mounted) {
-          Helpers.showSnackBar(context, 'Failed to update image: $e');
+          Helpers.showSnackBar(
+            context,
+            '${context.tr('Failed to update image')}: $e',
+          );
         }
       } finally {
         if (mounted) setState(() => _isUploadingImage = false);
@@ -314,7 +321,9 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile == null) {
-      if (mounted) Helpers.showSnackBar(context, 'No image selected');
+      if (mounted) {
+        Helpers.showSnackBar(context, context.tr('No image selected'));
+      }
       return;
     }
 
@@ -338,10 +347,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       });
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'Cover image updated successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Cover image updated successfully'));
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Failed to update cover: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to update cover')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploadingCover = false);
     }
@@ -381,10 +396,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       await StorageService.saveUserData(response);
       setState(() => _avatarUrl = null);
       if (mounted) {
-        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Profile image deleted successfully'));
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Failed to delete image: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete image')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
     }
@@ -423,10 +444,16 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
       await StorageService.saveUserData(response);
       setState(() => _coverUrl = null);
       if (mounted) {
-        Helpers.showSnackBar(context, 'Cover image deleted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Cover image deleted successfully'));
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Failed to delete cover: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete cover')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploadingCover = false);
     }
@@ -434,7 +461,7 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (_nameController.text.trim().isEmpty) {
-      Helpers.showSnackBar(context, 'Please enter your name');
+      Helpers.showSnackBar(context, context.tr('Please enter your name'));
       return;
     }
 
@@ -638,16 +665,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                     style: AppTextFieldStyle.profile,
                   ),
                   const SizedBox(height: 20),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
+                  AppSwitchTile(
+                    title: context.tr('Show call button'),
+                    subtitle: _showPhonePublic
+                        ? context.tr('Customers can call you')
+                        : context.tr('Call button will be hidden'),
                     value: _showPhonePublic,
-                    activeColor: AppColors.primaryColor,
-                    title: Text(context.tr('Show call button')),
-                    subtitle: Text(
-                      _showPhonePublic
-                          ? context.tr('Customers can call you')
-                          : context.tr('Call button will be hidden'),
-                    ),
                     onChanged: (value) {
                       setState(() => _showPhonePublic = value);
                     },
@@ -662,16 +685,12 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
+                  AppSwitchTile(
+                    title: context.tr('Show WhatsApp/social buttons'),
+                    subtitle: _showSocialPublic
+                        ? context.tr('Customers can contact you')
+                        : context.tr('Buttons will be hidden'),
                     value: _showSocialPublic,
-                    activeColor: AppColors.primaryColor,
-                    title: Text(context.tr('Show WhatsApp/social buttons')),
-                    subtitle: Text(
-                      _showSocialPublic
-                          ? context.tr('Customers can contact you')
-                          : context.tr('Buttons will be hidden'),
-                    ),
                     onChanged: (value) {
                       setState(() => _showSocialPublic = value);
                     },
@@ -1110,25 +1129,19 @@ class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
 
         const SizedBox(height: 10),
 
-        SwitchListTile(
+        AppSwitchTile(
+          title: context.tr('Show my store in nearby results'),
+          subtitle: _allowNearbyVisibility
+              ? context.tr('Visible in nearby results')
+              : context.tr('Hidden from nearby results'),
           value: _allowNearbyVisibility,
-          contentPadding: EdgeInsets.zero,
-          activeColor: AppColors.primaryColor,
-          title: Text(
-            context.tr('Show my store in nearby results'),
-            style:
-                AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            _allowNearbyVisibility
-                ? context.tr('Visible in nearby results')
-                : context.tr('Hidden from nearby results'),
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.textSecondary),
-          ),
           onChanged: (value) {
             setState(() => _allowNearbyVisibility = value);
           },
+          titleStyle:
+              AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+          subtitleStyle:
+              AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
 
         const SizedBox(height: 8),

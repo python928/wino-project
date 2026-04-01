@@ -36,90 +36,133 @@ class StackedProductImages extends StatelessWidget {
       );
     }
 
+    return _buildMosaicPackImages(context);
+  }
+
+  Widget _buildMosaicPackImages(BuildContext context) {
+    final tile0 = products.isNotEmpty ? products[0] : null;
+    final tile1 = products.length > 1 ? products[1] : null;
+    final tile2 = products.length > 2 ? products[2] : null;
+    final tile3 = products.length > 3 ? products[3] : null;
+
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.15),
-            AppColors.primary.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      color: const Color(0xFFF3F4F7),
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: _buildTile(tile0)),
+                const SizedBox(width: 2),
+                Expanded(child: _buildTile(tile1)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: _buildTile(tile2)),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildTile(tile3),
+                      if (products.length > 1)
+                        Center(
+                          child: _buildCountPill(context, products.length),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      child: _buildStackedImages(),
     );
   }
 
-  Widget _buildStackedImages() {
-    // Show up to 3 product images stacked
-    final imagesToShow = products.take(3).toList();
-    final imageCount = imagesToShow.length;
-    final remainingCount = products.length - imageCount;
+  Widget _buildTile(dynamic product) {
+    if (product == null) {
+      return Container(
+        color: const Color(0xFFF0F1F4),
+      );
+    }
+
+    return _buildProductImage(product, fit: BoxFit.cover);
+  }
+
+  Widget _buildCountPill(BuildContext context, int totalProducts) {
+    final isArabic =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ==
+            'ar';
+    final fullLabel = isArabic ? '$totalProducts منتج' : '$totalProducts items';
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final availableHeight = constraints.maxHeight;
+        final isNarrow = constraints.maxWidth < 92;
+        final label = isNarrow ? '$totalProducts' : fullLabel;
 
-        // Image size adapts to container - use 70% of height
-        final imageSize = (availableHeight * 0.70).clamp(50.0, 90.0);
-        final overlap = imageSize * 0.35; // 35% overlap
-        final totalWidth = imageSize + (imageCount - 1) * (imageSize - overlap);
-        final startX = (availableWidth - totalWidth) / 2;
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            for (int i = 0; i < imageCount; i++)
-              Positioned(
-                left: startX + i * (imageSize - overlap),
-                child: Container(
-                  width: imageSize,
-                  height: imageSize,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildProductImage(imagesToShow[i]),
-                        if (remainingCount > 0 && i == imageCount - 1)
-                          Container(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '+$remainingCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                      ],
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 8 : 12,
+              vertical: isNarrow ? 5 : 7,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.96),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF2E2E32),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              ),
-          ],
+                if (!isNarrow) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.purpleGradient,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.widgets_outlined,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildProductImage(dynamic product) {
+  Widget _buildProductImage(dynamic product, {BoxFit fit = BoxFit.cover}) {
     String? imageUrl;
 
     // Handle PackProduct object
@@ -146,7 +189,7 @@ class StackedProductImages extends StatelessWidget {
 
     return Image.network(
       fullImageUrl,
-      fit: BoxFit.cover,
+      fit: fit,
       width: double.infinity,
       height: double.infinity,
       loadingBuilder: (context, child, loadingProgress) {

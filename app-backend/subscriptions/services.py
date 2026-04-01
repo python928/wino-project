@@ -91,6 +91,16 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None,
 	prefix = 'ad_' if is_ad else 'promotion_'
 	max_duration_key = f'{prefix}max_duration_days'
 	max_active_key = f'{prefix}max_active'
+	max_impressions_key = f'{prefix}max_impressions'
+	plan_features = get_merchant_plan_features(user)
+	max_duration = _to_int(
+		plan_features.get(max_duration_key),
+		DEFAULT_PLAN_FEATURES[max_duration_key],
+	)
+	max_impressions = _to_int(
+		plan_features.get(max_impressions_key),
+		DEFAULT_PLAN_FEATURES[max_impressions_key],
+	)
 
 	if start_date and end_date and end_date <= start_date:
 		raise serializers.ValidationError({'end_date': 'End date must be after start date.'})
@@ -100,10 +110,6 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None,
 		# Allow small clock skew (+1 second tolerance) for client/server time differences
 		duration_seconds = (end_date - start_date).total_seconds()
 		duration_days = max(1, int(duration_seconds / 86400) + 1)
-		max_duration = _to_int(
-			DEFAULT_PLAN_FEATURES.get(max_duration_key),
-			DEFAULT_PLAN_FEATURES[max_duration_key],
-		)
 		# Add 1-day buffer for clock skew (server/app time differences)
 		max_duration_with_buffer = max_duration + 1
 		if duration_days > max_duration_with_buffer:
@@ -144,7 +150,7 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None,
 			active_qs = active_qs.exclude(id=promotion_id)
 
 	max_active = _to_int(
-		DEFAULT_PLAN_FEATURES.get(max_active_key),
+		plan_features.get(max_active_key),
 		DEFAULT_PLAN_FEATURES[max_active_key],
 	)
 	if active_qs.count() >= max_active:
@@ -158,6 +164,7 @@ def enforce_promotion_constraints(user, start_date, end_date, promotion_id=None,
 	return {
 		'max_duration_days': max_duration,
 		'max_active': max_active,
+		max_impressions_key: max_impressions,
 	}
 
 

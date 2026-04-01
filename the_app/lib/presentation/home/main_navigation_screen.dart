@@ -47,7 +47,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen>
         const HomeScreen(), // 0 - Home
         const FavoritesScreen(), // 1 - Favorites
         const StoresListScreen(), // 2 - My Stores (Followed)
-        const ProfileScreen(), // 3 - Profile (was 4)
+        ProfileScreen(isActive: _selectedIndex == 3), // 3 - Profile (was 4)
       ];
 
   @override

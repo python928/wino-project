@@ -119,9 +119,10 @@ class _ModeButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
           children: [
             if (loading)
               SizedBox(
@@ -138,12 +139,13 @@ class _ModeButton extends StatelessWidget {
                 size: 16,
                 color: selected ? Colors.white : AppColors.textPrimary,
               ),
-            const SizedBox(width: 5),
+            if (loading || icon != null) const SizedBox(width: 3),
             Flexible(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

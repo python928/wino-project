@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
+import 'app_typography.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData get lightTheme => lightThemeFor();
+
+  static ThemeData lightThemeFor([Locale? locale]) {
+    final fontFamily = AppTypography.fontFamily(locale);
+
     return ThemeData(
-      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      fontFamily: fontFamily,
       primaryColor: AppColors.primaryColor,
       scaffoldBackgroundColor: AppColors.scaffoldBackground,
       useMaterial3: true,
-      textTheme: _buildTextTheme(),
+      textTheme: _buildTextTheme(locale),
 
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primaryColor,
@@ -33,7 +37,8 @@ class AppTheme {
           statusBarIconBrightness: Brightness.dark,
         ),
         iconTheme: const IconThemeData(color: AppColors.blackColor, size: 22),
-        titleTextStyle: GoogleFonts.plusJakartaSans(
+        titleTextStyle: AppTypography.textStyle(
+          locale,
           fontSize: 17,
           fontWeight: FontWeight.w700,
           color: AppColors.blackColor,
@@ -42,38 +47,44 @@ class AppTheme {
         centerTitle: true,
       ),
 
-      // Card Theme — white, 20px corners, soft shadow, no border
+      // Card Theme — Modern Material Design 3 style
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        shadowColor: const Color(0x14000000),
+        shadowColor: AppColors.primaryColor.withValues(alpha: 0.08),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        clipBehavior: Clip.antiAlias,
       ),
 
       // Input Design (matching screenshots - outlined style)
       inputDecorationTheme: InputDecorationTheme(
-        filled: false,  // No fill - clean outlined style
+        filled: false, // No fill - clean outlined style
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),  // Pill shape like screenshots
+          borderRadius:
+              BorderRadius.circular(24), // Pill shape like screenshots
           borderSide: BorderSide(color: AppColors.primaryColor, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: AppColors.blackColor20, width: 1.5),  // Light border
+          borderSide: BorderSide(
+              color: AppColors.blackColor20, width: 1.5), // Light border
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),  // Purple on focus
+          borderSide: BorderSide(
+              color: AppColors.primaryColor, width: 2), // Purple on focus
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide(color: AppColors.errorRed, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        hintStyle: GoogleFonts.plusJakartaSans(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        hintStyle: AppTypography.textStyle(
+          locale,
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: AppColors.greyColor,
@@ -83,18 +94,35 @@ class AppTheme {
       // Button Themes (pill-shaped like screenshots)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryColor,  // Purple background
+          backgroundColor: AppColors.primaryColor, // Purple background
           foregroundColor: Colors.white,
           elevation: 0,
+          shadowColor: AppColors.primaryColor.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          minimumSize: const Size(double.infinity, 54),  // Taller buttons
+          minimumSize:
+              const Size(double.infinity, 56), // Accessibility-friendly height
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(27),  // Pill shape (half of height)
+            borderRadius: BorderRadius.circular(28), // Pill shape
           ),
-          textStyle: GoogleFonts.plusJakartaSans(
+          textStyle: AppTypography.textStyle(
+            locale,
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.15,
           ),
+          // Add smooth press animation
+          animationDuration: const Duration(milliseconds: 200),
+        ).copyWith(
+          // Hover effect for web/desktop
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white.withValues(alpha: 0.08);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return Colors.white.withValues(alpha: 0.12);
+            }
+            return null;
+          }),
         ),
       ),
 
@@ -107,9 +135,10 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(27),  // Pill shape
+            borderRadius: BorderRadius.circular(27), // Pill shape
           ),
-          textStyle: GoogleFonts.plusJakartaSans(
+          textStyle: AppTypography.textStyle(
+            locale,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -119,8 +148,9 @@ class AppTheme {
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryColor,  // Purple text
-          textStyle: GoogleFonts.plusJakartaSans(
+          foregroundColor: AppColors.primaryColor, // Purple text
+          textStyle: AppTypography.textStyle(
+            locale,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -134,15 +164,17 @@ class AppTheme {
       // Bottom Navigation (matching lib design system)
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
-        selectedItemColor: AppColors.primaryColor,  // Purple selected
-        unselectedItemColor: Colors.transparent,  // Transparent unselected
-        type: BottomNavigationBarType.fixed,  // Fixed type for 5 items
+        selectedItemColor: AppColors.primaryColor, // Purple selected
+        unselectedItemColor: Colors.transparent, // Transparent unselected
+        type: BottomNavigationBarType.fixed, // Fixed type for 5 items
         elevation: 0,
-        selectedLabelStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 12,  // 12px font size
+        selectedLabelStyle: AppTypography.textStyle(
+          locale,
+          fontSize: 12, // 12px font size
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+        unselectedLabelStyle: AppTypography.textStyle(
+          locale,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -161,7 +193,8 @@ class AppTheme {
         elevation: 4,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
-        extendedTextStyle: GoogleFonts.plusJakartaSans(
+        extendedTextStyle: AppTypography.textStyle(
+          locale,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -190,11 +223,13 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: AppColors.borderPrimary),
         ),
-        labelStyle: GoogleFonts.plusJakartaSans(
+        labelStyle: AppTypography.textStyle(
+          locale,
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
-        secondaryLabelStyle: GoogleFonts.plusJakartaSans(
+        secondaryLabelStyle: AppTypography.textStyle(
+          locale,
           fontSize: 13,
           fontWeight: FontWeight.w500,
           color: AppColors.primaryColor,
@@ -207,35 +242,73 @@ class AppTheme {
         unselectedLabelColor: AppColors.textSecondary,
         indicatorColor: AppColors.primaryColor,
         indicatorSize: TabBarIndicatorSize.label,
-        labelStyle: GoogleFonts.plusJakartaSans(
+        labelStyle: AppTypography.textStyle(
+          locale,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+        unselectedLabelStyle: AppTypography.textStyle(
+          locale,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
       ),
 
+      popupMenuTheme: PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 18,
+        shadowColor: Colors.black.withValues(alpha: 0.14),
+        menuPadding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(
+              color: AppColors.borderPrimary.withValues(alpha: 0.95)),
+        ),
+        textStyle: AppTypography.textStyle(
+          locale,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+      ),
+
       // Switch Theme
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return Colors.white;
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        thumbIcon: WidgetStateProperty.all(null),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return AppColors.primaryColor.withValues(alpha: 0.08);
           }
-          return AppColors.textHint;
+          return Colors.transparent;
+        }),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return Colors.white;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return AppColors.primaryColor;
           }
-          return AppColors.borderPrimary;
+          return const Color(0xFFE8E2FB);
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primaryColor;
+          }
+          return const Color(0xFFD9D1F7);
+        }),
+        trackOutlineWidth: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0;
+          }
+          return 1.2;
         }),
       ),
 
       // Checkbox Theme (from lib design system)
       checkboxTheme: CheckboxThemeData(
-        checkColor: WidgetStateProperty.all(Colors.white),  // White checkmark
+        checkColor: WidgetStateProperty.all(Colors.white), // White checkmark
         fillColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return AppColors.primaryColor;
@@ -243,7 +316,7 @@ class AppTheme {
           return Colors.transparent;
         }),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),  // Rounded corners
+          borderRadius: BorderRadius.circular(6), // Rounded corners
         ),
         side: BorderSide(color: AppColors.whiteColor40),
       ),
@@ -251,81 +324,96 @@ class AppTheme {
   }
 
   // Typography System
-  static TextTheme _buildTextTheme() {
+  static TextTheme _buildTextTheme(Locale? locale) {
     return TextTheme(
-      displayLarge: GoogleFonts.plusJakartaSans(
+      displayLarge: AppTypography.textStyle(
+        locale,
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
       ),
-      displayMedium: GoogleFonts.plusJakartaSans(
+      displayMedium: AppTypography.textStyle(
+        locale,
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      displaySmall: GoogleFonts.plusJakartaSans(
+      displaySmall: AppTypography.textStyle(
+        locale,
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineLarge: GoogleFonts.plusJakartaSans(
+      headlineLarge: AppTypography.textStyle(
+        locale,
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineMedium: GoogleFonts.plusJakartaSans(
+      headlineMedium: AppTypography.textStyle(
+        locale,
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineSmall: GoogleFonts.plusJakartaSans(
+      headlineSmall: AppTypography.textStyle(
+        locale,
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.plusJakartaSans(
+      titleLarge: AppTypography.textStyle(
+        locale,
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      titleMedium: GoogleFonts.plusJakartaSans(
+      titleMedium: AppTypography.textStyle(
+        locale,
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      titleSmall: GoogleFonts.plusJakartaSans(
+      titleSmall: AppTypography.textStyle(
+        locale,
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-      bodyLarge: GoogleFonts.plusJakartaSans(
+      bodyLarge: AppTypography.textStyle(
+        locale,
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       ),
-      bodyMedium: GoogleFonts.plusJakartaSans(
+      bodyMedium: AppTypography.textStyle(
+        locale,
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.4,
       ),
-      bodySmall: GoogleFonts.plusJakartaSans(
+      bodySmall: AppTypography.textStyle(
+        locale,
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
       ),
-      labelLarge: GoogleFonts.plusJakartaSans(
+      labelLarge: AppTypography.textStyle(
+        locale,
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      labelMedium: GoogleFonts.plusJakartaSans(
+      labelMedium: AppTypography.textStyle(
+        locale,
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-      labelSmall: GoogleFonts.plusJakartaSans(
+      labelSmall: AppTypography.textStyle(
+        locale,
         fontSize: 10,
         fontWeight: FontWeight.w400,
         color: AppColors.textHint,
@@ -333,28 +421,70 @@ class AppTheme {
     );
   }
 
-  // Animation Durations
+  // Animation Durations (Enhanced for better UX)
+  static const Duration microAnimation = Duration(milliseconds: 100);
   static const Duration shortAnimation = Duration(milliseconds: 200);
   static const Duration mediumAnimation = Duration(milliseconds: 300);
   static const Duration longAnimation = Duration(milliseconds: 500);
+  static const Duration pageTransition = Duration(milliseconds: 350);
 
-  // Border Radius
+  // Animation Curves (Modern UX standards)
+  static const Curve defaultCurve = Curves.easeOutCubic;
+  static const Curve emphasizedCurve = Curves.easeInOutCubic;
+  static const Curve deceleratedCurve = Curves.easeOut;
+  static const Curve acceleratedCurve = Curves.easeIn;
+  static const Curve bounceCurve = Curves.elasticOut;
+
+  // Border Radius (Enhanced with more options)
   static const BorderRadius smallRadius = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius mediumRadius = BorderRadius.all(Radius.circular(12));
+  static const BorderRadius mediumRadius =
+      BorderRadius.all(Radius.circular(12));
   static const BorderRadius largeRadius = BorderRadius.all(Radius.circular(16));
   static const BorderRadius xlRadius = BorderRadius.all(Radius.circular(20));
+  static const BorderRadius xxlRadius = BorderRadius.all(Radius.circular(28));
+  static const BorderRadius circularRadius =
+      BorderRadius.all(Radius.circular(999));
 
-  // Spacing
+  // Spacing System (8px base grid)
+  static const double spacing2 = 2.0;
   static const double spacing4 = 4.0;
+  static const double spacing6 = 6.0;
   static const double spacing8 = 8.0;
   static const double spacing12 = 12.0;
   static const double spacing16 = 16.0;
   static const double spacing20 = 20.0;
   static const double spacing24 = 24.0;
+  static const double spacing28 = 28.0;
   static const double spacing32 = 32.0;
+  static const double spacing40 = 40.0;
+  static const double spacing48 = 48.0;
+  static const double spacing64 = 64.0;
 
-  // Icon Sizes
+  // Icon Sizes (Enhanced system)
+  static const double iconTiny = 12.0;
   static const double iconSmall = 16.0;
   static const double iconMedium = 24.0;
   static const double iconLarge = 32.0;
+  static const double iconXLarge = 48.0;
+  static const double iconHuge = 64.0;
+
+  // Elevation System (Material Design 3)
+  static const double elevation0 = 0.0;
+  static const double elevation1 = 1.0;
+  static const double elevation2 = 2.0;
+  static const double elevation3 = 4.0;
+  static const double elevation4 = 6.0;
+  static const double elevation5 = 8.0;
+
+  // Touch Target Sizes (Accessibility - minimum 48x48dp)
+  static const double minTouchTarget = 48.0;
+  static const double recommendedTouchTarget = 56.0;
+
+  // Transition Configurations
+  static PageTransitionsTheme get pageTransitionsTheme =>
+      const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+        },
+      );
 }

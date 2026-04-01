@@ -1,6 +1,16 @@
 # ما الذي ينقص المشروع الآن؟ وما الخطوة التالية؟
 
-آخر مراجعة: 23-03-2026
+آخر مراجعة: 01-04-2026
+
+## 0) قاعدة الصياغة الموحّدة
+المرجع الرسمي لحالة المشروع الآن هو:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+الصياغة الصادقة التي يجب الحفاظ عليها:
+- المشروع قوي تقنيا ومثبت في الكود.
+- تحول UI/UX كبير وحقيقي.
+- الحالة الحالية: advanced pre-production مع قابلية pilot حقيقية بعد hardening.
+- ليس من الدقة وصفه حاليا بأنه production-ready على مستوى المنتج الكامل.
 
 ## 1) نواقص حرجة قبل أي إطلاق إنتاجي
 1. إعدادات الخادم ما تزال development-friendly في بعض النقاط:
@@ -40,26 +50,34 @@
 9. تنظيف مسار device registration نحو path واحد على مستوى التطبيق والخادم.
 10. حذف placeholder/legacy directories الفارغة داخل `the_app/lib/features/`.
 11. تحديث جزء معتبر من التوثيق الداخلي ليتوافق مع الكود الحالي.
+12. توحيد مهم في تدفقات auth عبر `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+13. تطوير `CategorySelectionScreen` ليصبح primitive مشتركة واعية بالسياق بدل picker عام فقط.
 
 ---
 
 ## 3) نواقص جودة واتساق
-1. الترجمة تحسنت في:
+1. الترجمة تحسنت بشكل كبير وغطت:
    - onboarding
    - nearby/location UX
    - subscriptions
    - ads dashboard
-   لكن ما تزال تحتاج تغطية نهائية لبقية الشاشات الأقل استخداما.
+   - 11 شاشة أساسية عالية الاستخدام (home, profile, product/pack/promotion details, favorites, wallet, edit profile screens)
+   - ~60 مدخل جديد FR/AR في RuntimeTranslations
+   تبقى الشاشات الثانوية (add product, add promotion, بعض flows auth/review/feedback) تحتاج تدقيق لاحق.
 2. المزج بين:
    - generated localization
    - runtime translations
-   أصبح أوضح، لكنه ما يزال انتقاليا ويحتاج migration تدريجيا مستمرا.
-3. بعض التوثيق كان متأخرا عن الكود، وتم تحديثه في هذه الدفعة، لكنه يحتاج مراجعة دورية لاحقا.
-4. توجد بقايا legacy تسمية أو branding داخل بعض القيم الداخلية:
+   أصبح أوضح بعد تحديث SystemLocale وDeviceService، لكن مزيد من الملائمة عند إي ميجريشن جديد.
+3. خريطة Google وجهات النظر:
+   - تم توصيل Google Maps اتجاهات خارجي من صفحات المنتج والعرض والباق والملف (store detail)
+   - recovery pathways مدرجة: fallback لـ Settings عند عدم توفر Maps أو تعطيل GPS
+   - الحفاظ على تركيز خارجي على Maps طالما لا يتغير قرار المنتج
+4. بعض التوثيق كان متأخرا عن الكود، وتم تحديثه في هذه الدفعة، لكنه يحتاج مراجعة دورية لاحقا.
+5. توجد بقايا legacy تسمية أو branding داخل بعض القيم الداخلية:
    - package name ما يزال `dzlocal_shop`
    - بعض روابط الدعم/السوشيال في `app_config.dart` ما تزال `dzlocal`
-5. لا تزال بعض المسارات أو الطبقات تحمل تراكمات تاريخية يجب تبسيطها تدريجيا.
-6. explainability بدأت تتحسن للتاجر، لكنها ما تزال محدودة للمستخدم النهائي في مسارات الثقة والتوصية.
+6. لا تزال بعض المسارات أو الطبقات تحمل تراكمات تاريخية يجب تبسيطها تدريجيا.
+7. explainability بدأت تتحسن للتاجر، لكنها ما تزال محدودة للمستخدم النهائي في مسارات الثقة والتوصية.
 
 ---
 
@@ -92,12 +110,13 @@
 ---
 
 ## 5) نواقص UX
-1. first-run language experience تحسن، لكنه ما يزال قابلا لصقل بصري وسلوكي أكبر.
-2. شرح صلاحيات GPS والموقع أصبح أوضح، مع حاجة لاختبار سلوك المستخدم الحقيقي بعد الإطلاق.
-3. بعض empty/error/loading states تحسنت في الاشتراكات ولوحة الإعلانات، وتبقى شاشات أخرى لمراجعة لاحقة.
-4. dashboard التاجر أصبح أوضح قرائيا، لكن ما يزال قابلا لمزيد من الاختصار وربطه بالقرارات العملية.
-5. explainability للمستخدم النهائي في مسارات الثقة/التوصية ما تزال أضعف من قدرة backend الفعلية.
-6. branding consistency داخل كل النصوص والروابط والأصول لم تصل إلى حالة نهائية بعد.
+1. first-run language experience تحسن بشكل ملموس مع locale provider موحد، لكنه قابل لصقل بصري وسلوكي أكثر عند الحاجة.
+2. شرح صلاحيات GPS والموقع أصبح موحداً ومشتركاً، مع إمكانية اختبار سلوك المستخدم الحقيقي.
+3. اتجاهات Google Maps وجدت منزلها الصحيح كخدمة خارجية reusable مع recovery pathways واضحة.
+4. بعض empty/error/loading states تحسنت في الاشتراكات ولوحة الإعلانات، وتبقى شاشات أخرى لمراجعة لاحقة.
+5. dashboard التاجر أصبح أوضح قرائيا، لكن ما يزال قابلا لمزيد من الاختصار وربطه بالقرارات العملية.
+6. explainability للمستخدم النهائي في مسارات الثقة/التوصية ما تزال أضعف من قدرة backend الفعلية.
+7. branding consistency داخل كل النصوص والروابط والأصول ما تزال في طريق التبسيط (packages, internal links).
 
 ---
 
@@ -116,6 +135,8 @@
 3. تقارير ROI للإعلانات والاشتراكات ما تزال في بداية الطريق.
 4. نحتاج framing أوضح للتسويق: لماذا Wino أفضل من listing apps التقليدية؟
 5. نحتاج thesis / memoire framing مستقر يمكن تحديثه مع الكود دون أن يتأخر عنه مرة أخرى.
+6. توثيق Google Maps integration وخطوات recovery يجب أن يصبح part من developer docs والدعم.
+7. documentation policy يجب أن تصبح حلقة مستمرة: كل feature جديدة تحدّث وثائق قبل أو أثناء الدفعة، لا بعد أسابيع.
 
 ---
 
@@ -125,18 +146,19 @@
 2. Monitoring + alerting + request tracing.
 3. إزالة أو تقليل القيم الصالحة للتطوير فقط في الخادم والتطبيق.
 4. إنهاء branding cleanup في القيم الداخلية والروابط والإعدادات.
+5. إكمال localization coverage للشاشات الثانوية والحالات الحدية.
 
 ### أولوية 2
-5. إكمال localization coverage.
-6. توسيع الاختبارات الحرجة.
+6. توسيع الاختبارات الحرجة (auth, wallet, payments, reports).
 7. تحسين تجربة nearby/location permissions بعد قياس فعلي أو QA منظم.
 8. تقوية explainability للمستخدم النهائي.
+9. توثيق تكامل Google Maps والخطوات البديلة في دليل المطور.
 
 ### أولوية 3
-9. merchant dashboard أوضح وأقصر.
-10. explainability أعمق للثقة والتوصية.
-11. cleanup أوسع للبنية والواجهات المكررة أو legacy.
-12. تحويل الوثائق الحالية إلى نظام مراجعة دوري بعد كل دفعة كبيرة.
+10. merchant dashboard أوضح وأقصر.
+11. explainability أعمق للثقة والتوصية.
+12. cleanup أوسع للبنية والواجهات المكررة أو legacy.
+13. تحويل الوثائق الحالية إلى نظام مراجعة دوري بعد كل دفعة كبيرة.
 
 ---
 
@@ -145,6 +167,43 @@
 2. Base URL وkeys تعتمد على environment وليس hardcoded.
 3. CI يغطي الاختبارات الحرجة.
 4. أخطاء production يمكن رصدها وتتبعها.
-5. localization تغطي كل الشاشات الأساسية.
+5. localization تغطي كل الشاشات الأساسية والعالية الاستخدام.
 6. branding متسق ظاهريا وداخليا بدرجة كافية.
 7. التوثيق البرمجي والتشغيلي والمذكرة التقنية محدثة ومتسقة مع الكود.
+8. Google Maps integration موثق وخطوات recovery مختبَرة.
+
+
+2026-03-30 Maps Directions Update:
+- تم إغلاق فجوة مهمة: فتح الاتجاهات الخارجية إلى موقع المتجر من صفحات المنتج والعرض والباق والملف.
+- ما يجب الحفاظ عليه لاحقا: عدم تكرار منطق GPS في الشاشات، والاستمرار في استخدام `ExternalMapsService` و`DirectionsButton`.
+- أي تطوير لاحق للاتجاهات يجب أن يبقى خارجيا عبر Google Maps ما لم يتغير قرار المنتج صراحة.
+
+2026-03-30 Home Ads Single-Random Update:
+- تم نقل قرار إعلان الصفحة الرئيسية من الواجهة إلى السيرفر.
+- المطلوب الحفاظ عليه لاحقا: إعلان واحد فقط لـ `home_top` في كل طلب، مع عشوائية داخل الإعلانات المؤهلة فقط.
+- أي توسيع لاحق للبنرات الإعلانية يجب أن يبقي الاستهداف والتحقق والانطباعات تحت تحكم السيرفر.
+
+2026-04-01 Comprehensive Localization Coverage Update:
+- تم تحديث شامل لغطاء التوطين عبر 11 شاشة أساسية عالية الاستخدام:
+  - home_screen (4 snackbars، empty pack state)
+  - profile_screen (15+ snackbars، labels، follow/logout states)
+  - product_detail_screen (6 favorite/follow snackbars)
+  - promotion_detail_screen (6 favorite/follow snackbars)
+  - pack_detail_screen (8 favorite/follow snackbars)
+  - favorites_screen (2 snackbars، error loading state)
+  - edit_customer_profile_screen (8 snackbars + labels)
+  - edit_merchant_profile_screen (15+ snackbars + labels)
+  - coin_payment_screen (2+ snackbars + dialog content)
+  - notifications_screen (1 fallback title)
+  - ads_dashboard_screen (1 title)
+- ~60 مدخل جديد FR/AR في RuntimeTranslations لـ fallback safety.
+- تم حل تضاريس duplicate keys في runtime_translations maps.
+- كل مسار تفاعل حرج (favorite toggles، follow، review submission، image operations، payment requests) الآن يعرض feedback مترجم بشكل كامل.
+- الحفاظ عليه لاحقاً: استمرار استخدام context.tr() لكل نص user-facing، مع إضافة FR/AR entries إلى RuntimeTranslations عند إضافة strings جديدة.
+- شاشات ثانوية (add_product_screen، add_promotion_screen، بعض auth/review flows) تحتاج تدقيق في دفعة لاحقة.
+
+2026-04-01 Documentation Alignment Update:
+- تم تنظيف التناقض الأساسي بين وثائق `Transformation Complete / Production Ready` وبين وثائق `POC/MVP`.
+- القاعدة الجديدة: نستخدم `TRANSFORMATION_COMPLETE_SUMMARY.md` كمرجع معياري واحد للحالة الفعلية، ثم نجعل باقي الوثائق تعكسها بدل أن تناقضها.
+- هذا بحد ذاته خطوة جودة مهمة، لأن وضوح الحالة الفعلية يمنع قرارات تقنية أو أكاديمية مبنية على وصف غير دقيق.
+- جميع الملفات المرجعية (WINO_MVP، WINO_POC، WINO_BMC، WINO_BUSINESS_PLAN، PROJECT_DOCUMENTATION_INDEX، CODEBASE_MAP) هي الآن متسقة في تشير إلى TRANSFORMATION_COMPLETE_SUMMARY كمصدر الحقيقة.

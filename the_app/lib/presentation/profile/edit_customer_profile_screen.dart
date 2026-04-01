@@ -106,7 +106,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile == null) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'No image selected');
+        Helpers.showSnackBar(context, context.tr('No image selected'));
       }
       return;
     }
@@ -135,10 +135,16 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
       });
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'Profile picture updated successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Profile picture updated successfully'));
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Failed to update image: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to update image')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
     }
@@ -178,10 +184,16 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
       await StorageService.saveUserData(response);
       setState(() => _avatarUrl = null);
       if (mounted) {
-        Helpers.showSnackBar(context, 'Profile image deleted successfully');
+        Helpers.showSnackBar(
+            context, context.tr('Profile image deleted successfully'));
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Failed to delete image: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete image')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
     }
@@ -209,7 +221,8 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (_nameController.text.trim().isEmpty) {
-      Helpers.showSnackBar(context, 'Please fill in all required fields');
+      Helpers.showSnackBar(
+          context, context.tr('Please fill in all required fields'));
       return;
     }
 
@@ -235,11 +248,16 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
       }
 
       if (mounted) {
-        Helpers.showSnackBar(context, 'Data saved successfully');
+        Helpers.showSnackBar(context, context.tr('Data saved successfully'));
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) Helpers.showSnackBar(context, 'Error saving data: $e');
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Error saving data')}: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

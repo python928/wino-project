@@ -97,7 +97,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       debugPrint('Error loading favorites: $e');
       setState(() {
         _isLoading = false;
-        _error = 'An error occurred while loading favorites';
+        _error = context.tr('An error occurred while loading favorites');
       });
     }
   }
@@ -112,9 +112,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         _favorites.removeWhere((p) => p.id == product.id);
       });
 
-      Helpers.showSnackBar(context, 'Removed from favorites');
+      Helpers.showSnackBar(context, context.tr('Removed from favorites'));
     } catch (e) {
-      Helpers.showSnackBar(context, 'An error occurred', isError: true);
+      Helpers.showSnackBar(context, context.tr('An error occurred'),
+          isError: true);
     }
   }
 

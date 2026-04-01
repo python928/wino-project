@@ -1,12 +1,13 @@
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import 'store_action_tile.dart';
 
 class ContactActionRow extends StatelessWidget {
   final String? phone;
   final String? whatsapp;
+  final Widget? trailingAction;
   final bool showTitle;
   final String title;
   final TextStyle? titleStyle;
@@ -16,6 +17,7 @@ class ContactActionRow extends StatelessWidget {
     super.key,
     this.phone,
     this.whatsapp,
+    this.trailingAction,
     this.showTitle = false,
     this.title = 'Contact Store',
     this.titleStyle,
@@ -26,7 +28,7 @@ class ContactActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final phoneValue = (phone ?? '').trim();
     final whatsappValue = (whatsapp ?? '').trim();
-    if (phoneValue.isEmpty && whatsappValue.isEmpty) {
+    if (phoneValue.isEmpty && whatsappValue.isEmpty && trailingAction == null) {
       return const SizedBox.shrink();
     }
 
@@ -34,40 +36,34 @@ class ContactActionRow extends StatelessWidget {
       children: [
         if (phoneValue.isNotEmpty)
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Helpers.launchURL('tel:$phoneValue'),
-              icon: const Icon(Icons.phone_outlined, size: 18),
-              label: Text(context.tr('Call')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: buttonVerticalPadding),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+            child: StoreActionTile(
+              onTap: () => Helpers.launchURL('tel:$phoneValue'),
+              icon: Icons.phone_outlined,
+              label: context.tr('Call'),
+              backgroundColor: const Color(0xFFF3EEFF),
+              foregroundColor: const Color(0xFF6F42E5),
+              verticalPadding: buttonVerticalPadding,
             ),
           ),
-        if (phoneValue.isNotEmpty && whatsappValue.isNotEmpty)
+        if (phoneValue.isNotEmpty &&
+            (whatsappValue.isNotEmpty || trailingAction != null))
           const SizedBox(width: 10),
         if (whatsappValue.isNotEmpty)
           Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => Helpers.launchURL(
+            child: StoreActionTile(
+              onTap: () => Helpers.launchURL(
                 'https://wa.me/${_normalizeWhatsApp(whatsappValue)}',
               ),
-              icon: const Icon(Icons.chat_outlined, size: 18),
-              label: Text(context.tr('WhatsApp')),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green.shade700,
-                side: BorderSide(color: Colors.green.shade400),
-                padding: EdgeInsets.symmetric(vertical: buttonVerticalPadding),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              icon: Icons.chat_bubble_outline_rounded,
+              label: context.tr('WhatsApp'),
+              backgroundColor: const Color(0xFFE8F8EF),
+              foregroundColor: const Color(0xFF17A34A),
+              verticalPadding: buttonVerticalPadding,
             ),
           ),
+        if (whatsappValue.isNotEmpty && trailingAction != null)
+          const SizedBox(width: 10),
+        if (trailingAction != null) Expanded(child: trailingAction!),
       ],
     );
 

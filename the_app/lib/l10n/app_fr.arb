@@ -46,6 +46,15 @@
   "feedbackSubmitSuccess": "Avis envoye avec succes.",
   "feedbackSubmitError": "Echec de l'envoi de l'avis",
   "feedbackEmpty": "Aucun avis envoye pour le moment.",
+  "directionsToStore": "Itineraire vers le magasin",
+  "mapLabel": "Carte",
+  "openInGoogleMaps": "Ouvrir dans Google Maps",
+  "locationDisabledTitle": "La localisation est desactivee",
+  "locationDisabledMessage": "Activez le service de localisation (GPS) depuis les parametres pour utiliser l'itineraire.",
+  "openSettings": "Ouvrir les parametres",
+  "close": "Fermer",
+  "locationUnavailable": "Aucune position disponible",
+  "unableToOpenGoogleMaps": "Impossible d'ouvrir Google Maps",
   "locationDisabled": "La localisation est desactivee. Activez le GPS pour la recherche a proximite.",
   "locationPermissionDeniedForever": "L'autorisation de localisation est refusee de facon permanente. Autorisez-la depuis les parametres de l'application.",
   "settingsOpenLocation": "Ouvrir les parametres de localisation",
@@ -102,5 +111,114 @@
   "feedbackStatusInReview": "En cours d'examen",
   "feedbackStatusRejected": "Rejete",
   "feedbackTypeDefault": "Avis",
-  "qrLinkOpened": "Lien QR ouvert."
+  "qrLinkOpened": "Lien QR ouvert.",
+  "authRegisterHeaderTitle": "Creez votre compte",
+  "authRegisterHeaderSubtitle": "Trois etapes rapides pour personnaliser le shopping et les offres proches.",
+  "authRegisterFooterPrompt": "Vous avez deja un compte ?",
+  "authRegisterFooterAction": "Se connecter",
+  "authProfileSetupHeaderTitle": "Completez votre profil",
+  "authProfileSetupHeaderSubtitle": "Ajoutez quelques details pour personnaliser vos resultats.",
+  "authProfileSetupBodySubtitle": "Votre nom, votre date de naissance et vos centres d'interet nous aident a adapter les produits, magasins et offres proches.",
+  "authStepPersonalTitle": "Informations personnelles",
+  "authStepPersonalSubtitle": "Commencez par l'essentiel pour avoir un compte complet des le debut.",
+  "authStepAccountTitle": "Informations du compte",
+  "authStepAccountSubtitle": "Utilisez un numero joignable et un mot de passe securise.",
+  "authStepInterestsTitle": "Centres d'interet",
+  "authStepInterestsSubtitle": "Choisissez jusqu'a 6 categories pour ameliorer les recommandations et la decouverte a proximite.",
+  "authFieldFirstName": "Prenom",
+  "authFieldFirstNameHint": "Entrez votre prenom",
+  "authFieldLastName": "Nom",
+  "authFieldLastNameHint": "Entrez votre nom",
+  "authFieldFullName": "Nom complet",
+  "authFieldFullNameHint": "Entrez votre nom complet",
+  "authFieldBirthday": "Date de naissance",
+  "authFieldBirthdayHint": "Utilisez le jour, le mois et l'annee tels qu'ils figurent sur vos documents officiels.",
+  "authFieldDay": "Jour",
+  "authFieldDayHint": "JJ",
+  "authFieldMonth": "Mois",
+  "authFieldMonthHint": "MM",
+  "authFieldYear": "Annee",
+  "authFieldYearHint": "AAAA",
+  "authFieldGender": "Genre",
+  "authGenderMale": "Homme",
+  "authGenderFemale": "Femme",
+  "authFieldPhone": "Numero de telephone",
+  "authFieldPhoneHint": "0XXXXXXXXX",
+  "authFieldEmail": "E-mail",
+  "authFieldEmailHint": "Entrez votre adresse e-mail",
+  "authFieldPassword": "Mot de passe",
+  "authFieldPasswordHint": "Entrez votre mot de passe",
+  "authFieldConfirmPassword": "Confirmer le mot de passe",
+  "authFieldConfirmPasswordHint": "Saisissez a nouveau votre mot de passe",
+  "authFieldCategories": "Categories preferees",
+  "authFieldCategoriesHint": "Choisissez jusqu'a 6 categories. Vous pourrez les modifier plus tard.",
+  "authCategoriesCta": "Choisir vos categories preferees",
+  "authCategoriesRetry": "Reessayer le chargement des categories",
+  "authCategoriesLoadError": "Impossible de charger les categories pour le moment. Veuillez reessayer.",
+  "authActionCreateAccount": "Creer le compte",
+  "authActionPrevious": "Precedent",
+  "authRegistrationFailed": "L'inscription a echoue. Veuillez reessayer.",
+  "authProfileSaveError": "Impossible d'enregistrer votre profil. Veuillez reessayer.",
+  "authErrorRequired": "Champ requis",
+  "authErrorNameRequired": "Entrez votre nom complet",
+  "authErrorBirthdayRequired": "Entrez votre date de naissance",
+  "authErrorBirthdayInvalid": "Entrez une date valide",
+  "authErrorMustBe13": "Vous devez avoir au moins 13 ans",
+  "authErrorPhoneRequired": "Entrez votre numero de telephone",
+  "authErrorPhoneInvalid": "Utilisez le format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX",
+  "authErrorEmailRequired": "Entrez votre adresse e-mail",
+  "authErrorEmailInvalid": "Entrez une adresse e-mail valide",
+  "authErrorPasswordRequired": "Entrez un mot de passe",
+  "authErrorPasswordMin": "Utilisez au moins 6 caracteres",
+  "authErrorConfirmPasswordRequired": "Confirmez votre mot de passe",
+  "authErrorPasswordsDoNotMatch": "Les mots de passe ne correspondent pas",
+  "authErrorCategoriesRequired": "Choisissez au moins 1 categorie",
+  "authStepProgress": "Etape {current} sur {total}",
+  "@authStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerSelectionCount": "{selected} sur {max} selectionnees",
+  "@categoriesPickerSelectionCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxReached": "Vous pouvez selectionner jusqu'a {max} categories.",
+  "@categoriesPickerMaxReached": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMinRequired": "Selectionnez au moins {min} categories pour continuer.",
+  "@categoriesPickerMinRequired": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxHint": "Choisissez jusqu'a {max} categories.",
+  "@categoriesPickerMaxHint": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryPickerSearchSubtitle": "Choisissez des categories pour affiner les resultats, ou laissez vide pour garder une recherche large.",
+  "categoryPickerProductSubtitle": "Choisissez la categorie unique qui correspond le mieux a ce produit."
 }

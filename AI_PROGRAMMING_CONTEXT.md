@@ -1,7 +1,19 @@
 # AI Programming Context (Wino)
 
+Last updated: 2026-04-01
+
 ## Purpose
 This file is a quick high-signal context pack for AI coding agents working on this repository.
+
+## Current status reality
+Canonical stage reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+Use this mental model:
+- strong implemented technical platform,
+- large UI/UX transformation already landed,
+- advanced pre-production / pilot-ready direction,
+- not yet honest to label as full production-ready release.
 
 ## Monorepo overview
 - `app-backend/`: Django + DRF backend
@@ -34,6 +46,8 @@ This file is a quick high-signal context pack for AI coding agents working on th
 - Locale management: `the_app/lib/core/providers/locale_provider.dart`
 - Deep links: `the_app/lib/core/services/deep_link_service.dart`
 - Location UX helper: `the_app/lib/presentation/common/location_permission_helper.dart`
+- Shared auth flow primitives: `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+- Shared category picker: `the_app/lib/presentation/search/category_selection_screen.dart`
 
 ## Routing conventions
 - Product details route accepts `Post` or product id (loader fallback exists)

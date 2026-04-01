@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
+import '../../shared_widgets/app_dropdown_menu.dart';
 import '../../shared_widgets/contact_action_row.dart';
 
 /// Profile header with cover, avatar, store info, and actions
@@ -31,6 +32,10 @@ class ProfileMerchantHeader extends StatelessWidget {
   final VoidCallback? onFavoriteTap;
   final VoidCallback? onReportTap;
   final Gradient primaryGradient;
+  final Widget? directionsButton;
+  final List<AppDropdownAction<String>> settingsActions;
+  final bool showImageEditActions;
+  final bool showCoverSettingsAction;
 
   // Social Links
   final String? facebook;
@@ -64,6 +69,10 @@ class ProfileMerchantHeader extends StatelessWidget {
     this.onFavoriteTap,
     this.onReportTap,
     required this.primaryGradient,
+    this.directionsButton,
+    this.settingsActions = const [],
+    this.showImageEditActions = true,
+    this.showCoverSettingsAction = true,
     this.facebook,
     this.instagram,
     this.whatsapp,
@@ -88,18 +97,24 @@ class ProfileMerchantHeader extends StatelessWidget {
     final ratingText = Helpers.formatRating(averageRating);
     final displayPhone = _formatLocalPhone(phoneNumber);
     final hasPhone = displayPhone.isNotEmpty;
+    final localizedLoc = _localizedLocation(context, location);
+    final showCoverUploadAction = isOwnerView && showImageEditActions;
+    final showCoverSettingsMenu = isOwnerView &&
+        showCoverSettingsAction &&
+        onSettingsMenuSelected != null;
+    final showAnyCoverActions = showCoverUploadAction || showCoverSettingsMenu;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Cover + Avatar ──────────────────────────────────────────────
         Stack(
           clipBehavior: Clip.none,
           children: [
-            Container(
-              height: 190,
+            // Cover image
+            SizedBox(
+              height: 200,
               width: double.infinity,
-              decoration: BoxDecoration(
-                  color: AppColors.primaryDeep.withValues(alpha: 0.08)),
               child: (storeCoverUrl != null && storeCoverUrl!.isNotEmpty)
                   ? Image.network(
                       storeCoverUrl!,
@@ -107,15 +122,8 @@ class ProfileMerchantHeader extends StatelessWidget {
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Container(
-                          decoration: BoxDecoration(gradient: primaryGradient),
-                          alignment: Alignment.center,
-                          child: const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          ),
-                        );
+                            decoration:
+                                BoxDecoration(gradient: primaryGradient));
                       },
                       errorBuilder: (_, __, ___) => Container(
                           decoration: BoxDecoration(gradient: primaryGradient)),
@@ -123,214 +131,245 @@ class ProfileMerchantHeader extends StatelessWidget {
                   : Container(
                       decoration: BoxDecoration(gradient: primaryGradient)),
             ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: onSettingsMenuSelected == null
-                  ? const SizedBox.shrink()
-                  : PopupMenuButton<String>(
-                      onSelected: onSettingsMenuSelected!,
-                      offset: const Offset(-10, 40),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      color: Colors.white,
-                      elevation: 8,
-                      itemBuilder: (context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined,
-                                  color: AppColors.primaryColor, size: 20),
-                              const SizedBox(width: 12),
-                              Text(context.tr('Edit Information')),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'logout',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.logout,
-                                  color: Colors.red, size: 20),
-                              const SizedBox(width: 12),
-                              Text(context.tr('Logout'),
-                                  style: const TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
+            // Subtle bottom fade on cover
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.28),
                       ],
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.settings_outlined,
-                            color: Colors.white, size: 18),
-                      ),
-                    ),
-            ),
-            PositionedDirectional(
-              bottom: -34,
-              start: 20,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.14),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.grey.shade100,
-                      child: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                          ? ClipOval(
-                              child: Image.network(
-                                avatarUrl!,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.store,
-                                    size: 30,
-                                    color: Colors.grey),
-                              ),
-                            )
-                          : const Icon(Icons.store,
-                              size: 30, color: Colors.grey),
                     ),
                   ),
-                ],
+                ),
+              ),
+            ),
+            // Settings / upload buttons
+            if (showAnyCoverActions) ...[
+              PositionedDirectional(
+                top: 14,
+                end: 14,
+                child: Row(
+                  children: [
+                    if (showCoverUploadAction)
+                      _buildCoverAction(
+                        icon: Icons.photo_camera_outlined,
+                        onTap: onPickCoverImage,
+                      ),
+                    if (showCoverSettingsMenu) ...[
+                      if (showCoverUploadAction) const SizedBox(width: 8),
+                      AppDropdownMenuButton<String>(
+                        onSelected: onSettingsMenuSelected!,
+                        offset: const Offset(-10, 40),
+                        actions: settingsActions.isNotEmpty
+                            ? settingsActions
+                            : [
+                                AppDropdownAction(
+                                  value: 'edit',
+                                  icon: Icons.edit_outlined,
+                                  label: context.tr('Edit Information'),
+                                ),
+                                AppDropdownAction(
+                                  value: 'logout',
+                                  icon: Icons.logout,
+                                  label: context.tr('Logout'),
+                                  destructive: true,
+                                  showDividerAbove: true,
+                                ),
+                              ],
+                        child: _buildCoverAction(
+                            icon: Icons.settings_outlined, onTap: null),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            // Avatar — positioned to overlap cover bottom
+            PositionedDirectional(
+              bottom: -40,
+              start: 20,
+              child: GestureDetector(
+                onTap: isOwnerView && showImageEditActions ? onPickImage : null,
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 42,
+                        backgroundColor: Colors.grey.shade100,
+                        child: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                            ? ClipOval(
+                                child: Image.network(
+                                  avatarUrl!,
+                                  width: 84,
+                                  height: 84,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.store,
+                                      size: 28,
+                                      color: Colors.grey),
+                                ),
+                              )
+                            : const Icon(Icons.store,
+                                size: 28, color: Colors.grey),
+                      ),
+                    ),
+                    if (isOwnerView && showImageEditActions)
+                      Positioned(
+                        right: 2,
+                        bottom: 2,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt,
+                              size: 13, color: Colors.white),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 46),
+
+        // ── Info area below cover ────────────────────────────────────────
+        const SizedBox(height: 52),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Name + verified + stats on same row
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        if (isVerified) ...[
-                          const Icon(
-                            Icons.verified,
-                            size: 20,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Expanded(
-                          child: Text(
-                            userName,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.people_outline_rounded,
-                          size: 18, color: AppColors.primaryColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        followersText,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.star_rounded,
-                          size: 18, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(
-                        ratingText,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 18, color: AppColors.primaryColor),
-                  const SizedBox(width: 6),
-                  Expanded(
+                  Flexible(
                     child: Text(
-                      _localizedLocation(context, location),
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                      maxLines: 1,
+                      userName,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (isVerified) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.verified, size: 18, color: Colors.blue),
+                  ],
+                  const Spacer(),
+                  _buildInlineStat(
+                    icon: Icons.star_rounded,
+                    value: ratingText,
+                    iconColor: const Color(0xFFB26A00),
+                    bg: const Color(0xFFFFF3D6),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildInlineStat(
+                    icon: Icons.people_outline_rounded,
+                    value: followersText,
+                    iconColor: AppColors.primaryColor,
+                    bg: AppColors.primaryColor.withOpacity(0.08),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (storeDescription.isNotEmpty)
+              // Location (inline, no box)
+              if (localizedLoc.isNotEmpty && localizedLoc.trim() != '/') ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined,
+                        size: 15, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        localizedLoc,
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Description
+              if (storeDescription.isNotEmpty) ...[
+                const SizedBox(height: 12),
                 Text(
                   storeDescription,
                   style: TextStyle(
-                      fontSize: 13, color: Colors.grey[600], height: 1.4),
+                      fontSize: 13, color: Colors.grey[600], height: 1.5),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-              const SizedBox(height: 10),
-
-              // Follow and Favorite buttons for non-owner view
+              ],
+              const SizedBox(height: 16),
+              // Action buttons
               if (!isOwnerView) ...[
                 Row(
                   children: [
                     Expanded(
                       child: GestureDetector(
                         onTap: onFollowTap,
-                        child: Container(
-                          height: 40,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: 42,
                           decoration: BoxDecoration(
-                            color: AppColors.primaryColor,
-                            borderRadius: BorderRadius.circular(20),
+                            color: isFollowing
+                                ? AppColors.primaryColor.withOpacity(0.08)
+                                : AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isFollowing
+                                ? Border.all(
+                                    color: AppColors.primaryColor, width: 1.5)
+                                : null,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                isFollowing ? Icons.done : Icons.add,
-                                color: Colors.white,
+                                isFollowing
+                                    ? Icons.check_rounded
+                                    : Icons.add_rounded,
+                                color: isFollowing
+                                    ? AppColors.primaryColor
+                                    : Colors.white,
                                 size: 18,
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: 6),
                               Text(
                                 isFollowing
                                     ? context.tr('Following')
                                     : context.tr('Follow'),
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: isFollowing
+                                      ? AppColors.primaryColor
+                                      : Colors.white,
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -338,51 +377,35 @@ class ProfileMerchantHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: onReportTap,
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.flag_outlined,
-                                size: 16, color: Colors.red.shade500),
-                            const SizedBox(width: 6),
-                            Text(
-                              context.tr('Report'),
-                              style: TextStyle(
-                                color: Colors.red.shade500,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+                    if (onReportTap != null) ...[
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: onReportTap,
+                        child: Container(
+                          height: 42,
+                          width: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.flag_outlined,
+                              size: 18, color: Colors.red.shade400),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 16),
-              ],
-
-              if (!isOwnerView) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 ContactActionRow(
                   phone: hasPhone ? phoneNumber : null,
                   whatsapp: whatsapp,
+                  trailingAction: directionsButton,
                   buttonVerticalPadding: 10,
                 ),
               ],
-
-              // Social Icons Row
+              // Social icons
               if (_hasAnySocial) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -406,8 +429,99 @@ class ProfileMerchantHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
       ],
+    );
+  }
+
+  Widget _buildInlineStat({
+    required IconData icon,
+    required String value,
+    required Color iconColor,
+    required Color bg,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: iconColor,
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBadge({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color iconColor,
+    required Color bg,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: iconColor,
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: iconColor.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoverAction({required IconData icon, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.35),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
+      ),
     );
   }
 
@@ -447,30 +561,6 @@ class ProfileMerchantHeader extends StatelessWidget {
           ),
           child: FaIcon(icon, size: 20, color: color),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-    bool compact = false,
-  }) {
-    final size = compact ? 28.0 : 36.0;
-    final iconSize = compact ? 16.0 : 19.0;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.45),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, size: iconSize, color: Colors.white),
       ),
     );
   }

@@ -23,47 +23,77 @@ class AppToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unselectedBg = showBorder ? Colors.white : AppColors.blackColor5;
+    const unselectedBg = Color(0xFFF1EFF8);
     const selectedBg = AppColors.primaryColor;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: compact
-            ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
-            : const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? selectedBg : unselectedBg,
-          borderRadius: BorderRadius.circular(compact ? 20 : 24),
-          border: showBorder
-              ? Border.all(
-                  color: isSelected
-                      ? AppColors.primaryColor
-                      : const Color(0xFFE0E0E0),
-                  width: 1.5,
-                )
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                color: isSelected ? Colors.white : AppColors.textPrimary,
-                size: compact ? 18 : 20,
-              ),
-              SizedBox(width: compact ? 6 : 8),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textPrimary,
-                fontSize: compact ? 14 : 15,
-                fontWeight: FontWeight.w500,
-              ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isSelected ? selectedBg : unselectedBg,
+        borderRadius: BorderRadius.circular(compact ? 22 : 24),
+        border: showBorder
+            ? Border.all(
+                color: isSelected
+                    ? AppColors.primaryColor
+                    : Colors.white.withValues(alpha: 0.95),
+                width: 1.1,
+              )
+            : null,
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: AppColors.primaryColor.withValues(alpha: 0.16),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(compact ? 22 : 24),
+          child: Padding(
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
+                : const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    color:
+                        isSelected ? Colors.white : AppColors.textSecondary,
+                    size: compact ? 18 : 19,
+                  ),
+                  SizedBox(width: compact ? 6 : 8),
+                ],
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: compact ? 160 : 220,
+                  ),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color:
+                          isSelected ? Colors.white : AppColors.textSecondary,
+                      fontSize: compact ? 13.5 : 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w600,
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

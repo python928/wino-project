@@ -1,7 +1,7 @@
 SERVER / REPOSITORY STRUCTURE
 ============================
 
-Last reviewed: 2026-03-23
+Last reviewed: 2026-04-01
 
 Top-level repository view
 -------------------------
@@ -18,20 +18,31 @@ Top-level repository view
 ├── AI_EDITING_GUIDE_FOR_WINO.md
 ├── AI_PROGRAMMING_CONTEXT.md
 ├── CODEBASE_MAP_FOR_AI.md
+├── COMPREHENSIVE_UI_UX_TRANSFORMATION_2026.md
 ├── Market-Analysis-Algeria.txt
 ├── MEMOIRE_RESEARCH_DOSSIER_2026-03.md
 ├── MEMOIRE_TECHNICAL_SUMMARY_2026-03.md
+├── MERCHANT_SUBSCRIPTION_PROMOTION_REDESIGN.md
 ├── MISSING_NOW_AND_NEXT_ACTIONS.txt
 ├── PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md
 ├── PROJECT_DOCUMENTATION_INDEX.md
 ├── PROJECT_QUICKSTART.md
 ├── SERVER_STRUCTURE.txt
-└── WEB_SERVER_AND_ANDROID_LIBS_FEATURES.txt
+├── TRANSFORMATION_COMPLETE_SUMMARY.md
+├── UI_UX_IMPROVEMENTS_2026-03.md
+├── UI_UX_PROBLEMS_AND_SOLUTIONS.md
+├── WEB_SERVER_AND_ANDROID_LIBS_FEATURES.txt
+├── WINO_BMC.md
+├── WINO_BUSINESS_PLAN.md
+├── WINO_MVP.md
+└── WINO_POC.md
 
 Repository reality
 ------------------
 - This repo is both a codebase and a documentation knowledge base.
 - Root docs are part of the working architecture memory for developers, AI assistants, and memoire writing.
+- The canonical current-stage doc is now `TRANSFORMATION_COMPLETE_SUMMARY.md`.
+- The truthful repo-wide stage is advanced pre-production / pilot-ready direction, not full production release.
 
 Backend tree (`app-backend/`)
 -----------------------------
@@ -127,3 +138,5 @@ Recent structure / product evolution to remember
 - merchant ads dashboard now includes stronger explainability text.
 - empty placeholder directories under `the_app/lib/features/` were cleaned up.
 - API docs should no longer mention the removed duplicate devices route.
+- auth flow structure is now partially centralized through `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+- category picking became a shared, multi-context primitive instead of a one-off screen behavior.

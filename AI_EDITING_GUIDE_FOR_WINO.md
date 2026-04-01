@@ -1,8 +1,18 @@
 # AI Editing Guide For Wino
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
 
 This file is meant for AI assistants and programmers who need to edit the repo without rediscovering its rules every time.
+
+## Status reality
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+Do not describe the repo as a finished production release.
+The honest wording is:
+- strong technical artifact,
+- large UI/system progress,
+- advanced pre-production / pilot-ready direction.
 
 ## 1) Non-negotiable project invariants
 1. `Store == User`
@@ -13,6 +23,13 @@ This file is meant for AI assistants and programmers who need to edit the repo w
 6. Public-facing brand is `Wino`
 
 ## 2) What to inspect before editing by topic
+### Auth / onboarding / category selection
+- `the_app/lib/presentation/auth/register_screen.dart`
+- `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+- `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+- `the_app/lib/presentation/search/category_selection_screen.dart`
+- `the_app/lib/core/widgets/app_text_field.dart`
+
 ### Auth / profile / store
 - `app-backend/users/models.py`
 - `app-backend/users/views.py`
@@ -49,15 +66,23 @@ This file is meant for AI assistants and programmers who need to edit the repo w
 - `the_app/lib/presentation/shared_widgets/qr_payload_dialog.dart`
 
 ### Localization
-- `the_app/lib/l10n/*.arb`
-- `the_app/lib/core/localization/runtime_translations.dart`
-- `the_app/lib/core/extensions/l10n_extension.dart`
+- `the_app/lib/l10n/*.arb` (generated translations)
+- `the_app/lib/core/localization/runtime_translations.dart` (FR/AR fallback)
+- `the_app/lib/core/extensions/l10n_extension.dart` (context.tr() helper)
+- Implementation rule: wrap all user-visible text in `context.tr()`, add FR/AR entries to RuntimeTranslations if not in ARB files
+- Current status: 11 core screens are 100% localized; secondary screens remain partial
 
 ### Nearby / location UX
 - `the_app/lib/presentation/common/location_permission_helper.dart`
 - `the_app/lib/presentation/home/home_screen.dart`
 - `the_app/lib/presentation/search/search_tab_screen.dart`
 - `the_app/lib/presentation/profile/edit_merchant_profile_screen.dart`
+
+### External Maps / directions
+- `the_app/lib/core/services/external_maps_service.dart` (Google Maps integration)
+- `the_app/lib/presentation/shared_widgets/directions_button.dart` (reusable directions button)
+- Used in: product_detail, promotion_detail, pack_detail, profile (store view)
+- Recovery pattern: GPS-disabled → user prompted to enable in settings (do not repeat GPS logic per-screen)
 
 ## 3) Change propagation rules
 ### If you change a backend endpoint
@@ -77,10 +102,14 @@ Also inspect:
 - runtime translations / ARB strings
 
 ### If you add or rename UI text
-Decide whether it belongs in:
-- generated localization (`l10n/*.arb`)
-- runtime translations (`runtime_translations.dart`)
-- or both during migration
+Workflow:
+1. Wrap in `context.tr('Your English text')`
+2. If it's a reusable/common string, add to `l10n/en.arb`
+3. Run `flutter gen-l10n` to generate localizations
+4. Add FR/AR translations to `runtime_translations.dart` for fallback safety
+5. Test in EN/FR/AR to confirm display
+
+Current state: all snackbars, dialogs, labels, and feedback messages in core screens already follow this pattern.
 
 ### If you change trust/report/review rules
 Also update:
@@ -125,11 +154,13 @@ Useful facts to include in prompts:
 - `Store == User`
 - `Android-only Flutter repo`
 - `Named routes via RouteGenerator`
-- `Hybrid localization: ARB + runtime_translations`
+- `Hybrid localization: ARB + runtime_translations (11 core screens 100% multilingual)`
+- `External Google Maps integration via ExternalMapsService + DirectionsButton`
 - `Trust layer exists for reports/reviews`
 - `Wallet + subscriptions + ads are all active product areas`
 - `Docs at repo root should be updated when architecture changes`
 - `Visible brand is Wino`
+- `All user-facing feedback requires context.tr() + FR/AR translation entries`
 
 ## 8) What counts as a good change in this repo
 A good change usually does all of the following:

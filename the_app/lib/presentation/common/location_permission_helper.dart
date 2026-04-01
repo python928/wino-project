@@ -53,18 +53,17 @@ class LocationPermissionHelper {
     final message = error.toString().toLowerCase();
 
     if (message.contains('location services are disabled')) {
-      await _showSettingsDialog(
+      await showLocationDisabledDialog(
         context,
         title: context.tr('Enable GPS'),
         message: context.l10n.locationDisabled,
         actionLabel: context.l10n.settingsOpenLocation,
-        openSettings: Geolocator.openLocationSettings,
       );
       return;
     }
 
     if (message.contains('permanently denied')) {
-      await _showSettingsDialog(
+      await showSettingsDialog(
         context,
         title: context.tr('Permission Required'),
         message: context.l10n.locationPermissionDeniedForever,
@@ -82,11 +81,30 @@ class LocationPermissionHelper {
     Helpers.showSnackBar(context, fallbackMessage, isError: true);
   }
 
-  static Future<void> _showSettingsDialog(
+  static Future<void> showLocationDisabledDialog(
+    BuildContext context, {
+    String? title,
+    String? message,
+    String? actionLabel,
+    String? closeLabel,
+    Future<bool> Function() openSettings = Geolocator.openLocationSettings,
+  }) {
+    return showSettingsDialog(
+      context,
+      title: title ?? context.l10n.locationDisabledTitle,
+      message: message ?? context.l10n.locationDisabledMessage,
+      actionLabel: actionLabel ?? context.l10n.openSettings,
+      closeLabel: closeLabel ?? context.l10n.close,
+      openSettings: openSettings,
+    );
+  }
+
+  static Future<void> showSettingsDialog(
     BuildContext context, {
     required String title,
     required String message,
     required String actionLabel,
+    String? closeLabel,
     required Future<bool> Function() openSettings,
   }) async {
     await showDialog<void>(
@@ -97,7 +115,7 @@ class LocationPermissionHelper {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.l10n.commonCancel),
+            child: Text(closeLabel ?? context.l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () async {

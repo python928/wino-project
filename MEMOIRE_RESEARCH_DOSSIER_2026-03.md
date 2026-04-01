@@ -1,6 +1,16 @@
 # Memoire Research Dossier and Source Bank (Wino)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+Recommended wording discipline for the memoire:
+- strong technical artifact,
+- advanced product POC,
+- realistic pilot-ready direction after hardening,
+- not yet a finished production-ready commercial release.
 
 This file is the strongest university-facing documentation pack in the repo. It combines:
 - the current code reality,
@@ -417,10 +427,11 @@ This is enough to describe the project as an applied artifact, not just a classr
 ## 12) Recent implementation changes worth mentioning in the memoire
 1. first-run launch screen now exposes language selection clearly
 2. nearby and GPS permission education is centralized
-3. merchant ads dashboard includes clearer metric explanation
-4. localization flow is better organized between ARB and runtime fallback
-5. device registration docs and app config now align on one active path
-6. visible branding moved further toward `Wino`
+3. external map directions are integrated for store-linked detail journeys
+4. merchant ads dashboard includes clearer metric explanation
+5. localization flow is better organized between ARB and runtime fallback
+6. device registration docs and app config now align on one active path
+7. visible branding moved further toward `Wino`
 
 These changes help the memoire because they show iterative refinement and product maturation.
 
@@ -575,10 +586,88 @@ https://asjp.cerist.dz/en/article/265435
 29. Chabani and Chabani (2025), Adoption and Analysis of Electronic Payment Methods in Algeria: A Case Study of Algérie Télécom (2022-2024)
 https://asjp.cerist.dz/en/article/282109
 
+### E. Additional official, legal, payment, and logistics context
+30. UNCTAD (2025), Algeria: eTrade Readiness Assessment
+https://unctad.org/publication/algeria-etrade-readiness-assessment
+
+31. ARPCE - Rapport annuel 2024
+https://www.arpce.dz/fr/doc/raa
+
+32. ARPCE - L'ARPCE par les chiffres 2024
+https://www.arpce.dz/fr/doc/ac
+
+33. ARPCE - Indicateurs des marchés
+https://www.arpce.dz/fr/indic
+
+34. ARPCE - Observatoire du marché de la téléphonie mobile du 2ème trimestre 2025
+https://www.arpce.dz/fr/indic/mobile
+
+35. ARPCE - Observatoire du marché postal 2022
+https://www.arpce.dz/fr/indic/poste
+
+36. ARPCE - Courrier Express Domestique (Régime de la Simple Déclaration) / liste des opérateurs
+https://www.arpce.dz/fr/service/post-sd
+
+37. Banque d'Algérie - Systèmes de paiement
+https://www.bank-of-algeria.dz/systemes/
+
+38. Banque d'Algérie - Rapport annuel 2024
+https://www.bank-of-algeria.dz/wp-content/uploads/2025/09/Rapport-2024-fr.pdf
+
+39. SATIM - Nos missions (interopérabilité et infrastructure monétique)
+https://satim.dz/index.php/fr/satim/nos-missions
+
+40. APS - L'e-paiement en Algérie poursuit son envol en 2025, propulsé par les services publics (2026-02-18)
+https://www.aps.dz/fr/economie/banque-et-finances/mls14cqm-l-e-paiement-en-algerie-poursuit-son-envol-en-2025-propulse-par-les-services-publics
+
+41. JORADP - Loi n° 18-07 du 10 juin 2018 relative à la protection des personnes physiques dans le traitement des données à caractère personnel
+https://www.joradp.dz/FTP/jo-francais/2018/F2018034.pdf
+
+42. JORADP - Loi n° 15-04 du 1er février 2015 fixant les règles générales relatives à la signature et à la certification électroniques
+https://www.joradp.dz/FTP/jo-francais/2015/F2015006.pdf
+
+43. JORADP - Loi du 17 février 2026 relative aux services de confiance pour les transactions électroniques et à l'identification électronique (JO n° 14 du 18 février 2026)
+https://www.joradp.dz/FTP/jo-francais/2026/F2026014.pdf
+
+### F. Additional academic reinforcement
+44. Gregor and Hevner (2013), Positioning and Presenting Design Science Research for Maximum Impact
+https://doi.org/10.25300/MISQ/2013/37.2.01
+
+45. Adomavicius and Tuzhilin (2005), Toward the Next Generation of Recommender Systems: A Survey of the State-of-the-Art and Possible Extensions
+https://doi.org/10.1109/TKDE.2005.99
+
+46. Tintarev (2007), Explaining Recommendations
+https://doi.org/10.1007/978-3-540-73078-1_67
+
+47. Gefen, Karahanna, and Straub (2003), Trust and TAM in Online Shopping: An Integrated Model
+https://doi.org/10.2307/30036519
+
+48. Ba and Pavlou (2002), Evidence of the Effect of Trust Building Technology in Electronic Markets: Price Premiums and Buyer Behavior
+https://doi.org/10.2307/4132332
+
+49. McKnight, Cummings, and Chervany (1998), Initial Trust Formation in New Organizational Relationships
+https://doi.org/10.5465/AMR.1998.926622
+
+50. Medjahed and Kadri (2023), E-commerce in Algeria Between Legislation and Implementation
+https://asjp.cerist.dz/en/article/226728
+
+51. Atik and Sadek (2024), Evolution of E-Commerce Websites in Algeria
+https://asjp.cerist.dz/en/article/253157
+
+52. Belmadi et al. (2026), Reality and Applications of E-Commerce in Algeria According to the Orientations of Law 18-05
+https://asjp.cerist.dz/en/article/285772
+
+53. Daabouz and Ferhi (2021), E-Commerce and the Use of Electronic Payment in Algeria
+https://asjp.cerist.dz/en/article/159215
+
 ## 17) How to use these sources in the memoire
 Use them in layers:
 - official sources:
   for market, regulation, infrastructure, and institutional context.
+- legal and governance sources:
+  for data protection, electronic signature, trust services, and compliance framing.
+- payment and logistics sources:
+  for interoperability, delivery constraints, formalization of operators, and operational realism.
 - academic theory sources:
   for Design Science Research, socio-technical framing, explainability, trust, and O2O theory.
 - Algeria-specific academic sources:
@@ -608,3 +697,4 @@ During defense, emphasize:
 - and the contribution is both technical and practical.
 
 That combination is stronger than claiming a perfect finished product.
+

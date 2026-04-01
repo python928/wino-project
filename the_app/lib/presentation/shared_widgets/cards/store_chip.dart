@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../data/models/user_model.dart';
 
 /// Category-style store chip: circle avatar · name · rating · followers.
 /// Used on home (featured stores) and search (stores results).
@@ -22,6 +23,22 @@ class StoreChip extends StatelessWidget {
     this.isVerified = false,
     this.onTap,
   });
+
+  factory StoreChip.fromUser({
+    Key? key,
+    required User store,
+    VoidCallback? onTap,
+  }) {
+    return StoreChip(
+      key: key,
+      imageUrl: store.profileImage,
+      name: store.fullName,
+      rating: store.averageRating,
+      followersCount: store.followersCount,
+      isVerified: store.isVerified,
+      onTap: onTap,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +135,7 @@ class StoreChip extends StatelessWidget {
             // ── Rating + Followers ─────────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               children: [
                 const Icon(Icons.star_rounded, size: 11, color: Colors.amber),
                 const SizedBox(width: 2),
@@ -134,11 +151,15 @@ class StoreChip extends StatelessWidget {
                 Icon(Icons.people_outline_rounded,
                     size: 11, color: AppColors.textSecondary),
                 const SizedBox(width: 2),
-                Text(
-                  Helpers.formatLargeNumber(followersCount),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
+                Flexible(
+                  child: Text(
+                    Helpers.formatLargeNumber(followersCount),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],

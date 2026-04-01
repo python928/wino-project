@@ -1,6 +1,15 @@
 # Wino Minimum Viable Product (MVP)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+Important wording rule:
+- this file defines the honest target shape of the MVP,
+- it does not mean Wino has already earned an MVP release label,
+- and it definitely should not be used as proof that the product is already production-ready.
 
 ## 1) MVP Goal
 The MVP should be the smallest release that proves Wino can help Algerian users discover nearby offers they trust, while giving merchants a lightweight way to publish and promote inventory.
@@ -31,6 +40,7 @@ For merchants:
 - account registration/login,
 - home feed and search,
 - nearby and location-aware discovery,
+- external map directions from store-linked detail views (product, pack, promotion, store),
 - store, product, pack, and promotion detail views,
 - favorites,
 - reviews and reporting,

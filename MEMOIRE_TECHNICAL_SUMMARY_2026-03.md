@@ -1,6 +1,16 @@
 # Memoire Technical and Research Positioning Summary (Wino)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+Use this wording consistently in university work:
+- Wino is a substantial implemented artifact.
+- The UI/UX transformation is materially real.
+- The project is in advanced pre-production with a realistic pilot path.
+- It should not yet be described as a fully production-ready commercial release.
 
 ## 1) Problem framing
 Wino addresses a practical Algerian O2O commerce problem:
@@ -96,6 +106,7 @@ The product has started moving toward more explainable merchant UX, especially i
 Recent implementation changes improved the academic narrative, not only the UI:
 - first-run onboarding now includes visible language choice,
 - nearby/location permission education is centralized and reusable,
+- external map directions to merchant destinations are available from store-linked detail flows,
 - merchant ads dashboard now explains what metrics mean more clearly,
 - report/review strings were translated more consistently,
 - device registration path was cleaned up to one active route,
@@ -253,3 +264,4 @@ That positioning is academically stronger than overselling it.
 - `ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt`
 - `MEMOIRE_RESEARCH_DOSSIER_2026-03.md`
 - `PROJECT_CONTEXT_FOR_AI_AND_MEMOIRE.md`
+

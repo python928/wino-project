@@ -1,10 +1,18 @@
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
+  static Future<bool> isLocationServiceEnabled() {
+    return Geolocator.isLocationServiceEnabled();
+  }
+
+  static Future<bool> openLocationSettings() {
+    return Geolocator.openLocationSettings();
+  }
+
   /// Returns the current GPS position.
   /// Works on Android & iOS (physical device or emulator).
   static Future<Position> getCurrentPosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await isLocationServiceEnabled();
     if (!serviceEnabled) {
       throw Exception('Location services are disabled. Please enable GPS.');
     }
@@ -36,7 +44,8 @@ class LocationService {
       if (lastPosition != null) {
         return lastPosition;
       }
-      throw Exception('Failed to get location. Please ensure your GPS is active.');
+      throw Exception(
+          'Failed to get location. Please ensure your GPS is active.');
     }
   }
 

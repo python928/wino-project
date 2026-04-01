@@ -334,6 +334,60 @@ abstract class AppLocalizations {
   /// **'No feedback submitted yet.'**
   String get feedbackEmpty;
 
+  /// No description provided for @directionsToStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions to store'**
+  String get directionsToStore;
+
+  /// No description provided for @mapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get mapLabel;
+
+  /// No description provided for @openInGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Google Maps'**
+  String get openInGoogleMaps;
+
+  /// No description provided for @locationDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is disabled'**
+  String get locationDisabledTitle;
+
+  /// No description provided for @locationDisabledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable location service (GPS) from settings to use directions.'**
+  String get locationDisabledMessage;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @locationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No location available'**
+  String get locationUnavailable;
+
+  /// No description provided for @unableToOpenGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open Google Maps'**
+  String get unableToOpenGoogleMaps;
+
   /// No description provided for @locationDisabled.
   ///
   /// In en, this message translates to:
@@ -633,6 +687,414 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'QR link opened.'**
   String get qrLinkOpened;
+
+  /// No description provided for @authRegisterHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account'**
+  String get authRegisterHeaderTitle;
+
+  /// No description provided for @authRegisterHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Three quick steps to personalize shopping and nearby offers.'**
+  String get authRegisterHeaderSubtitle;
+
+  /// No description provided for @authRegisterFooterPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get authRegisterFooterPrompt;
+
+  /// No description provided for @authRegisterFooterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authRegisterFooterAction;
+
+  /// No description provided for @authProfileSetupHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile'**
+  String get authProfileSetupHeaderTitle;
+
+  /// No description provided for @authProfileSetupHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a few details so we can personalize results for you.'**
+  String get authProfileSetupHeaderSubtitle;
+
+  /// No description provided for @authProfileSetupBodySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name, birthday, and interests help us tailor products, stores, and nearby offers.'**
+  String get authProfileSetupBodySubtitle;
+
+  /// No description provided for @authStepPersonalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal details'**
+  String get authStepPersonalTitle;
+
+  /// No description provided for @authStepPersonalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with the basics so your account feels complete from day one.'**
+  String get authStepPersonalSubtitle;
+
+  /// No description provided for @authStepAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account details'**
+  String get authStepAccountTitle;
+
+  /// No description provided for @authStepAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a reachable phone number and a secure password.'**
+  String get authStepAccountSubtitle;
+
+  /// No description provided for @authStepInterestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping interests'**
+  String get authStepInterestsTitle;
+
+  /// No description provided for @authStepInterestsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to 6 categories to improve recommendations and nearby discovery.'**
+  String get authStepInterestsSubtitle;
+
+  /// No description provided for @authFieldFirstName.
+  ///
+  /// In en, this message translates to:
+  /// **'First name'**
+  String get authFieldFirstName;
+
+  /// No description provided for @authFieldFirstNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your first name'**
+  String get authFieldFirstNameHint;
+
+  /// No description provided for @authFieldLastName.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name'**
+  String get authFieldLastName;
+
+  /// No description provided for @authFieldLastNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your last name'**
+  String get authFieldLastNameHint;
+
+  /// No description provided for @authFieldFullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get authFieldFullName;
+
+  /// No description provided for @authFieldFullNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your full name'**
+  String get authFieldFullNameHint;
+
+  /// No description provided for @authFieldBirthday.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get authFieldBirthday;
+
+  /// No description provided for @authFieldBirthdayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use day, month, and year as shown on your official documents.'**
+  String get authFieldBirthdayHint;
+
+  /// No description provided for @authFieldDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get authFieldDay;
+
+  /// No description provided for @authFieldDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'DD'**
+  String get authFieldDayHint;
+
+  /// No description provided for @authFieldMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get authFieldMonth;
+
+  /// No description provided for @authFieldMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'MM'**
+  String get authFieldMonthHint;
+
+  /// No description provided for @authFieldYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get authFieldYear;
+
+  /// No description provided for @authFieldYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'YYYY'**
+  String get authFieldYearHint;
+
+  /// No description provided for @authFieldGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get authFieldGender;
+
+  /// No description provided for @authGenderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get authGenderMale;
+
+  /// No description provided for @authGenderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get authGenderFemale;
+
+  /// No description provided for @authFieldPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get authFieldPhone;
+
+  /// No description provided for @authFieldPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'0XXXXXXXXX'**
+  String get authFieldPhoneHint;
+
+  /// No description provided for @authFieldEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get authFieldEmail;
+
+  /// No description provided for @authFieldEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address'**
+  String get authFieldEmailHint;
+
+  /// No description provided for @authFieldPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authFieldPassword;
+
+  /// No description provided for @authFieldPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get authFieldPasswordHint;
+
+  /// No description provided for @authFieldConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get authFieldConfirmPassword;
+
+  /// No description provided for @authFieldConfirmPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter your password'**
+  String get authFieldConfirmPasswordHint;
+
+  /// No description provided for @authFieldCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite categories'**
+  String get authFieldCategories;
+
+  /// No description provided for @authFieldCategoriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to 6 categories. You can change them later.'**
+  String get authFieldCategoriesHint;
+
+  /// No description provided for @authCategoriesCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your favorite categories'**
+  String get authCategoriesCta;
+
+  /// No description provided for @authCategoriesRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try loading categories again'**
+  String get authCategoriesRetry;
+
+  /// No description provided for @authCategoriesLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load categories right now. Please try again.'**
+  String get authCategoriesLoadError;
+
+  /// No description provided for @authActionCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get authActionCreateAccount;
+
+  /// No description provided for @authActionPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get authActionPrevious;
+
+  /// No description provided for @authRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration failed. Please try again.'**
+  String get authRegistrationFailed;
+
+  /// No description provided for @authProfileSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not save your profile. Please try again.'**
+  String get authProfileSaveError;
+
+  /// No description provided for @authErrorRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get authErrorRequired;
+
+  /// No description provided for @authErrorNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your full name'**
+  String get authErrorNameRequired;
+
+  /// No description provided for @authErrorBirthdayRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your birth date'**
+  String get authErrorBirthdayRequired;
+
+  /// No description provided for @authErrorBirthdayInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid date'**
+  String get authErrorBirthdayInvalid;
+
+  /// No description provided for @authErrorMustBe13.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at least 13 years old'**
+  String get authErrorMustBe13;
+
+  /// No description provided for @authErrorPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your phone number'**
+  String get authErrorPhoneRequired;
+
+  /// No description provided for @authErrorPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX'**
+  String get authErrorPhoneInvalid;
+
+  /// No description provided for @authErrorEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address'**
+  String get authErrorEmailRequired;
+
+  /// No description provided for @authErrorEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address'**
+  String get authErrorEmailInvalid;
+
+  /// No description provided for @authErrorPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a password'**
+  String get authErrorPasswordRequired;
+
+  /// No description provided for @authErrorPasswordMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 6 characters'**
+  String get authErrorPasswordMin;
+
+  /// No description provided for @authErrorConfirmPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your password'**
+  String get authErrorConfirmPasswordRequired;
+
+  /// No description provided for @authErrorPasswordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get authErrorPasswordsDoNotMatch;
+
+  /// No description provided for @authErrorCategoriesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least 1 category'**
+  String get authErrorCategoriesRequired;
+
+  /// No description provided for @authStepProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String authStepProgress(int current, int total);
+
+  /// No description provided for @categoriesPickerSelectionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{selected} of {max} selected'**
+  String categoriesPickerSelectionCount(int selected, int max);
+
+  /// No description provided for @categoriesPickerMaxReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You can select up to {max} categories.'**
+  String categoriesPickerMaxReached(int max);
+
+  /// No description provided for @categoriesPickerMinRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least {min} categories to continue.'**
+  String categoriesPickerMinRequired(int min);
+
+  /// No description provided for @categoriesPickerMaxHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to {max} categories.'**
+  String categoriesPickerMaxHint(int max);
+
+  /// No description provided for @categoryPickerSearchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose categories to narrow results, or leave them empty to keep your search broad.'**
+  String get categoryPickerSearchSubtitle;
+
+  /// No description provided for @categoryPickerProductSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the one category that best matches this product.'**
+  String get categoryPickerProductSubtitle;
 }
 
 class _AppLocalizationsDelegate

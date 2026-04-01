@@ -175,11 +175,8 @@ class RecommendationsList extends StatelessWidget {
                       horizontal: CardConstants.gridHorizontalPadding),
                   itemCount: stores.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, i) => StoreChip(
-                    imageUrl: stores[i].profileImage,
-                    name: stores[i].name,
-                    rating: stores[i].averageRating,
-                    followersCount: stores[i].followersCount,
+                  itemBuilder: (context, i) => StoreChip.fromUser(
+                    store: stores[i],
                     onTap: () => Navigator.pushNamed(
                       context,
                       Routes.store,

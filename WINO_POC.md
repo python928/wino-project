@@ -1,6 +1,14 @@
 # Wino Proof of Concept (POC)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+This document should be read with one discipline:
+- strong technical POC does not automatically mean production-ready product.
+- Wino is best described today as an advanced pre-production platform with a credible pilot path.
 
 ## 1) Purpose
 This document defines the Proof of Concept for Wino as it exists now in code and as it should be validated in a controlled field pilot.
@@ -63,6 +71,7 @@ Use now:
 - onboarding with visible language choice,
 - home, nearby, and search flows,
 - store/product/promotion/pack detail screens,
+- external map directions from detail screens to merchant locations,
 - reviews, favorites, and reports,
 - merchant publishing and profile editing,
 - share, QR, and deep-link flows,
@@ -107,8 +116,10 @@ The POC should be evaluated with simple, decision-ready metrics.
 Wino can already be described as:
 
 - `Technical POC: achieved`
-- `Product POC: partially achieved`
+- `Product POC: advanced / partially achieved`
 - `Business POC: not yet validated`
+- `Pilot readiness after hardening: realistic`
+- `Full production readiness: not yet`
 
 Why:
 - the architecture and feature set are already broad enough to prove feasibility,

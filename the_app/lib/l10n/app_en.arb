@@ -46,6 +46,15 @@
   "feedbackSubmitSuccess": "Feedback sent successfully.",
   "feedbackSubmitError": "Failed to send feedback",
   "feedbackEmpty": "No feedback submitted yet.",
+  "directionsToStore": "Directions to store",
+  "mapLabel": "Map",
+  "openInGoogleMaps": "Open in Google Maps",
+  "locationDisabledTitle": "Location is disabled",
+  "locationDisabledMessage": "Enable location service (GPS) from settings to use directions.",
+  "openSettings": "Open Settings",
+  "close": "Close",
+  "locationUnavailable": "No location available",
+  "unableToOpenGoogleMaps": "Unable to open Google Maps",
   "locationDisabled": "Location services are disabled. Please enable GPS to use nearby search.",
   "locationPermissionDeniedForever": "Location permission is permanently denied. Please allow it from app settings.",
   "settingsOpenLocation": "Open Location Settings",
@@ -102,5 +111,114 @@
   "feedbackStatusInReview": "In review",
   "feedbackStatusRejected": "Rejected",
   "feedbackTypeDefault": "Feedback",
-  "qrLinkOpened": "QR link opened."
+  "qrLinkOpened": "QR link opened.",
+  "authRegisterHeaderTitle": "Create your account",
+  "authRegisterHeaderSubtitle": "Three quick steps to personalize shopping and nearby offers.",
+  "authRegisterFooterPrompt": "Already have an account?",
+  "authRegisterFooterAction": "Sign in",
+  "authProfileSetupHeaderTitle": "Complete your profile",
+  "authProfileSetupHeaderSubtitle": "Save a few details so we can personalize results for you.",
+  "authProfileSetupBodySubtitle": "Your name, birthday, and interests help us tailor products, stores, and nearby offers.",
+  "authStepPersonalTitle": "Personal details",
+  "authStepPersonalSubtitle": "Start with the basics so your account feels complete from day one.",
+  "authStepAccountTitle": "Account details",
+  "authStepAccountSubtitle": "Use a reachable phone number and a secure password.",
+  "authStepInterestsTitle": "Shopping interests",
+  "authStepInterestsSubtitle": "Choose up to 6 categories to improve recommendations and nearby discovery.",
+  "authFieldFirstName": "First name",
+  "authFieldFirstNameHint": "Enter your first name",
+  "authFieldLastName": "Last name",
+  "authFieldLastNameHint": "Enter your last name",
+  "authFieldFullName": "Full name",
+  "authFieldFullNameHint": "Enter your full name",
+  "authFieldBirthday": "Date of birth",
+  "authFieldBirthdayHint": "Use day, month, and year as shown on your official documents.",
+  "authFieldDay": "Day",
+  "authFieldDayHint": "DD",
+  "authFieldMonth": "Month",
+  "authFieldMonthHint": "MM",
+  "authFieldYear": "Year",
+  "authFieldYearHint": "YYYY",
+  "authFieldGender": "Gender",
+  "authGenderMale": "Male",
+  "authGenderFemale": "Female",
+  "authFieldPhone": "Phone number",
+  "authFieldPhoneHint": "0XXXXXXXXX",
+  "authFieldEmail": "Email",
+  "authFieldEmailHint": "Enter your email address",
+  "authFieldPassword": "Password",
+  "authFieldPasswordHint": "Enter your password",
+  "authFieldConfirmPassword": "Confirm password",
+  "authFieldConfirmPasswordHint": "Re-enter your password",
+  "authFieldCategories": "Favorite categories",
+  "authFieldCategoriesHint": "Choose up to 6 categories. You can change them later.",
+  "authCategoriesCta": "Select your favorite categories",
+  "authCategoriesRetry": "Try loading categories again",
+  "authCategoriesLoadError": "We could not load categories right now. Please try again.",
+  "authActionCreateAccount": "Create account",
+  "authActionPrevious": "Previous",
+  "authRegistrationFailed": "Registration failed. Please try again.",
+  "authProfileSaveError": "We could not save your profile. Please try again.",
+  "authErrorRequired": "Required",
+  "authErrorNameRequired": "Enter your full name",
+  "authErrorBirthdayRequired": "Enter your birth date",
+  "authErrorBirthdayInvalid": "Enter a valid date",
+  "authErrorMustBe13": "You must be at least 13 years old",
+  "authErrorPhoneRequired": "Enter your phone number",
+  "authErrorPhoneInvalid": "Use format 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX",
+  "authErrorEmailRequired": "Enter your email address",
+  "authErrorEmailInvalid": "Enter a valid email address",
+  "authErrorPasswordRequired": "Enter a password",
+  "authErrorPasswordMin": "Use at least 6 characters",
+  "authErrorConfirmPasswordRequired": "Confirm your password",
+  "authErrorPasswordsDoNotMatch": "Passwords do not match",
+  "authErrorCategoriesRequired": "Select at least 1 category",
+  "authStepProgress": "Step {current} of {total}",
+  "@authStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerSelectionCount": "{selected} of {max} selected",
+  "@categoriesPickerSelectionCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxReached": "You can select up to {max} categories.",
+  "@categoriesPickerMaxReached": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMinRequired": "Select at least {min} categories to continue.",
+  "@categoriesPickerMinRequired": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesPickerMaxHint": "Choose up to {max} categories.",
+  "@categoriesPickerMaxHint": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryPickerSearchSubtitle": "Choose categories to narrow results, or leave them empty to keep your search broad.",
+  "categoryPickerProductSubtitle": "Pick the one category that best matches this product."
 }

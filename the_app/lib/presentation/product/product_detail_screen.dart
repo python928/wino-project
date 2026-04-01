@@ -18,7 +18,9 @@ import '../../core/utils/helpers.dart';
 import '../../data/models/post_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
+import '../shared_widgets/app_dropdown_menu.dart';
 import '../shared_widgets/contact_action_row.dart';
+import '../shared_widgets/directions_button.dart';
 import '../shared_widgets/image_carousel.dart';
 import '../shared_widgets/qr_payload_dialog.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
@@ -98,7 +100,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _copyProductLink() async {
     await Clipboard.setData(ClipboardData(text: _productShareLink));
     if (!mounted) return;
-    Helpers.showSnackBar(context, 'Product link copied');
+    Helpers.showSnackBar(context, context.tr('Product link copied'));
   }
 
   Future<void> _showShareProductOptions() async {
@@ -166,6 +168,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String? _storeImageUrl;
   String? _storePhone;
   String? _storeWhatsapp;
+  double? _storeLatitude;
+  double? _storeLongitude;
   bool _storeShowPhone = true;
   bool _storeShowSocial = true;
 
@@ -342,6 +346,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         if (store.whatsapp != null && store.whatsapp!.trim().isNotEmpty) {
           whatsapp = store.whatsapp;
         }
+        _storeLatitude = store.latitude;
+        _storeLongitude = store.longitude;
         showPhone = store.showPhonePublic;
         showSocial = store.showSocialPublic;
       }
@@ -399,7 +405,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _toggleFavorite() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in to save favorites', isError: true);
+      Helpers.showSnackBar(context, context.tr('Log in to save favorites'),
+          isError: true);
       return;
     }
     if (_isTogglingFavorite) return;
@@ -419,11 +426,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       FavoritesChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
-        isFavorited ? 'Added to favorites' : 'Removed from favorites',
+        isFavorited
+            ? context.tr('Added to favorites')
+            : context.tr('Removed from favorites'),
       );
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update favorite', isError: true);
+      Helpers.showSnackBar(context, context.tr('Failed to update favorite'),
+          isError: true);
     } finally {
       if (mounted) setState(() => _isTogglingFavorite = false);
     }
@@ -432,7 +442,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _toggleFollow() async {
     if (_isOwnStore) return;
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in to follow stores', isError: true);
+      Helpers.showSnackBar(context, context.tr('Log in to follow stores'),
+          isError: true);
       return;
     }
     if (_isTogglingFollow) return;
@@ -454,11 +465,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
-        isFollowing ? 'Followed store' : 'Unfollowed store',
+        isFollowing
+            ? context.tr('Followed store')
+            : context.tr('Unfollowed store'),
       );
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update follow', isError: true);
+      Helpers.showSnackBar(context, context.tr('Failed to update follow'),
+          isError: true);
     } finally {
       if (mounted) setState(() => _isTogglingFollow = false);
     }
@@ -481,8 +495,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return ContactActionRow(
       phone: phone,
       whatsapp: whatsapp,
+      trailingAction: _buildDirectionsButton(),
       showTitle: true,
       buttonVerticalPadding: 12,
+    );
+  }
+
+  double? get _destinationLatitude =>
+      _storeLatitude ??
+      widget.product.storeLatitude ??
+      widget.product.author.latitude;
+
+  double? get _destinationLongitude =>
+      _storeLongitude ??
+      widget.product.storeLongitude ??
+      widget.product.author.longitude;
+
+  Widget _buildDirectionsButton() {
+    return DirectionsButton(
+      destinationLat: _destinationLatitude,
+      destinationLng: _destinationLongitude,
+      label: context.l10n.mapLabel,
     );
   }
 
@@ -542,43 +575,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           foregroundColor: Colors.black,
           elevation: 0,
           actions: [
-            PopupMenuButton<String>(
+            AppDropdownMenuButton<String>(
               onSelected: (value) => _onProductMenuSelected(value),
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
+              actions: [
+                AppDropdownAction(
                   value: 'favorite',
-                  child: Row(
-                    children: [
-                      Icon(
-                        _isFavorited ? Icons.favorite : Icons.favorite_border,
-                        color: Colors.red,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(context.tr(
-                          _isFavorited ? 'Remove Favorite' : 'Add Favorite')),
-                    ],
+                  icon: _isFavorited ? Icons.favorite : Icons.favorite_border,
+                  label: context.tr(
+                    _isFavorited ? 'Remove Favorite' : 'Add Favorite',
                   ),
                 ),
-                PopupMenuItem<String>(
+                AppDropdownAction(
                   value: 'share',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.share_outlined, size: 18),
-                      const SizedBox(width: 10),
-                      Text(context.tr('Share Product')),
-                    ],
-                  ),
+                  icon: Icons.share_outlined,
+                  label: context.tr('Share Product'),
                 ),
-                PopupMenuItem<String>(
+                AppDropdownAction(
                   value: 'report',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.flag_outlined, size: 18),
-                      const SizedBox(width: 10),
-                      Text(context.tr('Report Product')),
-                    ],
-                  ),
+                  icon: Icons.flag_outlined,
+                  label: context.tr('Report Product'),
                 ),
               ],
             ),
@@ -781,10 +796,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Widget _buildImageSection() {
     final images = _galleryImages;
+    final imageHeight = (MediaQuery.of(context).size.height * 0.52)
+        .clamp(420.0, 580.0)
+        .toDouble();
 
     return ImageCarousel(
       images: images,
-      height: 250,
+      height: imageHeight,
       borderRadius: 12,
       topRightOverlay: GestureDetector(
         onTap: _toggleFavorite,

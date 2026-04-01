@@ -10,6 +10,7 @@ import '../../core/utils/jwt_validator.dart';
 import '../home/main_navigation_screen.dart';
 import 'launch_screen.dart';
 import 'login_screen.dart';
+import 'phone_profile_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -92,6 +93,10 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final isValid = await _validateTokenWithBackend();
       if (isValid) {
+        if (StorageService.isPhoneProfileSetupPending()) {
+          _navigateToPhoneProfileSetup();
+          return;
+        }
         _navigateToHome();
       } else {
         await StorageService.logout();
@@ -100,6 +105,10 @@ class _SplashScreenState extends State<SplashScreen>
     } catch (_) {
       final currentToken = await StorageService.getAccessToken();
       if (currentToken != null && !JWTValidator.isExpired(currentToken)) {
+        if (StorageService.isPhoneProfileSetupPending()) {
+          _navigateToPhoneProfileSetup();
+          return;
+        }
         _navigateToHomeOffline();
       } else {
         _navigateToLogin();
@@ -142,6 +151,13 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+    );
+  }
+
+  void _navigateToPhoneProfileSetup() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const PhoneProfileSetupScreen()),
     );
   }
 

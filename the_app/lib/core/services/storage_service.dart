@@ -16,6 +16,8 @@ class StorageService {
   static const String keyLanguage = 'language';
   static const String keyTheme = 'theme';
   static const String keyFirstTime = 'first_time';
+  static const String keyPendingPhoneProfileSetup =
+      'pending_phone_profile_setup';
   static const String keyLastCategories = 'last_categories';
   static const String keyLastNotifiedNotificationId =
       'last_notified_notification_id';
@@ -96,6 +98,7 @@ class StorageService {
     await prefs.remove(keyUserData);
     await prefs.setBool(keyIsLoggedIn, false);
     await prefs.remove(keyUserType);
+    await prefs.remove(keyPendingPhoneProfileSetup);
   }
 
   // ==================== LOGIN STATUS ====================
@@ -106,6 +109,18 @@ class StorageService {
 
   static String getUserType() {
     return prefs.getString(keyUserType) ?? 'user';
+  }
+
+  static bool isPhoneProfileSetupPending() {
+    return prefs.getBool(keyPendingPhoneProfileSetup) ?? false;
+  }
+
+  static Future<void> setPhoneProfileSetupPending(bool value) async {
+    if (value) {
+      await prefs.setBool(keyPendingPhoneProfileSetup, true);
+    } else {
+      await prefs.remove(keyPendingPhoneProfileSetup);
+    }
   }
 
   static bool isMerchant() {

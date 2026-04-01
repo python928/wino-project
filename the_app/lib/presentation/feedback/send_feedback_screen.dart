@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/config/api_config.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import '../../core/services/api_service.dart';
+import '../shared_widgets/app_dropdown_menu.dart';
 
 class SendFeedbackScreen extends StatefulWidget {
   const SendFeedbackScreen({super.key});
@@ -32,7 +33,8 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
 
   Future<void> _pickScreenshot() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (!mounted) return;
     setState(() => _screenshot = file);
   }
@@ -56,7 +58,8 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
         'device_info': _deviceController.text.trim(),
       };
       if (_screenshot != null) {
-        await ApiService.postMultipart(ApiConfig.feedback, fields, _screenshot!, 'screenshot');
+        await ApiService.postMultipart(
+            ApiConfig.feedback, fields, _screenshot!, 'screenshot');
       } else {
         await ApiService.post(ApiConfig.feedback, fields);
       }
@@ -84,20 +87,22 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          DropdownButtonFormField<String>(
-            initialValue: _type,
+          AppDropdownField<String>(
+            value: _type,
+            label: l10n.feedbackTypeLabel,
             items: [
-              DropdownMenuItem(
+              AppDropdownFieldItem(
                 value: 'problem',
-                child: Text(l10n.feedbackTypeProblem),
+                label: l10n.feedbackTypeProblem,
+                icon: Icons.error_outline_rounded,
               ),
-              DropdownMenuItem(
+              AppDropdownFieldItem(
                 value: 'suggestion',
-                child: Text(l10n.feedbackTypeSuggestion),
+                label: l10n.feedbackTypeSuggestion,
+                icon: Icons.lightbulb_outline_rounded,
               ),
             ],
             onChanged: (v) => setState(() => _type = v ?? 'problem'),
-            decoration: InputDecoration(labelText: l10n.feedbackTypeLabel),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -112,12 +117,14 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _appVersionController,
-            decoration: InputDecoration(labelText: l10n.feedbackAppVersionOptional),
+            decoration:
+                InputDecoration(labelText: l10n.feedbackAppVersionOptional),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _deviceController,
-            decoration: InputDecoration(labelText: l10n.feedbackDeviceInfoOptional),
+            decoration:
+                InputDecoration(labelText: l10n.feedbackDeviceInfoOptional),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(

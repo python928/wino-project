@@ -19,6 +19,7 @@ import '../../data/models/category_model.dart';
 import '../../data/models/post_model.dart';
 import '../common/location_filter_picker.dart';
 import '../search/category_selection_screen.dart';
+import '../shared_widgets/app_switch_tile.dart';
 import '../subscription/subscription_gate.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -117,6 +118,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
           categories: _categories,
           initialSelectedCategoryIds: _selectedCategoryIds,
           singleSelection: true,
+          minSelection: 1,
+          subtitle: context.l10n.categoryPickerProductSubtitle,
         ),
       ),
     );
@@ -511,24 +514,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(context.tr('Show Price')),
-                        subtitle: Text(
-                          context.tr('Show price to customers in listings'),
-                        ),
+                      AppSwitchTile(
+                        title: context.tr('Show Price'),
+                        subtitle:
+                            context.tr('Show price to customers in listings'),
                         value: _showPrice,
                         onChanged: (value) {
                           setState(() => _showPrice = value);
                         },
                       ),
 
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(context.tr('Available')),
-                        subtitle: Text(
-                          context.tr('Is the product available for sale?'),
-                        ),
+                      AppSwitchTile(
+                        title: context.tr('Available'),
+                        subtitle:
+                            context.tr('Is the product available for sale?'),
                         value: _isAvailable,
                         onChanged: (value) {
                           setState(() => _isAvailable = value);
@@ -616,55 +615,32 @@ class _AddProductScreenState extends State<AddProductScreen> {
         children: [
           // Toggle row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: _deliveryAvailable
-                        ? AppColors.primaryColor.withOpacity(0.12)
-                        : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.local_shipping_outlined,
-                    size: 18,
-                    color: _deliveryAvailable
-                        ? AppColors.primaryColor
-                        : Colors.grey.shade500,
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: AppSwitchTile(
+              title: context.tr('Delivery Available'),
+              subtitle: _deliveryAvailable
+                  ? context.tr('Select areas you deliver to')
+                  : context.tr('Customers can come pick up'),
+              value: _deliveryAvailable,
+              onChanged: (v) => setState(() => _deliveryAvailable = v),
+              showContainer: false,
+              padding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: _deliveryAvailable
+                      ? AppColors.primaryColor.withOpacity(0.12)
+                      : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.tr('Delivery Available'),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        _deliveryAvailable
-                            ? context.tr('Select areas you deliver to')
-                            : context.tr('Customers can come pick up'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: _deliveryAvailable
+                      ? AppColors.primaryColor
+                      : Colors.grey.shade500,
                 ),
-                Switch(
-                  value: _deliveryAvailable,
-                  onChanged: (v) => setState(() => _deliveryAvailable = v),
-                  activeColor: AppColors.primaryColor,
-                ),
-              ],
+              ),
             ),
           ),
 

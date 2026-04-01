@@ -12,7 +12,9 @@ import '../../core/utils/helpers.dart';
 import '../../data/models/offer_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../common/widgets/reviews_section.dart';
+import '../shared_widgets/app_dropdown_menu.dart';
 import '../shared_widgets/contact_action_row.dart';
+import '../shared_widgets/directions_button.dart';
 import '../shared_widgets/image_carousel.dart';
 import '../shared_widgets/report_bottom_sheet.dart';
 
@@ -36,6 +38,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
   String? _storeImageUrl;
   String? _storePhone;
   String? _storeWhatsapp;
+  double? _storeLatitude;
+  double? _storeLongitude;
   bool _storeShowPhone = true;
   bool _storeShowSocial = true;
 
@@ -93,6 +97,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
         if (store.whatsapp != null && store.whatsapp!.trim().isNotEmpty) {
           whatsapp = store.whatsapp;
         }
+        _storeLatitude = store.latitude;
+        _storeLongitude = store.longitude;
         showPhone = store.showPhonePublic;
         showSocial = store.showSocialPublic;
       }
@@ -150,7 +156,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
   Future<void> _toggleFavorite() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in to save favorites', isError: true);
+      Helpers.showSnackBar(context, context.tr('Log in to save favorites'),
+          isError: true);
       return;
     }
     if (_isTogglingFavorite) return;
@@ -167,11 +174,14 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
       FavoritesChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
-        isFavorited ? 'Added to favorites' : 'Removed from favorites',
+        isFavorited
+            ? context.tr('Added to favorites')
+            : context.tr('Removed from favorites'),
       );
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update favorite', isError: true);
+      Helpers.showSnackBar(context, context.tr('Failed to update favorite'),
+          isError: true);
     } finally {
       if (mounted) setState(() => _isTogglingFavorite = false);
     }
@@ -179,7 +189,8 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
   Future<void> _toggleFollow() async {
     if (!StorageService.isLoggedIn()) {
-      Helpers.showSnackBar(context, 'Log in to follow stores', isError: true);
+      Helpers.showSnackBar(context, context.tr('Log in to follow stores'),
+          isError: true);
       return;
     }
     if (_isTogglingFollow) return;
@@ -197,11 +208,14 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
       FollowChangeNotifier.bump();
       Helpers.showSnackBar(
         context,
-        isFollowing ? 'Followed store' : 'Unfollowed store',
+        isFollowing
+            ? context.tr('Followed store')
+            : context.tr('Unfollowed store'),
       );
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Failed to update follow', isError: true);
+      Helpers.showSnackBar(context, context.tr('Failed to update follow'),
+          isError: true);
     } finally {
       if (mounted) setState(() => _isTogglingFollow = false);
     }
@@ -220,8 +234,27 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
     return ContactActionRow(
       phone: phone,
       whatsapp: whatsapp,
+      trailingAction: _buildDirectionsButton(),
       showTitle: true,
       buttonVerticalPadding: 12,
+    );
+  }
+
+  double? get _destinationLatitude =>
+      _storeLatitude ??
+      widget.promotion.product.storeLatitude ??
+      widget.promotion.product.author.latitude;
+
+  double? get _destinationLongitude =>
+      _storeLongitude ??
+      widget.promotion.product.storeLongitude ??
+      widget.promotion.product.author.longitude;
+
+  Widget _buildDirectionsButton() {
+    return DirectionsButton(
+      destinationLat: _destinationLatitude,
+      destinationLng: _destinationLongitude,
+      label: context.l10n.mapLabel,
     );
   }
 
@@ -280,14 +313,15 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           foregroundColor: Colors.black,
           elevation: 0,
           actions: [
-            PopupMenuButton<String>(
+            AppDropdownMenuButton<String>(
               onSelected: (value) {
                 if (value == 'report') _showReportPromotionSheet();
               },
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
+              actions: [
+                AppDropdownAction(
                   value: 'report',
-                  child: Text(context.tr('Report Offer')),
+                  icon: Icons.flag_outlined,
+                  label: context.tr('Report Offer'),
                 ),
               ],
             ),
@@ -481,10 +515,13 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
 
   Widget _buildImageSection() {
     final images = _galleryImages;
+    final imageHeight = (MediaQuery.of(context).size.height * 0.50)
+        .clamp(390.0, 540.0)
+        .toDouble();
 
     return ImageCarousel(
       images: images,
-      height: 250,
+      height: imageHeight,
       borderRadius: 12,
       topRightOverlay: GestureDetector(
         onTap: _toggleFavorite,

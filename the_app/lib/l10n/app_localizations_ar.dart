@@ -138,6 +138,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get feedbackEmpty => 'لم يتم إرسال أي ملاحظات بعد.';
 
   @override
+  String get directionsToStore => 'الاتجاهات إلى المتجر';
+
+  @override
+  String get mapLabel => 'الخريطة';
+
+  @override
+  String get openInGoogleMaps => 'فتح في Google Maps';
+
+  @override
+  String get locationDisabledTitle => 'الموقع غير مفعل';
+
+  @override
+  String get locationDisabledMessage =>
+      'فعّل خدمة الموقع (GPS) من الإعدادات لاستخدام الاتجاهات.';
+
+  @override
+  String get openSettings => 'فتح الإعدادات';
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get locationUnavailable => 'لا يوجد موقع';
+
+  @override
+  String get unableToOpenGoogleMaps => 'تعذر فتح Google Maps';
+
+  @override
   String get locationDisabled =>
       'خدمات الموقع متوقفة. يرجى تفعيل GPS لاستخدام البحث القريب.';
 
@@ -300,4 +328,232 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get qrLinkOpened => 'تم فتح رابط QR.';
+
+  @override
+  String get authRegisterHeaderTitle => 'أنشئ حسابك';
+
+  @override
+  String get authRegisterHeaderSubtitle =>
+      'ثلاث خطوات سريعة لتخصيص التسوق والعروض القريبة.';
+
+  @override
+  String get authRegisterFooterPrompt => 'لديك حساب بالفعل؟';
+
+  @override
+  String get authRegisterFooterAction => 'تسجيل الدخول';
+
+  @override
+  String get authProfileSetupHeaderTitle => 'أكمل ملفك الشخصي';
+
+  @override
+  String get authProfileSetupHeaderSubtitle =>
+      'أضف بعض التفاصيل لنخصص النتائج المناسبة لك.';
+
+  @override
+  String get authProfileSetupBodySubtitle =>
+      'اسمك وتاريخ ميلادك واهتماماتك تساعدنا على تخصيص المنتجات والمتاجر والعروض القريبة.';
+
+  @override
+  String get authStepPersonalTitle => 'بياناتك الأساسية';
+
+  @override
+  String get authStepPersonalSubtitle =>
+      'ابدأ بالمعلومات الأساسية حتى يصبح حسابك جاهزًا من البداية.';
+
+  @override
+  String get authStepAccountTitle => 'بيانات الحساب';
+
+  @override
+  String get authStepAccountSubtitle =>
+      'استخدم رقم هاتف متاحًا وكلمة مرور آمنة.';
+
+  @override
+  String get authStepInterestsTitle => 'اهتمامات التسوق';
+
+  @override
+  String get authStepInterestsSubtitle =>
+      'اختر حتى 6 فئات لتحسين الاقتراحات والاكتشاف القريب.';
+
+  @override
+  String get authFieldFirstName => 'الاسم الأول';
+
+  @override
+  String get authFieldFirstNameHint => 'أدخل اسمك الأول';
+
+  @override
+  String get authFieldLastName => 'اللقب';
+
+  @override
+  String get authFieldLastNameHint => 'أدخل لقبك';
+
+  @override
+  String get authFieldFullName => 'الاسم الكامل';
+
+  @override
+  String get authFieldFullNameHint => 'أدخل اسمك الكامل';
+
+  @override
+  String get authFieldBirthday => 'تاريخ الميلاد';
+
+  @override
+  String get authFieldBirthdayHint =>
+      'استخدم اليوم والشهر والسنة كما هي في وثائقك الرسمية.';
+
+  @override
+  String get authFieldDay => 'اليوم';
+
+  @override
+  String get authFieldDayHint => 'يوم';
+
+  @override
+  String get authFieldMonth => 'الشهر';
+
+  @override
+  String get authFieldMonthHint => 'شهر';
+
+  @override
+  String get authFieldYear => 'السنة';
+
+  @override
+  String get authFieldYearHint => 'سنة';
+
+  @override
+  String get authFieldGender => 'الجنس';
+
+  @override
+  String get authGenderMale => 'ذكر';
+
+  @override
+  String get authGenderFemale => 'أنثى';
+
+  @override
+  String get authFieldPhone => 'رقم الهاتف';
+
+  @override
+  String get authFieldPhoneHint => '0XXXXXXXXX';
+
+  @override
+  String get authFieldEmail => 'البريد الإلكتروني';
+
+  @override
+  String get authFieldEmailHint => 'أدخل بريدك الإلكتروني';
+
+  @override
+  String get authFieldPassword => 'كلمة المرور';
+
+  @override
+  String get authFieldPasswordHint => 'أدخل كلمة المرور';
+
+  @override
+  String get authFieldConfirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get authFieldConfirmPasswordHint => 'أعد إدخال كلمة المرور';
+
+  @override
+  String get authFieldCategories => 'الفئات المفضلة';
+
+  @override
+  String get authFieldCategoriesHint =>
+      'اختر حتى 6 فئات. يمكنك تغييرها لاحقًا.';
+
+  @override
+  String get authCategoriesCta => 'اختر فئاتك المفضلة';
+
+  @override
+  String get authCategoriesRetry => 'أعد محاولة تحميل الفئات';
+
+  @override
+  String get authCategoriesLoadError =>
+      'تعذر تحميل الفئات الآن. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get authActionCreateAccount => 'إنشاء الحساب';
+
+  @override
+  String get authActionPrevious => 'السابق';
+
+  @override
+  String get authRegistrationFailed =>
+      'فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get authProfileSaveError =>
+      'تعذر حفظ ملفك الشخصي. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get authErrorRequired => 'هذا الحقل مطلوب';
+
+  @override
+  String get authErrorNameRequired => 'أدخل اسمك الكامل';
+
+  @override
+  String get authErrorBirthdayRequired => 'أدخل تاريخ ميلادك';
+
+  @override
+  String get authErrorBirthdayInvalid => 'أدخل تاريخًا صحيحًا';
+
+  @override
+  String get authErrorMustBe13 => 'يجب أن يكون عمرك 13 سنة على الأقل';
+
+  @override
+  String get authErrorPhoneRequired => 'أدخل رقم هاتفك';
+
+  @override
+  String get authErrorPhoneInvalid =>
+      'استخدم الصيغة 05XXXXXXXX / 06XXXXXXXX / 07XXXXXXXX';
+
+  @override
+  String get authErrorEmailRequired => 'أدخل بريدك الإلكتروني';
+
+  @override
+  String get authErrorEmailInvalid => 'أدخل بريدًا إلكترونيًا صحيحًا';
+
+  @override
+  String get authErrorPasswordRequired => 'أدخل كلمة مرور';
+
+  @override
+  String get authErrorPasswordMin => 'استخدم 6 أحرف على الأقل';
+
+  @override
+  String get authErrorConfirmPasswordRequired => 'أكد كلمة المرور';
+
+  @override
+  String get authErrorPasswordsDoNotMatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get authErrorCategoriesRequired => 'اختر فئة واحدة على الأقل';
+
+  @override
+  String authStepProgress(int current, int total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String categoriesPickerSelectionCount(int selected, int max) {
+    return '$selected من $max محددة';
+  }
+
+  @override
+  String categoriesPickerMaxReached(int max) {
+    return 'يمكنك اختيار حتى $max فئات فقط.';
+  }
+
+  @override
+  String categoriesPickerMinRequired(int min) {
+    return 'اختر $min فئات على الأقل للمتابعة.';
+  }
+
+  @override
+  String categoriesPickerMaxHint(int max) {
+    return 'يمكنك اختيار حتى $max فئات.';
+  }
+
+  @override
+  String get categoryPickerSearchSubtitle =>
+      'اختر فئات لتضييق النتائج، أو اتركها فارغة إذا كنت تريد بحثًا أوسع.';
+
+  @override
+  String get categoryPickerProductSubtitle =>
+      'اختر الفئة الواحدة الأنسب لهذا المنتج.';
 }

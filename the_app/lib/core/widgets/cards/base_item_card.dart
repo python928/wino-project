@@ -98,6 +98,15 @@ class BaseItemCard extends StatelessWidget {
         final height = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : CardDimensions.itemCardHeight;
+        final textScale = MediaQuery.of(context)
+            .textScaler
+            .scale(1.0)
+            .clamp(1.0, 1.35)
+            .toDouble();
+        final localeCode =
+            Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ??
+                '';
+        final isArabicUi = localeCode.startsWith('ar');
         final customBottomInfo = buildCustomBottomInfo(context);
         final customFooterInfo = buildCustomFooterInfo(context);
         final showPriceRow = hidePrice || price != null;
@@ -108,19 +117,20 @@ class BaseItemCard extends StatelessWidget {
         // Some grids use a larger childAspectRatio (shorter height), which can
         // leave too little space for title/meta/price and cause RenderFlex
         // overflows inside the content Column.
-        final estimatedTitleHeight = width < 120 ? 18.0 : 34.0; // 1–2 lines
-        final estimatedMetaHeight = (rating != null ? 16.0 : 0.0) +
-            (bottomLeftText != null ? 16.0 : 0.0);
+        final estimatedTitleHeight = (width < 120 ? 16.0 : 24.0) * textScale;
+        final estimatedMetaHeight = ((rating != null ? 14.0 : 0.0) +
+                (bottomLeftText != null ? 14.0 : 0.0)) *
+            textScale;
         final estimatedMetaGap =
-            (rating != null && bottomLeftText != null) ? 6.0 : 0.0;
+            (rating != null && bottomLeftText != null) ? 4.0 : 0.0;
         final estimatedPriceHeight =
-            hidePrice ? 18.0 : (price != null ? 22.0 : 0.0);
+            (hidePrice ? 16.0 : (price != null ? 20.0 : 0.0)) * textScale;
         final estimatedCustomBottomHeight =
             customBottomInfo != null && !replaceDefaultMetaSection(context)
-                ? 22.0 + AppConstants.spacing6
+                ? 16.0 + AppConstants.spacing4
                 : 0.0;
         final estimatedFooterHeight = customFooterInfo != null
-            ? 24.0 + (showPriceRow ? AppConstants.spacing6 : 0.0)
+            ? 20.0 + (showPriceRow ? AppConstants.spacing4 : 0.0)
             : 0.0;
         final estimatedContentMinHeight = (contentPadding * 2) +
             estimatedTitleHeight +
@@ -130,7 +140,8 @@ class BaseItemCard extends StatelessWidget {
             estimatedCustomBottomHeight +
             estimatedFooterHeight +
             (estimatedPriceHeight > 0 ? AppConstants.spacing6 : 0.0) +
-            estimatedPriceHeight;
+            estimatedPriceHeight +
+            (isArabicUi ? 10.0 : 6.0);
 
         // Keep the image square when there's enough height; otherwise shrink
         // it to guarantee content fits.
@@ -164,19 +175,19 @@ class BaseItemCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           buildCustomContent(context) ?? _buildTitle(),
-                          const SizedBox(height: AppConstants.spacing8),
+                          const SizedBox(height: AppConstants.spacing6),
                           if (replaceDefaultMetaSection(context))
                             (customBottomInfo ?? const SizedBox.shrink())
                           else ...[
                             _buildMetaSection(),
                             if (customBottomInfo != null)
-                              const SizedBox(height: AppConstants.spacing6),
+                              const SizedBox(height: AppConstants.spacing4),
                             if (customBottomInfo != null) customBottomInfo,
                           ],
                           const Spacer(),
                           if (customFooterInfo != null) customFooterInfo,
                           if (customFooterInfo != null && showPriceRow)
-                            const SizedBox(height: AppConstants.spacing6),
+                            const SizedBox(height: AppConstants.spacing4),
                           if (hidePrice)
                             _buildCallForPrice()
                           else if (price != null)
@@ -306,6 +317,15 @@ class BaseItemCard extends StatelessWidget {
   BoxDecoration _buildBadgeDecoration() {
     final badgeText = (customBadge ?? '').trim().toLowerCase();
     final isPackBadge = badgeText.startsWith('pack');
+    final hasDiscountPack = isPackBadge && discountPercentage != null;
+
+    if (hasDiscountPack) {
+      return BoxDecoration(
+        gradient: AppColors.purpleGradient,
+        borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+        boxShadow: AppColors.purpleShadow,
+      );
+    }
 
     if (isPackBadge) {
       return BoxDecoration(
@@ -424,12 +444,12 @@ class BaseItemCard extends StatelessWidget {
       children: [
         if (rating != null) _buildRatingRow(),
         if (rating != null && bottomLeftText != null)
-          const SizedBox(height: AppConstants.spacing6),
+          const SizedBox(height: AppConstants.spacing4),
         if (bottomLeftText != null)
           GestureDetector(
             onTap: onBottomLeftTap,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               children: [
                 if (bottomLeftIcon != null) ...[
                   Icon(bottomLeftIcon,
@@ -449,7 +469,7 @@ class BaseItemCard extends StatelessWidget {
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: AppConstants.fontSizeBody,
+                      fontSize: AppConstants.fontSizeCaption,
                     ),
                   ),
                 ),
@@ -465,7 +485,10 @@ class BaseItemCard extends StatelessWidget {
     final fullStars = value.floor();
     final hasHalfStar = (value - fullStars) >= 0.5;
 
-    return Row(
+    return Wrap(
+      spacing: AppConstants.spacing6,
+      runSpacing: AppConstants.spacing4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (int i = 0; i < 5; i++)
           Icon(
@@ -474,25 +497,23 @@ class BaseItemCard extends StatelessWidget {
                 : (i == fullStars && hasHalfStar)
                     ? Icons.star_half
                     : Icons.star_border,
-            size: AppConstants.fontSizeSubtitle,
+            size: AppConstants.fontSizeBody,
             color: Colors.amber,
           ),
-        const SizedBox(width: AppConstants.spacing8),
         Text(
           value.toStringAsFixed(1),
           style: const TextStyle(
             color: AppColors.textPrimary,
-            fontSize: AppConstants.fontSizeBody,
+            fontSize: AppConstants.fontSizeCaption,
             fontWeight: FontWeight.w600,
           ),
         ),
         if (reviewCount != null) ...[
-          const SizedBox(width: AppConstants.spacing6),
           Text(
             '(${reviewCount!})',
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: AppConstants.fontSizeBody,
+              fontSize: AppConstants.fontSizeCaption,
               fontWeight: FontWeight.w500,
             ),
           ),

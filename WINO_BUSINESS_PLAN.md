@@ -1,6 +1,16 @@
 # Wino Business Plan (BP)
 
-Last updated: 2026-03-23
+Last updated: 2026-04-01
+
+## 0) Current stage note
+Canonical status reference:
+- `TRANSFORMATION_COMPLETE_SUMMARY.md`
+
+This plan should assume the following:
+- Wino is a broad implemented platform,
+- the UI and product surface improved materially,
+- the next honest milestone is a measured pilot plus release hardening,
+- not a premature claim of full production readiness.
 
 ## 1) Executive Summary
 Wino is an Algeria-focused, Android-first local commerce platform built around four linked ideas:
@@ -30,6 +40,7 @@ Wino combines in one product:
 - store and merchant profile presence,
 - product, pack, and promotion publishing,
 - nearby and search-driven discovery,
+- external map directions from store-linked detail pages to real-world merchant locations,
 - trust signals through reviews, reports, and moderation,
 - share, QR, and deep-link distribution,
 - merchant monetization building blocks through ads, subscriptions, and wallet flows.

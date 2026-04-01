@@ -13,6 +13,7 @@ from analytics.models import UserInterestProfile
 from analytics.recommendations import get_recommended_products
 from subscriptions.services import enforce_promotion_constraints
 from users.models import Follower
+from wallet import services as wallet_services
 
 from .models import AdCampaign, AdCampaignViewer
 from .serializers import AdCampaignSerializer
@@ -30,6 +31,7 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 	serializer_class = AdCampaignSerializer
 	filter_backends = [filters.OrderingFilter]
 	ordering_fields = ['created_at', 'percentage']
+	HOME_TOP_RANDOM_POOL_SIZE = 5
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve']:
@@ -145,6 +147,17 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 			return []
 		return get_recommended_products(request.user, limit=40)
 
+	def _query_flag(self, request, key):
+		raw = str(request.query_params.get(key) or '').strip().lower()
+		return raw in {'1', 'true', 'yes', 'on'}
+
+	def _normalize_string_set(self, values):
+		return {
+			str(value).strip()
+			for value in (values or [])
+			if str(value).strip()
+		}
+
 	def _passes_audience(self, request, campaign, user_lat, user_lng, user_wilaya):
 		mode = (campaign.audience_mode or '').lower()
 		if mode in ('', 'all'):
@@ -182,7 +195,9 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 		if campaign.target_categories:
 			if not user_categories:
 				return False
-			if not set(user_categories).intersection(set(campaign.target_categories)):
+			user_category_tokens = self._normalize_string_set(user_categories)
+			target_category_tokens = self._normalize_string_set(campaign.target_categories)
+			if not user_category_tokens.intersection(target_category_tokens):
 				return False
 
 		geo_mode = (campaign.geo_mode or '').lower()
@@ -222,7 +237,9 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 			if user_categories and campaign.product.category_id in user_categories:
 				score += 20.0
 		if campaign.target_categories:
-			matches = len(set(user_categories).intersection(set(campaign.target_categories)))
+			user_category_tokens = self._normalize_string_set(user_categories)
+			target_category_tokens = self._normalize_string_set(campaign.target_categories)
+			matches = len(user_category_tokens.intersection(target_category_tokens))
 			score += min(matches * 8.0, 24.0)
 		else:
 			score += 6.0
@@ -236,6 +253,23 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 				pass
 		score += random.uniform(0, 6)
 		return score
+
+	def _should_return_single_random_campaign(self, request):
+		if not self._query_flag(request, 'single_random'):
+			return False
+		if request.query_params.get('store') or request.query_params.get('product') or request.query_params.get('pack'):
+			return False
+		placement = str(request.query_params.get('placement') or '').strip().lower()
+		return placement == AdCampaign.PLACEMENT_HOME_TOP
+
+	def _pick_single_random_campaign(self, scored_campaigns):
+		if not scored_campaigns:
+			return []
+		pool_size = min(len(scored_campaigns), self.HOME_TOP_RANDOM_POOL_SIZE)
+		pool = scored_campaigns[:pool_size]
+		population = [campaign for _, campaign in pool]
+		weights = [max(float(score), 0.01) for score, _campaign in pool]
+		return random.choices(population, weights=weights, k=1)
 
 	def _resolve_viewer_key(self, request):
 		if getattr(request.user, 'is_authenticated', False):
@@ -255,35 +289,34 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 		if not campaign_ids:
 			return
 		viewer_key = self._resolve_viewer_key(request)
-		campaigns = AdCampaign.objects.filter(id__in=campaign_ids).only('id', 'store_id')
-		countable_ids = []
+		campaigns = AdCampaign.objects.select_related('store').filter(id__in=campaign_ids)
 		for campaign in campaigns:
 			if getattr(request.user, 'is_authenticated', False) and request.user.id == campaign.store_id:
 				continue
-			countable_ids.append(campaign.id)
 			hit, created = AdCampaignViewer.objects.get_or_create(
 				campaign_id=campaign.id,
 				viewer_key=viewer_key,
 			)
 			if not created:
 				hit.save(update_fields=['last_seen_at'])
-				continue
-			AdCampaign.objects.filter(id=campaign.id).update(
-				unique_viewers_count=F('unique_viewers_count') + 1,
+
+			# Billing rule: every delivered impression consumes 1 ad-view coin.
+			# unique_viewers_count is incremented only on first viewer hit.
+			wallet_services.consume_ad_view_coin(
+				campaign.store,
+				campaign=campaign,
+				is_unique_viewer=created,
+				viewer_key=viewer_key,
 			)
-		if not countable_ids:
-			return
-		AdCampaign.objects.filter(id__in=countable_ids).update(
-			impressions_count=F('impressions_count') + 1
-		)
-		AdCampaign.objects.filter(
-			id__in=countable_ids,
-			max_impressions__isnull=False,
-			impressions_count__gte=F('max_impressions'),
-		).update(is_active=False)
 
 	def list(self, request, *args, **kwargs):
 		qs = list(self.get_queryset())
+		placement = str(request.query_params.get('placement') or '').strip().lower()
+		has_explicit_target_filter = bool(
+			request.query_params.get('store')
+			or request.query_params.get('product')
+			or request.query_params.get('pack')
+		)
 		user_categories = self._resolve_user_categories(request)
 		user_age = self._resolve_user_age(request)
 		user_lat, user_lng = self._resolve_user_location(request)
@@ -322,12 +355,26 @@ class AdCampaignViewSet(viewsets.ModelViewSet):
 			)
 			scored.append((score, campaign))
 
-		if not scored:
-			scored = [(random.uniform(0, 1), c) for c in qs]
-
-		random.shuffle(scored)
-		scored.sort(key=lambda x: x[0], reverse=True)
-		ordered = [c for _, c in scored]
+		if scored:
+			random.shuffle(scored)
+			scored.sort(key=lambda x: x[0], reverse=True)
+			if self._should_return_single_random_campaign(request):
+				ordered = self._pick_single_random_campaign(scored)
+			else:
+				ordered = [c for _, c in scored]
+		else:
+			# Home fallback: if strict personalization yields nothing,
+			# still surface general campaigns so the public homepage is not empty.
+			if placement == AdCampaign.PLACEMENT_HOME_TOP and not has_explicit_target_filter:
+				fallback_general = [
+					campaign
+					for campaign in qs
+					if (campaign.audience_mode or AdCampaign.AUDIENCE_ALL) == AdCampaign.AUDIENCE_ALL
+					and (campaign.geo_mode or AdCampaign.GEO_MODE_ALL) == AdCampaign.GEO_MODE_ALL
+				]
+				ordered = fallback_general if fallback_general else qs
+			else:
+				ordered = []
 
 		page = self.paginate_queryset(ordered)
 		if page is not None:

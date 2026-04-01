@@ -39,6 +39,14 @@ class HomeProvider with ChangeNotifier {
   bool _isLoadingPacks = false;
   String? _packsError;
 
+  // Shared discovery location filter (used across Home/Search screens)
+  String _discoveryLocationLabel = '';
+  String? _discoveryWilaya;
+  String? _discoveryBaladiya;
+  double? _discoveryRadiusKm;
+  double? _discoveryUserLat;
+  double? _discoveryUserLng;
+
   // Getters
   List<Category> get categories => _categories;
   bool get isLoadingCategories => _isLoadingCategories;
@@ -61,12 +69,49 @@ class HomeProvider with ChangeNotifier {
   bool get isLoadingPacks => _isLoadingPacks;
   String? get packsError => _packsError;
 
+  String get discoveryLocationLabel => _discoveryLocationLabel;
+  String? get discoveryWilaya => _discoveryWilaya;
+  String? get discoveryBaladiya => _discoveryBaladiya;
+  double? get discoveryRadiusKm => _discoveryRadiusKm;
+  double? get discoveryUserLat => _discoveryUserLat;
+  double? get discoveryUserLng => _discoveryUserLng;
+
   bool get isLoading =>
       _isLoadingCategories ||
       _isLoadingStores ||
       _isLoadingProducts ||
       _isLoadingHotDeals ||
       _isLoadingPacks;
+
+  void setDiscoveryLocationFilter({
+    required String locationLabel,
+    String? wilaya,
+    String? baladiya,
+    double? radiusKm,
+    double? userLat,
+    double? userLng,
+    bool notify = true,
+  }) {
+    final changed = _discoveryLocationLabel != locationLabel ||
+        _discoveryWilaya != wilaya ||
+        _discoveryBaladiya != baladiya ||
+        _discoveryRadiusKm != radiusKm ||
+        _discoveryUserLat != userLat ||
+        _discoveryUserLng != userLng;
+
+    if (!changed) return;
+
+    _discoveryLocationLabel = locationLabel;
+    _discoveryWilaya = wilaya;
+    _discoveryBaladiya = baladiya;
+    _discoveryRadiusKm = radiusKm;
+    _discoveryUserLat = userLat;
+    _discoveryUserLng = userLng;
+
+    if (notify) {
+      notifyListeners();
+    }
+  }
 
   Future<void> _runSectionLoad({
     required void Function(bool) setLoading,
@@ -292,8 +337,40 @@ class HomeProvider with ChangeNotifier {
     if (notify) notifyListeners();
   }
 
+  Future<List<Map<String, dynamic>>> _fetchPaginatedResults(
+    String endpoint, {
+    bool fetchAllPages = false,
+  }) async {
+    final results = <Map<String, dynamic>>[];
+    final visitedUrls = <String>{};
+    String? nextUrl = endpoint;
+
+    while (nextUrl != null && nextUrl.isNotEmpty && visitedUrls.add(nextUrl)) {
+      final data = await ApiService.get(nextUrl);
+
+      if (data is Map<String, dynamic> && data['results'] is List) {
+        results.addAll(
+          (data['results'] as List).whereType<Map<String, dynamic>>(),
+        );
+        if (!fetchAllPages) break;
+
+        final next = data['next']?.toString();
+        if (next == null || next.isEmpty) break;
+        nextUrl = next;
+        continue;
+      }
+
+      if (data is List) {
+        results.addAll(data.whereType<Map<String, dynamic>>());
+      }
+      break;
+    }
+
+    return results;
+  }
+
   /// Load featured packs
-  Future<void> loadFeaturedPacks() async {
+  Future<void> loadFeaturedPacks({int? limit = 10}) async {
     await _runSectionLoad(
       setLoading: (v) => _isLoadingPacks = v,
       setError: (v) => _packsError = v,
@@ -314,24 +391,16 @@ class HomeProvider with ChangeNotifier {
           // continue without enrichment
         }
 
-        final data = await ApiService.get(
-            '/api/catalog/packs/?available_status=available');
+        final packResults = await _fetchPaginatedResults(
+          '/api/catalog/packs/?available_status=available',
+          fetchAllPages: limit == null,
+        );
 
-        if (data is Map<String, dynamic> && data['results'] != null) {
-          _featuredPacks = (data['results'] as List)
-              .map((json) => Pack.fromJson(json as Map<String, dynamic>,
-                  storesById: storesById))
-              .take(10)
-              .toList();
-        } else if (data is List) {
-          _featuredPacks = data
-              .map((json) => Pack.fromJson(json as Map<String, dynamic>,
-                  storesById: storesById))
-              .take(10)
-              .toList();
-        } else {
-          _featuredPacks = [];
-        }
+        final parsedPacks = packResults
+            .map((json) => Pack.fromJson(json, storesById: storesById))
+            .toList();
+        _featuredPacks =
+            limit == null ? parsedPacks : parsedPacks.take(limit).toList();
       },
       errorMessage: (e) {
         _featuredPacks = [];

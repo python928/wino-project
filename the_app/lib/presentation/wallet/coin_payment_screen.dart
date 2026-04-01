@@ -56,7 +56,8 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
       });
     } catch (_) {
       if (mounted) {
-        Helpers.showSnackBar(context, 'Could not select images', isError: true);
+        Helpers.showSnackBar(context, context.tr('Could not select images'),
+            isError: true);
       }
     }
   }
@@ -91,7 +92,7 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
   Future<void> _submit() async {
     if (_proofImages.isEmpty) {
       Helpers.showSnackBar(
-          context, 'Please upload at least one payment proof.');
+          context, context.tr('Please upload at least one payment proof.'));
       return;
     }
     setState(() => _submitting = true);
@@ -110,7 +111,8 @@ class _CoinPaymentScreenState extends State<CoinPaymentScreen> {
         builder: (ctx) => AlertDialog(
           title: Text(context.tr('Request submitted')),
           content: Text(
-            'Payment request #$requestId is pending server approval.\nCoins are added after approval.',
+            '${context.tr('Payment request')} #$requestId ${context.tr('is pending server approval.')}\n'
+            '${context.tr('Coins are added after approval.')}',
           ),
           actions: [
             TextButton(
