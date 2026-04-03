@@ -27,7 +27,9 @@ class PackCard extends BaseItemCard {
   }) : super(
           title: pack.name,
           imageUrl: _pickImage(pack),
-          customImageWidget: StackedProductImages(products: pack.products),
+          customImageWidget: pack.products.isNotEmpty
+              ? StackedProductImages(products: pack.products)
+              : null,
           price: pack.discountPrice,
           oldPrice:
               pack.totalPrice > pack.discountPrice ? pack.totalPrice : null,

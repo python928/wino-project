@@ -292,12 +292,7 @@ class _PhoneProfileSetupScreenState extends State<PhoneProfileSetupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: AppConstants.spacing8),
-            AuthSectionIntro(
-              title: l10n.authProfileSetupHeaderTitle,
-              subtitle: l10n.authProfileSetupBodySubtitle,
-            ),
-            const SizedBox(height: AppConstants.spacing24),
+            const SizedBox(height: AppConstants.spacing12),
             AppTextField(
               controller: _nameController,
               label: l10n.authFieldFullName,

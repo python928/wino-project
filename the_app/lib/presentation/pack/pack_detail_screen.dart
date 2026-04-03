@@ -334,6 +334,18 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final totalPrice = widget.pack.totalPrice.isFinite
+        ? widget.pack.totalPrice
+        : 0.0;
+    final discountPrice = widget.pack.discountPrice.isFinite
+        ? widget.pack.discountPrice
+        : 0.0;
+    final savings = (totalPrice - discountPrice).isFinite
+        ? (totalPrice - discountPrice)
+        : 0.0;
+    final savingsPercent =
+        totalPrice > 0 && savings > 0 ? ((savings / totalPrice) * 100).round() : 0;
+
     return Directionality(
       textDirection: Directionality.of(context),
       child: Scaffold(
@@ -524,7 +536,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                             Text(context.tr('Regular Total:'),
                                 style: TextStyle(fontSize: 14)),
                             Text(
-                              Helpers.formatPrice(widget.pack.totalPrice),
+                              Helpers.formatPrice(totalPrice),
                               style: TextStyle(
                                 fontSize: 14,
                                 decoration: TextDecoration.lineThrough,
@@ -545,7 +557,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                               ),
                             ),
                             Text(
-                              Helpers.formatPrice(widget.pack.discountPrice),
+                              Helpers.formatPrice(discountPrice),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -567,7 +579,7 @@ class _PackDetailScreenState extends State<PackDetailScreen> {
                               ),
                             ),
                             Text(
-                              '${Helpers.formatPrice(widget.pack.totalPrice - widget.pack.discountPrice)} (${(((widget.pack.totalPrice - widget.pack.discountPrice) / widget.pack.totalPrice) * 100).round()}%)',
+                              '${Helpers.formatPrice(savings)} ($savingsPercent%)',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.green.shade700,

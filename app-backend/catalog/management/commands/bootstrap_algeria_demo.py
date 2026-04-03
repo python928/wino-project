@@ -157,7 +157,7 @@ CATEGORY_BLUEPRINTS = [
 STORE_BLUEPRINTS = [
     {
         "username": "dar.ouani.hydra",
-        "name": "Dar Ouani Hydra",
+        "name": "دار أواني حيدرة",
         "email": "dar.ouani@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0550123041",
@@ -170,7 +170,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.739700"),
         "longitude": Decimal("3.040000"),
         "store_type": "physical",
-        "store_description": "Cookware, serving trays, tea sets, and practical kitchen pieces common in Algerian homes.",
+        "store_description": "متجر مختص في أواني المطبخ، صواني التقديم، أطقم الشاي، ولوازم الطبخ اليومية.",
         "instagram": "dar.ouani.hydra",
         "facebook": "darouanihydra",
         "whatsapp": "0550123041",
@@ -187,7 +187,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "atlas.meuble.setif",
-        "name": "Atlas Meuble Setif",
+        "name": "أطلس للأثاث سطيف",
         "email": "atlas.meuble@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0661382054",
@@ -200,7 +200,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.191100"),
         "longitude": Decimal("5.413700"),
         "store_type": "physical",
-        "store_description": "Chairs, tables, cupboards, and living-room furniture for apartments and family homes.",
+        "store_description": "أثاث منزلي يشمل الكراسي والطاولات والخزائن وتجهيزات غرف الجلوس.",
         "instagram": "atlas.meuble.setif",
         "facebook": "atlasmeublesetif",
         "whatsapp": "0661382054",
@@ -217,7 +217,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "soug.elmawashi.khroub",
-        "name": "Soug El Mawashi El Khroub",
+        "name": "سوق المواشي الخروب",
         "email": "soug.mawashi@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0770439182",
@@ -230,7 +230,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.264100"),
         "longitude": Decimal("6.693700"),
         "store_type": "physical",
-        "store_description": "Local sheep, lambs, and seasonal livestock listings for families and butchers.",
+        "store_description": "بيع الخرفان والأغنام والمواشي الموسمية للعائلات والقصابين.",
         "instagram": "soug.elmawashi.khroub",
         "facebook": "sougelmawashikhroub",
         "whatsapp": "0770439182",
@@ -246,7 +246,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "boucherie.elbahia.oran",
-        "name": "Boucherie El Bahia Oran",
+        "name": "ملحمة الباهية وهران",
         "email": "boucherie.elbahia@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0557334206",
@@ -259,7 +259,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("35.697100"),
         "longitude": Decimal("-0.630800"),
         "store_type": "physical",
-        "store_description": "Fresh lamb, beef cuts, minced meat, and butcher-prepared trays for family meals.",
+        "store_description": "لحوم طازجة تشمل لحم الغنم وقطع البقر واللحم المفروم وصواني جاهزة.",
         "instagram": "boucherie.elbahia.oran",
         "facebook": "boucherieelbahiaoran",
         "whatsapp": "0557334206",
@@ -275,7 +275,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "sarah.mode.annaba",
-        "name": "Sarah Mode Annaba",
+        "name": "سارة مود عنابة",
         "email": "sarah.mode@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0664221490",
@@ -288,7 +288,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.900000"),
         "longitude": Decimal("7.766700"),
         "store_type": "online",
-        "store_description": "Women's and men's clothing, jilbabs, dresses, tracksuits, and family fashion basics.",
+        "store_description": "ملابس نسائية ورجالية تشمل الجلابيب والفساتين والبدلات الرياضية والقطع اليومية.",
         "instagram": "sarah.mode.annaba",
         "facebook": "sarahmodeannaba",
         "whatsapp": "0664221490",
@@ -305,7 +305,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "aya.accessoires.blida",
-        "name": "Aya Accessoires Blida",
+        "name": "آية للإكسسوارات البليدة",
         "email": "aya.accessoires@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0771275088",
@@ -318,7 +318,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.470000"),
         "longitude": Decimal("2.828900"),
         "store_type": "physical",
-        "store_description": "Handbags, wallets, watches, scarves, and small gift accessories with daily demand.",
+        "store_description": "حقائب ومحافظ وساعات وأوشحة وإكسسوارات هدايا مطلوبة يوميًا.",
         "instagram": "aya.accessoires.blida",
         "facebook": "ayaaccessoiresblida",
         "whatsapp": "0771275088",
@@ -335,7 +335,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "fares.auto.sba",
-        "name": "Fares Auto Sidi Bel Abbes",
+        "name": "فارس أوتو سيدي بلعباس",
         "email": "fares.auto@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0554018897",
@@ -348,7 +348,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("35.189600"),
         "longitude": Decimal("-0.631000"),
         "store_type": "physical",
-        "store_description": "Used city cars, family vehicles, and a few practical car accessories for quick resale.",
+        "store_description": "سيارات مستعملة للمدينة والعائلة مع بعض لوازم وإكسسوارات السيارات.",
         "instagram": "fares.auto.sba",
         "facebook": "faresautosba",
         "whatsapp": "0554018897",
@@ -364,7 +364,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "maktabati.tlemcen",
-        "name": "Maktabati Tlemcen",
+        "name": "مكتبتي تلمسان",
         "email": "maktabati.tlemcen@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0668021733",
@@ -377,7 +377,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("34.878300"),
         "longitude": Decimal("-1.315000"),
         "store_type": "online",
-        "store_description": "Notebooks, pens, school bags, geometry tools, and classroom basics for students.",
+        "store_description": "لوازم مدرسية تشمل الدفاتر والأقلام والحقائب وأدوات الهندسة ومستلزمات الدراسة.",
         "instagram": "maktabati.tlemcen",
         "facebook": "maktabatitlemcen",
         "whatsapp": "0668021733",
@@ -394,7 +394,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "yacine.mobile.babez",
-        "name": "Yacine Mobile Bab Ezzouar",
+        "name": "ياسين موبايل باب الزوار",
         "email": "yacine.mobile@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0777801559",
@@ -407,7 +407,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.721900"),
         "longitude": Decimal("3.183800"),
         "store_type": "physical",
-        "store_description": "Popular smartphones, charging gear, earbuds, and everyday mobile accessories.",
+        "store_description": "هواتف ذكية وإكسسوارات الموبايل مثل الشواحن والسماعات ولوازم الاستخدام اليومي.",
         "instagram": "yacine.mobile.babez",
         "facebook": "yacinemobilebabez",
         "whatsapp": "0777801559",
@@ -424,7 +424,7 @@ STORE_BLUEPRINTS = [
     },
     {
         "username": "lina.beaute.bejaia",
-        "name": "Lina Beauty Bejaia",
+        "name": "لينا بيوتي بجاية",
         "email": "lina.beaute@demo.toprice.local",
         "password": "Demo@12345",
         "phone": "0552843775",
@@ -437,7 +437,7 @@ STORE_BLUEPRINTS = [
         "latitude": Decimal("36.752500"),
         "longitude": Decimal("5.084000"),
         "store_type": "online",
-        "store_description": "Perfume, skincare, and beauty basics with light packaging and gift-friendly options.",
+        "store_description": "عطور ومنتجات عناية بالبشرة ومستحضرات تجميل مناسبة للاستعمال اليومي والهدايا.",
         "instagram": "lina.beaute.bejaia",
         "facebook": "linabeautebejaia",
         "whatsapp": "0552843775",
@@ -781,13 +781,6 @@ class Command(BaseCommand):
             user.set_password(blueprint["password"])
 
             if not self.skip_images:
-                profile_content = self._download_profile_image(blueprint)
-                if profile_content is not None:
-                    user.profile_image.save(
-                        f"{blueprint['username'].replace('.', '_')}_profile.jpg",
-                        ContentFile(profile_content),
-                        save=False,
-                    )
                 cover_content = self._download_seeded_image(
                     cache_key=f"{blueprint['username']}-cover",
                     tags=blueprint["cover_tags"],
@@ -798,6 +791,16 @@ class Command(BaseCommand):
                     user.cover_image.save(
                         f"{blueprint['username'].replace('.', '_')}_cover.jpg",
                         ContentFile(cover_content),
+                        save=False,
+                    )
+
+                profile_content = self._download_profile_image(blueprint)
+                if profile_content is None:
+                    profile_content = cover_content
+                if profile_content is not None:
+                    user.profile_image.save(
+                        f"{blueprint['username'].replace('.', '_')}_profile.jpg",
+                        ContentFile(profile_content),
                         save=False,
                     )
 
@@ -882,7 +885,7 @@ class Command(BaseCommand):
             if not blueprint.get("supports_packs"):
                 continue
             store_products = products_by_store.get(store.id, [])
-            if len(store_products) < 3:
+            if len(store_products) < 4:
                 continue
             pack = Pack.objects.create(
                 merchant=store,
@@ -893,7 +896,9 @@ class Command(BaseCommand):
                 delivery_available=True,
                 delivery_wilayas=store.address.split(",")[-1].strip(),
             )
-            for product in store_products[:3]:
+            target_products_count = 5 if self.rng.random() < 0.35 else 4
+            selected_products = self.rng.sample(store_products, k=min(target_products_count, len(store_products)))
+            for product in selected_products:
                 PackProduct.objects.create(pack=pack, product=product, quantity=1)
             if not self.skip_images:
                 image_content = self._download_seeded_image(
@@ -1348,11 +1353,24 @@ class Command(BaseCommand):
         return pool
 
     def _download_profile_image(self, blueprint):
-        gender_folder = "women" if blueprint["gender"] == "female" else "men"
-        urls = [
-            f"https://randomuser.me/api/portraits/{gender_folder}/{blueprint['profile_index']}.jpg",
-            f"https://picsum.photos/seed/{urllib.parse.quote(blueprint['username'])}/600/600",
-        ]
+        tags = []
+        for query in blueprint.get("product_image_queries") or []:
+            if isinstance(query, (list, tuple)):
+                tags.extend(str(tag).strip() for tag in query if str(tag).strip())
+            else:
+                value = str(query).strip()
+                if value:
+                    tags.append(value)
+
+        if not tags:
+            tags.extend(str(tag).strip() for tag in (blueprint.get("cover_tags") or []) if str(tag).strip())
+
+        tag_string = ",".join(dict.fromkeys(tags))
+        if not tag_string:
+            return None
+
+        seed = f"profile-{blueprint['username']}-{tag_string.replace(',', '-')}"
+        urls = [f"https://loremflickr.com/700/700/{tag_string}?lock={urllib.parse.quote(seed)}"]
         return self._download_from_sources(urls, cache_key=f"profile-{blueprint['username']}")
 
     def _download_seeded_image(self, cache_key, tags, width, height):

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../components/skeleton_loader.dart';
+import '../../extensions/l10n_extension.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_constants.dart';
 import '../../theme/app_decorations.dart';
@@ -179,7 +180,7 @@ class BaseItemCard extends StatelessWidget {
                           if (replaceDefaultMetaSection(context))
                             (customBottomInfo ?? const SizedBox.shrink())
                           else ...[
-                            _buildMetaSection(),
+                            _buildMetaSection(context),
                             if (customBottomInfo != null)
                               const SizedBox(height: AppConstants.spacing4),
                             if (customBottomInfo != null) customBottomInfo,
@@ -437,15 +438,18 @@ class BaseItemCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetaSection() {
+  Widget _buildMetaSection(BuildContext context) {
+    final localizedBottomLeft =
+        bottomLeftText == null ? null : context.tr(bottomLeftText!);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (rating != null) _buildRatingRow(),
-        if (rating != null && bottomLeftText != null)
+        if (rating != null && localizedBottomLeft != null)
           const SizedBox(height: AppConstants.spacing4),
-        if (bottomLeftText != null)
+        if (localizedBottomLeft != null)
           GestureDetector(
             onTap: onBottomLeftTap,
             child: Row(
@@ -459,10 +463,10 @@ class BaseItemCard extends StatelessWidget {
                 ],
                 Flexible(
                   child: Text(
-                    bottomLeftText!,
+                    localizedBottomLeft,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textDirection: _isLikelyArabic(bottomLeftText!)
+                    textDirection: _isLikelyArabic(localizedBottomLeft)
                         ? TextDirection.rtl
                         : TextDirection.ltr,
                     textAlign: TextAlign.start,

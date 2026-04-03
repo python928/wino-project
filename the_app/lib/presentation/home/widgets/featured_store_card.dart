@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/extensions/l10n_extension.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/card_styles.dart';
 import '../../../core/utils/helpers.dart';
@@ -29,7 +30,8 @@ class FeaturedStoreCard extends StatelessWidget {
           children: [
             // Cover Image
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
               child: SizedBox(
                 height: 55,
                 child: store.coverImage != null && store.coverImage!.isNotEmpty
@@ -39,7 +41,8 @@ class FeaturedStoreCard extends StatelessWidget {
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
                           return Container(
-                            color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                            color:
+                                AppColors.primaryPurple.withValues(alpha: 0.1),
                             alignment: Alignment.center,
                             child: const SizedBox(
                               width: 16,
@@ -79,7 +82,8 @@ class FeaturedStoreCard extends StatelessWidget {
                           ],
                         ),
                         child: ClipOval(
-                          child: store.profileImage != null && store.profileImage!.isNotEmpty
+                          child: store.profileImage != null &&
+                                  store.profileImage!.isNotEmpty
                               ? Image.network(
                                   store.profileImage!,
                                   fit: BoxFit.cover,
@@ -164,7 +168,8 @@ class FeaturedStoreCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       // Followers
-                      Icon(Icons.people_outline, size: 11, color: AppColors.textSecondary),
+                      Icon(Icons.people_outline,
+                          size: 11, color: AppColors.textSecondary),
                       const SizedBox(width: 2),
                       Text(
                         Helpers.formatLargeNumber(store.followersCount),
@@ -301,7 +306,8 @@ class StoreListCard extends StatelessWidget {
                       const SizedBox(width: 10),
 
                       // Followers
-                      Icon(Icons.people_outline, size: 14, color: AppColors.textSecondary),
+                      Icon(Icons.people_outline,
+                          size: 14, color: AppColors.textSecondary),
                       Text(
                         ' ${Helpers.formatLargeNumber(store.followersCount)} ',
                         style: TextStyle(
@@ -313,9 +319,10 @@ class StoreListCard extends StatelessWidget {
                       // Location if available
                       if (store.city != null) ...[
                         const SizedBox(width: 10),
-                        Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                        Icon(Icons.location_on_outlined,
+                            size: 14, color: AppColors.textSecondary),
                         Text(
-                          ' ${store.city} ',
+                          ' ${context.tr(store.city!)} ',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -338,7 +345,8 @@ class StoreListCard extends StatelessWidget {
                   child: SizedBox(
                     width: 60,
                     height: 60,
-                    child: store.profileImage != null && store.profileImage!.isNotEmpty
+                    child: store.profileImage != null &&
+                            store.profileImage!.isNotEmpty
                         ? Image.network(
                             store.profileImage!,
                             fit: BoxFit.cover,
@@ -350,7 +358,8 @@ class StoreListCard extends StatelessWidget {
                                 child: const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               );
                             },
@@ -358,14 +367,17 @@ class StoreListCard extends StatelessWidget {
                               return Container(
                                 color: Colors.grey[200],
                                 alignment: Alignment.center,
-                                child: const Icon(Icons.store, size: 26, color: Colors.grey),
+                                child: const Icon(Icons.store,
+                                    size: 26, color: Colors.grey),
                               );
                             },
                           )
                         : Container(
-                            color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                            color:
+                                AppColors.primaryPurple.withValues(alpha: 0.1),
                             alignment: Alignment.center,
-                            child: Icon(Icons.store, size: 26, color: AppColors.primaryPurple),
+                            child: Icon(Icons.store,
+                                size: 26, color: AppColors.primaryPurple),
                           ),
                   ),
                 ),

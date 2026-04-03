@@ -4,7 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/pack_model.dart';
 
 /// Widget to display stacked product images for pack items
-/// Shows up to 3 product images in an overlapping card layout
+/// Shows up to 4 product images in a mosaic layout
 class StackedProductImages extends StatelessWidget {
   final List<dynamic> products;
 
@@ -40,6 +40,7 @@ class StackedProductImages extends StatelessWidget {
   }
 
   Widget _buildMosaicPackImages(BuildContext context) {
+    final hiddenProductsCount = (products.length - 4).clamp(0, products.length);
     final tile0 = products.isNotEmpty ? products[0] : null;
     final tile1 = products.length > 1 ? products[1] : null;
     final tile2 = products.length > 2 ? products[2] : null;
@@ -69,9 +70,9 @@ class StackedProductImages extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       _buildTile(tile3),
-                      if (products.length > 1)
+                      if (hiddenProductsCount > 0)
                         Center(
-                          child: _buildCountPill(context, products.length),
+                          child: _buildCountPill(context, hiddenProductsCount),
                         ),
                     ],
                   ),
@@ -94,16 +95,18 @@ class StackedProductImages extends StatelessWidget {
     return _buildProductImage(product, fit: BoxFit.cover);
   }
 
-  Widget _buildCountPill(BuildContext context, int totalProducts) {
+  Widget _buildCountPill(BuildContext context, int hiddenProductsCount) {
     final isArabic =
         Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ==
             'ar';
-    final fullLabel = isArabic ? '$totalProducts منتج' : '$totalProducts items';
+    final fullLabel = isArabic
+        ? '+$hiddenProductsCount إضافية'
+        : '+$hiddenProductsCount more';
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 92;
-        final label = isNarrow ? '$totalProducts' : fullLabel;
+        final label = isNarrow ? '+$hiddenProductsCount' : fullLabel;
 
         return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: constraints.maxWidth),

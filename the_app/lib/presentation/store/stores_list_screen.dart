@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
+
+import '../../core/routing/routes.dart';
+import '../../core/services/follow_change_notifier.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
-import '../../core/routing/routes.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/store_repository.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/error_state_widget.dart';
 import '../shared_widgets/shimmer_loading.dart';
 import '../shared_widgets/unified_app_bar.dart';
-import '../../core/services/follow_change_notifier.dart';
 
 /// Stores list screen for bottom navigation
 /// Shows all available stores with search and filter
@@ -202,7 +203,7 @@ class _StoresListScreenState extends State<StoresListScreen> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              store.address,
+                              context.tr(store.address),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,

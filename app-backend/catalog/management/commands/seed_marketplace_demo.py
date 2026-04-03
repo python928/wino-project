@@ -356,7 +356,7 @@ class Command(BaseCommand):
 				)
 				promotions_count += 1
 
-			if len(store_products) >= 2:
+			if len(store_products) >= 4:
 				pack = Pack.objects.create(
 					merchant=store,
 					name=f"Bundle Pack {store.id}",
@@ -366,7 +366,8 @@ class Command(BaseCommand):
 					delivery_available=True,
 					delivery_wilayas=rng.choice(WILAYA_SAMPLES),
 				)
-				chosen = rng.sample(store_products, k=min(3, len(store_products)))
+				target_products_count = 5 if rng.random() < 0.35 else 4
+				chosen = rng.sample(store_products, k=min(target_products_count, len(store_products)))
 				for prod in chosen:
 					PackProduct.objects.create(pack=pack, product=prod, quantity=rng.randint(1, 3))
 

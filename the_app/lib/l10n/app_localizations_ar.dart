@@ -387,10 +387,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authFieldLastNameHint => 'أدخل لقبك';
 
   @override
-  String get authFieldFullName => 'الاسم الكامل';
+  String get authFieldFullName => 'الاسم الكامل او اسم المحل';
 
   @override
-  String get authFieldFullNameHint => 'أدخل اسمك الكامل';
+  String get authFieldFullNameHint => 'أدخل الاسم الكامل او اسم المحل';
 
   @override
   String get authFieldBirthday => 'تاريخ الميلاد';

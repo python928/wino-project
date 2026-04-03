@@ -16,19 +16,18 @@ class RuntimeTranslations {
 
     final languageCode = Localizations.localeOf(context).languageCode;
     if (languageCode == 'fr') {
-      return _fr[text] ?? text;
+      return _translateWithLocationSupport(
+        text: text,
+        dictionary: _fr,
+        languageCode: languageCode,
+      );
     }
     if (languageCode == 'ar') {
-      final mapped = _ar[text];
-      if (mapped != null) return mapped;
-
-      // Fallback: auto-arabize Algerian wilaya/baladiya names so every
-      // commune in the constants file is display-translated without
-      // requiring a huge manual dictionary.
-      if (_algeriaLocationNames.contains(text)) {
-        return _arabizeAlgeriaName(text);
-      }
-      return text;
+      return _translateWithLocationSupport(
+        text: text,
+        dictionary: _ar,
+        languageCode: languageCode,
+      );
     }
     return text;
   }
@@ -37,6 +36,203 @@ class RuntimeTranslations {
     ...algeriaWilayasBaladiat.keys,
     ...algeriaWilayasBaladiat.values.expand((v) => v),
   };
+
+  static final Map<String, String> _canonicalLocationByNormalized = () {
+    final map = <String, String>{};
+
+    void add(String name) {
+      final normalized = _normalizeLocationLookup(name);
+      if (normalized.isEmpty) return;
+      map.putIfAbsent(normalized, () => name);
+    }
+
+    for (final wilaya in algeriaWilayasBaladiat.keys) {
+      add(wilaya);
+    }
+    for (final baladiyat in algeriaWilayasBaladiat.values) {
+      for (final baladiya in baladiyat) {
+        add(baladiya);
+      }
+    }
+
+    return map;
+  }();
+
+  static const Map<String, String> _locationAliases = {
+    // Common backend spelling.
+    'alger': 'Algiers',
+  };
+
+  static const Map<String, String> _genericArabicLocationWords = {
+    'centre': 'المركز',
+    'center': 'المركز',
+    'ville': 'مدينة',
+    'commune': 'بلدية',
+    'wilaya': 'ولاية',
+  };
+
+  static String _translateWithLocationSupport({
+    required String text,
+    required Map<String, String> dictionary,
+    required String languageCode,
+  }) {
+    final direct = dictionary[text];
+    if (direct != null) return direct;
+
+    final canonical = _canonicalizeLocationName(text);
+    if (canonical != null) {
+      return _translateCanonicalLocation(
+        canonical,
+        dictionary,
+        languageCode,
+      );
+    }
+
+    final composite = _translateCompositeLocationExpression(
+      raw: text,
+      dictionary: dictionary,
+      languageCode: languageCode,
+    );
+    if (composite != null) return composite;
+
+    final phrase = _translateSpaceSeparatedLocationExpression(
+      raw: text,
+      dictionary: dictionary,
+      languageCode: languageCode,
+    );
+    if (phrase != null) return phrase;
+
+    // Legacy fallback: exact location token still auto-arabized.
+    if (languageCode == 'ar' && _algeriaLocationNames.contains(text)) {
+      return _arabizeAlgeriaName(text);
+    }
+
+    return text;
+  }
+
+  static String _translateCanonicalLocation(
+    String canonical,
+    Map<String, String> dictionary,
+    String languageCode,
+  ) {
+    final mapped = dictionary[canonical];
+    if (mapped != null) return mapped;
+    if (languageCode == 'ar') return _arabizeAlgeriaName(canonical);
+    return canonical;
+  }
+
+  static String? _translateCompositeLocationExpression({
+    required String raw,
+    required Map<String, String> dictionary,
+    required String languageCode,
+  }) {
+    if (!raw.contains(',') && !raw.contains('،')) return null;
+
+    final parts = raw
+        .split(RegExp(r'[،,]'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    if (parts.length < 2) return null;
+
+    var changed = false;
+    final translatedParts = <String>[];
+    for (final part in parts) {
+      final translated = _translateLocationChunk(
+        part: part,
+        dictionary: dictionary,
+        languageCode: languageCode,
+      );
+      if (translated != part) changed = true;
+      translatedParts.add(translated);
+    }
+
+    if (!changed) return null;
+    return languageCode == 'ar'
+        ? translatedParts.join('، ')
+        : translatedParts.join(', ');
+  }
+
+  static String? _translateSpaceSeparatedLocationExpression({
+    required String raw,
+    required Map<String, String> dictionary,
+    required String languageCode,
+  }) {
+    if (raw.contains(',') || raw.contains('،')) return null;
+    if (!raw.contains(' ')) return null;
+
+    final translated = _translateLocationChunk(
+      part: raw,
+      dictionary: dictionary,
+      languageCode: languageCode,
+    );
+
+    if (translated == raw) return null;
+    return translated;
+  }
+
+  static String _translateLocationChunk({
+    required String part,
+    required Map<String, String> dictionary,
+    required String languageCode,
+  }) {
+    final canonical = _canonicalizeLocationName(part);
+    if (canonical != null) {
+      return _translateCanonicalLocation(canonical, dictionary, languageCode);
+    }
+
+    final words = part.split(RegExp(r'\s+'));
+    if (words.length < 2) return part;
+
+    var changed = false;
+    final translatedWords = <String>[];
+    for (final word in words) {
+      final canonicalWord = _canonicalizeLocationName(word);
+      if (canonicalWord != null) {
+        translatedWords.add(
+          _translateCanonicalLocation(canonicalWord, dictionary, languageCode),
+        );
+        changed = true;
+        continue;
+      }
+
+      if (languageCode == 'ar') {
+        final generic =
+            _genericArabicLocationWords[_normalizeLocationLookup(word)];
+        if (generic != null) {
+          translatedWords.add(generic);
+          changed = true;
+          continue;
+        }
+      }
+
+      translatedWords.add(word);
+    }
+
+    if (!changed) return part;
+    return translatedWords.join(' ');
+  }
+
+  static String? _canonicalizeLocationName(String raw) {
+    final normalized = _normalizeLocationLookup(raw);
+    if (normalized.isEmpty) return null;
+
+    final alias = _locationAliases[normalized];
+    if (alias != null) return alias;
+
+    return _canonicalLocationByNormalized[normalized];
+  }
+
+  static String _normalizeLocationLookup(String input) {
+    return _stripDiacritics(input)
+        .toLowerCase()
+        .replaceAll(RegExp(r"[’'`´]"), ' ')
+        .replaceAll('-', ' ')
+        .replaceAll(RegExp(r'[^a-z0-9 ]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
 
   static String _arabizeAlgeriaName(String raw) {
     final normalized = raw

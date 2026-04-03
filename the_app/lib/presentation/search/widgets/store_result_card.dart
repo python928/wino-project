@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/extensions/l10n_extension.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -19,14 +20,16 @@ class StoreResultCard extends StatelessWidget {
   });
 
   /// Show distance if both user+store coords available, otherwise address
-  String _locationText() {
+  String _locationText(BuildContext context) {
     final dist = Helpers.haversineDistance(
-      userLat, userLng,
-      store.latitude, store.longitude,
+      userLat,
+      userLng,
+      store.latitude,
+      store.longitude,
     );
     if (dist != null) return Helpers.formatDistance(dist);
-    if (store.address.isNotEmpty) return store.address;
-    return 'Algeria';
+    if (store.address.isNotEmpty) return context.tr(store.address);
+    return context.tr('Algeria');
   }
 
   @override
@@ -66,7 +69,8 @@ class StoreResultCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: (store.profileImage != null && store.profileImage!.isNotEmpty)
+                  child: (store.profileImage != null &&
+                          store.profileImage!.isNotEmpty)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(14),
                           child: Image.network(
@@ -147,7 +151,7 @@ class StoreResultCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          _locationText(),
+                          _locationText(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.bodySmall.copyWith(

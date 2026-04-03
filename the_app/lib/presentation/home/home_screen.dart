@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
           placement: 'home_top',
           userLat: _radiusKm != null ? _userLat : null,
           userLng: _radiusKm != null ? _userLng : null,
-          singleRandomized: false,
+          singleRandomized: true,
         );
   }
 
@@ -1383,13 +1383,14 @@ class _HomeScreenState extends State<HomeScreen> {
           return const SizedBox.shrink();
         }
 
+        final ad = ads.first;
+
         return SizedBox(
           height: 228,
-          child: PageView.builder(
-            controller: PageController(viewportFraction: 0.9),
-            itemCount: ads.length,
-            itemBuilder: (context, index) {
-              final ad = ads[index];
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Builder(
+              builder: (context) {
               final storeName = ad.product.storeName;
               final productTitle = ad.product.title;
               final isStoreRtl = _isLikelyArabic(storeName);
@@ -1405,8 +1406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () =>
                     _navigateToPromotionDetails(ad, placement: 'home_top'),
                 child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
@@ -1728,7 +1728,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               );
-            },
+              },
+            ),
           ),
         );
       },
