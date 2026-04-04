@@ -1,0 +1,138 @@
+[
+  {
+    "source_folder": "1",
+    "source_count": 8,
+    "category_id": 1,
+    "category_name": "Cookware & Kitchen",
+    "category_name_ar": "أواني ومستلزمات المطبخ",
+    "target_folder": "imports/cookware-kitchen",
+    "target_count": 8,
+    "notes": "Kitchen utensils, pans, measuring cups, cleaning pads",
+    "sample_files": [
+      "cookware-kitchen_01.jpg",
+      "cookware-kitchen_02.jpg",
+      "cookware-kitchen_03.jpg",
+      "cookware-kitchen_04.jpg",
+      "cookware-kitchen_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "2",
+    "source_count": 8,
+    "category_id": 14,
+    "category_name": "Watches & Wearables",
+    "category_name_ar": "ساعات وأجهزة قابلة للارتداء",
+    "target_folder": "imports/watches-wearables",
+    "target_count": 8,
+    "notes": "Smart watches, digital watches, watch organizers",
+    "sample_files": [
+      "watches-wearables_01.jpg",
+      "watches-wearables_02.jpg",
+      "watches-wearables_03.jpg",
+      "watches-wearables_04.jpg",
+      "watches-wearables_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "3",
+    "source_count": 11,
+    "category_id": 10,
+    "category_name": "Phones & Accessories",
+    "category_name_ar": "هواتف وإكسسوارات",
+    "target_folder": "imports/phones-accessories",
+    "target_count": 11,
+    "notes": "Smartphones and rugged phones",
+    "sample_files": [
+      "phones-accessories_01.jpg",
+      "phones-accessories_02.jpg",
+      "phones-accessories_03.jpg",
+      "phones-accessories_04.jpg",
+      "phones-accessories_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "4",
+    "source_count": 11,
+    "category_id": 15,
+    "category_name": "Sports & Fitness",
+    "category_name_ar": "رياضة ولياقة",
+    "target_folder": "imports/sports-fitness",
+    "target_count": 11,
+    "notes": "Resistance bands, sleeves, training accessories",
+    "sample_files": [
+      "sports-fitness_01.jpg",
+      "sports-fitness_02.jpg",
+      "sports-fitness_03.jpg",
+      "sports-fitness_04.jpg",
+      "sports-fitness_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "5",
+    "source_count": 16,
+    "category_id": 16,
+    "category_name": "Home Furniture & Storage",
+    "category_name_ar": "أثاث منزلي وتخزين",
+    "target_folder": "imports/home-furniture-storage",
+    "target_count": 16,
+    "notes": "Chairs, poufs, storage racks, home essentials",
+    "sample_files": [
+      "home-furniture-storage_01.jpg",
+      "home-furniture-storage_02.jpg",
+      "home-furniture-storage_03.jpg",
+      "home-furniture-storage_04.jpg",
+      "home-furniture-storage_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "6",
+    "source_count": 14,
+    "category_id": 9,
+    "category_name": "School Supplies",
+    "category_name_ar": "أدوات مدرسية",
+    "target_folder": "imports/school-supplies",
+    "target_count": 14,
+    "notes": "Notebooks, pens, journals, backpacks",
+    "sample_files": [
+      "school-supplies_01.jpg",
+      "school-supplies_02.jpg",
+      "school-supplies_03.jpg",
+      "school-supplies_04.jpg",
+      "school-supplies_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "7",
+    "source_count": 11,
+    "category_id": 17,
+    "category_name": "Laptops & Computers",
+    "category_name_ar": "حواسيب محمولة وكمبيوتر",
+    "target_folder": "imports/laptops-computers",
+    "target_count": 11,
+    "notes": "Laptops, mini laptops, handheld PCs",
+    "sample_files": [
+      "laptops-computers_01.jpg",
+      "laptops-computers_02.jpg",
+      "laptops-computers_03.jpg",
+      "laptops-computers_04.jpg",
+      "laptops-computers_05.jpg"
+    ]
+  },
+  {
+    "source_folder": "8",
+    "source_count": 13,
+    "category_id": 2,
+    "category_name": "Fashion & Shoes",
+    "category_name_ar": "ملابس وأحذية",
+    "target_folder": "imports/fashion-shoes",
+    "target_count": 13,
+    "notes": "Men clothing, hoodies, jackets, jeans",
+    "sample_files": [
+      "fashion-shoes_01.jpg",
+      "fashion-shoes_02.jpg",
+      "fashion-shoes_03.jpg",
+      "fashion-shoes_04.jpg",
+      "fashion-shoes_05.jpg"
+    ]
+  }
+]
