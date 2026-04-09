@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.validators import FileExtensionValidator
 
-from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport
+from .models import Category, Pack, PackImage, PackProduct, Product, ProductImage, Review, Favorite, Promotion, PromotionImage, ProductReport, PromotionViewer
 from .serializers import (
 	CategorySerializer,
 	PackImageSerializer,
@@ -29,11 +29,524 @@ from users.models import User, TrustSettings
 from users.abuse import record_abuse_signal
 from users.trust_scoring import score_product_report, score_review_credibility, evaluate_store_verification
 from subscriptions.services import ensure_can_create_post, enforce_promotion_constraints
+from analytics.models import InteractionLog
 
 # NOTE: Store == users.User now (unified profile)
 
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+
+def _as_bool(value):
+	return str(value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _as_positive_int(value, default_value):
+	try:
+		parsed = int(value)
+		return parsed if parsed > 0 else default_value
+	except (TypeError, ValueError):
+		return default_value
+
+
+def _as_float(value, default_value=0.0):
+	try:
+		return float(value)
+	except (TypeError, ValueError):
+		return default_value
+
+
+def _target_feed_size(request, default_size=12):
+	raw_size = request.query_params.get('page_size') or request.query_params.get('limit')
+	target_size = _as_positive_int(raw_size, default_size)
+	return max(6, min(target_size, 40))
+
+
+def _has_at_least_n_items(queryset, target_count):
+	if target_count <= 1:
+		return queryset.exists()
+	sample_ids = list(
+		queryset.values_list('id', flat=True).distinct()[:target_count]
+	)
+	return len(sample_ids) >= target_count
+
+
+def _apply_city_scope_with_baladiya_fallback(
+	queryset,
+	request,
+	wilaya_code,
+	baladiya,
+	wilaya_scope_q,
+	baladiya_scope_q,
+	baladiya_only_q,
+):
+	target_size = _target_feed_size(request)
+	if wilaya_code:
+		if baladiya:
+			strict_qs = queryset.filter(baladiya_scope_q)
+			if _has_at_least_n_items(strict_qs, target_size):
+				return strict_qs
+
+		wilaya_qs = queryset.filter(wilaya_scope_q)
+		if _has_at_least_n_items(wilaya_qs, target_size):
+			return wilaya_qs
+
+		# Last fallback: keep feed populated instead of returning an empty city page
+		return queryset
+
+	if baladiya:
+		baladiya_qs = queryset.filter(baladiya_only_q)
+		if _has_at_least_n_items(baladiya_qs, target_size):
+			return baladiya_qs
+		return queryset
+
+	return queryset
+
+
+def _bayesian_rating(average_rating, vote_count, global_average=3.5, minimum_votes=5.0):
+	avg = _as_float(average_rating, global_average)
+	votes = max(_as_float(vote_count, 0.0), 0.0)
+	min_votes = max(_as_float(minimum_votes, 1.0), 1.0)
+	if votes <= 0:
+		return _as_float(global_average, 3.5)
+	weight = votes / (votes + min_votes)
+	return (weight * avg) + ((1.0 - weight) * _as_float(global_average, 3.5))
+
+
+def _recency_boost(created_at, now, horizon_hours=72):
+	if created_at is None:
+		return 0.0
+	age_seconds = max((now - created_at).total_seconds(), 0.0)
+	horizon_seconds = max(float(horizon_hours) * 3600.0, 1.0)
+	if age_seconds >= horizon_seconds:
+		return 0.0
+	return 1.0 - (age_seconds / horizon_seconds)
+
+
+def _apply_ranked_order(queryset, ranked_ids, fallback_order='-created_at'):
+	if not ranked_ids:
+		return queryset
+	when_clauses = [
+		models.When(id=pk, then=index)
+		for index, pk in enumerate(ranked_ids)
+	]
+	order_case = models.Case(
+		*when_clauses,
+		default=models.Value(len(ranked_ids) + 1000),
+		output_field=models.IntegerField(),
+	)
+	return queryset.annotate(_home_rank_order=order_case).order_by('_home_rank_order', fallback_order)
+
+
+def _rank_products_for_home(queryset, request):
+	if not _as_bool(request.query_params.get('home_rank')):
+		return queryset
+
+	now = timezone.now()
+	window_hours = _as_positive_int(request.query_params.get('home_window_hours'), 168)
+	candidate_limit = _as_positive_int(request.query_params.get('home_candidate_limit'), 300)
+	recent_cutoff = now - timedelta(hours=window_hours)
+	week_cutoff = now - timedelta(days=7)
+
+	candidates = list(queryset.select_related('store', 'category')[:candidate_limit])
+	if not candidates:
+		return queryset
+
+	product_ids = [product.id for product in candidates]
+
+	review_rows = (
+		Review.objects.filter(product_id__in=product_ids)
+		.values('product_id')
+		.annotate(
+			avg_rating=models.Avg('rating'),
+			total_reviews=models.Count('id'),
+			recent_avg_rating=models.Avg('rating', filter=models.Q(created_at__gte=recent_cutoff)),
+			recent_reviews=models.Count('id', filter=models.Q(created_at__gte=recent_cutoff)),
+		)
+	)
+	reviews_by_product = {
+		int(row['product_id']): row
+		for row in review_rows
+	}
+
+	weighted_rating_sum = 0.0
+	weighted_rating_votes = 0
+	for row in review_rows:
+		votes = int(row.get('total_reviews') or 0)
+		avg = _as_float(row.get('avg_rating'), 0.0)
+		weighted_rating_sum += (avg * votes)
+		weighted_rating_votes += votes
+	global_average = (weighted_rating_sum / weighted_rating_votes) if weighted_rating_votes > 0 else 3.5
+
+	interaction_rows = (
+		InteractionLog.objects.filter(
+			product_id__in=product_ids,
+			action__in=['view', 'click'],
+			timestamp__gte=week_cutoff,
+		)
+		.values('product_id')
+		.annotate(
+			recent_hits=models.Count('id', filter=models.Q(timestamp__gte=recent_cutoff)),
+			week_hits=models.Count('id'),
+		)
+	)
+	interactions_by_product = {
+		int(row['product_id']): row
+		for row in interaction_rows
+	}
+
+	ranked_entries = []
+	for product in candidates:
+		review_stats = reviews_by_product.get(product.id, {})
+		interaction_stats = interactions_by_product.get(product.id, {})
+
+		total_reviews = int(review_stats.get('total_reviews') or 0)
+		recent_reviews = int(review_stats.get('recent_reviews') or 0)
+		avg_rating = _as_float(review_stats.get('avg_rating'), global_average)
+		recent_avg_rating = _as_float(review_stats.get('recent_avg_rating'), avg_rating)
+
+		recent_rating_score = _bayesian_rating(
+			recent_avg_rating,
+			recent_reviews,
+			global_average=global_average,
+			minimum_votes=3.0,
+		)
+		overall_rating_score = _bayesian_rating(
+			avg_rating,
+			total_reviews,
+			global_average=global_average,
+			minimum_votes=8.0,
+		)
+		rating_score = (
+			(recent_rating_score * 0.75) + (overall_rating_score * 0.25)
+			if recent_reviews > 0
+			else overall_rating_score
+		)
+
+		recent_hits = int(interaction_stats.get('recent_hits') or 0)
+		week_hits = int(interaction_stats.get('week_hits') or 0)
+		popularity_score = math.log1p(max((recent_hits * 2) + week_hits, 0))
+		review_volume_score = math.log1p(max((recent_reviews * 2) + total_reviews, 0))
+		freshness_score = _recency_boost(getattr(product, 'created_at', None), now, horizon_hours=96)
+
+		final_score = (
+			(rating_score * 18.0)
+			+ (review_volume_score * 2.4)
+			+ (popularity_score * 4.2)
+			+ (freshness_score * 5.0)
+		)
+		has_ratings = 1 if total_reviews > 0 else 0
+		ranked_entries.append((product.id, has_ratings, final_score, product.created_at))
+
+	ranked_entries.sort(key=lambda item: (item[1], item[2], item[3]), reverse=True)
+	ranked_ids = [item[0] for item in ranked_entries]
+	return _apply_ranked_order(queryset, ranked_ids)
+
+
+def _rank_promotions_for_home(queryset, request):
+	if not _as_bool(request.query_params.get('home_rank')):
+		return queryset
+
+	now = timezone.now()
+	window_hours = _as_positive_int(request.query_params.get('home_window_hours'), 168)
+	candidate_limit = _as_positive_int(request.query_params.get('home_candidate_limit'), 300)
+	recent_cutoff = now - timedelta(hours=window_hours)
+	week_cutoff = now - timedelta(days=7)
+
+	candidates = list(queryset.select_related('product')[:candidate_limit])
+	if not candidates:
+		return queryset
+
+	promotion_ids = [promo.id for promo in candidates]
+	product_ids = [promo.product_id for promo in candidates if promo.product_id]
+
+	reviews_by_product = {}
+	global_average = 3.5
+	if product_ids:
+		review_rows = (
+			Review.objects.filter(product_id__in=product_ids)
+			.values('product_id')
+			.annotate(
+				avg_rating=models.Avg('rating'),
+				total_reviews=models.Count('id'),
+				recent_avg_rating=models.Avg('rating', filter=models.Q(created_at__gte=recent_cutoff)),
+				recent_reviews=models.Count('id', filter=models.Q(created_at__gte=recent_cutoff)),
+			)
+		)
+		reviews_by_product = {
+			int(row['product_id']): row
+			for row in review_rows
+		}
+		weighted_rating_sum = 0.0
+		weighted_rating_votes = 0
+		for row in review_rows:
+			votes = int(row.get('total_reviews') or 0)
+			avg = _as_float(row.get('avg_rating'), 0.0)
+			weighted_rating_sum += (avg * votes)
+			weighted_rating_votes += votes
+		if weighted_rating_votes > 0:
+			global_average = weighted_rating_sum / weighted_rating_votes
+
+	interactions_by_product = {}
+	if product_ids:
+		interaction_rows = (
+			InteractionLog.objects.filter(
+				product_id__in=product_ids,
+				timestamp__gte=week_cutoff,
+			)
+			.values('product_id')
+			.annotate(
+				recent_product_hits=models.Count(
+					'id',
+					filter=models.Q(action__in=['view', 'click'], timestamp__gte=recent_cutoff),
+				),
+				week_product_hits=models.Count('id', filter=models.Q(action__in=['view', 'click'])),
+				recent_promo_hits=models.Count(
+					'id',
+					filter=models.Q(action='promotion_click', timestamp__gte=recent_cutoff),
+				),
+				week_promo_hits=models.Count('id', filter=models.Q(action='promotion_click')),
+			)
+		)
+		interactions_by_product = {
+			int(row['product_id']): row
+			for row in interaction_rows
+		}
+
+	viewer_rows = (
+		PromotionViewer.objects.filter(promotion_id__in=promotion_ids)
+		.values('promotion_id')
+		.annotate(
+			recent_viewers=models.Count('id', filter=models.Q(last_seen_at__gte=recent_cutoff)),
+			total_viewers=models.Count('id'),
+		)
+	)
+	viewers_by_promotion = {
+		int(row['promotion_id']): row
+		for row in viewer_rows
+	}
+
+	ranked_entries = []
+	for promo in candidates:
+		interaction_stats = interactions_by_product.get(promo.product_id or -1, {})
+		viewer_stats = viewers_by_promotion.get(promo.id, {})
+		review_stats = reviews_by_product.get(promo.product_id or -1, {})
+
+		discount_strength = _as_float(getattr(promo, 'percentage', 0.0), 0.0)
+		product_recent_hits = int(interaction_stats.get('recent_product_hits') or 0)
+		product_week_hits = int(interaction_stats.get('week_product_hits') or 0)
+		promo_recent_hits = int(interaction_stats.get('recent_promo_hits') or 0)
+		promo_week_hits = int(interaction_stats.get('week_promo_hits') or 0)
+		recent_viewers = int(viewer_stats.get('recent_viewers') or 0)
+		total_viewers = int(viewer_stats.get('total_viewers') or 0)
+
+		total_reviews = int(review_stats.get('total_reviews') or 0)
+		avg_rating = _as_float(review_stats.get('avg_rating'), global_average)
+		rating_support = _bayesian_rating(
+			avg_rating,
+			total_reviews,
+			global_average=global_average,
+			minimum_votes=8.0,
+		)
+
+		engagement_raw = (
+			(promo_recent_hits * 3.0)
+			+ (promo_week_hits * 1.8)
+			+ (recent_viewers * 2.0)
+			+ (total_viewers * 0.35)
+			+ (product_recent_hits * 1.4)
+			+ (product_week_hits * 0.45)
+		)
+		engagement_score = math.log1p(max(engagement_raw, 0.0))
+		freshness_score = _recency_boost(getattr(promo, 'created_at', None), now, horizon_hours=120)
+
+		final_score = (
+			(engagement_score * 6.6)
+			+ (discount_strength * 1.35)
+			+ (freshness_score * 4.2)
+			+ (rating_support * 2.0)
+		)
+		has_signal = 1 if engagement_raw > 0 else 0
+		ranked_entries.append((promo.id, has_signal, final_score, promo.created_at))
+
+	ranked_entries.sort(key=lambda item: (item[1], item[2], item[3]), reverse=True)
+	ranked_ids = [item[0] for item in ranked_entries]
+	return _apply_ranked_order(queryset, ranked_ids)
+
+
+def _rank_packs_for_home(queryset, request):
+	if not _as_bool(request.query_params.get('home_rank')):
+		return queryset
+
+	now = timezone.now()
+	window_hours = _as_positive_int(request.query_params.get('home_window_hours'), 168)
+	candidate_limit = _as_positive_int(request.query_params.get('home_candidate_limit'), 300)
+	recent_cutoff = now - timedelta(hours=window_hours)
+	week_cutoff = now - timedelta(days=7)
+
+	candidates = list(queryset.prefetch_related('pack_products')[:candidate_limit])
+	if not candidates:
+		return queryset
+
+	pack_ids = [pack.id for pack in candidates]
+	merchant_ids = [pack.merchant_id for pack in candidates if pack.merchant_id]
+
+	merchant_reviews_by_store = {}
+	global_average = 3.5
+	if merchant_ids:
+		merchant_review_rows = (
+			Review.objects.filter(store_id__in=merchant_ids)
+			.values('store_id')
+			.annotate(
+				avg_rating=models.Avg('rating'),
+				total_reviews=models.Count('id'),
+				recent_avg_rating=models.Avg('rating', filter=models.Q(created_at__gte=recent_cutoff)),
+				recent_reviews=models.Count('id', filter=models.Q(created_at__gte=recent_cutoff)),
+			)
+		)
+		merchant_reviews_by_store = {
+			int(row['store_id']): row
+			for row in merchant_review_rows
+		}
+		weighted_rating_sum = 0.0
+		weighted_rating_votes = 0
+		for row in merchant_review_rows:
+			votes = int(row.get('total_reviews') or 0)
+			avg = _as_float(row.get('avg_rating'), 0.0)
+			weighted_rating_sum += (avg * votes)
+			weighted_rating_votes += votes
+		if weighted_rating_votes > 0:
+			global_average = weighted_rating_sum / weighted_rating_votes
+
+	pack_products_by_pack = {}
+	all_product_ids = set()
+	for pack in candidates:
+		product_ids = []
+		for pack_product in pack.pack_products.all():
+			product_ids.append(pack_product.product_id)
+			all_product_ids.add(pack_product.product_id)
+		pack_products_by_pack[pack.id] = product_ids
+
+	interactions_by_product = {}
+	if all_product_ids:
+		interaction_rows = (
+			InteractionLog.objects.filter(
+				product_id__in=list(all_product_ids),
+				action__in=['view', 'click'],
+				timestamp__gte=week_cutoff,
+			)
+			.values('product_id')
+			.annotate(
+				recent_hits=models.Count('id', filter=models.Q(timestamp__gte=recent_cutoff)),
+				week_hits=models.Count('id'),
+			)
+		)
+		interactions_by_product = {
+			int(row['product_id']): row
+			for row in interaction_rows
+		}
+
+	ranked_entries = []
+	for pack in candidates:
+		merchant_stats = merchant_reviews_by_store.get(pack.merchant_id or -1, {})
+		total_reviews = int(merchant_stats.get('total_reviews') or 0)
+		recent_reviews = int(merchant_stats.get('recent_reviews') or 0)
+		avg_rating = _as_float(merchant_stats.get('avg_rating'), global_average)
+		recent_avg = _as_float(merchant_stats.get('recent_avg_rating'), avg_rating)
+
+		recent_rating_score = _bayesian_rating(
+			recent_avg,
+			recent_reviews,
+			global_average=global_average,
+			minimum_votes=2.0,
+		)
+		overall_rating_score = _bayesian_rating(
+			avg_rating,
+			total_reviews,
+			global_average=global_average,
+			minimum_votes=6.0,
+		)
+		rating_score = (
+			(recent_rating_score * 0.75) + (overall_rating_score * 0.25)
+			if recent_reviews > 0
+			else overall_rating_score
+		)
+
+		pack_product_ids = pack_products_by_pack.get(pack.id, [])
+		recent_hits = 0
+		week_hits = 0
+		for product_id in pack_product_ids:
+			stats = interactions_by_product.get(product_id, {})
+			recent_hits += int(stats.get('recent_hits') or 0)
+			week_hits += int(stats.get('week_hits') or 0)
+
+		popularity_score = math.log1p(max((recent_hits * 2) + week_hits, 0))
+		review_volume_score = math.log1p(max((recent_reviews * 2) + total_reviews, 0))
+		freshness_score = _recency_boost(getattr(pack, 'created_at', None), now, horizon_hours=144)
+		size_bonus = min(len(pack_product_ids), 8) * 0.6
+
+		final_score = (
+			(rating_score * 15.5)
+			+ (review_volume_score * 2.0)
+			+ (popularity_score * 4.2)
+			+ (freshness_score * 4.4)
+			+ size_bonus
+		)
+		has_ratings = 1 if total_reviews > 0 else 0
+		ranked_entries.append((pack.id, has_ratings, final_score, pack.created_at))
+
+	ranked_entries.sort(key=lambda item: (item[1], item[2], item[3]), reverse=True)
+	ranked_ids = [item[0] for item in ranked_entries]
+	return _apply_ranked_order(queryset, ranked_ids)
+
+
+def _build_discovery_meta(request, source):
+	return {
+		'source': source,
+		'discovery_mode': request.query_params.get('discovery_mode') or (
+			'nearby' if request.query_params.get('lat') and request.query_params.get('lng') else 'none'
+		),
+		'distance_km': request.query_params.get('radius_km') or request.query_params.get('distance_km'),
+		'wilaya_code': request.query_params.get('wilaya_code'),
+		'baladiya': request.query_params.get('baladiya'),
+	}
+
+
+def _log_product_list_impressions(request, products, source='product_list_request', max_items=24):
+	if not getattr(request.user, 'is_authenticated', False):
+		return
+	try:
+		from analytics.utils import log_user_event
+		metadata = _build_discovery_meta(request, source)
+		session_id = str(request.query_params.get('session_id') or '')
+		for product in list(products)[:max_items]:
+			log_user_event(
+				request.user,
+				'view',
+				product=product,
+				metadata=dict(metadata),
+				session_id=session_id,
+			)
+	except Exception:
+		pass
+
+
+def _log_product_detail_click(request, product, source='product_detail_request'):
+	if not getattr(request.user, 'is_authenticated', False):
+		return
+	try:
+		from analytics.utils import log_user_event
+		metadata = _build_discovery_meta(request, source)
+		session_id = str(request.query_params.get('session_id') or '')
+		log_user_event(
+			request.user,
+			'click',
+			product=product,
+			metadata=metadata,
+			session_id=session_id,
+		)
+	except Exception:
+		pass
 
 
 def _validate_uploaded_image(image):
@@ -90,8 +603,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 	serializer_class = ProductSerializer
 	# Enable filtering by store/category/status so profile pages only show the owner's products
 	filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
-	search_fields = ['name', 'description']
-	ordering_fields = ['created_at', 'price']
+	search_fields = ['name', 'description', 'store__name', 'store__username', 'store__address']
+	ordering_fields = ['created_at', 'price', 'average_rating']
 	filterset_fields = ['store', 'category', 'available_status']
 
 	def get_permissions(self):
@@ -102,15 +615,90 @@ class ProductViewSet(viewsets.ModelViewSet):
 		return [permissions.IsAuthenticated()]
 
 	def get_queryset(self):
-		queryset = Product.objects.all()
+		queryset = Product.objects.select_related('store', 'category').prefetch_related('images')
 		store_id = self.request.query_params.get('store')
 		if store_id:
 			queryset = queryset.filter(store_id=store_id)
+
+		# Support multi-category filtering from search tab
+		category_ids_raw = (self.request.query_params.get('category_ids') or '').strip()
+		if category_ids_raw:
+			category_ids = []
+			for raw_id in category_ids_raw.split(','):
+				raw_id = raw_id.strip()
+				if not raw_id:
+					continue
+				try:
+					category_ids.append(int(raw_id))
+				except (TypeError, ValueError):
+					continue
+			if category_ids:
+				queryset = queryset.filter(category_id__in=category_ids)
+
+		min_price = self.request.query_params.get('min_price')
+		if min_price not in (None, ''):
+			try:
+				queryset = queryset.filter(price__gte=float(min_price))
+			except (TypeError, ValueError):
+				pass
+
+		max_price = self.request.query_params.get('max_price')
+		if max_price not in (None, ''):
+			try:
+				queryset = queryset.filter(price__lte=float(max_price))
+			except (TypeError, ValueError):
+				pass
+
+		wilaya_code = (self.request.query_params.get('wilaya_code') or '').strip()
+		baladiya = (self.request.query_params.get('baladiya') or '').strip()
+		delivery_match = models.Q()
+		if wilaya_code:
+			delivery_match = models.Q(delivery_available=True) & (
+				models.Q(delivery_wilayas__isnull=True)
+				| models.Q(delivery_wilayas__exact='')
+				| models.Q(delivery_wilayas__icontains=wilaya_code)
+			)
+
+		wilaya_scope_q = models.Q(store__address__icontains=wilaya_code)
+		if wilaya_code:
+			wilaya_scope_q |= delivery_match
+
+		baladiya_scope_q = (
+			models.Q(store__address__icontains=wilaya_code)
+			& models.Q(store__address__icontains=baladiya)
+		)
+		if wilaya_code:
+			baladiya_scope_q |= delivery_match
+
+		baladiya_only_q = models.Q(store__address__icontains=baladiya)
+		queryset = _apply_city_scope_with_baladiya_fallback(
+			queryset=queryset,
+			request=self.request,
+			wilaya_code=wilaya_code,
+			baladiya=baladiya,
+			wilaya_scope_q=wilaya_scope_q,
+			baladiya_scope_q=baladiya_scope_q,
+			baladiya_only_q=baladiya_only_q,
+		)
+
+		ordering_param = (self.request.query_params.get('ordering') or '').strip()
+		min_rating = self.request.query_params.get('min_rating')
+		needs_rating_annotation = (
+			(min_rating not in (None, '')) or ('average_rating' in ordering_param)
+		)
+		if needs_rating_annotation:
+			queryset = queryset.annotate(average_rating=models.Avg('reviews__rating'))
+			if min_rating not in (None, ''):
+				try:
+					queryset = queryset.filter(average_rating__gte=float(min_rating))
+				except (TypeError, ValueError):
+					pass
 		
 		# --- Advanced Search Logic (Academic) ---
 		lat = self.request.query_params.get('lat')
 		lng = self.request.query_params.get('lng')
 		category_id = self.request.query_params.get('category')
+		radius_override = self.request.query_params.get('radius_km')
 		
 		# Only apply if location is provided (Search Mode)
 		if lat and lng:
@@ -124,14 +712,25 @@ class ProductViewSet(viewsets.ModelViewSet):
 					category = Category.objects.filter(id=category_id).first()
 				
 				radius_km = calculate_adaptive_radius(category)
+				if radius_override not in (None, ''):
+					try:
+						radius_km = float(radius_override)
+					except (TypeError, ValueError):
+						pass
 				
 				# 2. Bounding Box Filter (Spatial Optimization)
 				# 1 deg lat ~= 111 km
 				# 1 deg lng ~= 111 km * cos(lat)
 				lat_delta = radius_km / 111.0
-				lng_delta = radius_km / (111.0 * abs(math.cos(math.radians(user_lat))))
+				lng_divisor = 111.0 * abs(math.cos(math.radians(user_lat)))
+				if lng_divisor < 0.0001:
+					lng_divisor = 0.0001
+				lng_delta = radius_km / lng_divisor
 				
 				queryset = queryset.filter(
+					store__allow_nearby_visibility=True,
+					store__latitude__isnull=False,
+					store__longitude__isnull=False,
 					store__latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
 					store__longitude__range=(user_lng - lng_delta, user_lng + lng_delta)
 				)
@@ -141,7 +740,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 				
 			except (ValueError, TypeError):
 				pass # Fallback to standard filtering
-				
+
+		queryset = queryset.distinct()
+		queryset = _rank_products_for_home(queryset, self.request)
+
 		return queryset
 
 	def perform_create(self, serializer):
@@ -152,11 +754,24 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 	def retrieve(self, request, *args, **kwargs):
 		instance = self.get_object()
+		_log_product_detail_click(request, instance)
 		serializer = self.get_serializer(instance)
 		return Response(serializer.data)
 
 	def list(self, request, *args, **kwargs):
-		return super().list(request, *args, **kwargs)
+		queryset = self.filter_queryset(self.get_queryset())
+		page = self.paginate_queryset(queryset)
+
+		if page is not None:
+			serializer = self.get_serializer(page, many=True)
+			response = self.get_paginated_response(serializer.data)
+			_log_product_list_impressions(request, page)
+			return response
+
+		serializer = self.get_serializer(queryset, many=True)
+		data = serializer.data
+		_log_product_list_impressions(request, list(queryset[:24]))
+		return Response(data)
 
 
 class ProductImageViewSet(viewsets.ModelViewSet):
@@ -185,8 +800,9 @@ class PackViewSet(viewsets.ModelViewSet):
 	# IMPORTANT: your Pack model should now select_related('store') only
 	queryset = Pack.objects.select_related('merchant').prefetch_related('images', 'pack_products').order_by('-created_at', '-id')
 	serializer_class = PackSerializer
-	filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
-	ordering_fields = ['created_at', 'discount']
+	filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+	search_fields = ['name', 'description', 'merchant__name', 'merchant__username', 'merchant__address']
+	ordering_fields = ['created_at', 'discount', 'merchant_rating']
 	filterset_fields = ['merchant', 'available_status']
 
 	def update(self, request, *args, **kwargs):
@@ -206,6 +822,111 @@ class PackViewSet(viewsets.ModelViewSet):
 		store_id = self.request.query_params.get('store') or self.request.query_params.get('merchant')
 		if store_id:
 			queryset = queryset.filter(merchant_id=store_id)
+
+		category_id = self.request.query_params.get('category')
+		if category_id not in (None, ''):
+			queryset = queryset.filter(pack_products__product__category_id=category_id)
+
+		category_ids_raw = (self.request.query_params.get('category_ids') or '').strip()
+		if category_ids_raw:
+			category_ids = []
+			for raw_id in category_ids_raw.split(','):
+				raw_id = raw_id.strip()
+				if not raw_id:
+					continue
+				try:
+					category_ids.append(int(raw_id))
+				except (TypeError, ValueError):
+					continue
+			if category_ids:
+				queryset = queryset.filter(pack_products__product__category_id__in=category_ids)
+
+		min_price = self.request.query_params.get('min_price')
+		if min_price not in (None, ''):
+			try:
+				queryset = queryset.filter(discount__gte=float(min_price))
+			except (TypeError, ValueError):
+				pass
+
+		max_price = self.request.query_params.get('max_price')
+		if max_price not in (None, ''):
+			try:
+				queryset = queryset.filter(discount__lte=float(max_price))
+			except (TypeError, ValueError):
+				pass
+
+		wilaya_code = (self.request.query_params.get('wilaya_code') or '').strip()
+		baladiya = (self.request.query_params.get('baladiya') or '').strip()
+		delivery_match = models.Q()
+		if wilaya_code:
+			delivery_match = models.Q(delivery_available=True) & (
+				models.Q(delivery_wilayas__isnull=True)
+				| models.Q(delivery_wilayas__exact='')
+				| models.Q(delivery_wilayas__icontains=wilaya_code)
+			)
+
+		wilaya_scope_q = models.Q(merchant__address__icontains=wilaya_code)
+		if wilaya_code:
+			wilaya_scope_q |= delivery_match
+
+		baladiya_scope_q = (
+			models.Q(merchant__address__icontains=wilaya_code)
+			& models.Q(merchant__address__icontains=baladiya)
+		)
+		if wilaya_code:
+			baladiya_scope_q |= delivery_match
+
+		baladiya_only_q = models.Q(merchant__address__icontains=baladiya)
+		queryset = _apply_city_scope_with_baladiya_fallback(
+			queryset=queryset,
+			request=self.request,
+			wilaya_code=wilaya_code,
+			baladiya=baladiya,
+			wilaya_scope_q=wilaya_scope_q,
+			baladiya_scope_q=baladiya_scope_q,
+			baladiya_only_q=baladiya_only_q,
+		)
+
+		ordering_param = (self.request.query_params.get('ordering') or '').strip()
+		min_rating = self.request.query_params.get('min_rating')
+		needs_rating_annotation = (
+			(min_rating not in (None, '')) or ('merchant_rating' in ordering_param)
+		)
+		if needs_rating_annotation:
+			queryset = queryset.annotate(
+				merchant_rating=models.Avg('merchant__store_reviews__rating')
+			)
+			if min_rating not in (None, ''):
+				try:
+					queryset = queryset.filter(merchant_rating__gte=float(min_rating))
+				except (TypeError, ValueError):
+					pass
+
+		lat = self.request.query_params.get('lat')
+		lng = self.request.query_params.get('lng')
+		radius_km = self.request.query_params.get('radius_km')
+		if lat not in (None, '') and lng not in (None, '') and radius_km not in (None, ''):
+			try:
+				user_lat = float(lat)
+				user_lng = float(lng)
+				radius = float(radius_km)
+				lat_delta = radius / 111.0
+				lng_divisor = 111.0 * abs(math.cos(math.radians(user_lat)))
+				if lng_divisor < 0.0001:
+					lng_divisor = 0.0001
+				lng_delta = radius / lng_divisor
+				queryset = queryset.filter(
+					merchant__allow_nearby_visibility=True,
+					merchant__latitude__isnull=False,
+					merchant__longitude__isnull=False,
+					merchant__latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
+					merchant__longitude__range=(user_lng - lng_delta, user_lng + lng_delta),
+				)
+			except (TypeError, ValueError):
+				pass
+
+		queryset = queryset.distinct()
+		queryset = _rank_packs_for_home(queryset, self.request)
 		return queryset
 
 	def perform_create(self, serializer):
@@ -598,8 +1319,9 @@ class IsStoreOwnerOrReadOnly(permissions.BasePermission):
 class PromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.select_related('store', 'product').prefetch_related('images')
 	serializer_class = PromotionSerializer
-	filter_backends = [filters.OrderingFilter]
-	ordering_fields = ['created_at', 'percentage']
+	filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+	search_fields = ['name', 'description', 'product__name', 'product__description', 'store__name', 'store__username']
+	ordering_fields = ['created_at', 'percentage', 'product_rating', 'product__price']
 
 	def get_permissions(self):
 		if self.action in ['list', 'retrieve']:
@@ -657,7 +1379,115 @@ class PromotionViewSet(viewsets.ModelViewSet):
 		product_id = self.request.query_params.get('product')
 		if product_id:
 			qs = qs.filter(product_id=product_id)
+
+		category_id = self.request.query_params.get('category')
+		if category_id not in (None, ''):
+			qs = qs.filter(product__category_id=category_id)
+
+		category_ids_raw = (self.request.query_params.get('category_ids') or '').strip()
+		if category_ids_raw:
+			category_ids = []
+			for raw_id in category_ids_raw.split(','):
+				raw_id = raw_id.strip()
+				if not raw_id:
+					continue
+				try:
+					category_ids.append(int(raw_id))
+				except (TypeError, ValueError):
+					continue
+			if category_ids:
+				qs = qs.filter(product__category_id__in=category_ids)
+
+		min_price = self.request.query_params.get('min_price')
+		if min_price not in (None, ''):
+			try:
+				qs = qs.filter(product__price__gte=float(min_price))
+			except (TypeError, ValueError):
+				pass
+
+		max_price = self.request.query_params.get('max_price')
+		if max_price not in (None, ''):
+			try:
+				qs = qs.filter(product__price__lte=float(max_price))
+			except (TypeError, ValueError):
+				pass
+
+		wilaya_code = (self.request.query_params.get('wilaya_code') or '').strip()
+		baladiya = (self.request.query_params.get('baladiya') or '').strip()
+		address_wilaya_q = (
+			models.Q(product__store__address__icontains=wilaya_code)
+			| models.Q(store__address__icontains=wilaya_code)
+		)
+		address_baladiya_q = (
+			models.Q(product__store__address__icontains=baladiya)
+			| models.Q(store__address__icontains=baladiya)
+		)
+
+		delivery_match = models.Q()
+		if wilaya_code:
+			delivery_match = models.Q(product__delivery_available=True) & (
+				models.Q(product__delivery_wilayas__isnull=True)
+				| models.Q(product__delivery_wilayas__exact='')
+				| models.Q(product__delivery_wilayas__icontains=wilaya_code)
+			)
+
+		wilaya_scope_q = address_wilaya_q
+		if wilaya_code:
+			wilaya_scope_q |= delivery_match
+
+		baladiya_scope_q = address_wilaya_q & address_baladiya_q
+		if wilaya_code:
+			baladiya_scope_q |= delivery_match
+
+		baladiya_only_q = address_baladiya_q
+		qs = _apply_city_scope_with_baladiya_fallback(
+			queryset=qs,
+			request=self.request,
+			wilaya_code=wilaya_code,
+			baladiya=baladiya,
+			wilaya_scope_q=wilaya_scope_q,
+			baladiya_scope_q=baladiya_scope_q,
+			baladiya_only_q=baladiya_only_q,
+		)
+
+		ordering_param = (self.request.query_params.get('ordering') or '').strip()
+		min_rating = self.request.query_params.get('min_rating')
+		needs_rating_annotation = (
+			(min_rating not in (None, '')) or ('product_rating' in ordering_param)
+		)
+		if needs_rating_annotation:
+			qs = qs.annotate(product_rating=models.Avg('product__reviews__rating'))
+			if min_rating not in (None, ''):
+				try:
+					qs = qs.filter(product_rating__gte=float(min_rating))
+				except (TypeError, ValueError):
+					pass
+
+		lat = self.request.query_params.get('lat')
+		lng = self.request.query_params.get('lng')
+		radius_km = self.request.query_params.get('radius_km')
+		if lat not in (None, '') and lng not in (None, '') and radius_km not in (None, ''):
+			try:
+				user_lat = float(lat)
+				user_lng = float(lng)
+				radius = float(radius_km)
+				lat_delta = radius / 111.0
+				lng_divisor = 111.0 * abs(math.cos(math.radians(user_lat)))
+				if lng_divisor < 0.0001:
+					lng_divisor = 0.0001
+				lng_delta = radius / lng_divisor
+				qs = qs.filter(
+					product__store__allow_nearby_visibility=True,
+					product__store__latitude__isnull=False,
+					product__store__longitude__isnull=False,
+					product__store__latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
+					product__store__longitude__range=(user_lng - lng_delta, user_lng + lng_delta),
+				)
+			except (TypeError, ValueError):
+				pass
 		
+		qs = qs.distinct()
+		qs = _rank_promotions_for_home(qs, self.request)
 		return qs
 
 	def perform_create(self, serializer):

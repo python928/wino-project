@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
+import math
 from rest_framework import filters, permissions, status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -62,7 +63,7 @@ class UserViewSet(viewsets.ModelViewSet):
 	serializer_class = UserSerializer
 	permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 	filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-	search_fields = ['name', 'username', 'store_description', 'email', 'phone']
+	search_fields = ['name', 'username', 'store_description', 'email', 'phone', 'address']
 	ordering_fields = ['date_joined', 'username']
 
 	def get_queryset(self):
@@ -70,6 +71,58 @@ class UserViewSet(viewsets.ModelViewSet):
 		has_posts = self.request.query_params.get('has_posts')
 		if has_posts and has_posts.lower() == 'true':
 			queryset = queryset.filter(products__available_status='available').distinct()
+
+		wilaya_code = (self.request.query_params.get('wilaya_code') or '').strip()
+		baladiya = (self.request.query_params.get('baladiya') or '').strip()
+		raw_page_size = self.request.query_params.get('page_size')
+		try:
+			target_size = int(raw_page_size) if raw_page_size else 12
+		except (TypeError, ValueError):
+			target_size = 12
+		target_size = max(6, min(target_size, 40))
+
+		def _has_target(qs):
+			sample_ids = list(qs.values_list('id', flat=True).distinct()[:target_size])
+			return len(sample_ids) >= target_size
+
+		if wilaya_code and baladiya:
+			strict_qs = queryset.filter(address__icontains=wilaya_code).filter(
+				address__icontains=baladiya,
+			)
+			if _has_target(strict_qs):
+				queryset = strict_qs
+			else:
+				wilaya_qs = queryset.filter(address__icontains=wilaya_code)
+				queryset = wilaya_qs if _has_target(wilaya_qs) else queryset
+		elif wilaya_code:
+			wilaya_qs = queryset.filter(address__icontains=wilaya_code)
+			queryset = wilaya_qs if _has_target(wilaya_qs) else queryset
+		elif baladiya:
+			baladiya_qs = queryset.filter(address__icontains=baladiya)
+			queryset = baladiya_qs if _has_target(baladiya_qs) else queryset
+
+		lat = self.request.query_params.get('lat')
+		lng = self.request.query_params.get('lng')
+		radius_km = self.request.query_params.get('radius_km')
+		if lat not in (None, '') and lng not in (None, '') and radius_km not in (None, ''):
+			try:
+				user_lat = float(lat)
+				user_lng = float(lng)
+				radius = float(radius_km)
+				lat_delta = radius / 111.0
+				lng_divisor = 111.0 * abs(math.cos(math.radians(user_lat)))
+				if lng_divisor < 0.0001:
+					lng_divisor = 0.0001
+				lng_delta = radius / lng_divisor
+				queryset = queryset.filter(
+					allow_nearby_visibility=True,
+					latitude__isnull=False,
+					longitude__isnull=False,
+					latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
+					longitude__range=(user_lng - lng_delta, user_lng + lng_delta),
+				)
+			except (TypeError, ValueError):
+				pass
 		return queryset
 
 	def get_permissions(self):

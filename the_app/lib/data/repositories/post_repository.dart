@@ -131,6 +131,16 @@ class PostRepository {
     int? page,
     int? storeId,
     int? categoryId,
+    List<int>? categoryIds,
+    String? wilayaCode,
+    String? baladiya,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? ordering,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
     bool availableOnly = true,
     bool fetchAllPages = false,
   }) async {
@@ -140,6 +150,34 @@ class PostRepository {
       if (page != null) queryParams['page'] = page.toString();
       if (storeId != null) queryParams['store'] = storeId.toString();
       if (categoryId != null) queryParams['category'] = categoryId.toString();
+      if (categoryIds != null && categoryIds.isNotEmpty) {
+        queryParams['category_ids'] = categoryIds.join(',');
+      }
+      if (wilayaCode != null && wilayaCode.isNotEmpty) {
+        queryParams['wilaya_code'] = wilayaCode;
+      }
+      if (baladiya != null && baladiya.isNotEmpty) {
+        queryParams['baladiya'] = baladiya;
+      }
+      if (minPrice != null) {
+        queryParams['min_price'] = minPrice.toStringAsFixed(2);
+      }
+      if (maxPrice != null) {
+        queryParams['max_price'] = maxPrice.toStringAsFixed(2);
+      }
+      if (minRating != null) {
+        queryParams['min_rating'] = minRating.toStringAsFixed(1);
+      }
+      if (ordering != null && ordering.isNotEmpty) {
+        queryParams['ordering'] = ordering;
+      }
+      if (userLat != null && userLng != null) {
+        queryParams['lat'] = userLat.toStringAsFixed(6);
+        queryParams['lng'] = userLng.toStringAsFixed(6);
+      }
+      if (radiusKm != null) {
+        queryParams['radius_km'] = radiusKm.toStringAsFixed(2);
+      }
       if (availableOnly) queryParams['available_status'] = 'available';
 
       final queryString = queryParams.isNotEmpty
@@ -366,9 +404,19 @@ class PostRepository {
     bool includeInactive = false,
     String? kind,
     String? placement,
+    String? search,
+    int? categoryId,
+    List<int>? categoryIds,
+    String? baladiya,
     String? wilayaCode,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? ordering,
+    double? radiusKm,
     double? userLat,
     double? userLng,
+    bool homeRank = false,
     bool singleRandomized = false,
     bool fetchAllPages = false,
   }) async {
@@ -388,11 +436,45 @@ class PostRepository {
       }
       if (!isAdsRequest && kind != null && kind.isNotEmpty)
         query['kind'] = kind;
+      if (!isAdsRequest && search != null && search.isNotEmpty) {
+        query['search'] = search;
+      }
+      if (!isAdsRequest && categoryId != null) {
+        query['category'] = '$categoryId';
+      }
+      if (!isAdsRequest && categoryIds != null && categoryIds.isNotEmpty) {
+        query['category_ids'] = categoryIds.join(',');
+      }
       if (placement != null && placement.isNotEmpty) {
         query['placement'] = placement;
       }
       if (wilayaCode != null && wilayaCode.isNotEmpty) {
         query['wilaya_code'] = wilayaCode;
+      }
+      if (!isAdsRequest && baladiya != null && baladiya.isNotEmpty) {
+        query['baladiya'] = baladiya;
+      }
+      if (!isAdsRequest && minPrice != null) {
+        query['min_price'] = minPrice.toStringAsFixed(2);
+      }
+      if (!isAdsRequest && maxPrice != null) {
+        query['max_price'] = maxPrice.toStringAsFixed(2);
+      }
+      if (!isAdsRequest && minRating != null) {
+        query['min_rating'] = minRating.toStringAsFixed(1);
+      }
+      if (!isAdsRequest && ordering != null && ordering.isNotEmpty) {
+        query['ordering'] = ordering;
+      }
+      if (!isAdsRequest && userLat != null && userLng != null) {
+        query['lat'] = userLat.toStringAsFixed(6);
+        query['lng'] = userLng.toStringAsFixed(6);
+      }
+      if (!isAdsRequest && radiusKm != null) {
+        query['radius_km'] = radiusKm.toStringAsFixed(2);
+      }
+      if (!isAdsRequest && homeRank) {
+        query['home_rank'] = 'true';
       }
       if (isAdsRequest && userLat != null && userLng != null) {
         query['lat'] = userLat.toStringAsFixed(6);

@@ -86,13 +86,47 @@ class _HomeScreenState extends State<HomeScreen> {
     final homeProvider = context.read<HomeProvider>();
     final postProvider = context.read<PostProvider>();
     final analyticsProvider = context.read<AnalyticsProvider>();
+    final wilayaCode = _wilayaForHomeApi;
+    final baladiya = _baladiyaForHomeApi;
+    final userLat = _userLatForHomeApi;
+    final userLng = _userLngForHomeApi;
+    final radiusKm = _radiusForHomeApi;
 
     // Fetch in top-to-bottom screen order to keep section loading predictable.
     await _reloadHomeTopAd();
-    await postProvider.loadOffers();
-    await homeProvider.loadRecentProducts();
-    await homeProvider.loadFeaturedPacks();
-    await homeProvider.loadFeaturedStores();
+    await postProvider.loadOffers(
+      wilayaCode: wilayaCode,
+      baladiya: baladiya,
+      userLat: userLat,
+      userLng: userLng,
+      radiusKm: radiusKm,
+      homeRank: true,
+    );
+    await homeProvider.loadRecentProducts(
+      limit: 20,
+      wilayaCode: wilayaCode,
+      baladiya: baladiya,
+      userLat: userLat,
+      userLng: userLng,
+      radiusKm: radiusKm,
+      homeRank: true,
+    );
+    await homeProvider.loadFeaturedPacks(
+      limit: 20,
+      wilayaCode: wilayaCode,
+      baladiya: baladiya,
+      userLat: userLat,
+      userLng: userLng,
+      radiusKm: radiusKm,
+      homeRank: true,
+    );
+    await homeProvider.loadFeaturedStores(
+      wilayaCode: wilayaCode,
+      baladiya: baladiya,
+      userLat: userLat,
+      userLng: userLng,
+      radiusKm: radiusKm,
+    );
     await analyticsProvider.fetchRecommendations(limit: 80);
 
     if (_isInitialHomeLoad && mounted) {
@@ -105,13 +139,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _reloadHomeTopAd() async {
     if (!mounted) return;
     await context.read<PostProvider>().loadAdOffers(
-          wilayaCode: _selectedWilaya,
+          wilayaCode: _wilayaForHomeApi,
           placement: 'home_top',
-          userLat: _radiusKm != null ? _userLat : null,
-          userLng: _radiusKm != null ? _userLng : null,
+          userLat: _userLatForHomeApi,
+          userLng: _userLngForHomeApi,
           singleRandomized: true,
         );
   }
+
+  String? get _wilayaForHomeApi {
+    if (_radiusKm != null) return null;
+    final value = _selectedWilaya?.trim() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
+  String? get _baladiyaForHomeApi {
+    if (_radiusKm != null) return null;
+    final value = _selectedBaladiya?.trim() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
+  double? get _radiusForHomeApi => _radiusKm;
+
+  double? get _userLatForHomeApi => _radiusKm != null ? _userLat : null;
+
+  double? get _userLngForHomeApi => _radiusKm != null ? _userLng : null;
+
+  double? get _activeUserLatForCards => _radiusKm != null ? _userLat : null;
+
+  double? get _activeUserLngForCards => _radiusKm != null ? _userLng : null;
 
   void _initLocationFromProfile() {
     final userData = StorageService.getUserData();
@@ -153,10 +209,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (km <= 0) {
       setState(() {
         _radiusKm = null;
-        _selectedLocation = 'Algiers, Algeria';
+        if (_selectedLocation == '/' || _selectedLocation.trim().isEmpty) {
+          _selectedLocation = 'Algiers, Algeria';
+        }
       });
       _syncSharedDiscoveryLocation();
-      await _reloadHomeTopAd();
+      await _loadData();
       return;
     }
 
@@ -189,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       _syncSharedDiscoveryLocation();
       _logFilterDistance(km);
-      await _reloadHomeTopAd();
+      await _loadData();
     } catch (e) {
       if (!mounted) return;
       await LocationPermissionHelper.handleLocationError(
@@ -225,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       _syncSharedDiscoveryLocation();
       _logFilterWilaya(result.wilaya, result.baladiya);
-      await _reloadHomeTopAd();
+      await _loadData();
     }
   }
 
@@ -255,11 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final addressLower = address.toLowerCase();
     final wilayaLower = _selectedWilaya!.toLowerCase();
     if (!addressLower.contains(wilayaLower)) return false;
-    if (_selectedBaladiya != null &&
-        _selectedBaladiya!.trim().isNotEmpty &&
-        !addressLower.contains(_selectedBaladiya!.toLowerCase())) {
-      return false;
-    }
+    // Baladiya is treated as a precision boost, not a hard blocker.
+    // This prevents empty feeds when the backend falls back from baladiya to wilaya.
     return true;
   }
 
@@ -274,7 +329,12 @@ class _HomeScreenState extends State<HomeScreen> {
       return true;
     }
     final selected = _selectedWilaya!.toLowerCase();
-    return deliveryWilayas.map((w) => w.toLowerCase()).contains(selected);
+    return deliveryWilayas.any((wilaya) {
+      final normalizedWilaya = wilaya.toLowerCase();
+      return normalizedWilaya == selected ||
+          normalizedWilaya.contains(selected) ||
+          selected.contains(normalizedWilaya);
+    });
   }
 
   bool _postMatchesCity(Post p) {
@@ -304,38 +364,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Post> _filterPostsForActiveLocation(List<Post> products) {
-    if (_radiusKm != null) return _filterByRadius(products);
-    if (_isCityFilterActive) {
-      final filtered = products.where(_postMatchesCity).toList();
-      return filtered.isEmpty ? products : filtered;
-    }
+    // Location filtering is server-driven for home products.
     return products;
   }
 
   List<Offer> _filterOffersForActiveLocation(List<Offer> offers) {
-    if (_radiusKm == null && !_isCityFilterActive) return offers;
-    if (_radiusKm != null && _userLat != null && _userLng != null) {
-      return offers.where((o) {
-        if (!o.product.storeNearbyVisible) return false;
-        final dist = Helpers.haversineDistance(_userLat, _userLng,
-            o.product.storeLatitude, o.product.storeLongitude);
-        if (dist == null) return false;
-        return dist <= _radiusKm!;
-      }).toList();
-    }
-    if (_isCityFilterActive) {
-      final filtered = offers.where(_offerMatchesCity).toList();
-      return filtered.isEmpty ? offers : filtered;
-    }
+    // Location filtering is server-driven for home offers.
     return offers;
   }
 
   List<Pack> _filterPacksForActiveLocation(List<Pack> packs) {
-    if (_radiusKm != null) return _filterPacksByRadius(packs);
-    if (_isCityFilterActive) {
-      final filtered = packs.where(_packMatchesCity).toList();
-      return filtered.isEmpty ? packs : filtered;
-    }
+    // Location filtering is server-driven for home packs.
     return packs;
   }
 
@@ -495,8 +534,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOffersBlock() {
-    return Consumer2<PostProvider, AnalyticsProvider>(
-      builder: (context, postProvider, analyticsProvider, child) {
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
         final offers = _filterOffersForActiveLocation(postProvider.offers);
         final hasOffers = offers.isNotEmpty;
         final isLoading = postProvider.isLoadingOffers;
@@ -507,13 +546,17 @@ class _HomeScreenState extends State<HomeScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Discounts', 'See All', () {
+            _buildSectionHeader(
+              context.tr('Top Discounts'),
+              context.tr('See All'),
+              () {
               Navigator.pushNamed(
                 context,
                 Routes.searchTab,
                 arguments: {'type': 'Discounts', 'autoSearch': true},
               );
-            }),
+              },
+            ),
             const SizedBox(height: AppTheme.spacing16),
             _buildOffersSection(),
             const SizedBox(height: AppTheme.spacing24),
@@ -542,101 +585,21 @@ class _HomeScreenState extends State<HomeScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Latest Products', 'View All', () {
+            _buildSectionHeader(
+              context.tr('Top Products'),
+              context.tr('View All'),
+              () {
               Navigator.pushNamed(
                 context,
                 Routes.searchTab,
                 arguments: {'type': 'Products', 'autoSearch': true},
               );
-            }),
+              },
+            ),
             const SizedBox(height: AppTheme.spacing16),
             _buildRecentProductsSection(),
             const SizedBox(height: AppTheme.spacing24),
-
-            // Discounted Products Section
-            _buildDiscountedProductsBlock(),
           ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDiscountedProductsBlock() {
-    return Consumer2<HomeProvider, PostProvider>(
-      builder: (context, homeProvider, postProvider, child) {
-        // Get only products with active discounts
-        final allProducts = homeProvider.recentProducts;
-        final discountedProducts = allProducts
-            .where((p) => postProvider.isProductDiscounted(p))
-            .toList();
-        final products = _filterPostsForActiveLocation(discountedProducts);
-
-        if (products.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader('Products with Discounts', 'See All', () {
-              Navigator.pushNamed(
-                context,
-                Routes.searchTab,
-                arguments: {'type': 'Discounted', 'autoSearch': true},
-              );
-            }),
-            const SizedBox(height: AppTheme.spacing16),
-            _buildDiscountedProductsSection(),
-            const SizedBox(height: AppTheme.spacing24),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDiscountedProductsSection() {
-    return Consumer2<HomeProvider, PostProvider>(
-      builder: (context, homeProvider, postProvider, child) {
-        // Get only products with active discounts
-        final allProducts = homeProvider.recentProducts;
-        final discountedProducts = allProducts
-            .where((p) => postProvider.isProductDiscounted(p))
-            .toList();
-        final products = _filterPostsForActiveLocation(discountedProducts);
-
-        if (products.isEmpty) {
-          return _buildCompactEmptyState(
-            height: 220,
-            message: _radiusKm != null
-                ? 'No discounted products within ${_radiusKm!.toInt()} km'
-                : (_isCityFilterActive
-                    ? 'No discounted products in this location'
-                    : 'No discounted products available at the moment'),
-          );
-        }
-
-        return SizedBox(
-          height: 280,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(
-                horizontal: CardConstants.gridHorizontalPadding),
-            scrollDirection: Axis.horizontal,
-            itemCount: products.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: CardConstants.gridCrossAxisSpacing),
-            itemBuilder: (context, index) {
-              return SizedBox(
-                width: _gridCardWidth(context),
-                child: ProductCard(
-                  product: products[index],
-                  userLat: _userLat,
-                  userLng: _userLng,
-                  onTap: () => _navigateToProductDetails(products[index]),
-                  onFavoriteTap: () => _toggleFavorite(products[index]),
-                ),
-              );
-            },
-          ),
         );
       },
     );
@@ -655,13 +618,17 @@ class _HomeScreenState extends State<HomeScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Featured Packs', 'View All', () {
+            _buildSectionHeader(
+              context.tr('Top Packs'),
+              context.tr('View All'),
+              () {
               Navigator.pushNamed(
                 context,
                 Routes.searchTab,
                 arguments: {'type': 'Packs', 'autoSearch': true},
               );
-            }),
+              },
+            ),
             const SizedBox(height: AppTheme.spacing16),
             _buildPacksSection(),
             const SizedBox(height: AppTheme.spacing24),
@@ -933,7 +900,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return SizedBox(
-          height: 130,
+          height: 136,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
             scrollDirection: Axis.horizontal,
@@ -943,6 +910,9 @@ class _HomeScreenState extends State<HomeScreen> {
               final u = stores[index];
               return StoreChip.fromUser(
                 store: u,
+                userLat: _activeUserLatForCards,
+                userLng: _activeUserLngForCards,
+                showDistance: _radiusKm != null,
                 onTap: () => Navigator.pushNamed(
                   context,
                   Routes.store,
@@ -1062,8 +1032,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: _gridCardWidth(context),
                 child: ProductCard(
                   product: hotDeals[index],
-                  userLat: _userLat,
-                  userLng: _userLng,
+                  userLat: _activeUserLatForCards,
+                  userLng: _activeUserLngForCards,
                   onTap: () => _navigateToProductDetails(hotDeals[index]),
                   onFavoriteTap: () => _toggleFavorite(hotDeals[index]),
                 ),
@@ -1118,7 +1088,11 @@ class _HomeScreenState extends State<HomeScreen> {
               final pack = packs[index];
               return SizedBox(
                 width: _gridCardWidth(context),
-                child: PackCard(pack: pack),
+                child: PackCard(
+                  pack: pack,
+                  userLat: _activeUserLatForCards,
+                  userLng: _activeUserLngForCards,
+                ),
               );
             },
           ),
@@ -1335,8 +1309,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: _gridCardWidth(context),
                 child: ProductCard(
                   product: products[index],
-                  userLat: _userLat,
-                  userLng: _userLng,
+                  userLat: _activeUserLatForCards,
+                  userLng: _activeUserLngForCards,
                   onTap: () => _navigateToProductDetails(products[index]),
                   onFavoriteTap: () => _toggleFavorite(products[index]),
                 ),
@@ -1776,8 +1750,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==================== Offers Section ====================
 
   Widget _buildOffersSection() {
-    return Consumer2<PostProvider, AnalyticsProvider>(
-      builder: (context, postProvider, analyticsProvider, child) {
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
         final offers = postProvider.offers;
 
         if (postProvider.isLoadingOffers && offers.isEmpty) {
@@ -1796,12 +1770,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // Apply radius filter on the embedded product's store location
         final filteredOffers = _filterOffersForActiveLocation(offers);
 
-        final rankedOffers = _rankOffersByUserSignals(
-          filteredOffers,
-          analyticsProvider.recommendations,
-        );
-
-        if (rankedOffers.isEmpty) {
+        if (filteredOffers.isEmpty) {
           return _buildCompactEmptyState(
             height: 220,
             message: _radiusKm != null
@@ -1818,17 +1787,17 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(
                 horizontal: CardConstants.gridHorizontalPadding),
             scrollDirection: Axis.horizontal,
-            itemCount: rankedOffers.length,
+            itemCount: filteredOffers.length,
             separatorBuilder: (_, __) =>
                 const SizedBox(width: CardConstants.gridCrossAxisSpacing),
             itemBuilder: (context, index) {
-              final offer = rankedOffers[index];
+              final offer = filteredOffers[index];
               return SizedBox(
                 width: _gridCardWidth(context),
                 child: PromotionCard(
                   offer: offer,
-                  userLat: _userLat,
-                  userLng: _userLng,
+                  userLat: _activeUserLatForCards,
+                  userLng: _activeUserLngForCards,
                   onTap: () => _navigateToPromotionDetails(
                     offer,
                     placement: 'home_feed',
@@ -1840,39 +1809,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
-  }
-
-  List<Offer> _rankOffersByUserSignals(
-    List<Offer> offers,
-    List<dynamic> recommendations,
-  ) {
-    if (offers.isEmpty) return offers;
-    final recScoreByProductId = <int, double>{};
-    for (var i = 0; i < recommendations.length; i++) {
-      final item = recommendations[i];
-      if (item is! Map<String, dynamic>) continue;
-      final product = item['product'];
-      int? productId;
-      if (product is Map<String, dynamic>) {
-        productId = int.tryParse('${product['id'] ?? ''}');
-      }
-      if (productId == null) continue;
-      final score = double.tryParse('${item['score'] ?? ''}') ?? 0.0;
-      recScoreByProductId[productId] = score +
-          ((recommendations.length - i).clamp(0, recommendations.length) * 1.2);
-    }
-
-    final ranked = List<Offer>.from(offers);
-    ranked.sort((a, b) {
-      final aRec = recScoreByProductId[a.product.id] ?? 0.0;
-      final bRec = recScoreByProductId[b.product.id] ?? 0.0;
-      final aFresh = a.isNearEnding ? 8.0 : 0.0;
-      final bFresh = b.isNearEnding ? 8.0 : 0.0;
-      final aScore = (aRec * 0.65) + (a.discountPercentage * 0.25) + aFresh;
-      final bScore = (bRec * 0.65) + (b.discountPercentage * 0.25) + bFresh;
-      return bScore.compareTo(aScore);
-    });
-    return ranked;
   }
 
   // ==================== Navigation Methods ====================

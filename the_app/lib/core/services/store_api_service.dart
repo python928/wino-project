@@ -22,7 +22,8 @@ class StoreApiService {
     }
   }
 
-  Future<User> getStoreDetails(int storeId, {int retries = 2, bool forceRefresh = false}) async {
+  Future<User> getStoreDetails(int storeId,
+      {int retries = 2, bool forceRefresh = false}) async {
     if (!forceRefresh && _storeCache.containsKey(storeId)) {
       return _storeCache[storeId]!;
     }
@@ -47,17 +48,21 @@ class StoreApiService {
     }
   }
 
-  Future<List<Post>> getStoreProducts(int storeId, {int page = 1, int retries = 2}) async {
+  Future<List<Post>> getStoreProducts(int storeId,
+      {int page = 1, int retries = 2}) async {
     int attempt = 0;
     while (true) {
       try {
-        final data = await ApiService.get('${ApiConfig.products}?store=$storeId&page=$page');
+        final data = await ApiService.get(
+            '${ApiConfig.products}?store=$storeId&page=$page');
         if (data is Map<String, dynamic> && data['results'] != null) {
           return (data['results'] as List)
               .map((json) => Post.fromJson(json as Map<String, dynamic>))
               .toList();
         } else if (data is List) {
-          return data.map((json) => Post.fromJson(json as Map<String, dynamic>)).toList();
+          return data
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
         }
         return [];
       } catch (e) {
@@ -76,6 +81,9 @@ class StoreApiService {
     String? searchQuery,
     String? wilaya,
     String? city,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
     int page = 1,
     int? pageSize,
     int retries = 2,
@@ -84,14 +92,23 @@ class StoreApiService {
     while (true) {
       try {
         final params = <String, String>{};
-        if (searchQuery != null && searchQuery.isNotEmpty) params['search'] = searchQuery;
+        if (searchQuery != null && searchQuery.isNotEmpty)
+          params['search'] = searchQuery;
+        if (wilaya != null && wilaya.isNotEmpty) params['wilaya_code'] = wilaya;
+        if (city != null && city.isNotEmpty) params['baladiya'] = city;
+        if (userLat != null && userLng != null) {
+          params['lat'] = userLat.toStringAsFixed(6);
+          params['lng'] = userLng.toStringAsFixed(6);
+        }
+        if (radiusKm != null) params['radius_km'] = radiusKm.toStringAsFixed(2);
         params['page'] = page.toString();
         if (pageSize != null) params['page_size'] = pageSize.toString();
         params['has_posts'] = 'true';
 
         String url = ApiConfig.users;
         if (params.isNotEmpty) {
-          url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+          url +=
+              '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
         }
 
         final data = await ApiService.get(url);
@@ -101,7 +118,9 @@ class StoreApiService {
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
         } else if (data is List) {
-          return data.map((json) => User.fromJson(json as Map<String, dynamic>)).toList();
+          return data
+              .map((json) => User.fromJson(json as Map<String, dynamic>))
+              .toList();
         }
         return [];
       } catch (e) {
@@ -119,7 +138,8 @@ class StoreApiService {
     int attempt = 0;
     while (true) {
       try {
-        final resp = await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        final resp = await ApiService.post(
+            ApiConfig.followersToggle, {'store': storeId});
         final isFollowing = (resp is Map && resp['is_following'] == true);
         if (!isFollowing) {
           await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
@@ -140,7 +160,8 @@ class StoreApiService {
     int attempt = 0;
     while (true) {
       try {
-        final resp = await ApiService.post(ApiConfig.followersToggle, {'store': storeId});
+        final resp = await ApiService.post(
+            ApiConfig.followersToggle, {'store': storeId});
         final isFollowing = (resp is Map && resp['is_following'] == true);
         if (isFollowing) {
           await ApiService.post(ApiConfig.followersToggle, {'store': storeId});

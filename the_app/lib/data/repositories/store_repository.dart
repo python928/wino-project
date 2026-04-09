@@ -63,6 +63,11 @@ class StoreRepository {
   /// Search users/stores by query
   static Future<List<User>> searchStores({
     String? query,
+    String? wilayaCode,
+    String? baladiya,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
     bool fetchAllPages = false,
   }) async {
     try {
@@ -71,6 +76,19 @@ class StoreRepository {
       };
       if (query != null && query.isNotEmpty) {
         queryParams['search'] = query;
+      }
+      if (wilayaCode != null && wilayaCode.isNotEmpty) {
+        queryParams['wilaya_code'] = wilayaCode;
+      }
+      if (baladiya != null && baladiya.isNotEmpty) {
+        queryParams['baladiya'] = baladiya;
+      }
+      if (userLat != null && userLng != null) {
+        queryParams['lat'] = userLat.toStringAsFixed(6);
+        queryParams['lng'] = userLng.toStringAsFixed(6);
+      }
+      if (radiusKm != null) {
+        queryParams['radius_km'] = radiusKm.toStringAsFixed(2);
       }
       final url =
           '${ApiConfig.users}?${Uri(queryParameters: queryParams).query}';

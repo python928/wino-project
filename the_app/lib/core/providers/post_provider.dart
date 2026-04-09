@@ -105,13 +105,43 @@ class PostProvider with ChangeNotifier {
     ]);
   }
 
-  Future<void> loadOffers({bool fetchAllPages = false}) async {
+  Future<void> loadOffers({
+    String? search,
+    int? categoryId,
+    List<int>? categoryIds,
+    String? wilayaCode,
+    String? baladiya,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? ordering,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
+    bool homeRank = false,
+    bool fetchAllPages = false,
+  }) async {
     _isLoadingPromotions = true;
     _offersError = null;
     notifyListeners();
 
     try {
-      _offers = await PostRepository.getOffers(fetchAllPages: fetchAllPages);
+      _offers = await PostRepository.getOffers(
+        search: search,
+        categoryId: categoryId,
+        categoryIds: categoryIds,
+        wilayaCode: wilayaCode,
+        baladiya: baladiya,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        minRating: minRating,
+        ordering: ordering,
+        userLat: userLat,
+        userLng: userLng,
+        radiusKm: radiusKm,
+        homeRank: homeRank,
+        fetchAllPages: fetchAllPages,
+      );
     } catch (e) {
       _offersError = e.toString();
       _error = _offersError;
@@ -347,6 +377,16 @@ class PostProvider with ChangeNotifier {
     String? search,
     int? storeId,
     int? categoryId,
+    List<int>? categoryIds,
+    String? wilayaCode,
+    String? baladiya,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? ordering,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
     bool fetchAllPages = false,
   }) async {
     _isLoadingPosts = true;
@@ -358,6 +398,16 @@ class PostProvider with ChangeNotifier {
         search: search,
         storeId: storeId,
         categoryId: categoryId,
+        categoryIds: categoryIds,
+        wilayaCode: wilayaCode,
+        baladiya: baladiya,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        minRating: minRating,
+        ordering: ordering,
+        userLat: userLat,
+        userLng: userLng,
+        radiusKm: radiusKm,
         fetchAllPages: fetchAllPages,
       );
     } catch (e) {

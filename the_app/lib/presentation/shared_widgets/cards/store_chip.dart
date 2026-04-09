@@ -12,6 +12,7 @@ class StoreChip extends StatelessWidget {
   final double rating;
   final int followersCount;
   final bool isVerified;
+  final String? distanceText;
   final VoidCallback? onTap;
 
   const StoreChip({
@@ -21,14 +22,33 @@ class StoreChip extends StatelessWidget {
     required this.rating,
     required this.followersCount,
     this.isVerified = false,
+    this.distanceText,
     this.onTap,
   });
 
   factory StoreChip.fromUser({
     Key? key,
     required User store,
+    double? userLat,
+    double? userLng,
+    bool showDistance = false,
     VoidCallback? onTap,
   }) {
+    String? distanceText;
+    if (showDistance) {
+      final computedDistance = Helpers.haversineDistance(
+        userLat,
+        userLng,
+        store.latitude,
+        store.longitude,
+      );
+      if (computedDistance != null) {
+        distanceText = Helpers.formatDistance(computedDistance);
+      } else if (store.distance != null) {
+        distanceText = Helpers.formatDistance(store.distance!);
+      }
+    }
+
     return StoreChip(
       key: key,
       imageUrl: store.profileImage,
@@ -36,12 +56,20 @@ class StoreChip extends StatelessWidget {
       rating: store.averageRating,
       followersCount: store.followersCount,
       isVerified: store.isVerified,
+      distanceText: distanceText,
       onTap: onTap,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasDistance = distanceText != null && distanceText!.isNotEmpty;
+    final avatarBoxSize = hasDistance ? 70.0 : 74.0;
+    final avatarSize = hasDistance ? 66.0 : 70.0;
+    final spaceAfterAvatar = hasDistance ? 4.0 : 6.0;
+    final spaceAfterName = hasDistance ? 2.0 : 3.0;
+    final spaceBeforeDistance = hasDistance ? 2.0 : 3.0;
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -51,15 +79,15 @@ class StoreChip extends StatelessWidget {
           children: [
             // ── Circle avatar ──────────────────────────────────────────────
             SizedBox(
-              width: 74,
-              height: 74,
+              width: avatarBoxSize,
+              height: avatarBoxSize,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                     child: Container(
-                      width: 70,
-                      height: 70,
+                      width: avatarSize,
+                      height: avatarSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.primaryColor.withOpacity(0.08),
@@ -100,7 +128,7 @@ class StoreChip extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 6),
+            SizedBox(height: spaceAfterAvatar),
 
             // ── Store name ─────────────────────────────────────────────────
             Row(
@@ -123,6 +151,7 @@ class StoreChip extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
+                      height: 1.0,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -130,7 +159,7 @@ class StoreChip extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 3),
+            SizedBox(height: spaceAfterName),
 
             // ── Rating + Followers ─────────────────────────────────────────
             Row(
@@ -144,6 +173,7 @@ class StoreChip extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
+                    height: 1.0,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -158,12 +188,40 @@ class StoreChip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 10,
+                      height: 1.0,
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ),
               ],
             ),
+            if (distanceText != null) ...[
+              SizedBox(height: spaceBeforeDistance),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 11,
+                    color: AppColors.primaryColor,
+                  ),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    child: Text(
+                      distanceText!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        height: 1.0,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

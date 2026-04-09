@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/extensions/l10n_extension.dart';
 import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
@@ -212,7 +213,7 @@ class _LiveDurationBadge extends StatelessWidget {
     required this.end,
   });
 
-  static String _format(Duration duration) {
+  static String _format(Duration duration, BuildContext context) {
     var totalSeconds = duration.inSeconds;
     if (totalSeconds < 0) totalSeconds = 0;
 
@@ -225,7 +226,8 @@ class _LiveDurationBadge extends StatelessWidget {
     final ss = seconds.toString().padLeft(2, '0');
 
     if (days > 0) {
-      final d = '$days day${days == 1 ? '' : 's'}';
+      final dayLabel = days == 1 ? context.tr('day') : context.tr('days');
+      final d = '$days $dayLabel';
       return '$d $hours:$mm:$ss';
     }
     return '${duration.inHours}:$mm:$ss';
@@ -249,7 +251,7 @@ class _LiveDurationBadge extends StatelessWidget {
         }
 
         final remaining = end.difference(now);
-        final text = _format(remaining);
+        final text = _format(remaining, context);
 
         return Container(
           padding: const EdgeInsets.symmetric(

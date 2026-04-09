@@ -6,9 +6,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Base URL
   static String get baseUrl {
-    if (kIsWeb) return 'http://192.168.16.21:8000';
-    if (Platform.isAndroid) return 'http://192.168.16.21:8000';
-    return 'http://192.168.16.21:8000';
+    if (kIsWeb) return 'http://192.168.78.21:8000';
+    if (Platform.isAndroid) return 'http://192.168.78.21:8000';
+    return 'http://192.168.78.21:8000';
   }
 
   // API prefix

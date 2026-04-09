@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -28,11 +30,11 @@ import '../common/location_permission_helper.dart';
 import '../common/location_picker_screen.dart';
 import '../common/radius_picker_sheet.dart';
 import '../product/product_detail_screen.dart';
+import '../shared_widgets/app_icon_action_button.dart';
 import '../shared_widgets/cards/pack_card.dart';
 import '../shared_widgets/cards/product_card.dart';
 import '../shared_widgets/cards/promotion_card.dart';
 import '../shared_widgets/cards/store_chip.dart';
-import '../shared_widgets/app_icon_action_button.dart';
 import '../shared_widgets/empty_state_widget.dart';
 import '../shared_widgets/loading_indicator.dart';
 import '../shared_widgets/location_mode_switcher.dart';
@@ -289,6 +291,99 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     );
   }
 
+  String? get _searchQueryForApi {
+    final q = _searchController.text.trim();
+    return q.isEmpty ? null : q;
+  }
+
+  int? get _singleCategoryIdForApi =>
+      _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null;
+
+  List<int>? get _categoryIdsForApi {
+    if (_selectedCategoryIds.isEmpty) return null;
+    return _selectedCategoryIds.toList();
+  }
+
+  String? get _wilayaForApi {
+    if (_distanceKm != null) return null;
+    final w = _selectedWilaya?.trim() ?? '';
+    return w.isEmpty ? null : w;
+  }
+
+  String? get _baladiyaForApi {
+    if (_distanceKm != null) return null;
+    final b = _selectedBaladiya?.trim() ?? '';
+    return b.isEmpty ? null : b;
+  }
+
+  double? get _minPriceForApi =>
+      _priceRange.start > 0 ? _priceRange.start : null;
+
+  double? get _maxPriceForApi =>
+      _priceRange.end < 100000 ? _priceRange.end : null;
+
+  double? get _minRatingForApi => _minRating > 0 ? _minRating : null;
+
+  double? get _radiusForApi => _distanceKm;
+
+  double? get _userLatForApi =>
+      _distanceKm != null && _userLat != null ? _userLat : null;
+
+  double? get _userLngForApi =>
+      _distanceKm != null && _userLng != null ? _userLng : null;
+
+  double? get _activeUserLatForCards => _distanceKm != null ? _userLat : null;
+
+  double? get _activeUserLngForCards => _distanceKm != null ? _userLng : null;
+
+  String _apiOrderingForProducts() {
+    switch (_selectedSort) {
+      case 'Oldest':
+        return 'created_at';
+      case 'Highest Rated':
+        return '-average_rating';
+      case 'Lowest Price':
+        return 'price';
+      case 'Highest Price':
+        return '-price';
+      case 'Newest':
+      default:
+        return '-created_at';
+    }
+  }
+
+  String _apiOrderingForOffers() {
+    switch (_selectedSort) {
+      case 'Oldest':
+        return 'created_at';
+      case 'Highest Rated':
+        return '-product_rating';
+      case 'Lowest Price':
+        return 'product__price';
+      case 'Highest Price':
+        return '-product__price';
+      case 'Newest':
+      default:
+        return '-created_at';
+    }
+  }
+
+  String _apiOrderingForPacks() {
+    switch (_selectedSort) {
+      case 'Oldest':
+        return 'created_at';
+      case 'Highest Rated':
+        return '-merchant_rating';
+      case 'Lowest Price':
+        return 'discount';
+      case 'Highest Price':
+        return '-discount';
+      case 'Newest':
+      default:
+        return '-created_at';
+    }
+  }
+
   void _performSearch() {
     _searchFocus.unfocus();
 
@@ -298,14 +393,52 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     _resetVisibleCounts();
 
     final postProvider = context.read<PostProvider>();
+    final homeProvider = context.read<HomeProvider>();
     postProvider.loadPosts(
-      search: _searchController.text.isNotEmpty ? _searchController.text : null,
-      categoryId:
-          _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null,
+      search: _searchQueryForApi,
+      categoryId: _singleCategoryIdForApi,
+      categoryIds: _categoryIdsForApi,
+      wilayaCode: _wilayaForApi,
+      baladiya: _baladiyaForApi,
+      minPrice: _minPriceForApi,
+      maxPrice: _maxPriceForApi,
+      minRating: _minRatingForApi,
+      ordering: _apiOrderingForProducts(),
+      userLat: _userLatForApi,
+      userLng: _userLngForApi,
+      radiusKm: _radiusForApi,
       fetchAllPages: true,
     );
-    postProvider.loadOffers(fetchAllPages: true);
-    context.read<HomeProvider>().loadFeaturedPacks(limit: null);
+    postProvider.loadOffers(
+      search: _searchQueryForApi,
+      categoryId: _singleCategoryIdForApi,
+      categoryIds: _categoryIdsForApi,
+      wilayaCode: _wilayaForApi,
+      baladiya: _baladiyaForApi,
+      minPrice: _minPriceForApi,
+      maxPrice: _maxPriceForApi,
+      minRating: _minRatingForApi,
+      ordering: _apiOrderingForOffers(),
+      userLat: _userLatForApi,
+      userLng: _userLngForApi,
+      radiusKm: _radiusForApi,
+      fetchAllPages: true,
+    );
+    homeProvider.loadFeaturedPacks(
+      limit: null,
+      search: _searchQueryForApi,
+      categoryId: _singleCategoryIdForApi,
+      categoryIds: _categoryIdsForApi,
+      wilayaCode: _wilayaForApi,
+      baladiya: _baladiyaForApi,
+      minPrice: _minPriceForApi,
+      maxPrice: _maxPriceForApi,
+      minRating: _minRatingForApi,
+      ordering: _apiOrderingForPacks(),
+      userLat: _userLatForApi,
+      userLng: _userLngForApi,
+      radiusKm: _radiusForApi,
+    );
     _searchStores(fetchAllPages: true);
     _logSearchEvent();
   }
@@ -322,15 +455,50 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
 
     await Future.wait([
       postProvider.loadPosts(
-        search:
-            _searchController.text.isNotEmpty ? _searchController.text : null,
-        categoryId: _selectedCategoryIds.length == 1
-            ? _selectedCategoryIds.first
-            : null,
+        search: _searchQueryForApi,
+        categoryId: _singleCategoryIdForApi,
+        categoryIds: _categoryIdsForApi,
+        wilayaCode: _wilayaForApi,
+        baladiya: _baladiyaForApi,
+        minPrice: _minPriceForApi,
+        maxPrice: _maxPriceForApi,
+        minRating: _minRatingForApi,
+        ordering: _apiOrderingForProducts(),
+        userLat: _userLatForApi,
+        userLng: _userLngForApi,
+        radiusKm: _radiusForApi,
         fetchAllPages: true,
       ),
-      postProvider.loadOffers(fetchAllPages: true),
-      homeProvider.loadFeaturedPacks(limit: null),
+      postProvider.loadOffers(
+        search: _searchQueryForApi,
+        categoryId: _singleCategoryIdForApi,
+        categoryIds: _categoryIdsForApi,
+        wilayaCode: _wilayaForApi,
+        baladiya: _baladiyaForApi,
+        minPrice: _minPriceForApi,
+        maxPrice: _maxPriceForApi,
+        minRating: _minRatingForApi,
+        ordering: _apiOrderingForOffers(),
+        userLat: _userLatForApi,
+        userLng: _userLngForApi,
+        radiusKm: _radiusForApi,
+        fetchAllPages: true,
+      ),
+      homeProvider.loadFeaturedPacks(
+        limit: null,
+        search: _searchQueryForApi,
+        categoryId: _singleCategoryIdForApi,
+        categoryIds: _categoryIdsForApi,
+        wilayaCode: _wilayaForApi,
+        baladiya: _baladiyaForApi,
+        minPrice: _minPriceForApi,
+        maxPrice: _maxPriceForApi,
+        minRating: _minRatingForApi,
+        ordering: _apiOrderingForPacks(),
+        userLat: _userLatForApi,
+        userLng: _userLngForApi,
+        radiusKm: _radiusForApi,
+      ),
       _searchStores(fetchAllPages: true),
     ]);
     _logSearchEvent();
@@ -400,8 +568,12 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     setState(() => _isLoadingStores = true);
     try {
       final stores = await StoreRepository.searchStores(
-        query:
-            _searchController.text.isNotEmpty ? _searchController.text : null,
+        query: _searchQueryForApi,
+        wilayaCode: _wilayaForApi,
+        baladiya: _baladiyaForApi,
+        userLat: _userLatForApi,
+        userLng: _userLngForApi,
+        radiusKm: _radiusForApi,
         fetchAllPages: fetchAllPages,
       );
       if (mounted) {
@@ -465,6 +637,26 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
   }
 
+  void _handleCityTap() {
+    final hasSavedCity =
+        _selectedWilaya != null && _selectedWilaya!.trim().isNotEmpty;
+
+    if (_distanceKm != null && hasSavedCity) {
+      setState(() {
+        _distanceKm = null;
+        _resetVisibleCounts();
+      });
+      _persistLocationToSharedState();
+
+      if (_hasSearched) {
+        unawaited(_performSearchRefresh());
+      }
+      return;
+    }
+
+    _showLocationPicker();
+  }
+
   Future<void> _showDistancePicker() async {
     final shouldContinue = await LocationPermissionHelper.ensureEducationShown(
       context,
@@ -516,9 +708,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
         _userLat = lat;
         _userLng = lng;
         _distanceKm = km;
-        _selectedWilaya = null;
-        _selectedBaladiya = null;
-        _selectedLocation = '';
         _resetVisibleCounts();
       });
       _persistLocationToSharedState();
@@ -748,11 +937,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       _minRating > 0 ||
       _priceRange.start > 0 ||
       _priceRange.end < 100000 ||
-      (_selectedWilaya != null) ||
+      (_selectedWilaya != null && _selectedWilaya!.trim().isNotEmpty) ||
       _distanceKm != null;
-
-  bool get _hasAnyLocationFilter =>
-      (_selectedWilaya != null) || _distanceKm != null;
 
   Map<int, String> _categoriesById(HomeProvider homeProvider) {
     return {for (final c in homeProvider.categories) c.id: c.name};
@@ -942,51 +1128,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return prices.any(_matchesPriceFilter);
   }
 
-  List<User> _sortStores(
-    List<User> stores, {
-    required List<Post> posts,
-    required List<Offer> offers,
-    required List<Pack> packs,
-    required Map<int, String> categoriesById,
-  }) {
-    double priceMetric(User store, {required bool highest}) {
-      final prices = _storeCandidatePrices(
-        store,
-        posts: posts,
-        offers: offers,
-        packs: packs,
-        categoriesById: categoriesById,
-      );
-      if (prices.isEmpty) {
-        return highest ? double.negativeInfinity : double.infinity;
-      }
-      return highest
-          ? prices.reduce((a, b) => a > b ? a : b)
-          : prices.reduce((a, b) => a < b ? a : b);
-    }
-
-    switch (_selectedSort) {
-      case 'Oldest':
-        return List<User>.from(stores)
-          ..sort((a, b) => a.dateJoined.compareTo(b.dateJoined));
-      case 'Highest Rated':
-        return List<User>.from(stores)
-          ..sort((a, b) => b.averageRating.compareTo(a.averageRating));
-      case 'Lowest Price':
-        return List<User>.from(stores)
-          ..sort((a, b) => priceMetric(a, highest: false)
-              .compareTo(priceMetric(b, highest: false)));
-      case 'Highest Price':
-        return List<User>.from(stores)
-          ..sort((a, b) => priceMetric(b, highest: true)
-              .compareTo(priceMetric(a, highest: true)));
-      case 'Newest':
-      default:
-        return List<User>.from(stores)
-          ..sort((a, b) => b.dateJoined.compareTo(a.dateJoined));
-    }
-  }
-
   double _offerEffectivePrice(Offer offer) {
     if (offer.newPrice > 0) return offer.newPrice;
     return offer.product.price;
@@ -1002,17 +1143,20 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     return price >= _priceRange.start && price <= _priceRange.end;
   }
 
-  DateTime _parsePackDate(Pack pack) {
-    return DateTime.tryParse(pack.createdAt) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: Directionality.of(context),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _performSearch,
+          tooltip: context.tr('Search'),
+          backgroundColor: AppColors.primaryColor,
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.search_rounded),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: SafeArea(
           child: Column(
             children: [
@@ -1080,11 +1224,6 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ),
           const SizedBox(width: 6),
           AppIconActionButton(
-            icon: Icons.search_rounded,
-            onTap: _performSearch,
-          ),
-          const SizedBox(width: 6),
-          AppIconActionButton(
             icon: Icons.tune_rounded,
             onTap: _showFiltersSheet,
           ),
@@ -1101,15 +1240,13 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       child: LocationModeSwitcher(
         distanceActive: distanceActive,
-        cityLabel: (!distanceActive &&
-                _selectedLocation.isNotEmpty &&
-                _selectedLocation != '/')
+        cityLabel: (_selectedLocation.isNotEmpty && _selectedLocation != '/')
             ? _localizedLocationLabel(_selectedLocation)
             : context.tr('City'),
         nearbyLabel: distanceActive
             ? '${_distanceKm!.toInt()} ${context.tr('km')}'
             : context.tr('Nearby'),
-        onCityTap: _showLocationPicker,
+        onCityTap: _handleCityTap,
         onNearbyTap: _showDistancePicker,
         isLoadingNearby: _isNearbyLoading,
       ),
@@ -1722,67 +1859,14 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
     }
   }
 
-  // Location filter helpers
-  bool _storeMatchesLocationFilter(User store) {
-    if (_selectedWilaya == null) return true;
-    final normalizedLocation = _normalizeText([
-      store.address,
-      store.city ?? '',
-      store.country ?? '',
-    ].join(' '));
-    if (normalizedLocation.isEmpty) return false;
-
-    if (!normalizedLocation.contains(_normalizeText(_selectedWilaya!))) {
-      return false;
-    }
-    if (_selectedBaladiya != null &&
-        _selectedBaladiya!.isNotEmpty &&
-        !normalizedLocation.contains(_normalizeText(_selectedBaladiya!))) {
-      return false;
-    }
-
-    return true;
-  }
-
-  List<User> _getLocationFilteredStores({bool applyQuery = true}) {
-    final baseStores = applyQuery
-        ? _searchedStores.where(_storeMatchesQuery).toList()
-        : _searchedStores.toList();
-    if (_selectedWilaya == null) {
-      return baseStores;
-    }
-    return baseStores.where(_storeMatchesLocationFilter).toList();
-  }
-
-  List<User> _getDistanceFilteredStores({bool applyQuery = true}) {
-    final baseStores = applyQuery
-        ? _searchedStores.where(_storeMatchesQuery).toList()
-        : _searchedStores.toList();
-    if (_distanceKm == null || _userLat == null || _userLng == null) {
-      return baseStores;
-    }
-    return baseStores.where((store) {
-      if (!store.allowNearbyVisibility) return false;
-      final dist = Helpers.haversineDistance(
-          _userLat, _userLng, store.latitude, store.longitude);
-      return dist != null && dist <= _distanceKm!;
-    }).toList();
-  }
-
   List<User> _getFilteredStores({
     required Map<int, String> categoriesById,
     required List<Post> posts,
     required List<Offer> offers,
     required List<Pack> packs,
   }) {
-    List<User> stores;
-    if (_distanceKm != null) {
-      stores = _getDistanceFilteredStores();
-    } else if (_selectedWilaya != null) {
-      stores = _getLocationFilteredStores();
-    } else {
-      stores = _searchedStores.where(_storeMatchesQuery).toList();
-    }
+    // Store location filtering is already applied on the backend request.
+    List<User> stores = _searchedStores.where(_storeMatchesQuery).toList();
 
     if (_selectedCategoryIds.isNotEmpty) {
       stores = stores
@@ -1817,25 +1901,23 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           .toList();
     }
 
-    return _sortStores(
-      stores,
-      posts: posts,
-      offers: offers,
-      packs: packs,
-      categoriesById: categoriesById,
-    );
+    // Store ordering is server-driven.
+    return stores;
   }
 
-  Set<int> _getValidStoreIds() {
-    if (!_hasAnyLocationFilter) return {};
-    if (_distanceKm != null) {
-      return _getDistanceFilteredStores(applyQuery: false)
-          .map((store) => store.id)
-          .toSet();
-    }
-    return _getLocationFilteredStores(applyQuery: false)
-        .map((store) => store.id)
-        .toSet();
+  List<Post> _applyLocationFilterToProducts(List<Post> products) {
+    // Location filtering is already applied on the backend for search requests.
+    return products;
+  }
+
+  List<Offer> _applyLocationFilterToOffers(List<Offer> offers) {
+    // Location filtering is already applied on the backend for search requests.
+    return offers;
+  }
+
+  List<Pack> _applyLocationFilterToPacks(List<Pack> packs) {
+    // Location filtering is already applied on the backend for search requests.
+    return packs;
   }
 
   Widget _buildAllContent() {
@@ -1860,20 +1942,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildGridShimmer();
         }
 
-        final validStoreIds = _getValidStoreIds();
-
-        var filteredProducts = products.toList();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          filteredProducts = filteredProducts
-              .where((p) => validStoreIds.contains(p.storeId))
-              .toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          filteredProducts = [];
-        }
-        if (_distanceKm != null) {
-          filteredProducts =
-              filteredProducts.where((p) => p.storeNearbyVisible).toList();
-        }
+        var filteredProducts =
+            _applyLocationFilterToProducts(products.toList());
 
         filteredProducts = filteredProducts
             .where((p) => _postMatchesSelectedCategories(p, categoriesById))
@@ -1889,19 +1959,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((p) => _matchesPriceFilter(p.price))
             .toList();
 
-        var filteredOffers = offers.toList();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          filteredOffers = filteredOffers
-              .where((o) => validStoreIds.contains(o.product.storeId))
-              .toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          filteredOffers = [];
-        }
-        if (_distanceKm != null) {
-          filteredOffers = filteredOffers
-              .where((o) => o.product.storeNearbyVisible)
-              .toList();
-        }
+        var filteredOffers = _applyLocationFilterToOffers(offers.toList());
 
         filteredOffers = filteredOffers
             .where((o) =>
@@ -1918,18 +1976,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((o) => _matchesPriceFilter(_offerEffectivePrice(o)))
             .toList();
 
-        var filteredPacks = packs.toList();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          filteredPacks = filteredPacks
-              .where((p) => validStoreIds.contains(p.merchantId))
-              .toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          filteredPacks = [];
-        }
-        if (_distanceKm != null) {
-          filteredPacks =
-              filteredPacks.where((p) => p.merchantNearbyVisible).toList();
-        }
+        var filteredPacks = _applyLocationFilterToPacks(packs.toList());
         filteredPacks = filteredPacks
             .where((p) =>
                 _packMatchesSelectedCategories(p, categoriesById, products))
@@ -1945,53 +1992,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
             .toList();
 
-        switch (_selectedSort) {
-          case 'Oldest':
-            filteredProducts = List.from(filteredProducts)
-              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-            filteredOffers = List.from(filteredOffers)
-              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-            filteredPacks = List.from(filteredPacks)
-              ..sort((a, b) => _parsePackDate(a).compareTo(_parsePackDate(b)));
-            break;
-          case 'Highest Rated':
-            filteredProducts = List.from(filteredProducts)
-              ..sort((a, b) => b.rating.compareTo(a.rating));
-            filteredOffers = List.from(filteredOffers)
-              ..sort((a, b) => b.product.rating.compareTo(a.product.rating));
-            filteredPacks = List.from(filteredPacks)
-              ..sort((a, b) => b.merchantRating.compareTo(a.merchantRating));
-            break;
-          case 'Lowest Price':
-            filteredProducts = List.from(filteredProducts)
-              ..sort((a, b) => a.price.compareTo(b.price));
-            filteredOffers = List.from(filteredOffers)
-              ..sort((a, b) =>
-                  _offerEffectivePrice(a).compareTo(_offerEffectivePrice(b)));
-            filteredPacks = List.from(filteredPacks)
-              ..sort((a, b) =>
-                  _packEffectivePrice(a).compareTo(_packEffectivePrice(b)));
-            break;
-          case 'Highest Price':
-            filteredProducts = List.from(filteredProducts)
-              ..sort((a, b) => b.price.compareTo(a.price));
-            filteredOffers = List.from(filteredOffers)
-              ..sort((a, b) =>
-                  _offerEffectivePrice(b).compareTo(_offerEffectivePrice(a)));
-            filteredPacks = List.from(filteredPacks)
-              ..sort((a, b) =>
-                  _packEffectivePrice(b).compareTo(_packEffectivePrice(a)));
-            break;
-          case 'Newest':
-          default:
-            filteredProducts = List.from(filteredProducts)
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            filteredOffers = List.from(filteredOffers)
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            filteredPacks = List.from(filteredPacks)
-              ..sort((a, b) => _parsePackDate(b).compareTo(_parsePackDate(a)));
-            break;
-        }
+        // Ordering is server-driven via API query params.
 
         final filteredStores = _getFilteredStores(
           categoriesById: categoriesById,
@@ -2014,8 +2015,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ...filteredProducts.map(
             (p) => ProductCard(
               product: p,
-              userLat: _userLat,
-              userLng: _userLng,
+              userLat: _activeUserLatForCards,
+              userLng: _activeUserLngForCards,
               onTap: () {
                 _logClick(p);
                 Navigator.pushNamed(
@@ -2029,6 +2030,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           ),
           ...filteredOffers.map((o) => PromotionCard(
                 offer: o,
+                userLat: _activeUserLatForCards,
+                userLng: _activeUserLngForCards,
                 onTap: () {
                   _logPromotionClick(o, placement: 'search_top');
                   Navigator.pushNamed(
@@ -2038,7 +2041,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   );
                 },
               )),
-          ...filteredPacks.map((p) => PackCard(pack: p)),
+          ...filteredPacks.map((p) => PackCard(
+                pack: p,
+                userLat: _activeUserLatForCards,
+                userLng: _activeUserLngForCards,
+              )),
         ];
         final visibleCards = combinedCards.take(_allVisibleCount).toList();
 
@@ -2138,6 +2145,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                               : _storesVisibleCount))
                       .map((store) => StoreChip.fromUser(
                             store: store,
+                            userLat: _activeUserLatForCards,
+                            userLng: _activeUserLngForCards,
+                            showDistance: _distanceKm != null,
                             onTap: () => Navigator.pushNamed(
                               context,
                               Routes.store,
@@ -2193,16 +2203,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((p) => !postProvider.isProductDiscounted(p))
             .toList();
 
-        final validStoreIds = _getValidStoreIds();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          products =
-              products.where((p) => validStoreIds.contains(p.storeId)).toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          products = [];
-        }
-        if (_distanceKm != null) {
-          products = products.where((p) => p.storeNearbyVisible).toList();
-        }
+        products = _applyLocationFilterToProducts(products);
 
         if (_minRating > 0) {
           products = products.where((p) => p.rating >= _minRating).toList();
@@ -2219,29 +2220,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .toList();
         products = products.where((p) => _postMatchesQuery(p)).toList();
 
-        switch (_selectedSort) {
-          case 'Oldest':
-            products = List.from(products)
-              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-            break;
-          case 'Highest Rated':
-            products = List.from(products)
-              ..sort((a, b) => b.rating.compareTo(a.rating));
-            break;
-          case 'Lowest Price':
-            products = List.from(products)
-              ..sort((a, b) => a.price.compareTo(b.price));
-            break;
-          case 'Highest Price':
-            products = List.from(products)
-              ..sort((a, b) => b.price.compareTo(a.price));
-            break;
-          case 'Newest':
-          default:
-            products = List.from(products)
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            break;
-        }
+        // Ordering is server-driven via API query params.
 
         if (products.isEmpty) {
           return _buildEmptyState();
@@ -2268,8 +2247,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 itemBuilder: (context, index) {
                   return ProductCard(
                     product: visible[index],
-                    userLat: _userLat,
-                    userLng: _userLng,
+                    userLat: _activeUserLatForCards,
+                    userLng: _activeUserLngForCards,
                     onTap: () {
                       _logClick(visible[index]);
                       Navigator.pushNamed(
@@ -2307,17 +2286,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildGridShimmer();
         }
 
-        final validStoreIds = _getValidStoreIds();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          offers = offers
-              .where((o) => validStoreIds.contains(o.product.storeId))
-              .toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          offers = [];
-        }
-        if (_distanceKm != null) {
-          offers = offers.where((o) => o.product.storeNearbyVisible).toList();
-        }
+        offers = _applyLocationFilterToOffers(offers);
 
         final categoriesById = _categoriesById(context.read<HomeProvider>());
         offers = offers
@@ -2333,31 +2302,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((o) => _matchesPriceFilter(_offerEffectivePrice(o)))
             .toList();
 
-        switch (_selectedSort) {
-          case 'Oldest':
-            offers = List.from(offers)
-              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-            break;
-          case 'Highest Rated':
-            offers = List.from(offers)
-              ..sort((a, b) => b.product.rating.compareTo(a.product.rating));
-            break;
-          case 'Lowest Price':
-            offers = List.from(offers)
-              ..sort((a, b) =>
-                  _offerEffectivePrice(a).compareTo(_offerEffectivePrice(b)));
-            break;
-          case 'Highest Price':
-            offers = List.from(offers)
-              ..sort((a, b) =>
-                  _offerEffectivePrice(b).compareTo(_offerEffectivePrice(a)));
-            break;
-          case 'Newest':
-          default:
-            offers = List.from(offers)
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            break;
-        }
+        // Ordering is server-driven via API query params.
 
         if (offers.isEmpty) {
           return _buildEmptyState();
@@ -2385,6 +2330,8 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                   final offer = visible[index];
                   return PromotionCard(
                     offer: offer,
+                    userLat: _activeUserLatForCards,
+                    userLng: _activeUserLngForCards,
                     onTap: () {
                       _logPromotionClick(offer, placement: 'search_top');
                       Navigator.pushNamed(
@@ -2423,16 +2370,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
           return _buildGridShimmer();
         }
 
-        final validStoreIds = _getValidStoreIds();
-        if (_hasAnyLocationFilter && validStoreIds.isNotEmpty) {
-          packs =
-              packs.where((p) => validStoreIds.contains(p.merchantId)).toList();
-        } else if (_hasAnyLocationFilter && validStoreIds.isEmpty) {
-          packs = [];
-        }
-        if (_distanceKm != null) {
-          packs = packs.where((p) => p.merchantNearbyVisible).toList();
-        }
+        packs = _applyLocationFilterToPacks(packs);
 
         final categoriesById = _categoriesById(homeProvider);
         packs = packs
@@ -2447,31 +2385,7 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
             .where((p) => _matchesPriceFilter(_packEffectivePrice(p)))
             .toList();
 
-        switch (_selectedSort) {
-          case 'Oldest':
-            packs = List.from(packs)
-              ..sort((a, b) => _parsePackDate(a).compareTo(_parsePackDate(b)));
-            break;
-          case 'Highest Rated':
-            packs = List.from(packs)
-              ..sort((a, b) => b.merchantRating.compareTo(a.merchantRating));
-            break;
-          case 'Lowest Price':
-            packs = List.from(packs)
-              ..sort((a, b) =>
-                  _packEffectivePrice(a).compareTo(_packEffectivePrice(b)));
-            break;
-          case 'Highest Price':
-            packs = List.from(packs)
-              ..sort((a, b) =>
-                  _packEffectivePrice(b).compareTo(_packEffectivePrice(a)));
-            break;
-          case 'Newest':
-          default:
-            packs = List.from(packs)
-              ..sort((a, b) => _parsePackDate(b).compareTo(_parsePackDate(a)));
-            break;
-        }
+        // Ordering is server-driven via API query params.
 
         if (packs.isEmpty) {
           return _buildEmptyState();
@@ -2496,7 +2410,11 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 ),
                 itemCount: visible.length,
                 itemBuilder: (context, index) {
-                  return PackCard(pack: visible[index]);
+                  return PackCard(
+                    pack: visible[index],
+                    userLat: _activeUserLatForCards,
+                    userLng: _activeUserLngForCards,
+                  );
                 },
               ),
               if (packs.length > visible.length)
@@ -2544,6 +2462,9 @@ class _SearchTabScreenState extends State<SearchTabScreen> {
                 children: visibleStores
                     .map((store) => StoreChip.fromUser(
                           store: store,
+                          userLat: _activeUserLatForCards,
+                          userLng: _activeUserLngForCards,
+                          showDistance: _distanceKm != null,
                           onTap: () => Navigator.pushNamed(
                             context,
                             Routes.store,

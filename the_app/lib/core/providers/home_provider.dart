@@ -1,13 +1,14 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
+import '../../core/config/api_config.dart';
+import '../../data/models/category_model.dart';
+import '../../data/models/pack_model.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/user_model.dart';
-import '../../data/models/pack_model.dart';
-import '../../data/models/category_model.dart';
 import '../services/api_service.dart';
-import '../../core/config/api_config.dart';
 import '../services/product_api_service.dart';
-import '../services/storage_service.dart';
 import '../services/store_api_service.dart';
 
 class HomeProvider with ChangeNotifier {
@@ -164,135 +165,66 @@ class HomeProvider with ChangeNotifier {
     );
   }
 
-  /// Load & rank featured stores using a multi-signal scoring algorithm.
-  /// Signals: rating, review count, product count, followers,
-  ///          account age, category match, random jitter.
-  Future<void> loadFeaturedStores() async {
+  /// Load featured stores directly from API (server-authoritative filtering).
+  Future<void> loadFeaturedStores({
+    String? wilayaCode,
+    String? baladiya,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
+  }) async {
     await _runSectionLoad(
       setLoading: (v) => _isLoadingStores = v,
       setError: (v) => _storesError = v,
       task: () async {
-        // Fetch a large candidate pool
-        final pool = await _storeService.getStores(page: 1, pageSize: 40);
-
-        // Derive preferred categories from this session's loaded products
-        final sessionCategories = <String>{};
-        for (final p in _recentProducts) {
-          if (p.category.isNotEmpty) sessionCategories.add(p.category);
-        }
-        for (final p in _hotDeals) {
-          if (p.category.isNotEmpty) sessionCategories.add(p.category);
-        }
-        // Merge with persisted cross-session category preferences
-        final storedCategories = StorageService.getLastCategories();
-        final preferred = {...sessionCategories, ...storedCategories}.toList();
-
-        // Persist updated preferences for next session
-        if (sessionCategories.isNotEmpty) {
-          StorageService.saveLastCategories(preferred);
-        }
-
-        _featuredStores =
-            _scoreAndShuffleStores(pool, preferredCategories: preferred);
+        _featuredStores = await _storeService.getStores(
+          page: 1,
+          pageSize: 40,
+          wilaya: wilayaCode,
+          city: baladiya,
+          userLat: userLat,
+          userLng: userLng,
+          radiusKm: radiusKm,
+        );
       },
     );
   }
 
-  /// Score stores by multiple signals and return the top 8 with randomization.
-  /// Random jitter ensures results vary on every load.
-  List<User> _scoreAndShuffleStores(
-    List<User> pool, {
-    List<String> preferredCategories = const [],
-  }) {
-    if (pool.isEmpty) return [];
-    final rng = math.Random();
-    final now = DateTime.now();
-
-    final scored = pool.map((store) {
-      double score = 0.0;
-
-      // 1. Rating component (0-25 pts) with confidence factor
-      final rating = store.averageRating;
-      final reviewCount = store.reviewCount;
-      final ratingConfidence = math.min(reviewCount / 10.0, 1.0);
-      score += (rating / 5.0) * 25.0 * ratingConfidence;
-
-      // 2. Review count (0-15 pts, log scale)
-      if (reviewCount > 0) {
-        score += math.min(math.log(reviewCount + 1) / math.log(2) * 3, 15);
-      }
-
-      // 3. Post count (0-20 pts, log scale)
-      final postCount = store.productCount;
-      if (postCount > 0) {
-        score += math.min(math.log(postCount + 1) / math.log(2) * 4, 20);
-      }
-
-      // 4. Account age (0-10 pts)
-      final ageDays = now.difference(store.dateJoined).inDays;
-      final ageScore = math.min(ageDays / 365.0 * 10, 10);
-      score += ageScore;
-
-      // 5. Category match bonus (0-20 pts)
-      if (preferredCategories.isNotEmpty) {
-        final storeCategories =
-            store.categories.map((c) => c.toLowerCase()).toSet();
-        final preferred =
-            preferredCategories.map((c) => c.toLowerCase()).toSet();
-        final matches = storeCategories.intersection(preferred).length;
-        if (matches > 0) {
-          score += math.min(matches * 5.0, 20.0);
-        }
-      }
-
-      // 6. Followers (0-10 pts, log scale)
-      final followers = store.followersCount;
-      if (followers > 0) {
-        score += math.min(math.log(followers + 1) / math.log(2) * 2, 10);
-      }
-
-      // 7. Random jitter (0-5 pts) for variety on each load
-      score += rng.nextDouble() * 5.0;
-
-      return MapEntry(store, score);
-    }).toList();
-
-    // First shuffle to randomize same-score items
-    scored.shuffle(rng);
-
-    // Then sort by score
-    scored.sort((a, b) => b.value.compareTo(a.value));
-
-    // Take top stores with additional randomization
-    final top20 = scored.take(20).toList();
-
-    // Keep top 5, randomize the rest for variety
-    final result = <User>[];
-    if (top20.length > 5) {
-      result.addAll(top20.take(5).map((e) => e.key));
-      final remaining = top20.skip(5).map((e) => e.key).toList()..shuffle(rng);
-      result.addAll(remaining.take(3));
-    } else {
-      result.addAll(top20.map((e) => e.key));
-    }
-
-    return result;
-  }
-
-  /// Load recent products from API
-  Future<void> loadRecentProducts() async {
+  /// Load home products from API.
+  /// When [homeRank] is true, backend returns smart ranking (rated first + demand + fallback).
+  Future<void> loadRecentProducts({
+    int limit = 20,
+    String? wilayaCode,
+    String? baladiya,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
+    bool homeRank = false,
+  }) async {
     await _runSectionLoad(
       setLoading: (v) => _isLoadingProducts = v,
       setError: (v) => _productsError = v,
       task: () async {
         final response = await _productService.getProducts(
-          ordering: '-created_at',
+          ordering: homeRank ? null : '-created_at',
+          wilayaCode: wilayaCode,
+          baladiya: baladiya,
+          userLat: userLat,
+          userLng: userLng,
+          radiusKm: radiusKm,
+          homeRank: homeRank,
           page: 1,
+          pageSize: limit,
         );
-        // Shuffle top-20 so each refresh shows a different varied set
-        final recentPool = response.results.take(20).toList()
-          ..shuffle(math.Random());
-        _recentProducts = recentPool.take(10).toList();
+
+        if (homeRank) {
+          _recentProducts = response.results.take(limit).toList();
+        } else {
+          // Shuffle top-20 so each refresh shows a different varied set
+          final recentPool = response.results.take(20).toList()
+            ..shuffle(math.Random());
+          _recentProducts = recentPool.take(10).toList();
+        }
       },
     );
   }
@@ -370,7 +302,22 @@ class HomeProvider with ChangeNotifier {
   }
 
   /// Load featured packs
-  Future<void> loadFeaturedPacks({int? limit = 10}) async {
+  Future<void> loadFeaturedPacks({
+    int? limit = 10,
+    String? search,
+    int? categoryId,
+    List<int>? categoryIds,
+    String? wilayaCode,
+    String? baladiya,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? ordering,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
+    bool homeRank = false,
+  }) async {
     await _runSectionLoad(
       setLoading: (v) => _isLoadingPacks = v,
       setError: (v) => _packsError = v,
@@ -391,8 +338,51 @@ class HomeProvider with ChangeNotifier {
           // continue without enrichment
         }
 
+        final queryParams = <String, String>{
+          'available_status': 'available',
+        };
+        if (search != null && search.isNotEmpty) {
+          queryParams['search'] = search;
+        }
+        if (categoryId != null) {
+          queryParams['category'] = '$categoryId';
+        }
+        if (categoryIds != null && categoryIds.isNotEmpty) {
+          queryParams['category_ids'] = categoryIds.join(',');
+        }
+        if (wilayaCode != null && wilayaCode.isNotEmpty) {
+          queryParams['wilaya_code'] = wilayaCode;
+        }
+        if (baladiya != null && baladiya.isNotEmpty) {
+          queryParams['baladiya'] = baladiya;
+        }
+        if (minPrice != null) {
+          queryParams['min_price'] = minPrice.toStringAsFixed(2);
+        }
+        if (maxPrice != null) {
+          queryParams['max_price'] = maxPrice.toStringAsFixed(2);
+        }
+        if (minRating != null) {
+          queryParams['min_rating'] = minRating.toStringAsFixed(1);
+        }
+        if (ordering != null && ordering.isNotEmpty) {
+          queryParams['ordering'] = ordering;
+        }
+        if (userLat != null && userLng != null) {
+          queryParams['lat'] = userLat.toStringAsFixed(6);
+          queryParams['lng'] = userLng.toStringAsFixed(6);
+        }
+        if (radiusKm != null) {
+          queryParams['radius_km'] = radiusKm.toStringAsFixed(2);
+        }
+        if (homeRank) {
+          queryParams['home_rank'] = 'true';
+        }
+
+        final endpoint =
+            '/api/catalog/packs/?${Uri(queryParameters: queryParams).query}';
         final packResults = await _fetchPaginatedResults(
-          '/api/catalog/packs/?available_status=available',
+          endpoint,
           fetchAllPages: limit == null,
         );
 

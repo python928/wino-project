@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:dzlocal_shop/core/extensions/l10n_extension.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/home_provider.dart';
@@ -62,13 +62,20 @@ class RecommendationsList extends StatelessWidget {
     return Consumer2<PostProvider, HomeProvider>(
       builder: (context, postProvider, homeProvider, _) {
         // Filter products to exclude those with active discounts
-        final allProducts = postProvider.posts;
+        final allProducts = homeProvider.recentProducts;
         final products = allProducts
             .where((p) => !postProvider.isProductDiscounted(p))
             .toList();
         final offers = postProvider.offers;
         final packs = homeProvider.packs;
         final stores = homeProvider.featuredStores; // List<User>
+        final userLat = homeProvider.discoveryRadiusKm != null
+          ? homeProvider.discoveryUserLat
+          : null;
+        final userLng = homeProvider.discoveryRadiusKm != null
+          ? homeProvider.discoveryUserLng
+          : null;
+        final showDistance = homeProvider.discoveryRadiusKm != null;
 
         final hasCards =
             products.isNotEmpty || offers.isNotEmpty || packs.isNotEmpty;
@@ -90,6 +97,8 @@ class RecommendationsList extends StatelessWidget {
             final p = ps[i];
             mixedCards.add(ProductCard(
               product: p,
+              userLat: userLat,
+              userLng: userLng,
               onTap: onProductTap != null
                   ? () => onProductTap!(p)
                   : () => Navigator.pushNamed(
@@ -104,11 +113,17 @@ class RecommendationsList extends StatelessWidget {
             final o = os[i];
             mixedCards.add(PromotionCard(
               offer: o,
+              userLat: userLat,
+              userLng: userLng,
               onTap: onOfferTap != null ? () => onOfferTap!(o) : null,
             ));
           }
           if (i < ks.length) {
-            mixedCards.add(PackCard(pack: ks[i]));
+            mixedCards.add(PackCard(
+              pack: ks[i],
+              userLat: userLat,
+              userLng: userLng,
+            ));
           }
         }
 
@@ -168,7 +183,7 @@ class RecommendationsList extends StatelessWidget {
               const SizedBox(height: 24),
               _sectionLabel(context, 'Stores'),
               SizedBox(
-                height: 130,
+                height: 136,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(
@@ -177,6 +192,9 @@ class RecommendationsList extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, i) => StoreChip.fromUser(
                     store: stores[i],
+                    userLat: userLat,
+                    userLng: userLng,
+                    showDistance: showDistance,
                     onTap: () => Navigator.pushNamed(
                       context,
                       Routes.store,

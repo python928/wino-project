@@ -1,6 +1,6 @@
+import '../../data/models/post_model.dart';
 import '../config/api_config.dart';
 import './api_service.dart';
-import '../../data/models/post_model.dart';
 
 /// Pagination response wrapper
 class PaginatedResponse<T> {
@@ -42,21 +42,42 @@ class ProductApiService {
     double? maxPrice,
     String? availableStatus,
     String? ordering,
+    String? wilayaCode,
+    String? baladiya,
+    double? userLat,
+    double? userLng,
+    double? radiusKm,
+    bool homeRank = false,
     int page = 1,
+    int? pageSize,
   }) async {
     try {
       final params = <String, String>{'page': page.toString()};
       if (categoryId != null) params['category'] = categoryId.toString();
-      if (searchQuery != null && searchQuery.isNotEmpty) params['search'] = searchQuery;
+      if (searchQuery != null && searchQuery.isNotEmpty)
+        params['search'] = searchQuery;
       if (storeId != null) params['store'] = storeId.toString();
       if (minPrice != null) params['min_price'] = minPrice.toString();
       if (maxPrice != null) params['max_price'] = maxPrice.toString();
       if (availableStatus != null) params['available_status'] = availableStatus;
       if (ordering != null) params['ordering'] = ordering;
+      if (wilayaCode != null && wilayaCode.isNotEmpty)
+        params['wilaya_code'] = wilayaCode;
+      if (baladiya != null && baladiya.isNotEmpty)
+        params['baladiya'] = baladiya;
+      if (userLat != null && userLng != null) {
+        params['lat'] = userLat.toStringAsFixed(6);
+        params['lng'] = userLng.toStringAsFixed(6);
+      }
+      if (radiusKm != null) params['radius_km'] = radiusKm.toStringAsFixed(2);
+      if (homeRank) params['home_rank'] = 'true';
+      if (pageSize != null && pageSize > 0)
+        params['page_size'] = pageSize.toString();
 
       String url = ApiConfig.products;
       if (params.isNotEmpty) {
-        url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+        url +=
+            '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
       }
 
       final data = await ApiService.get(url);
@@ -76,7 +97,9 @@ class ProductApiService {
 
       // Handle non-paginated response
       if (data is List) {
-        final results = data.map((json) => Post.fromJson(json as Map<String, dynamic>)).toList();
+        final results = data
+            .map((json) => Post.fromJson(json as Map<String, dynamic>))
+            .toList();
         return PaginatedResponse(
           count: results.length,
           results: results,
