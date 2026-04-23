@@ -1,0 +1,80 @@
+@startuml
+title Subscriptions App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "subscriptions" {
+  entity "SubscriptionPlan" as SubscriptionPlan {
+    * id : BIGINT <<PK>>
+    --
+    name : VARCHAR
+    slug : VARCHAR
+    max_products : INTEGER
+    price : DECIMAL
+    duration_days : INTEGER
+    benefits : TEXT
+    plan_features : JSON
+    is_active : BOOLEAN
+  }
+
+  entity "MerchantSubscription" as MerchantSubscription {
+    * id : BIGINT <<PK>>
+    --
+    store_id : BIGINT <<FK>>
+    plan_id : BIGINT <<FK>>
+    start_date : DATETIME
+    end_date : DATETIME
+    status : VARCHAR
+  }
+
+  entity "SubscriptionPaymentRequest" as SubscriptionPaymentRequest {
+    * id : BIGINT <<PK>>
+    --
+    merchant_id : BIGINT <<FK>>
+    plan_id : BIGINT <<FK>>
+    reviewed_by_id : BIGINT <<FK>>
+    status : VARCHAR
+    payment_note : TEXT
+    status_reason_code : VARCHAR
+    status_reason_text : TEXT
+    reviewed_at : DATETIME
+    created_at : DATETIME
+  }
+
+  entity "SubscriptionPaymentProof" as SubscriptionPaymentProof {
+    * id : BIGINT <<PK>>
+    --
+    payment_request_id : BIGINT <<FK>>
+    image : VARCHAR
+    created_at : DATETIME
+  }
+
+  entity "SubscriptionPaymentConfig" as SubscriptionPaymentConfig {
+    * id : BIGINT <<PK>>
+    --
+    rib : VARCHAR
+    instructions : TEXT
+    is_active : BOOLEAN
+    updated_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" MerchantSubscription
+SubscriptionPlan "1" <-- "0..*" MerchantSubscription
+UsersUser "1" <-- "0..*" SubscriptionPaymentRequest
+UsersUser "0..1" <-- "0..*" SubscriptionPaymentRequest
+SubscriptionPlan "1" <-- "0..*" SubscriptionPaymentRequest
+SubscriptionPaymentRequest "1" <-- "0..*" SubscriptionPaymentProof
+
+@enduml

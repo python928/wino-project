@@ -1,0 +1,155 @@
+@startuml
+title Catalog App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "catalog" {
+  class Category {
+    +name: String
+    +name_ar: String
+    +name_fr: String
+    +name_en: String
+    +parent: Category
+    +icon_code_point: String
+    +icon_font_family: String
+    +icon_font_package: String
+    +scarcity_level: Integer
+  }
+
+  class Product {
+    +store: UsersUser
+    +category: Category
+    +name: String
+    +description: String
+    +price: Decimal
+    +hide_price: Boolean
+    +negotiable: Boolean
+    +available_status: String
+    +delivery_available: Boolean
+    +delivery_wilayas: String
+    +created_at: DateTime
+  }
+
+  class ProductImage {
+    +product: Product
+    +image: Image
+    +is_main: Boolean
+  }
+
+  class Promotion {
+    +store: UsersUser
+    +product: Product
+    +name: String
+    +description: String
+    +percentage: Decimal
+    +is_active: Boolean
+    +start_date: DateTime
+    +end_date: DateTime
+    +created_at: DateTime
+  }
+
+  class PromotionImage {
+    +promotion: Promotion
+    +image: Image
+    +is_main: Boolean
+  }
+
+  class PromotionViewer {
+    +promotion: Promotion
+    +viewer_key: String
+    +first_seen_at: DateTime
+    +last_seen_at: DateTime
+  }
+
+  class Pack {
+    +merchant: UsersUser
+    +name: String
+    +description: String
+    +discount: Decimal
+    +available_status: String
+    +delivery_available: Boolean
+    +delivery_wilayas: String
+    +created_at: DateTime
+  }
+
+  class PackImage {
+    +pack: Pack
+    +image: Image
+    +is_main: Boolean
+  }
+
+  class PackProduct {
+    +pack: Pack
+    +product: Product
+    +quantity: Integer
+  }
+
+  class Review {
+    +user: UsersUser
+    +store: UsersUser
+    +product: Product
+    +rating: Integer
+    +comment: String
+    +credibility_score: Integer
+    +credibility_level: String
+    +evidence_snapshot: JSON
+    +is_low_credibility: Boolean
+    +scored_at: DateTime
+    +created_at: DateTime
+  }
+
+  class Favorite {
+    +user: UsersUser
+    +product: Product
+    +created_at: DateTime
+  }
+
+  class ProductReport {
+    +reporter: UsersUser
+    +product: Product
+    +reason: String
+    +details: String
+    +status: String
+    +seriousness_score: Integer
+    +seriousness_level: String
+    +evidence_snapshot: JSON
+    +is_low_credibility: Boolean
+    +scored_at: DateTime
+    +reporter_reputation_score_at_submission: Integer
+    +created_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+}
+
+Category "0..1" <-- "0..*" Category
+Category "0..1" <-- "0..*" Product
+UsersUser "1" <-- "0..*" Product
+Product "1" <-- "0..*" ProductImage
+Product "0..1" <-- "0..*" Promotion
+UsersUser "1" <-- "0..*" Promotion
+Promotion "1" <-- "0..*" PromotionImage
+Promotion "1" <-- "0..*" PromotionViewer
+UsersUser "1" <-- "0..*" Pack
+Pack "1" <-- "0..*" PackImage
+Pack "1" <-- "0..*" PackProduct
+Product "1" <-- "0..*" PackProduct
+UsersUser "1" <-- "0..*" Review
+UsersUser "0..1" <-- "0..*" Review
+Product "0..1" <-- "0..*" Review
+UsersUser "1" <-- "0..*" Favorite
+Product "1" <-- "0..*" Favorite
+UsersUser "1" <-- "0..*" ProductReport
+Product "1" <-- "0..*" ProductReport
+
+@enduml

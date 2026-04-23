@@ -1,0 +1,140 @@
+@startuml
+title Users App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "users" {
+  class User {
+    +username: String
+    +email: String
+    +name: String
+    +phone: String
+    +gender: String
+    +birthday: Date
+    +profile_image: Image
+    +store_description: String
+    +address: String
+    +latitude: Decimal
+    +longitude: Decimal
+    +allow_nearby_visibility: Boolean
+    +location_updated_at: DateTime
+    +store_type: String
+    +cover_image: Image
+    +facebook: String
+    +instagram: String
+    +whatsapp: String
+    +tiktok: String
+    +youtube: String
+    +show_phone_public: Boolean
+    +show_social_public: Boolean
+    +coins_balance: Integer
+    +post_coins: Integer
+    +ad_view_coins: Integer
+    +last_daily_coin_grant: DateTime
+    +verification_status: String
+    +is_verified: Boolean
+    +verified_at: DateTime
+    +verified_by: User
+    +verification_note: String
+  }
+
+  class Follower {
+    +user: User
+    +followed_user: User
+    +created_at: DateTime
+  }
+
+  class PhoneOTP {
+    +phone: String
+    +code: String
+    +created_at: DateTime
+    +expires_at: DateTime
+    +attempts: Integer
+    +is_verified: Boolean
+    --
+    +is_expired(): Boolean
+    {static} +expiry_time(): DateTime
+  }
+
+  class StoreReport {
+    +reporter: User
+    +store: User
+    +reason: String
+    +details: String
+    +status: String
+    +seriousness_score: Integer
+    +seriousness_level: String
+    +evidence_snapshot: JSON
+    +is_low_credibility: Boolean
+    +scored_at: DateTime
+    +reporter_reputation_score_at_submission: Integer
+    +created_at: DateTime
+  }
+
+  class SystemSettings {
+    +first_login_coins: Integer
+    +daily_login_coins: Integer
+    --
+    {static} +get_settings(): SystemSettings
+  }
+
+  class TrustSettings {
+    +report_quick_submit_seconds: Integer
+    +review_quick_submit_seconds: Integer
+    +minimum_interactions_for_high_credibility: Integer
+    +reporter_reputation_default: Integer
+    +reporter_reputation_low_quality_penalty: Integer
+    +reporter_reputation_good_report_bonus: Integer
+    +report_weight_interactions: Integer
+    +report_weight_recency: Integer
+    +report_weight_reputation: Integer
+    +report_weight_account_age: Integer
+    +review_weight_dwell: Integer
+    +review_weight_interactions: Integer
+    +review_weight_account_age: Integer
+    +review_weight_history: Integer
+    +verified_min_credible_positive_reviews: Integer
+    +verified_max_credible_negative_ratio_percent: Integer
+    +verified_min_account_age_days: Integer
+    +auto_verify_eligible_stores: Boolean
+    +report_cooldown_minutes: Integer
+    +review_cooldown_minutes: Integer
+    +max_reports_per_day: Integer
+    +analytics_retention_days: Integer
+    --
+    {static} +get_settings(): TrustSettings
+  }
+
+  class AbuseFlag {
+    +actor: User
+    +signal_type: String
+    +target_type: String
+    +target_id: Integer
+    +count: Integer
+    +metadata: JSON
+    +first_seen_at: DateTime
+    +last_seen_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "AbstractUser" as AbstractUser <<external>>
+}
+
+User --|> AbstractUser
+User "0..1" <-- "0..*" User
+User "1" <-- "0..*" Follower
+User "1" <-- "0..*" Follower
+User "1" <-- "0..*" StoreReport
+User "1" <-- "0..*" StoreReport
+User "1" <-- "0..*" AbuseFlag
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+title Feedback App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "feedback" {
+  entity "Feedback" as Feedback {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    type : VARCHAR
+    message : TEXT
+    screenshot : VARCHAR
+    app_version : VARCHAR
+    platform : VARCHAR
+    device_info : VARCHAR
+    status : VARCHAR
+    admin_note : TEXT
+    created_at : DATETIME
+    updated_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" Feedback
+
+@enduml

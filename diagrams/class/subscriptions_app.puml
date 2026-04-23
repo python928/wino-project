@@ -1,0 +1,71 @@
+@startuml
+title Subscriptions App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "subscriptions" {
+  class SubscriptionPlan {
+    +name: String
+    +slug: String
+    +max_products: Integer
+    +price: Decimal
+    +duration_days: Integer
+    +benefits: String
+    +plan_features: JSON
+    +is_active: Boolean
+  }
+
+  class MerchantSubscription {
+    +store: UsersUser
+    +plan: SubscriptionPlan
+    +start_date: DateTime
+    +end_date: DateTime
+    +status: String
+  }
+
+  class SubscriptionPaymentRequest {
+    +merchant: UsersUser
+    +plan: SubscriptionPlan
+    +status: String
+    +payment_note: String
+    +status_reason_code: String
+    +status_reason_text: String
+    +reviewed_by: UsersUser
+    +reviewed_at: DateTime
+    +created_at: DateTime
+  }
+
+  class SubscriptionPaymentProof {
+    +payment_request: SubscriptionPaymentRequest
+    +image: Image
+    +created_at: DateTime
+  }
+
+  class SubscriptionPaymentConfig {
+    +rib: String
+    +instructions: String
+    +is_active: Boolean
+    +updated_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" MerchantSubscription
+SubscriptionPlan "1" <-- "0..*" MerchantSubscription
+UsersUser "1" <-- "0..*" SubscriptionPaymentRequest
+UsersUser "0..1" <-- "0..*" SubscriptionPaymentRequest
+SubscriptionPlan "1" <-- "0..*" SubscriptionPaymentRequest
+SubscriptionPaymentRequest "1" <-- "0..*" SubscriptionPaymentProof
+
+@enduml

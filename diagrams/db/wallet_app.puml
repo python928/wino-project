@@ -1,0 +1,74 @@
+@startuml
+title Wallet App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "wallet" {
+  entity "CoinPackPlan" as CoinPackPlan {
+    * id : BIGINT <<PK>>
+    --
+    pack_id : VARCHAR
+    coins_amount : INTEGER
+    price_amount : DECIMAL
+    original_price_amount : DECIMAL
+    title : VARCHAR
+    promo_badge : VARCHAR
+    is_promoted : BOOLEAN
+    sort_order : INTEGER
+    is_active : BOOLEAN
+    created_at : DATETIME
+    updated_at : DATETIME
+  }
+
+  entity "CoinPurchase" as CoinPurchase {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    approved_by_id : BIGINT <<FK>>
+    pack_id : VARCHAR
+    coins_amount : INTEGER
+    price_amount : DECIMAL
+    payment_note : TEXT
+    status : VARCHAR
+    approved_at : DATETIME
+    created_at : DATETIME
+  }
+
+  entity "CoinPurchaseProof" as CoinPurchaseProof {
+    * id : BIGINT <<PK>>
+    --
+    purchase_id : BIGINT <<FK>>
+    image : VARCHAR
+    created_at : DATETIME
+  }
+
+  entity "CoinTransaction" as CoinTransaction {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    amount_signed : INTEGER
+    reason : VARCHAR
+    related_model : VARCHAR
+    related_id : INTEGER
+    created_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" CoinPurchase
+UsersUser "0..1" <-- "0..*" CoinPurchase
+CoinPurchase ..> CoinPackPlan
+CoinPurchase "1" <-- "0..*" CoinPurchaseProof
+UsersUser "1" <-- "0..*" CoinTransaction
+
+@enduml

@@ -1,0 +1,141 @@
+@startuml
+title Users App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "users" {
+  entity "User" as User {
+    * id : BIGINT <<PK>>
+    --
+    verified_by_id : BIGINT <<FK>>
+    username : VARCHAR
+    email : VARCHAR
+    name : VARCHAR
+    phone : VARCHAR
+    gender : VARCHAR
+    birthday : DATE
+    profile_image : VARCHAR
+    store_description : TEXT
+    address : VARCHAR
+    latitude : DECIMAL
+    longitude : DECIMAL
+    allow_nearby_visibility : BOOLEAN
+    location_updated_at : DATETIME
+    store_type : VARCHAR
+    cover_image : VARCHAR
+    facebook : VARCHAR
+    instagram : VARCHAR
+    whatsapp : VARCHAR
+    tiktok : VARCHAR
+    youtube : VARCHAR
+    show_phone_public : BOOLEAN
+    show_social_public : BOOLEAN
+    coins_balance : INTEGER
+    post_coins : INTEGER
+    ad_view_coins : INTEGER
+    last_daily_coin_grant : DATETIME
+    verification_status : VARCHAR
+    is_verified : BOOLEAN
+    verified_at : DATETIME
+    verification_note : TEXT
+  }
+
+  entity "Follower" as Follower {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    followed_user_id : BIGINT <<FK>>
+    created_at : DATETIME
+  }
+
+  entity "PhoneOTP" as PhoneOTP {
+    * id : BIGINT <<PK>>
+    --
+    phone : VARCHAR
+    code : VARCHAR
+    created_at : DATETIME
+    expires_at : DATETIME
+    attempts : SMALLINT
+    is_verified : BOOLEAN
+  }
+
+  entity "StoreReport" as StoreReport {
+    * id : BIGINT <<PK>>
+    --
+    reporter_id : BIGINT <<FK>>
+    store_id : BIGINT <<FK>>
+    reason : VARCHAR
+    details : TEXT
+    status : VARCHAR
+    seriousness_score : SMALLINT
+    seriousness_level : VARCHAR
+    evidence_snapshot : JSON
+    is_low_credibility : BOOLEAN
+    scored_at : DATETIME
+    reporter_reputation_score_at_submission : SMALLINT
+    created_at : DATETIME
+  }
+
+  entity "SystemSettings" as SystemSettings {
+    * id : BIGINT <<PK>>
+    --
+    first_login_coins : INTEGER
+    daily_login_coins : INTEGER
+  }
+
+  entity "TrustSettings" as TrustSettings {
+    * id : BIGINT <<PK>>
+    --
+    report_quick_submit_seconds : INTEGER
+    review_quick_submit_seconds : INTEGER
+    minimum_interactions_for_high_credibility : INTEGER
+    reporter_reputation_default : SMALLINT
+    reporter_reputation_low_quality_penalty : SMALLINT
+    reporter_reputation_good_report_bonus : SMALLINT
+    report_weight_interactions : SMALLINT
+    report_weight_recency : SMALLINT
+    report_weight_reputation : SMALLINT
+    report_weight_account_age : SMALLINT
+    review_weight_dwell : SMALLINT
+    review_weight_interactions : SMALLINT
+    review_weight_account_age : SMALLINT
+    review_weight_history : SMALLINT
+    verified_min_credible_positive_reviews : INTEGER
+    verified_max_credible_negative_ratio_percent : SMALLINT
+    verified_min_account_age_days : INTEGER
+    auto_verify_eligible_stores : BOOLEAN
+    report_cooldown_minutes : INTEGER
+    review_cooldown_minutes : INTEGER
+    max_reports_per_day : INTEGER
+    analytics_retention_days : INTEGER
+  }
+
+  entity "AbuseFlag" as AbuseFlag {
+    * id : BIGINT <<PK>>
+    --
+    actor_id : BIGINT <<FK>>
+    signal_type : VARCHAR
+    target_type : VARCHAR
+    target_id : INTEGER
+    count : INTEGER
+    metadata : JSON
+    first_seen_at : DATETIME
+    last_seen_at : DATETIME
+  }
+}
+
+User "0..1" <-- "0..*" User
+User "1" <-- "0..*" Follower
+User "1" <-- "0..*" Follower
+User "1" <-- "0..*" StoreReport
+User "1" <-- "0..*" StoreReport
+User "1" <-- "0..*" AbuseFlag
+
+@enduml

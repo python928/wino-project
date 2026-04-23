@@ -1,0 +1,63 @@
+@startuml
+title Ads App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "ads" {
+  class AdCampaign {
+    +store: UsersUser
+    +product: CatalogProduct
+    +pack: CatalogPack
+    +name: String
+    +description: String
+    +percentage: Decimal
+    +placement: String
+    +display_hours: JSON
+    +audience_mode: String
+    +age_from: Integer
+    +age_to: Integer
+    +geo_mode: String
+    +target_wilayas: JSON
+    +target_radius_km: Integer
+    +target_categories: JSON
+    +is_active: Boolean
+    +start_date: DateTime
+    +end_date: DateTime
+    +max_impressions: Integer
+    +unique_viewers_count: Integer
+    +impressions_count: Integer
+    +delivered_views_count: Integer
+    +clicks_count: Integer
+    +created_at: DateTime
+    --
+    +clean(): void
+  }
+
+  class AdCampaignViewer {
+    +campaign: AdCampaign
+    +viewer_key: String
+    +first_seen_at: DateTime
+    +last_seen_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+  class "Catalog.Product" as CatalogProduct <<external>>
+  class "Catalog.Pack" as CatalogPack <<external>>
+}
+
+UsersUser "1" <-- "0..*" AdCampaign
+CatalogProduct "0..1" <-- "0..*" AdCampaign
+CatalogPack "0..1" <-- "0..*" AdCampaign
+AdCampaign "1" <-- "0..*" AdCampaignViewer
+
+@enduml

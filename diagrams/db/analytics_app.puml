@@ -1,0 +1,53 @@
+@startuml
+title Analytics App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "analytics" {
+  entity "UserInterestProfile" as UserInterestProfile {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    category_scores : JSON
+    price_affinity : JSON
+    distance_sensitivity : FLOAT
+    quality_sensitivity : FLOAT
+    preferred_max_distance_km : FLOAT
+    preferred_wilayas : JSON
+    search_keywords : JSON
+    preferred_sellers : JSON
+    last_updated : DATETIME
+  }
+
+  entity "InteractionLog" as InteractionLog {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    category_id : BIGINT <<FK>>
+    action : VARCHAR
+    metadata : JSON
+    session_id : VARCHAR
+    timestamp : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+  entity "Catalog.Product" as CatalogProduct <<external>>
+  entity "Catalog.Category" as CatalogCategory <<external>>
+}
+
+UsersUser "1" <-- "0..1" UserInterestProfile
+UsersUser "1" <-- "0..*" InteractionLog
+CatalogProduct "0..1" <-- "0..*" InteractionLog
+CatalogCategory "0..1" <-- "0..*" InteractionLog
+
+@enduml

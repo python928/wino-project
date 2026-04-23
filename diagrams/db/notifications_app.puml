@@ -1,0 +1,51 @@
+@startuml
+title Notifications App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "notifications" {
+  entity "Notification" as Notification {
+    * id : BIGINT <<PK>>
+    --
+    actor_id : BIGINT <<FK>>
+    notification_type : VARCHAR
+    title : VARCHAR
+    body : TEXT
+    product_id : INTEGER
+    pack_id : INTEGER
+    image_url : VARCHAR
+    extra_data : JSON
+    created_at : DATETIME
+  }
+
+  entity "NotificationRecipient" as NotificationRecipient {
+    * id : BIGINT <<PK>>
+    --
+    notification_id : BIGINT <<FK>>
+    user_id : BIGINT <<FK>>
+    is_read : BOOLEAN
+    read_at : DATETIME
+    delivered_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+  entity "Catalog.Product (weak)" as CatalogProductWeak <<external>>
+  entity "Catalog.Pack (weak)" as CatalogPackWeak <<external>>
+}
+
+UsersUser "0..1" <-- "0..*" Notification
+Notification "1" <-- "0..*" NotificationRecipient
+UsersUser "1" <-- "0..*" NotificationRecipient
+Notification ..> CatalogProductWeak
+Notification ..> CatalogPackWeak
+
+@enduml

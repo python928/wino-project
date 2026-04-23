@@ -1,0 +1,67 @@
+@startuml
+title Wallet App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "wallet" {
+  class CoinPackPlan {
+    +pack_id: String
+    +coins_amount: Integer
+    +price_amount: Decimal
+    +original_price_amount: Decimal
+    +title: String
+    +promo_badge: String
+    +is_promoted: Boolean
+    +sort_order: Integer
+    +is_active: Boolean
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+
+  class CoinPurchase {
+    +user: UsersUser
+    +pack_id: String
+    +coins_amount: Integer
+    +price_amount: Decimal
+    +payment_note: String
+    +status: String
+    +approved_at: DateTime
+    +approved_by: UsersUser
+    +created_at: DateTime
+  }
+
+  class CoinPurchaseProof {
+    +purchase: CoinPurchase
+    +image: Image
+    +created_at: DateTime
+  }
+
+  class CoinTransaction {
+    +user: UsersUser
+    +amount_signed: Integer
+    +reason: String
+    +related_model: String
+    +related_id: Integer
+    +created_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" CoinPurchase
+UsersUser "0..1" <-- "0..*" CoinPurchase
+CoinPurchase ..> CoinPackPlan
+CoinPurchase "1" <-- "0..*" CoinPurchaseProof
+UsersUser "1" <-- "0..*" CoinTransaction
+
+@enduml

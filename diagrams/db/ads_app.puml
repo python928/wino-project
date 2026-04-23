@@ -1,0 +1,64 @@
+@startuml
+title Ads App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "ads" {
+  entity "AdCampaign" as AdCampaign {
+    * id : BIGINT <<PK>>
+    --
+    store_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    pack_id : BIGINT <<FK>>
+    name : VARCHAR
+    description : TEXT
+    percentage : DECIMAL
+    placement : VARCHAR
+    display_hours : JSON
+    audience_mode : VARCHAR
+    age_from : INTEGER
+    age_to : INTEGER
+    geo_mode : VARCHAR
+    target_wilayas : JSON
+    target_radius_km : INTEGER
+    target_categories : JSON
+    is_active : BOOLEAN
+    start_date : DATETIME
+    end_date : DATETIME
+    max_impressions : INTEGER
+    unique_viewers_count : INTEGER
+    impressions_count : INTEGER
+    delivered_views_count : INTEGER
+    clicks_count : INTEGER
+    created_at : DATETIME
+  }
+
+  entity "AdCampaignViewer" as AdCampaignViewer {
+    * id : BIGINT <<PK>>
+    --
+    campaign_id : BIGINT <<FK>>
+    viewer_key : VARCHAR
+    first_seen_at : DATETIME
+    last_seen_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+  entity "Catalog.Product" as CatalogProduct <<external>>
+  entity "Catalog.Pack" as CatalogPack <<external>>
+}
+
+UsersUser "1" <-- "0..*" AdCampaign
+CatalogProduct "0..1" <-- "0..*" AdCampaign
+CatalogPack "0..1" <-- "0..*" AdCampaign
+AdCampaign "1" <-- "0..*" AdCampaignViewer
+
+@enduml

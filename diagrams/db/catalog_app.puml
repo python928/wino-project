@@ -1,0 +1,178 @@
+@startuml
+title Catalog App - DB Diagram
+top to bottom direction
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "catalog" {
+  entity "Category" as Category {
+    * id : BIGINT <<PK>>
+    --
+    parent_id : BIGINT <<FK>>
+    name : VARCHAR
+    name_ar : VARCHAR
+    name_fr : VARCHAR
+    name_en : VARCHAR
+    icon_code_point : VARCHAR
+    icon_font_family : VARCHAR
+    icon_font_package : VARCHAR
+    scarcity_level : INTEGER
+  }
+
+  entity "Product" as Product {
+    * id : BIGINT <<PK>>
+    --
+    store_id : BIGINT <<FK>>
+    category_id : BIGINT <<FK>>
+    name : VARCHAR
+    description : TEXT
+    price : DECIMAL
+    hide_price : BOOLEAN
+    negotiable : BOOLEAN
+    available_status : VARCHAR
+    delivery_available : BOOLEAN
+    delivery_wilayas : TEXT
+    created_at : DATETIME
+  }
+
+  entity "ProductImage" as ProductImage {
+    * id : BIGINT <<PK>>
+    --
+    product_id : BIGINT <<FK>>
+    image : VARCHAR
+    is_main : BOOLEAN
+  }
+
+  entity "Promotion" as Promotion {
+    * id : BIGINT <<PK>>
+    --
+    store_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    name : VARCHAR
+    description : TEXT
+    percentage : DECIMAL
+    is_active : BOOLEAN
+    start_date : DATETIME
+    end_date : DATETIME
+    created_at : DATETIME
+  }
+
+  entity "PromotionImage" as PromotionImage {
+    * id : BIGINT <<PK>>
+    --
+    promotion_id : BIGINT <<FK>>
+    image : VARCHAR
+    is_main : BOOLEAN
+  }
+
+  entity "PromotionViewer" as PromotionViewer {
+    * id : BIGINT <<PK>>
+    --
+    promotion_id : BIGINT <<FK>>
+    viewer_key : VARCHAR
+    first_seen_at : DATETIME
+    last_seen_at : DATETIME
+  }
+
+  entity "Pack" as Pack {
+    * id : BIGINT <<PK>>
+    --
+    merchant_id : BIGINT <<FK>>
+    name : VARCHAR
+    description : TEXT
+    discount : DECIMAL
+    available_status : VARCHAR
+    delivery_available : BOOLEAN
+    delivery_wilayas : TEXT
+    created_at : DATETIME
+  }
+
+  entity "PackImage" as PackImage {
+    * id : BIGINT <<PK>>
+    --
+    pack_id : BIGINT <<FK>>
+    image : VARCHAR
+    is_main : BOOLEAN
+  }
+
+  entity "PackProduct" as PackProduct {
+    * id : BIGINT <<PK>>
+    --
+    pack_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    quantity : INTEGER
+  }
+
+  entity "Review" as Review {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    store_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    rating : INTEGER
+    comment : TEXT
+    credibility_score : SMALLINT
+    credibility_level : VARCHAR
+    evidence_snapshot : JSON
+    is_low_credibility : BOOLEAN
+    scored_at : DATETIME
+    created_at : DATETIME
+  }
+
+  entity "Favorite" as Favorite {
+    * id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    created_at : DATETIME
+  }
+
+  entity "ProductReport" as ProductReport {
+    * id : BIGINT <<PK>>
+    --
+    reporter_id : BIGINT <<FK>>
+    product_id : BIGINT <<FK>>
+    reason : VARCHAR
+    details : TEXT
+    status : VARCHAR
+    seriousness_score : SMALLINT
+    seriousness_level : VARCHAR
+    evidence_snapshot : JSON
+    is_low_credibility : BOOLEAN
+    scored_at : DATETIME
+    reporter_reputation_score_at_submission : SMALLINT
+    created_at : DATETIME
+  }
+}
+
+package "External" <<Frame>> {
+  entity "Users.User" as UsersUser <<external>>
+}
+
+Category "0..1" <-- "0..*" Category
+Category "0..1" <-- "0..*" Product
+UsersUser "1" <-- "0..*" Product
+Product "1" <-- "0..*" ProductImage
+UsersUser "1" <-- "0..*" Promotion
+Product "0..1" <-- "0..*" Promotion
+Promotion "1" <-- "0..*" PromotionImage
+Promotion "1" <-- "0..*" PromotionViewer
+UsersUser "1" <-- "0..*" Pack
+Pack "1" <-- "0..*" PackImage
+Pack "1" <-- "0..*" PackProduct
+Product "1" <-- "0..*" PackProduct
+UsersUser "1" <-- "0..*" Review
+UsersUser "0..1" <-- "0..*" Review
+Product "0..1" <-- "0..*" Review
+UsersUser "1" <-- "0..*" Favorite
+Product "1" <-- "0..*" Favorite
+UsersUser "1" <-- "0..*" ProductReport
+Product "1" <-- "0..*" ProductReport
+
+@enduml

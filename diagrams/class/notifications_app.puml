@@ -1,0 +1,48 @@
+@startuml
+title Notifications App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "notifications" {
+  class Notification {
+    +actor: UsersUser
+    +notification_type: String
+    +title: String
+    +body: String
+    +product_id: Integer
+    +pack_id: Integer
+    +image_url: String
+    +extra_data: JSON
+    +created_at: DateTime
+  }
+
+  class NotificationRecipient {
+    +notification: Notification
+    +user: UsersUser
+    +is_read: Boolean
+    +read_at: DateTime
+    +delivered_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+  class "Catalog.Product (weak)" as CatalogProductWeak <<external>>
+  class "Catalog.Pack (weak)" as CatalogPackWeak <<external>>
+}
+
+UsersUser "0..1" <-- "0..*" Notification
+Notification "1" <-- "0..*" NotificationRecipient
+UsersUser "1" <-- "0..*" NotificationRecipient
+Notification ..> CatalogProductWeak
+Notification ..> CatalogPackWeak
+
+@enduml

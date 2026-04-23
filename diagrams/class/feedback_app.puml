@@ -1,0 +1,36 @@
+@startuml
+title Feedback App - Class Diagram
+top to bottom direction
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 50
+skinparam nodesep 32
+
+package "feedback" {
+  class Feedback {
+    +user: UsersUser
+    +type: String
+    +message: String
+    +screenshot: Image
+    +app_version: String
+    +platform: String
+    +device_info: String
+    +status: String
+    +admin_note: String
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+}
+
+package "External" <<Frame>> {
+  class "Users.User" as UsersUser <<external>>
+}
+
+UsersUser "1" <-- "0..*" Feedback
+
+@enduml
