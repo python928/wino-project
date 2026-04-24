@@ -64,9 +64,15 @@ def host_index(request):
 def download_app_index(request):
     return HttpResponseRedirect(GOOGLE_DRIVE_DOWNLOAD_URL)
 
+
+def privacy_policy_page(request):
+    return render(request, 'privacy-policy.html')
+
 urlpatterns = [
     path('', host_index, name='host_index'),
     path('download/', download_app_index, name='download_app_index'),
+    path('privacy-policy/', privacy_policy_page, name='privacy_policy'),
+    path('privacy-policy.html', privacy_policy_page, name='privacy_policy_html'),
     path('s/<int:store_id>/', store_short_link_redirect, name='short_store_redirect'),
     path('p/<int:product_id>/', product_short_link_redirect, name='short_product_redirect'),
     # Override logout to allow GET redirect instead of 405 when hit directly
