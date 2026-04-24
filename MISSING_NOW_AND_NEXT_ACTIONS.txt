@@ -48,9 +48,9 @@
    - common strings تمر أولا عبر generated localization
    - runtime translations بقيت fallback للشاشات الأقدم
 9. تنظيف مسار device registration نحو path واحد على مستوى التطبيق والخادم.
-10. حذف placeholder/legacy directories الفارغة داخل `the_app/lib/features/`.
+10. حذف placeholder/legacy directories الفارغة داخل `wino_app/lib/features/`.
 11. تحديث جزء معتبر من التوثيق الداخلي ليتوافق مع الكود الحالي.
-12. توحيد مهم في تدفقات auth عبر `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+12. توحيد مهم في تدفقات auth عبر `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
 13. تطوير `CategorySelectionScreen` ليصبح primitive مشتركة واعية بالسياق بدل picker عام فقط.
 
 ---
@@ -74,7 +74,7 @@
    - الحفاظ على تركيز خارجي على Maps طالما لا يتغير قرار المنتج
 4. بعض التوثيق كان متأخرا عن الكود، وتم تحديثه في هذه الدفعة، لكنه يحتاج مراجعة دورية لاحقا.
 5. توجد بقايا legacy تسمية أو branding داخل بعض القيم الداخلية:
-   - package name ما يزال `dzlocal_shop`
+   - package name ما يزال `wino`
    - بعض روابط الدعم/السوشيال في `app_config.dart` ما تزال `dzlocal`
 6. لا تزال بعض المسارات أو الطبقات تحمل تراكمات تاريخية يجب تبسيطها تدريجيا.
 7. explainability بدأت تتحسن للتاجر، لكنها ما تزال محدودة للمستخدم النهائي في مسارات الثقة والتوصية.

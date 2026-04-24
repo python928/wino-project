@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: app-backend
+        working-directory: wino_backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: the_app
+        working-directory: wino_app
     steps:
       - name: Checkout
         uses: actions/checkout@v4

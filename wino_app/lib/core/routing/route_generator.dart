@@ -1,0 +1,378 @@
+import 'package:flutter/material.dart';
+import 'package:wino/core/extensions/l10n_extension.dart';
+
+import '../../data/models/offer_model.dart';
+import '../../data/models/pack_model.dart';
+import '../../data/models/post_model.dart';
+import '../../data/repositories/post_repository.dart';
+import '../../core/services/storage_service.dart';
+import '../../features/notifications/notification_screen.dart';
+import '../../presentation/auth/login_screen.dart';
+import '../../presentation/auth/register_screen.dart';
+import '../../presentation/auth/splash_screen.dart';
+import '../../presentation/favorites/favorites_screen.dart';
+import '../../presentation/feedback/my_feedback_screen.dart';
+import '../../presentation/feedback/scan_qr_screen.dart';
+import '../../presentation/feedback/send_feedback_screen.dart';
+import '../../presentation/home/main_navigation_screen.dart';
+import '../../presentation/pack/pack_detail_screen.dart';
+import '../../presentation/product/product_detail_screen.dart';
+import '../../presentation/profile/add_pack_screen.dart';
+import '../../presentation/profile/add_product_screen.dart';
+import '../../presentation/profile/add_promotion_screen.dart';
+import '../../presentation/profile/profile_screen.dart';
+import '../../presentation/promotion/promotion_detail_screen.dart';
+import '../../presentation/search/search_tab_screen.dart';
+import 'routes.dart';
+
+class RouteGenerator {
+  static Route<dynamic> generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      // ===== AUTH ROUTES =====
+      case Routes.splash:
+        return MaterialPageRoute(
+          builder: (_) => const SplashScreen(),
+          settings: settings,
+        );
+
+      case Routes.login:
+        return _slideTransition(
+          settings: settings,
+          child: const LoginScreen(),
+        );
+
+      case Routes.register:
+        return _slideTransition(
+          settings: settings,
+          child: const RegisterScreen(),
+        );
+
+      // ===== MAIN ROUTES =====
+      case Routes.home:
+        return MaterialPageRoute(
+          builder: (_) => const MainNavigationScreen(),
+          settings: settings,
+        );
+
+      // ===== STORE ROUTES =====
+      case Routes.store:
+        final storeId = settings.arguments;
+        // Accept both int directly or extract from map
+        final id = storeId is int
+            ? storeId
+            : (storeId is Map ? storeId['storeId'] as int? : null);
+
+        if (id == null) {
+          return _invalidArgsRoute(settings);
+        }
+        final currentUserData = StorageService.getUserData();
+        final currentRawId = currentUserData?['id'];
+        final currentUserId = currentRawId is int
+            ? currentRawId
+            : int.tryParse(currentRawId?.toString() ?? '');
+        if (currentUserId != null && currentUserId == id) {
+          return _slideTransition(
+            settings: settings,
+            child: const MainNavigationScreen(initialIndex: 3),
+          );
+        }
+        return _fadeTransition(
+          settings: settings,
+          child: ProfileScreen(storeId: id),
+        );
+
+      // ===== PRODUCT ROUTES =====
+      case Routes.productDetails:
+        final args = settings.arguments;
+        if (args is ProductDetailsArgs) {
+          return _slideTransition(
+            settings: settings,
+            child: ProductDetailScreen(
+              product: args.product,
+              sourceSurface: args.sourceSurface,
+              discoveryMode: args.discoveryMode,
+              distanceKm: args.distanceKm,
+              wilayaCode: args.wilayaCode,
+              searchQuery: args.searchQuery,
+              searchContext: args.searchContext,
+            ),
+          );
+        }
+        final productId = RouteGenerator._asInt(args);
+        if (productId != null) {
+          return _slideTransition(
+            settings: settings,
+            child: _ProductDetailByIdLoader(productId: productId),
+          );
+        }
+        if (args is! Post) {
+          return _invalidArgsRoute(settings);
+        }
+        return _slideTransition(
+          settings: settings,
+          child: ProductDetailScreen(product: args),
+        );
+
+      case Routes.promotionDetails:
+        final promotion = settings.arguments as Offer;
+        return _slideTransition(
+          settings: settings,
+          child: PromotionDetailScreen(promotion: promotion),
+        );
+
+      case Routes.packDetails:
+        final pack = settings.arguments;
+        if (pack is! Pack) {
+          return _invalidArgsRoute(settings);
+        }
+        return _slideTransition(
+          settings: settings,
+          child: PackDetailScreen(pack: pack),
+        );
+
+      // ===== MERCHANT ROUTES =====
+      case '/merchant/products/add':
+        return _slideTransition(
+          settings: settings,
+          child: const AddProductScreen(),
+        );
+
+      case '/merchant/products/edit':
+        final product = settings.arguments;
+        if (product is! Post) {
+          return _invalidArgsRoute(settings);
+        }
+        return _slideTransition(
+          settings: settings,
+          child: AddProductScreen(product: product),
+        );
+
+      case '/merchant/packs/add':
+        return _slideTransition(
+          settings: settings,
+          child: const AddPackScreen(),
+        );
+
+      case Routes.addPack:
+        final pack = settings.arguments as Pack?;
+        return _slideTransition(
+          settings: settings,
+          child: AddPackScreen(pack: pack),
+        );
+
+      case '/merchant/packs/edit':
+        final pack = settings.arguments;
+        if (pack is! Pack) {
+          return _invalidArgsRoute(settings);
+        }
+        return _slideTransition(
+          settings: settings,
+          child: AddPackScreen(pack: pack),
+        );
+
+      case '/merchant/promotions/add':
+        return _slideTransition(
+          settings: settings,
+          child: const AddPromotionScreen(),
+        );
+
+      // ===== SEARCH TAB =====
+      case Routes.searchTab:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return _slideTransition(
+          settings: settings,
+          child: SearchTabScreen(
+            initialQuery: args?['query'],
+            initialType: args?['type'],
+            autoSearchOnOpen: args?['autoSearch'] == true,
+          ),
+        );
+
+      case Routes.searchResults:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return _slideTransition(
+          settings: settings,
+          child: SearchTabScreen(
+            initialQuery: args?['query'],
+            initialType: args?['type'],
+            autoSearchOnOpen: args?['autoSearch'] == true,
+          ),
+        );
+
+      // ===== FAVORITES =====
+      case Routes.favorites:
+      case Routes.wishlist:
+        return _slideTransition(
+          settings: settings,
+          child: const FavoritesScreen(),
+        );
+
+      // ===== NOTIFICATIONS =====
+      case Routes.notifications:
+        return MaterialPageRoute(
+          builder: (_) => const NotificationScreen(),
+          settings: settings,
+        );
+
+      case Routes.feedbackSend:
+        return _slideTransition(
+          settings: settings,
+          child: const SendFeedbackScreen(),
+        );
+
+      case Routes.feedbackMy:
+        return _slideTransition(
+          settings: settings,
+          child: const MyFeedbackScreen(),
+        );
+
+      case Routes.qrScan:
+        return _slideTransition(
+          settings: settings,
+          child: const ScanQrScreen(),
+        );
+
+      default:
+        return _notFoundRoute(settings);
+    }
+  }
+
+  // ===== TRANSITION HELPERS =====
+
+  static Route<dynamic> _fadeTransition({
+    required RouteSettings settings,
+    required Widget child,
+  }) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (_, __, ___) => child,
+      transitionsBuilder: (_, animation, __, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    );
+  }
+
+  static Route<dynamic> _slideTransition({
+    required RouteSettings settings,
+    required Widget child,
+  }) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (_, __, ___) => child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        final tween = Tween(begin: begin, end: Offset.zero)
+            .chain(CurveTween(curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    );
+  }
+
+  static int? _asInt(Object? value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static Route<dynamic> _invalidArgsRoute(RouteSettings settings) {
+    return MaterialPageRoute(
+      builder: (context) => _SimpleRouteErrorScreen(
+        title: context.tr('Invalid Data'),
+        message: context.tr(
+            'This page cannot be opened because the provided data is invalid.'),
+        routeName: settings.name,
+      ),
+      settings: settings,
+    );
+  }
+
+  static Route<dynamic> _notFoundRoute(RouteSettings settings) {
+    return MaterialPageRoute(
+      builder: (context) => _SimpleRouteErrorScreen(
+        title: context.tr('Page Not Found'),
+        message: context.tr('This page is currently unavailable.'),
+        routeName: settings.name,
+      ),
+      settings: settings,
+    );
+  }
+}
+
+class _SimpleRouteErrorScreen extends StatelessWidget {
+  final String title;
+  final String message;
+  final String? routeName;
+
+  const _SimpleRouteErrorScreen({
+    required this.title,
+    required this.message,
+    required this.routeName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              if (routeName != null)
+                Text(
+                  routeName!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: Text(context.tr('Back')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductDetailByIdLoader extends StatelessWidget {
+  final int productId;
+
+  const _ProductDetailByIdLoader({required this.productId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Post>(
+      future: PostRepository.getPost(productId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _SimpleRouteErrorScreen(
+            title: context.tr('Product Unavailable'),
+            message: context.tr('Could not load this product.'),
+            routeName: Routes.productDetails,
+          );
+        }
+        return ProductDetailScreen(product: snapshot.data!);
+      },
+    );
+  }
+}
+
+/// Top-level function so [MaterialApp.onGenerateRoute] can reference it directly.
+Route<dynamic> onGenerateRoute(RouteSettings settings) =>
+    RouteGenerator.generateRoute(settings);

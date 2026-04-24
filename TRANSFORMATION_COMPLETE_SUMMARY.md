@@ -50,8 +50,8 @@ The contradiction was not that the improvements were fake. The contradiction was
 - visible first-run language selection with integrated Locale provider
 - unified location-permission education and recovery flows across home, search, and merchant-profile screens
 - reusable external Google Maps directions with fallback recovery paths through:
-  - `the_app/lib/core/services/external_maps_service.dart`
-  - `the_app/lib/presentation/shared_widgets/directions_button.dart`
+  - `wino_app/lib/core/services/external_maps_service.dart`
+  - `wino_app/lib/presentation/shared_widgets/directions_button.dart`
   - recovers to settings launch when Maps is unavailable or GPS disabled
 - comprehensive multilingual coverage (English, French, Arabic) across core user journeys:
   - 11 high-traffic screens localized via `context.tr()` and RuntimeTranslations fallback system
@@ -59,22 +59,22 @@ The contradiction was not that the improvements were fake. The contradiction was
   - ARB-generated localizations + runtime fallback maps for screens not yet migrated
   - all user-facing status messages (favorite toggles, follow actions, review submissions, image uploads, payment requests) now display localized feedback
 - shared auth flow primitives through:
-  - `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+  - `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`
 - stronger auth/profile-setup UX in:
-  - `the_app/lib/presentation/auth/register_screen.dart`
-  - `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+  - `wino_app/lib/presentation/auth/register_screen.dart`
+  - `wino_app/lib/presentation/auth/phone_profile_setup_screen.dart`
 - context-aware category selection reused across auth, search, and publishing in:
-  - `the_app/lib/presentation/search/category_selection_screen.dart`
+  - `wino_app/lib/presentation/search/category_selection_screen.dart`
 - clearer shared dropdown/switch patterns in:
-  - `the_app/lib/presentation/shared_widgets/app_dropdown_menu.dart`
-  - `the_app/lib/presentation/shared_widgets/app_switch_tile.dart`
+  - `wino_app/lib/presentation/shared_widgets/app_dropdown_menu.dart`
+  - `wino_app/lib/presentation/shared_widgets/app_switch_tile.dart`
 - stronger typography/system consistency through:
-  - `the_app/lib/core/theme/app_typography.dart`
+  - `wino_app/lib/core/theme/app_typography.dart`
 
 ## 5) What still blocks a full production-ready claim
 These are not cosmetic gaps. They are release-truth gaps:
 
-- app `baseUrl` is still hardcoded locally in `the_app/lib/core/config/api_config.dart`
+- app `baseUrl` is still hardcoded locally in `wino_app/lib/core/config/api_config.dart`
 - some server defaults are still too development-friendly
 - Android cleartext assumptions still need tightening
 - OTP still needs stronger production hardening

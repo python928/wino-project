@@ -15,7 +15,7 @@ venv/
 coverage.xml
 htmlcov/
 *.log
-app-backend/staticfiles/
+wino_backend/staticfiles/
 
 # Environment / secrets
 .env
@@ -25,22 +25,22 @@ google-services.json
 google-services\ \(1\).json
 
 # Generated / local media
-app-backend/media/
+wino_backend/media/
 
 # Flutter build artifacts
-the_app/.dart_tool/
-the_app/build/
-the_app/.flutter-plugins
-the_app/.flutter-plugins-dependencies
-the_app/android/.gradle/
-the_app/android/app/build/
-the_app/android/local.properties
-the_app/ios/Pods/
-the_app/ios/Runner.xcworkspace/
-the_app/ios/Flutter/ephemeral/
-the_app/macos/Flutter/ephemeral/
-the_app/linux/flutter/ephemeral/
-the_app/windows/flutter/ephemeral/
+wino_app/.dart_tool/
+wino_app/build/
+wino_app/.flutter-plugins
+wino_app/.flutter-plugins-dependencies
+wino_app/android/.gradle/
+wino_app/android/app/build/
+wino_app/android/local.properties
+wino_app/ios/Pods/
+wino_app/ios/Runner.xcworkspace/
+wino_app/ios/Flutter/ephemeral/
+wino_app/macos/Flutter/ephemeral/
+wino_app/linux/flutter/ephemeral/
+wino_app/windows/flutter/ephemeral/
 
 # IDE / OS files
 .idea/

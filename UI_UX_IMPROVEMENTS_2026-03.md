@@ -33,7 +33,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 
 ### 1. **Enhanced Theme System** ✅
 
-**File:** `the_app/lib/core/theme/app_theme.dart`
+**File:** `wino_app/lib/core/theme/app_theme.dart`
 
 #### Changes Made:
 1. **Extended Animation System**
@@ -78,7 +78,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 
 ### 2. **New Animated Widgets Library** ✅
 
-**File:** `the_app/lib/core/widgets/animated_widgets.dart` (NEW)
+**File:** `wino_app/lib/core/widgets/animated_widgets.dart` (NEW)
 
 #### Created Components:
 
@@ -121,7 +121,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 
 ### 3. **Enhanced Empty State Widget** ✅
 
-**File:** `the_app/lib/presentation/shared_widgets/empty_state_widget.dart`
+**File:** `wino_app/lib/presentation/shared_widgets/empty_state_widget.dart`
 
 #### Improvements:
 
@@ -147,7 +147,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 
 ### 4. **Enhanced Error State Widget** ✅
 
-**File:** `the_app/lib/presentation/shared_widgets/error_state_widget.dart`
+**File:** `wino_app/lib/presentation/shared_widgets/error_state_widget.dart`
 
 #### Improvements:
 
@@ -171,7 +171,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 
 ### 5. **Accessibility System** ✅
 
-**File:** `the_app/lib/core/accessibility/semantic_helpers.dart` (NEW)
+**File:** `wino_app/lib/core/accessibility/semantic_helpers.dart` (NEW)
 
 #### Created Utilities:
 
@@ -278,7 +278,7 @@ This document outlines comprehensive UI/UX improvements implemented across the W
 ### Using New Animated Widgets
 
 ```dart
-import 'package:dzlocal_shop/core/widgets/animated_widgets.dart';
+import 'package:wino/core/widgets/animated_widgets.dart';
 
 // Animated button
 AnimatedScaleButton(
@@ -304,7 +304,7 @@ HoverElevatedCard(
 ### Using Accessibility Helpers
 
 ```dart
-import 'package:dzlocal_shop/core/accessibility/semantic_helpers.dart';
+import 'package:wino/core/accessibility/semantic_helpers.dart';
 
 // Semantic button
 SemanticHelpers.button(
@@ -331,7 +331,7 @@ String priceLabel = SemanticHelpers.formatPriceForScreenReader(
 ### Using Enhanced Theme
 
 ```dart
-import 'package:dzlocal_shop/core/theme/app_theme.dart';
+import 'package:wino/core/theme/app_theme.dart';
 
 // Use spacing system
 SizedBox(height: AppTheme.spacing24),
@@ -435,21 +435,21 @@ Material(
 ## 📌 Files Created/Modified
 
 ### New Files Created:
-1. `the_app/lib/core/widgets/animated_widgets.dart`
-2. `the_app/lib/core/accessibility/semantic_helpers.dart`
+1. `wino_app/lib/core/widgets/animated_widgets.dart`
+2. `wino_app/lib/core/accessibility/semantic_helpers.dart`
 3. `UI_UX_IMPROVEMENTS_2026-03.md` (this document)
 
 ### Modified Files:
-1. `the_app/lib/core/theme/app_theme.dart`
-2. `the_app/lib/presentation/shared_widgets/empty_state_widget.dart`
-3. `the_app/lib/presentation/shared_widgets/error_state_widget.dart`
+1. `wino_app/lib/core/theme/app_theme.dart`
+2. `wino_app/lib/presentation/shared_widgets/empty_state_widget.dart`
+3. `wino_app/lib/presentation/shared_widgets/error_state_widget.dart`
 
 ### Files Analyzed (No Changes):
-- `the_app/lib/core/theme/app_colors.dart`
-- `the_app/lib/presentation/home/home_screen.dart`
-- `the_app/lib/presentation/shared_widgets/unified_app_bar.dart`
-- `the_app/lib/presentation/shared_widgets/cards/product_card.dart`
-- `the_app/lib/presentation/auth/launch_screen.dart`
+- `wino_app/lib/core/theme/app_colors.dart`
+- `wino_app/lib/presentation/home/home_screen.dart`
+- `wino_app/lib/presentation/shared_widgets/unified_app_bar.dart`
+- `wino_app/lib/presentation/shared_widgets/cards/product_card.dart`
+- `wino_app/lib/presentation/auth/launch_screen.dart`
 - Various documentation files
 
 ---

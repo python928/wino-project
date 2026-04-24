@@ -9,8 +9,8 @@ Top-level repository view
 ├── .github/
 ├── .venv/
 ├── .vscode/
-├── app-backend/
-├── the_app/
+├── wino_backend/
+├── wino_app/
 ├── Academic-and-Practical-Description.txt
 ├── ALGERIA_COMPETITIVE_ADVANTAGE_PLAN.txt
 ├── API_LINKS_EXPLAINED.txt
@@ -44,9 +44,9 @@ Repository reality
 - The canonical current-stage doc is now `TRANSFORMATION_COMPLETE_SUMMARY.md`.
 - The truthful repo-wide stage is advanced pre-production / pilot-ready direction, not full production release.
 
-Backend tree (`app-backend/`)
+Backend tree (`wino_backend/`)
 -----------------------------
-app-backend
+wino_backend
 ├── .github/
 ├── Dockerfile
 ├── README.md
@@ -69,8 +69,8 @@ app-backend
 
 Important backend notes
 -----------------------
-- Active settings entrypoint: `app-backend/backend/settings.py`
-- Active root router: `app-backend/backend/urls.py`
+- Active settings entrypoint: `wino_backend/backend/settings.py`
+- Active root router: `wino_backend/backend/urls.py`
 - `common/` is not a major business app, but it is used by middleware/imports.
 - Root short-link routes live in backend root:
   - `/s/{id}/`
@@ -99,15 +99,15 @@ Backend module roles
 
 Media directories currently visible
 -----------------------------------
-- `app-backend/media/feedback/`
-- `app-backend/media/products/`
-- `app-backend/media/subscriptions/`
-- `app-backend/media/users/`
-- `app-backend/media/wallet/`
+- `wino_backend/media/feedback/`
+- `wino_backend/media/products/`
+- `wino_backend/media/subscriptions/`
+- `wino_backend/media/users/`
+- `wino_backend/media/wallet/`
 
-Flutter app tree (`the_app/`)
+Flutter app tree (`wino_app/`)
 -----------------------------
-the_app
+wino_app
 ├── android/
 ├── assets/
 ├── lib/
@@ -121,7 +121,7 @@ Platform scope
 --------------
 - Android platform folder is retained.
 - iOS/Web/macOS/Linux/Windows folders were removed from the repo.
-- Some internal names still use legacy identifiers such as `dzlocal_shop`, but the current product-facing brand is `Wino`.
+- Some internal names still use legacy identifiers such as `wino`, but the current product-facing brand is `Wino`.
 
 Key architecture notes
 ----------------------
@@ -136,7 +136,7 @@ Recent structure / product evolution to remember
 - first-run language onboarding is now a real product flow, not just a translation setting.
 - location permission education is centralized in shared Flutter helper code.
 - merchant ads dashboard now includes stronger explainability text.
-- empty placeholder directories under `the_app/lib/features/` were cleaned up.
+- empty placeholder directories under `wino_app/lib/features/` were cleaned up.
 - API docs should no longer mention the removed duplicate devices route.
-- auth flow structure is now partially centralized through `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+- auth flow structure is now partially centralized through `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
 - category picking became a shared, multi-context primitive instead of a one-off screen behavior.

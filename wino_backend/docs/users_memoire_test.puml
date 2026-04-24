@@ -1,0 +1,120 @@
+@startuml
+title Users App - Class Diagram
+top to bottom direction
+hide circle
+hide methods
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 12
+skinparam ranksep 45
+skinparam nodesep 30
+
+  class AbuseFlag {
+    +actor: ForeignKey -> User
+    +signal_type: CharField
+    +target_type: CharField
+    +target_id: PositiveIntegerField
+    +count: PositiveIntegerField
+    +metadata: JSONField
+    +first_seen_at: DateTimeField
+    +last_seen_at: DateTimeField
+  }
+  class Follower {
+    +user: ForeignKey -> User
+    +followed_user: ForeignKey -> User
+    +created_at: DateTimeField
+  }
+  class PhoneOTP {
+    +phone: CharField
+    +code: CharField
+    +created_at: DateTimeField
+    +expires_at: DateTimeField
+    +attempts: PositiveSmallIntegerField
+    +is_verified: BooleanField
+  }
+  class StoreReport {
+    +reporter: ForeignKey -> User
+    +store: ForeignKey -> User
+    +reason: CharField
+    +details: TextField
+    +status: CharField
+    +seriousness_score: PositiveSmallIntegerField
+    +seriousness_level: CharField
+    +evidence_snapshot: JSONField
+    +is_low_credibility: BooleanField
+    +scored_at: DateTimeField
+    +reporter_reputation_score_at_submission: PositiveSmallIntegerField
+    +created_at: DateTimeField
+  }
+  class SystemSettings {
+    +first_login_coins: PositiveIntegerField
+    +daily_login_coins: PositiveIntegerField
+  }
+  class TrustSettings {
+    +report_quick_submit_seconds: PositiveIntegerField
+    +review_quick_submit_seconds: PositiveIntegerField
+    +minimum_interactions_for_high_credibility: PositiveIntegerField
+    +reporter_reputation_default: PositiveSmallIntegerField
+    +reporter_reputation_low_quality_penalty: PositiveSmallIntegerField
+    +reporter_reputation_good_report_bonus: PositiveSmallIntegerField
+    +report_weight_interactions: PositiveSmallIntegerField
+    +report_weight_recency: PositiveSmallIntegerField
+    +report_weight_reputation: PositiveSmallIntegerField
+    +report_weight_account_age: PositiveSmallIntegerField
+    +review_weight_dwell: PositiveSmallIntegerField
+    +review_weight_interactions: PositiveSmallIntegerField
+    +review_weight_account_age: PositiveSmallIntegerField
+    +review_weight_history: PositiveSmallIntegerField
+    +verified_min_credible_positive_reviews: PositiveIntegerField
+    +verified_max_credible_negative_ratio_percent: PositiveSmallIntegerField
+    +verified_min_account_age_days: PositiveIntegerField
+    +auto_verify_eligible_stores: BooleanField
+    +report_cooldown_minutes: PositiveIntegerField
+    +review_cooldown_minutes: PositiveIntegerField
+    +max_reports_per_day: PositiveIntegerField
+    +analytics_retention_days: PositiveIntegerField
+  }
+  class User {
+    +name: CharField
+    +phone: CharField
+    +gender: CharField
+    +birthday: DateField
+    +profile_image: ImageField
+    +store_description: TextField
+    +address: CharField
+    +latitude: DecimalField
+    +longitude: DecimalField
+    +allow_nearby_visibility: BooleanField
+    +location_updated_at: DateTimeField
+    +store_type: CharField
+    +cover_image: ImageField
+    +facebook: CharField
+    +instagram: CharField
+    +whatsapp: CharField
+    +tiktok: CharField
+    +youtube: CharField
+    +show_phone_public: BooleanField
+    +show_social_public: BooleanField
+    +coins_balance: PositiveIntegerField
+    +post_coins: PositiveIntegerField
+    +ad_view_coins: PositiveIntegerField
+    +last_daily_coin_grant: DateTimeField
+    +verification_status: CharField
+    +is_verified: BooleanField
+    +verified_at: DateTimeField
+    +verified_by: ForeignKey -> User
+    +verification_note: TextField
+  }
+
+package "External" <<Frame>> {
+  class "AbstractUser" as AbstractUser <<external>>
+
+User --|> AbstractUser
+User <-- User
+User <-- Follower
+User <-- StoreReport
+User <-- AbuseFlag
+@enduml

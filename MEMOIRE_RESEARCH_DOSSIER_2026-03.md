@@ -386,7 +386,7 @@ At the same time, remaining limitations should be presented honestly:
 - observability is still incomplete,
 - localization has improved but is not yet complete across all screens,
 - automated testing is still smaller than the size of the system, especially in Flutter and end-to-end coverage,
-- some legacy naming remains in internal identifiers such as `dzlocal_shop`,
+- some legacy naming remains in internal identifiers such as `wino`,
 - explainability is improving for merchants, but is still weaker for end users in trust and recommendation flows.
 
 This balance is academically useful because it allows the thesis to describe Wino as:

@@ -1,4 +1,4 @@
-the_app/lib
+wino_app/lib
 ===========
 
 Last reviewed: 2026-04-01
@@ -226,7 +226,7 @@ Providers currently registered in `main.dart`
 -----------------
 - The repository is Android-only at platform-folder level.
 - iOS, Web, macOS, Linux, and Windows folders were removed from the Flutter project tree.
-- Some internal identifiers still use legacy names such as `dzlocal_shop`; this is an implementation detail, not the current public brand.
+- Main internal identifiers are aligned with the Wino brand.
 
 10) Practical editing notes
 ---------------------------

@@ -1,0 +1,316 @@
+(
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Wino App Download</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
+                rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+                :root {
+                        --page-ink: #0f172a;
+                        --ink-soft: #334155;
+                        --card-bg: rgba(255, 255, 255, 0.95);
+                        --brand: #0f766e;
+                        --brand-hover: #115e59;
+                        --focus: #f59e0b;
+                }
+
+                body {
+                        min-height: 100vh;
+                        margin: 0;
+                        font-family: "Manrope"), "Segoe UI", sans-serif;
+                        color: var(--page-ink);
+                        background-image: linear-gradient(120deg, rgba(15, 23, 42, 0.78), rgba(22, 78, 99, 0.66)),
+                        url("{{ page_background_url }}");
+                        background-position: center;
+                        background-size: cover;
+                        background-repeat: no-repeat;
+                }
+
+                .page-shell {
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        padding: 1.25rem;
+                }
+
+                .download-card {
+                        width: 100%;
+                        max-width: 1280px;
+                        border: 0;
+                        border-radius: 24px;
+                        overflow: hidden;
+                        background: var(--card-bg);
+                        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.35);
+                        backdrop-filter: blur(8px);
+                }
+
+                .hero-panel {
+                        color: #ffffff;
+                        background: radial-gradient(circle at top left, #0ea5a4 0%, #0f172a 60%);
+                }
+
+                .hero-title {
+                        font-family: "Sora", "Manrope", sans-serif;
+                        letter-spacing: -0.02em;
+                        line-height: 1.1;
+                        font-weight: 800;
+                        font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+                }
+
+                .hero-subtitle {
+                        color: rgba(255, 255, 255, 0.85);
+                }
+
+                .app-description {
+                        margin-top: 1.4rem;
+                        padding-top: 1rem;
+                        border-top: 1px solid rgba(255, 255, 255, 0.2);
+                }
+
+                .app-description-title {
+                        font-size: 0.9rem;
+                        font-weight: 700;
+                        color: rgba(255, 255, 255, 0.76);
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        margin-bottom: 0.45rem;
+                }
+
+                .app-description-text {
+                        color: rgba(255, 255, 255, 0.88);
+                        margin: 0;
+                        font-size: 1.04rem;
+                        line-height: 1.7;
+                }
+
+                .language-switch {
+                        display: flex;
+                        gap: 0.45rem;
+                        justify-content: flex-end;
+                        margin-bottom: 1rem;
+                }
+
+                .lang-btn {
+                        border: 1px solid #cbd5e1;
+                        background: #ffffff;
+                        color: #475569;
+                        border-radius: 999px;
+                        padding: 0.2rem 0.65rem;
+                        font-size: 0.8rem;
+                        font-weight: 700;
+                }
+
+                .lang-btn.active {
+                        background: #0f766e;
+                        border-color: #0f766e;
+                        color: #ffffff;
+                }
+
+                .btn-download {
+                        background: var(--brand);
+                        border: 1px solid var(--brand);
+                        color: #ffffff;
+                        font-weight: 700;
+                        border-radius: 14px;
+                        padding: 0.8rem 1rem;
+                }
+
+                .btn-download:hover {
+                        background: var(--brand-hover);
+                        border-color: var(--brand-hover);
+                        color: #ffffff;
+                }
+
+                .meta-label {
+                        font-size: 0.82rem;
+                        font-weight: 700;
+                        color: var(--ink-soft);
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                }
+
+                .video-shell {
+                        border-radius: 14px;
+                        overflow: hidden;
+                        border: 1px solid #dbe1ea;
+                        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+                        background: #0b1220;
+                }
+
+                .video-shell iframe {
+                        width: 100%;
+                        height: 100%;
+                        border: 0;
+                }
+
+                .video-wrap {
+                        max-width: 100%;
+                }
+
+                a:focus-visible,
+                button:focus-visible {
+                        outline: 3px solid var(--focus);
+                        outline-offset: 2px;
+                }
+
+                body[dir="rtl"] .hero-panel,
+                body[dir="rtl"] .action-panel {
+                        text-align: right;
+                }
+
+                body[dir="rtl"] .language-switch {
+                        justify-content: flex-start;
+                }
+
+                @media (max-width: 991.98px) {
+                        .page-shell {
+                                padding: 1rem;
+                        }
+
+                        .download-card {
+                                border-radius: 18px;
+                        }
+                }
+        </style>
+</head>
+
+<body dir="rtl">
+        <main class="page-shell">
+                <section class="container">
+                        <article class="download-card mx-auto">
+                                <div class="row g-0">
+                                        <div class="col-lg-5 p-4 p-md-5 hero-panel">
+                                                <p class="text-uppercase fw-bold mb-3" style="letter-spacing: 0.08em;"
+                                                        data-i18n="brand">Toprice x Wino</p>
+                                                <h1 class="hero-title mb-3" data-i18n="hero_title">Download the latest
+                                                        Wino Android app</h1>
+                                                <p class="hero-subtitle mb-4" data-i18n="hero_subtitle">One-click APK
+                                                        delivery. Simple and fast for everyone.</p>
+                                                <p class="mb-0 text-white-50" data-i18n="hero_note">Choose your language
+                                                        and download with one click.</p>
+
+                                                <section class="app-description">
+                                                        <p class="app-description-title" data-i18n="about_label">About
+                                                                Wino</p>
+                                                        <p class="app-description-text" data-i18n="about_text">Wino
+                                                                helps users discover nearby stores, browse products and
+                                                                offers, and contact merchants quickly from one app.</p>
+                                                </section>
+                                        </div>
+
+                                        <div class="col-lg-7 p-4 p-md-5 action-panel">
+                                                <div class="language-switch" role="group"
+                                                        aria-label="Language switcher">
+                                                        <button type="button" class="lang-btn"
+                                                                data-lang="en">EN</button>
+                                                        <button type="button" class="lang-btn"
+                                                                data-lang="fr">FR</button>
+                                                        <button type="button" class="lang-btn active"
+                                                                data-lang="ar">AR</button>
+                                                </div>
+
+                                                <p class="meta-label mb-2" data-i18n="primary_action">Primary action</p>
+                                                <div class="d-grid mb-4">
+                                                        <a class="btn btn-download btn-lg"
+                                                                href="{{ google_drive_download_url }}" target="_blank"
+                                                                rel="noopener" data-i18n="download_btn">Download APK</a>
+                                                </div>
+
+                                                <p class="meta-label mb-2" data-i18n="video_label">Video tutorial</p>
+                                                <div class="video-wrap mb-2">
+                                                        <div class="video-shell ratio ratio-16x9">
+                                                                <iframe src="{{ youtube_embed_url }}"
+                                                                        title="YouTube video player" loading="lazy"
+                                                                        referrerpolicy="strict-origin-when-cross-origin"
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                                        allowfullscreen>
+                                                                </iframe>
+                                                        </div>
+                                                </div>
+                                                <p class="small text-secondary mb-0" data-i18n="video_note">Watch the
+                                                        setup video directly here.</p>
+                                        </div>
+                                </div>
+                        </article>
+                </section>
+        </main>
+
+        <script>
+                const translations = {
+                        en: {
+                                brand: 'Toprice x Wino',
+                                hero_title: 'Download the latest Wino Android app',
+                                hero_subtitle: 'One-click APK delivery. Simple and fast for everyone.',
+                                hero_note: 'Choose your language and download with one click.',
+                                primary_action: 'Primary action',
+                                download_btn: 'Download APK',
+                                video_label: 'Video tutorial',
+                                video_note: 'Watch the setup video directly here.',
+                                about_label: 'About Wino',
+                                about_text: 'Wino helps users discover nearby stores, browse products and offers, and contact merchants quickly from one app.'
+                        },
+                        fr: {
+                                brand: 'Toprice x Wino',
+                                hero_title: 'Telechargez la derniere application Android Wino',
+                                hero_subtitle: 'Telechargement APK en un clic. Simple et rapide pour tous.',
+                                hero_note: 'Choisissez votre langue et telechargez en un clic.',
+                                primary_action: 'Action principale',
+                                download_btn: 'Telecharger APK',
+                                video_label: 'Video tutoriel',
+                                video_note: 'Regardez la video directement ici.',
+                                about_label: 'A propos de Wino',
+                                about_text: 'Wino vous aide a decouvrir les magasins proches, parcourir les produits et offres, puis contacter rapidement les commercants depuis une seule application.'
+                        },
+                        ar: {
+                                brand: 'توبرايس و وينو',
+                                hero_title: 'حمل اخر تطبيق وينو للاندرويد',
+                                hero_subtitle: 'تحميل مباشر للتطبيق بضغطة واحدة. سريع وسهل للجميع.',
+                                hero_note: 'اختر لغتك ثم حمل التطبيق بضغطة واحدة.',
+                                primary_action: 'الاجراء الرئيسي',
+                                download_btn: 'تحميل التطبيق',
+                                video_label: 'فيديو الشرح',
+                                video_note: 'شاهد فيديو الشرح مباشرة من هنا.',
+                                about_label: 'عن تطبيق وينو',
+                                about_text: 'يساعدك وينو على اكتشاف المتاجر القريبة، تصفح المنتجات والعروض، والتواصل بسرعة مع التجار من خلال تطبيق واحد.'
+                        }
+                };
+
+                function applyLanguage(lang) {
+                        const selected = translations[lang] ? lang : 'en';
+                        const isArabic = selected === 'ar';
+
+                        document.documentElement.lang = selected;
+                        document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
+                        document.body.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
+
+                        document.querySelectorAll('[data-i18n]').forEach(function (node) {
+                                const key = node.getAttribute('data-i18n');
+                                const value = translations[selected][key];
+                                if (value) {
+                                        node.textContent = value;
+                                }
+                        });
+
+                        document.querySelectorAll('.lang-btn').forEach(function (btn) {
+                                btn.classList.toggle('active', btn.getAttribute('data-lang') === selected);
+                        });
+                }
+
+                document.querySelectorAll('.lang-btn').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                                applyLanguage(btn.getAttribute('data-lang'));
+                        });
+                });
+
+                applyLanguage('ar');
+        </script>
+</body>
+
+</html>

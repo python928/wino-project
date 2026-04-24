@@ -3,8 +3,8 @@
 Last updated: 2026-04-01
 
 ## What this repo contains
-- Backend API: `app-backend/` (Django 5 + DRF + JWT)
-- Flutter client: `the_app/` (Provider/ChangeNotifier + named routes)
+- Backend API: `wino_backend/` (Django 5 + DRF + JWT)
+- Flutter client: `wino_app/` (Provider/ChangeNotifier + named routes)
 
 Core rule: **Store == User** (`users.User` is the “store”).
 
@@ -16,7 +16,7 @@ Before you over- or under-state the repo:
 - It is not yet honest to call it a finished production-ready commercial release.
 
 ## Backend quickstart (local)
-From `app-backend/`:
+From `wino_backend/`:
 
 1. Install Python dependencies
 - `pip3 install -r requirements.txt --break-system-packages --default-timeout 300`
@@ -28,18 +28,18 @@ From `app-backend/`:
 - `python3 manage.py runserver 0.0.0.0:8000`
 
 Key environment behavior
-- Default DB is SQLite (`app-backend/db.sqlite3`).
+- Default DB is SQLite (`wino_backend/db.sqlite3`).
 - Media is served only when `DEBUG=True`.
 - Several production hardening settings are still pending.
 
 ## Flutter quickstart
-From `the_app/`:
+From `wino_app/`:
 
 1. Fetch packages
 - `flutter pub get`
 
 2. Set API base URL
-- Edit `the_app/lib/core/config/api_config.dart` (`ApiConfig.baseUrl`) to match your machine IP/port.
+- Edit `wino_app/lib/core/config/api_config.dart` (`ApiConfig.baseUrl`) to match your machine IP/port.
 
 3. If you changed ARB localization files
 - `flutter gen-l10n`
@@ -49,7 +49,7 @@ From `the_app/`:
 
 Current platform note
 - This repo is Android-only at platform-folder level.
-- Some internal names still use legacy identifiers such as `dzlocal_shop`, but the visible product brand is `Wino`.
+- Internal names and visible branding are now aligned as `Wino`.
 
 ## Most used API roots
 - Auth: `/api/auth/token/`, `/api/auth/token/refresh/`
@@ -73,7 +73,7 @@ OTP generation/delivery is still not in a final production-ready mode. This must
 
 ## 2026-03-30 Maps Directions Update
 - The Flutter app now includes reusable external Google Maps directions support on store-linked detail pages.
-- Main implementation files: `the_app/lib/core/services/external_maps_service.dart` and `the_app/lib/presentation/shared_widgets/directions_button.dart`.
+- Main implementation files: `wino_app/lib/core/services/external_maps_service.dart` and `wino_app/lib/presentation/shared_widgets/directions_button.dart`.
 - Recovery fallback: when Maps is unavailable or GPS is disabled, the app launches device settings with localized instructions.
 - When validating the app manually, include a GPS-off scenario and confirm the localized "Open Settings" recovery path works without crashes.
 
@@ -86,5 +86,5 @@ OTP generation/delivery is still not in a final production-ready mode. This must
 - Secondary screens (add product, add promotion, auth flows, reviews) remain partial and should be audited in a future pass.
 
 ## 2026-04-01 Auth And Category Flow Update
-- Auth flow structure is now stronger through `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+- Auth flow structure is now stronger through `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
 - Category selection is now context-aware and reused across auth, search, and product publishing rather than behaving like a generic picker everywhere.

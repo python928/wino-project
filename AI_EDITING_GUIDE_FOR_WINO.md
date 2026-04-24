@@ -24,63 +24,63 @@ The honest wording is:
 
 ## 2) What to inspect before editing by topic
 ### Auth / onboarding / category selection
-- `the_app/lib/presentation/auth/register_screen.dart`
-- `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
-- `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
-- `the_app/lib/presentation/search/category_selection_screen.dart`
-- `the_app/lib/core/widgets/app_text_field.dart`
+- `wino_app/lib/presentation/auth/register_screen.dart`
+- `wino_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+- `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+- `wino_app/lib/presentation/search/category_selection_screen.dart`
+- `wino_app/lib/core/widgets/app_text_field.dart`
 
 ### Auth / profile / store
-- `app-backend/users/models.py`
-- `app-backend/users/views.py`
-- `app-backend/users/serializers.py`
-- `the_app/lib/presentation/profile/`
-- `the_app/lib/core/services/storage_service.dart`
+- `wino_backend/users/models.py`
+- `wino_backend/users/views.py`
+- `wino_backend/users/serializers.py`
+- `wino_app/lib/presentation/profile/`
+- `wino_app/lib/core/services/storage_service.dart`
 
 ### Products / promotions / packs
-- `app-backend/catalog/models.py`
-- `app-backend/catalog/views.py`
-- `the_app/lib/presentation/product/product_detail_screen.dart`
-- `the_app/lib/presentation/promotion/promotion_detail_screen.dart`
-- `the_app/lib/presentation/pack/pack_detail_screen.dart`
+- `wino_backend/catalog/models.py`
+- `wino_backend/catalog/views.py`
+- `wino_app/lib/presentation/product/product_detail_screen.dart`
+- `wino_app/lib/presentation/promotion/promotion_detail_screen.dart`
+- `wino_app/lib/presentation/pack/pack_detail_screen.dart`
 
 ### Reviews / reports / trust
-- `app-backend/catalog/views.py`
-- `app-backend/users/views.py`
-- `app-backend/users/trust_scoring.py`
-- `the_app/lib/presentation/common/widgets/reviews_section.dart`
-- `the_app/lib/presentation/shared_widgets/report_bottom_sheet.dart`
+- `wino_backend/catalog/views.py`
+- `wino_backend/users/views.py`
+- `wino_backend/users/trust_scoring.py`
+- `wino_app/lib/presentation/common/widgets/reviews_section.dart`
+- `wino_app/lib/presentation/shared_widgets/report_bottom_sheet.dart`
 
 ### Wallet / subscriptions / merchant growth
-- `app-backend/wallet/`
-- `app-backend/subscriptions/`
-- `app-backend/ads/`
-- `the_app/lib/presentation/wallet/`
-- `the_app/lib/presentation/subscription/`
-- `the_app/lib/core/config/api_config.dart`
+- `wino_backend/wallet/`
+- `wino_backend/subscriptions/`
+- `wino_backend/ads/`
+- `wino_app/lib/presentation/wallet/`
+- `wino_app/lib/presentation/subscription/`
+- `wino_app/lib/core/config/api_config.dart`
 
 ### Deep links / sharing / QR
-- `app-backend/backend/urls.py`
-- `the_app/lib/core/services/deep_link_service.dart`
-- `the_app/android/app/src/main/AndroidManifest.xml`
-- `the_app/lib/presentation/shared_widgets/qr_payload_dialog.dart`
+- `wino_backend/backend/urls.py`
+- `wino_app/lib/core/services/deep_link_service.dart`
+- `wino_app/android/app/src/main/AndroidManifest.xml`
+- `wino_app/lib/presentation/shared_widgets/qr_payload_dialog.dart`
 
 ### Localization
-- `the_app/lib/l10n/*.arb` (generated translations)
-- `the_app/lib/core/localization/runtime_translations.dart` (FR/AR fallback)
-- `the_app/lib/core/extensions/l10n_extension.dart` (context.tr() helper)
+- `wino_app/lib/l10n/*.arb` (generated translations)
+- `wino_app/lib/core/localization/runtime_translations.dart` (FR/AR fallback)
+- `wino_app/lib/core/extensions/l10n_extension.dart` (context.tr() helper)
 - Implementation rule: wrap all user-visible text in `context.tr()`, add FR/AR entries to RuntimeTranslations if not in ARB files
 - Current status: 11 core screens are 100% localized; secondary screens remain partial
 
 ### Nearby / location UX
-- `the_app/lib/presentation/common/location_permission_helper.dart`
-- `the_app/lib/presentation/home/home_screen.dart`
-- `the_app/lib/presentation/search/search_tab_screen.dart`
-- `the_app/lib/presentation/profile/edit_merchant_profile_screen.dart`
+- `wino_app/lib/presentation/common/location_permission_helper.dart`
+- `wino_app/lib/presentation/home/home_screen.dart`
+- `wino_app/lib/presentation/search/search_tab_screen.dart`
+- `wino_app/lib/presentation/profile/edit_merchant_profile_screen.dart`
 
 ### External Maps / directions
-- `the_app/lib/core/services/external_maps_service.dart` (Google Maps integration)
-- `the_app/lib/presentation/shared_widgets/directions_button.dart` (reusable directions button)
+- `wino_app/lib/core/services/external_maps_service.dart` (Google Maps integration)
+- `wino_app/lib/presentation/shared_widgets/directions_button.dart` (reusable directions button)
 - Used in: product_detail, promotion_detail, pack_detail, profile (store view)
 - Recovery pattern: GPS-disabled → user prompted to enable in settings (do not repeat GPS logic per-screen)
 
@@ -89,7 +89,7 @@ The honest wording is:
 Also check:
 - backend router/url file
 - backend view/serializer
-- `the_app/lib/core/config/api_config.dart`
+- `wino_app/lib/core/config/api_config.dart`
 - the calling service/screen/provider
 - `API_LINKS_EXPLAINED.txt`
 
@@ -129,7 +129,7 @@ Also inspect:
 3. Device registration should be treated as `/api/notifications/devices/`.
 4. Product/store trust logic spans both `users/` and `catalog/`.
 5. Most actual Flutter feature work still lives in `presentation/`, even though `features/` exists.
-6. Some internal names still use legacy values such as `dzlocal_shop`, but visible branding is `Wino`.
+6. Some internal names still use legacy values such as `wino`, but visible branding is `Wino`.
 
 ## 5) Safe mental model for the app
 - `core/` = infrastructure

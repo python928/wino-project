@@ -9,7 +9,7 @@ Project stage note
 - The strongest truthful label is advanced pre-production / pilot-ready direction.
 - The codebase should not yet be documented as a fully production-hardened commercial release.
 
-WEB SERVER (`app-backend`)
+WEB SERVER (`wino_backend`)
 ==========================
 
 1) Core libraries from `requirements.txt`
@@ -123,7 +123,7 @@ Infrastructure helpers
 - report cooldowns and daily caps are enforced server-side
 - trust scoring weights seriousness and credibility rather than treating all reports equally
 
-ANDROID / FLUTTER APP (`the_app`)
+ANDROID / FLUTTER APP (`wino_app`)
 =================================
 
 1) Platform scope
@@ -131,7 +131,7 @@ ANDROID / FLUTTER APP (`the_app`)
 - Android folder retained and active
 - iOS/Web/macOS/Linux/Windows removed from the repo
 - public-facing app brand is `Wino`
-- internal package naming still includes legacy `dzlocal_shop` identifiers in some places
+- internal package naming still includes legacy `wino` identifiers in some places
 
 2) Main Flutter dependencies from `pubspec.yaml`
 ------------------------------------------------
@@ -271,6 +271,6 @@ The codebase is no longer just a marketplace UI. It now has:
 - early explainability improvements for merchant analytics
 
 This makes it technically rich enough for both real product iteration and academic analysis.
-- Shared auth-flow building blocks now live in `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
+- Shared auth-flow building blocks now live in `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`.
 - `register_screen.dart` and `phone_profile_setup_screen.dart` now share a clearer structure, stronger inline validation, and more consistent category-picking behavior.
-- `the_app/lib/presentation/search/category_selection_screen.dart` now functions as a reusable primitive for auth interests, search filters, and product publishing selection.
+- `wino_app/lib/presentation/search/category_selection_screen.dart` now functions as a reusable primitive for auth interests, search filters, and product publishing selection.

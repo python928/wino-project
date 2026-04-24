@@ -19,14 +19,14 @@ Current stage note
   - context.tr() extension method as primary UI translation handler
   - all core user-facing screens (11+ primary flows) now support full multilingual feedback
 - External Maps integration uses Google Maps for directions via `ExternalMapsService` with GPS fallback handling
-- Public-facing brand is `Wino`, even though some internal identifiers still use legacy names
+- Public-facing brand and main internal identifiers are aligned as `Wino`
 
 If an edit ignores one of those truths, it will usually drift away from how the project actually works.
 
 ## 2) Backend entrypoints
-- Settings: `app-backend/backend/settings.py`
-- Root URLs: `app-backend/backend/urls.py`
-- Manage script: `app-backend/manage.py`
+- Settings: `wino_backend/backend/settings.py`
+- Root URLs: `wino_backend/backend/urls.py`
+- Manage script: `wino_backend/manage.py`
 
 Root routes worth remembering
 - `/api/users/`
@@ -42,12 +42,12 @@ Root routes worth remembering
 
 ## 3) Backend modules by concern
 ### Auth / User / Store / Trust
-- Models: `app-backend/users/models.py`
-- Views: `app-backend/users/views.py`
-- Serializers: `app-backend/users/serializers.py`
-- Helpers: `app-backend/users/services.py`
-- Abuse helpers: `app-backend/users/abuse.py`
-- Trust scoring: `app-backend/users/trust_scoring.py`
+- Models: `wino_backend/users/models.py`
+- Views: `wino_backend/users/views.py`
+- Serializers: `wino_backend/users/serializers.py`
+- Helpers: `wino_backend/users/services.py`
+- Abuse helpers: `wino_backend/users/abuse.py`
+- Trust scoring: `wino_backend/users/trust_scoring.py`
 
 Go here for
 - OTP
@@ -59,10 +59,10 @@ Go here for
 - daily / first-login coin policies
 
 ### Catalog
-- Models: `app-backend/catalog/models.py`
-- Views: `app-backend/catalog/views.py`
-- Serializers: `app-backend/catalog/serializers.py`
-- URLs: `app-backend/catalog/urls.py`
+- Models: `wino_backend/catalog/models.py`
+- Views: `wino_backend/catalog/views.py`
+- Serializers: `wino_backend/catalog/serializers.py`
+- URLs: `wino_backend/catalog/urls.py`
 
 Go here for
 - categories
@@ -74,55 +74,55 @@ Go here for
 - product reports
 
 ### Ads
-- Models: `app-backend/ads/models.py`
-- Views: `app-backend/ads/views.py`
-- URLs: `app-backend/ads/urls.py`
+- Models: `wino_backend/ads/models.py`
+- Views: `wino_backend/ads/views.py`
+- URLs: `wino_backend/ads/urls.py`
 
 ### Analytics
-- Models: `app-backend/analytics/models.py`
-- Views: `app-backend/analytics/views.py`
-- URLs: `app-backend/analytics/urls.py`
-- Recommendation logic: `app-backend/analytics/recommendations.py`
+- Models: `wino_backend/analytics/models.py`
+- Views: `wino_backend/analytics/views.py`
+- URLs: `wino_backend/analytics/urls.py`
+- Recommendation logic: `wino_backend/analytics/recommendations.py`
 - Retention cleanup command:
-  `app-backend/analytics/management/commands/purge_old_analytics.py`
+  `wino_backend/analytics/management/commands/purge_old_analytics.py`
 
 ### Wallet
-- Models: `app-backend/wallet/models.py`
-- Views: `app-backend/wallet/views.py`
-- Services: `app-backend/wallet/services.py`
-- URLs: `app-backend/wallet/urls.py`
+- Models: `wino_backend/wallet/models.py`
+- Views: `wino_backend/wallet/views.py`
+- Services: `wino_backend/wallet/services.py`
+- URLs: `wino_backend/wallet/urls.py`
 
 ### Subscriptions
-- Models: `app-backend/subscriptions/models.py`
-- Views: `app-backend/subscriptions/views.py`
-- Services: `app-backend/subscriptions/services.py`
-- URLs: `app-backend/subscriptions/urls.py`
+- Models: `wino_backend/subscriptions/models.py`
+- Views: `wino_backend/subscriptions/views.py`
+- Services: `wino_backend/subscriptions/services.py`
+- URLs: `wino_backend/subscriptions/urls.py`
 
 ### Feedback
-- Models: `app-backend/feedback/models.py`
-- Views: `app-backend/feedback/views.py`
-- URLs: `app-backend/feedback/urls.py`
+- Models: `wino_backend/feedback/models.py`
+- Views: `wino_backend/feedback/views.py`
+- URLs: `wino_backend/feedback/urls.py`
 
 ## 4) Flutter entrypoints
-- App bootstrap: `the_app/lib/main.dart`
-- Route registry: `the_app/lib/core/routing/routes.dart`
-- Route builder: `the_app/lib/core/routing/route_generator.dart`
-- API paths: `the_app/lib/core/config/api_config.dart`
-- HTTP wrapper: `the_app/lib/core/services/api_service.dart`
-- Storage/JWT/lang persistence: `the_app/lib/core/services/storage_service.dart`
-- Deep links: `the_app/lib/core/services/deep_link_service.dart`
+- App bootstrap: `wino_app/lib/main.dart`
+- Route registry: `wino_app/lib/core/routing/routes.dart`
+- Route builder: `wino_app/lib/core/routing/route_generator.dart`
+- API paths: `wino_app/lib/core/config/api_config.dart`
+- HTTP wrapper: `wino_app/lib/core/services/api_service.dart`
+- Storage/JWT/lang persistence: `wino_app/lib/core/services/storage_service.dart`
+- Deep links: `wino_app/lib/core/services/deep_link_service.dart`
 
 ## 5) App folders that matter most
 ### Shared infrastructure
-- `the_app/lib/core/`
-- `the_app/lib/data/`
+- `wino_app/lib/core/`
+- `wino_app/lib/data/`
 
 ### Active reusable feature code
-- `the_app/lib/features/analytics/`
-- `the_app/lib/features/notifications/`
+- `wino_app/lib/features/analytics/`
+- `wino_app/lib/features/notifications/`
 
 ### Most real UI work
-- `the_app/lib/presentation/`
+- `wino_app/lib/presentation/`
 
 Important screen areas
 - onboarding / launch: `presentation/auth/`
@@ -152,24 +152,24 @@ Related shared widgets
 
 ### Auth-flow pattern
 If you edit registration or phone profile setup, inspect:
-- `the_app/lib/presentation/auth/register_screen.dart`
-- `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
-- `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
-- `the_app/lib/core/widgets/app_text_field.dart`
+- `wino_app/lib/presentation/auth/register_screen.dart`
+- `wino_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+- `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+- `wino_app/lib/core/widgets/app_text_field.dart`
 
 ### Category-selection pattern
 If you change interests/categories UX, inspect:
-- `the_app/lib/presentation/search/category_selection_screen.dart`
-- `the_app/lib/presentation/search/search_tab_screen.dart`
-- `the_app/lib/presentation/profile/add_product_screen.dart`
-- `the_app/lib/presentation/auth/register_screen.dart`
-- `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+- `wino_app/lib/presentation/search/category_selection_screen.dart`
+- `wino_app/lib/presentation/search/search_tab_screen.dart`
+- `wino_app/lib/presentation/profile/add_product_screen.dart`
+- `wino_app/lib/presentation/auth/register_screen.dart`
+- `wino_app/lib/presentation/auth/phone_profile_setup_screen.dart`
 
 ### Localization pattern
 New UI text may need changes in more than one place:
-- `the_app/lib/l10n/*.arb` (English, French, Arabic)
-- `the_app/lib/core/localization/runtime_translations.dart` (FR/AR fallback for ungenerated strings)
-- `the_app/lib/core/extensions/l10n_extension.dart` (context.tr() helper)
+- `wino_app/lib/l10n/*.arb` (English, French, Arabic)
+- `wino_app/lib/core/localization/runtime_translations.dart` (FR/AR fallback for ungenerated strings)
+- `wino_app/lib/core/extensions/l10n_extension.dart` (context.tr() helper)
 
 Implementation rule for new strings
 - Wrap all user-facing text in `context.tr('English text')`
@@ -184,8 +184,8 @@ Current localization status
 
 ### External Maps integration pattern
 GPS direction support is implemented as an external service:
-- Service layer: `the_app/lib/core/services/external_maps_service.dart`
-- Reusable widget: `the_app/lib/presentation/shared_widgets/directions_button.dart`
+- Service layer: `wino_app/lib/core/services/external_maps_service.dart`
+- Reusable widget: `wino_app/lib/presentation/shared_widgets/directions_button.dart`
 - Used in: product_detail, promotion_detail, pack_detail, profile (store view)
 
 Fallback behavior
@@ -205,9 +205,9 @@ If nearby or GPS behavior changes, inspect:
 
 ### Deep-link pattern
 If a store/product route changes, inspect:
-- backend short links in `app-backend/backend/urls.py`
-- app parsing in `the_app/lib/core/services/deep_link_service.dart`
-- Android intent filters in `the_app/android/app/src/main/AndroidManifest.xml`
+- backend short links in `wino_backend/backend/urls.py`
+- app parsing in `wino_app/lib/core/services/deep_link_service.dart`
+- Android intent filters in `wino_app/android/app/src/main/AndroidManifest.xml`
 
 ## 7) API sync points
 If a backend endpoint changes, usually sync all of these:
@@ -269,28 +269,28 @@ Read these with this file:
 - `MEMOIRE_RESEARCH_DOSSIER_2026-03.md` if the task touches university writing
 
 ## 2026-03-30 Maps Directions Update
-- New service node: `the_app/lib/core/services/external_maps_service.dart`
-- New shared widget node: `the_app/lib/presentation/shared_widgets/directions_button.dart`
+- New service node: `wino_app/lib/core/services/external_maps_service.dart`
+- New shared widget node: `wino_app/lib/presentation/shared_widgets/directions_button.dart`
 - Updated screen nodes: product detail, promotion detail, pack detail, and store/profile flows now share one external-maps pattern with localized GPS-disabled recovery.
 
 ## 2026-03-30 Home Ads Single-Random Update
-- Backend selection node: `app-backend/ads/views.py`
-- Backend verification node: `app-backend/ads/tests.py`
-- Flutter request/render nodes: `the_app/lib/core/providers/post_provider.dart`, `the_app/lib/data/repositories/post_repository.dart`, `the_app/lib/presentation/home/home_screen.dart`
+- Backend selection node: `wino_backend/ads/views.py`
+- Backend verification node: `wino_backend/ads/tests.py`
+- Flutter request/render nodes: `wino_app/lib/core/providers/post_provider.dart`, `wino_app/lib/data/repositories/post_repository.dart`, `wino_app/lib/presentation/home/home_screen.dart`
 
 ## 2026-03-30 Dropdowns And Switches Design Update
-- Typography node: `the_app/lib/core/theme/app_typography.dart`
-- Shared menu node: `the_app/lib/presentation/shared_widgets/app_dropdown_menu.dart`
-- Shared switch node: `the_app/lib/presentation/shared_widgets/app_switch_tile.dart`
-- Shared filter-chip node updated: `the_app/lib/core/widgets/app_toggle_button.dart`
+- Typography node: `wino_app/lib/core/theme/app_typography.dart`
+- Shared menu node: `wino_app/lib/presentation/shared_widgets/app_dropdown_menu.dart`
+- Shared switch node: `wino_app/lib/presentation/shared_widgets/app_switch_tile.dart`
+- Shared filter-chip node updated: `wino_app/lib/core/widgets/app_toggle_button.dart`
 
 ## 2026-03-30 Search And Profile UI Stability Update
-- Search bootstrap node: `the_app/lib/presentation/search/search_tab_screen.dart`
-- Profile settings action reuse nodes: `the_app/lib/presentation/profile/profile_screen.dart`, `the_app/lib/presentation/profile/widgets/profile_merchant_header.dart`
-- Shared card overflow-hardening nodes: `the_app/lib/core/widgets/cards/base_item_card.dart`, `the_app/lib/presentation/shared_widgets/cards/promotion_card.dart`, `the_app/lib/presentation/shared_widgets/cards/store_chip.dart`
+- Search bootstrap node: `wino_app/lib/presentation/search/search_tab_screen.dart`
+- Profile settings action reuse nodes: `wino_app/lib/presentation/profile/profile_screen.dart`, `wino_app/lib/presentation/profile/widgets/profile_merchant_header.dart`
+- Shared card overflow-hardening nodes: `wino_app/lib/core/widgets/cards/base_item_card.dart`, `wino_app/lib/presentation/shared_widgets/cards/promotion_card.dart`, `wino_app/lib/presentation/shared_widgets/cards/store_chip.dart`
 
 ## 2026-04-01 Auth And Category Flow Update
-- Shared auth flow node: `the_app/lib/presentation/auth/widgets/auth_flow_components.dart`
-- Updated auth screen nodes: `the_app/lib/presentation/auth/register_screen.dart`, `the_app/lib/presentation/auth/phone_profile_setup_screen.dart`
-- Shared category-selection node: `the_app/lib/presentation/search/category_selection_screen.dart`
-- Supporting input/system node: `the_app/lib/core/widgets/app_text_field.dart`
+- Shared auth flow node: `wino_app/lib/presentation/auth/widgets/auth_flow_components.dart`
+- Updated auth screen nodes: `wino_app/lib/presentation/auth/register_screen.dart`, `wino_app/lib/presentation/auth/phone_profile_setup_screen.dart`
+- Shared category-selection node: `wino_app/lib/presentation/search/category_selection_screen.dart`
+- Supporting input/system node: `wino_app/lib/core/widgets/app_text_field.dart`

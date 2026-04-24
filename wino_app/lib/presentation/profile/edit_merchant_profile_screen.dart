@@ -1,0 +1,1176 @@
+import 'dart:async';
+
+import 'package:wino/core/extensions/l10n_extension.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../core/config/api_config.dart';
+import '../../core/services/api_service.dart';
+import '../../core/services/location_service.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/geolocation_stub.dart'
+    if (dart.library.html) '../../core/utils/geolocation_web.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../common/location_permission_helper.dart';
+import '../common/location_picker_screen.dart';
+import '../shared_widgets/app_switch_tile.dart';
+
+class EditMerchantProfileScreen extends StatefulWidget {
+  final String initialName;
+  final String initialPhone;
+  final String? initialImage;
+  final String? initialCoverImage;
+  final String? initialStoreDescription;
+  final String? initialAddress;
+  final String? initialFacebook;
+  final String? initialInstagram;
+  final String? initialWhatsapp;
+  final String? initialTiktok;
+  final String? initialYoutube;
+  final double? initialLatitude;
+  final double? initialLongitude;
+
+  const EditMerchantProfileScreen({
+    super.key,
+    required this.initialName,
+    required this.initialPhone,
+    this.initialImage,
+    this.initialCoverImage,
+    this.initialStoreDescription,
+    this.initialAddress,
+    this.initialFacebook,
+    this.initialInstagram,
+    this.initialWhatsapp,
+    this.initialTiktok,
+    this.initialYoutube,
+    this.initialLatitude,
+    this.initialLongitude,
+  });
+
+  @override
+  State<EditMerchantProfileScreen> createState() =>
+      _EditMerchantProfileScreenState();
+}
+
+class _EditMerchantProfileScreenState extends State<EditMerchantProfileScreen> {
+  late TextEditingController _nameController;
+  late TextEditingController _descriptionController;
+
+// ... existing imports
+
+  // Social Controllers
+  late TextEditingController _facebookController;
+  late TextEditingController _instagramController;
+  late TextEditingController _whatsappController;
+  late TextEditingController _tiktokController;
+  late TextEditingController _youtubeController;
+
+  bool _isLoading = false;
+  bool _isUploadingImage = false;
+  bool _isUploadingCover = false;
+  bool _isGettingLocation = false; // New state
+  String? _avatarUrl;
+  String? _coverUrl;
+  String? _selectedWilaya;
+  String? _selectedBaladiya;
+  double? _latitude;
+  double? _longitude;
+  bool _allowNearbyVisibility = true;
+  bool _showPhonePublic = true;
+  bool _showSocialPublic = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _descriptionController =
+        TextEditingController(text: widget.initialStoreDescription ?? '');
+
+    _facebookController =
+        TextEditingController(text: widget.initialFacebook ?? '');
+    _instagramController =
+        TextEditingController(text: widget.initialInstagram ?? '');
+    _whatsappController =
+        TextEditingController(text: widget.initialWhatsapp ?? '');
+    _tiktokController = TextEditingController(text: widget.initialTiktok ?? '');
+    _youtubeController =
+        TextEditingController(text: widget.initialYoutube ?? '');
+
+    _avatarUrl = widget.initialImage;
+    _coverUrl = widget.initialCoverImage;
+
+    // Initialize Lat/Lng
+    _latitude = widget.initialLatitude;
+    _longitude = widget.initialLongitude;
+
+    // Fallback to storage if not passed in props but we have address
+    if (_latitude == null) {
+      final userData = StorageService.getUserData();
+      if (userData != null && userData['latitude'] != null) {
+        _latitude = double.tryParse(userData['latitude'].toString());
+        _longitude = double.tryParse(userData['longitude'].toString());
+      }
+    }
+    final userData = StorageService.getUserData();
+    _allowNearbyVisibility =
+        userData?['allow_nearby_visibility'] as bool? ?? true;
+    _showPhonePublic = userData?['show_phone_public'] as bool? ?? true;
+    _showSocialPublic = userData?['show_social_public'] as bool? ?? true;
+
+    _loadAddress();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    // 60-day coordinate lock check
+    final userData = StorageService.getUserData();
+    final locUpdatedStr = userData?['location_updated_at']?.toString();
+    if (locUpdatedStr != null && locUpdatedStr.isNotEmpty) {
+      final locUpdated = DateTime.tryParse(locUpdatedStr);
+      if (locUpdated != null) {
+        final daysSince = DateTime.now().difference(locUpdated).inDays;
+        if (daysSince < 60) {
+          final remaining = 60 - daysSince;
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(context.tr('Coordinates Locked')),
+                content: Text(
+                  'You can only change your GPS coordinates once every 60 days.\n\n'
+                  '$remaining day(s) remaining before you can update.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(context.tr('OK')),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    final shouldContinue = await LocationPermissionHelper.ensureEducationShown(
+      context,
+      flow: LocationEducationFlow.storeGps,
+    );
+    if (!shouldContinue) return;
+
+    setState(() => _isGettingLocation = true);
+    try {
+      if (kIsWeb) {
+        final coords = await getWebCurrentPosition();
+        if (coords != null) {
+          setState(() {
+            _latitude = coords['latitude'];
+            _longitude = coords['longitude'];
+          });
+          if (mounted) {
+            Helpers.showSnackBar(
+              context,
+              context.tr('Location updated successfully ✅'),
+            );
+          }
+        }
+      } else {
+        final pos = await LocationService.getCurrentPosition();
+        setState(() {
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
+        });
+        if (mounted) {
+          Helpers.showSnackBar(
+            context,
+            context.tr('Location updated successfully ✅'),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      await LocationPermissionHelper.handleLocationError(
+        context,
+        e,
+        fallbackMessage: context.tr('Could not get location'),
+      );
+    } finally {
+      if (mounted) setState(() => _isGettingLocation = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _whatsappController.dispose();
+    _tiktokController.dispose();
+    _youtubeController.dispose();
+    super.dispose();
+  }
+
+  void _loadAddress() {
+    if (widget.initialAddress != null && widget.initialAddress!.isNotEmpty) {
+      _parseAddressToWilayaBaladiya(widget.initialAddress!);
+    } else {
+      final userData = StorageService.getUserData();
+      if (userData != null) {
+        final address = userData['location'] ?? userData['address'] ?? '';
+        _parseAddressToWilayaBaladiya(address);
+      }
+    }
+  }
+
+  void _parseAddressToWilayaBaladiya(String address) {
+    if (address.contains(',')) {
+      final parts = address.split(',').map((e) => e.trim()).toList();
+      if (parts.length >= 2) {
+        _selectedBaladiya = parts[0];
+        _selectedWilaya = parts[1];
+      }
+    }
+  }
+
+  Future<ImageSource?> _showImageSourcePicker() async {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.tr('Choose image source')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.camera_alt, color: AppColors.primaryColor),
+              title: Text(context.tr('Camera')),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library,
+                  color: AppColors.primaryColor),
+              title: Text(context.tr('Gallery')),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile == null) {
+      if (mounted) {
+        Helpers.showSnackBar(context, context.tr('No image selected'));
+      }
+      return;
+    }
+
+    {
+      setState(() => _isUploadingImage = true);
+
+      try {
+        final userData = StorageService.getUserData();
+        final userId = userData?['id'];
+        if (userId == null) throw Exception('Cannot identify user ID');
+
+        await ApiService.updateMultipart(
+            '${ApiConfig.users}$userId/', {}, pickedFile, 'profile_image',
+            method: 'PATCH');
+
+        final response = await ApiService.get('${ApiConfig.users}$userId/');
+        await StorageService.saveUserData(response);
+
+        setState(() {
+          _avatarUrl = response['profile_image'] ?? response['avatar'];
+        });
+
+        if (mounted) {
+          Helpers.showSnackBar(
+              context, context.tr('Profile picture updated successfully'));
+        }
+      } catch (e) {
+        if (mounted) {
+          Helpers.showSnackBar(
+            context,
+            '${context.tr('Failed to update image')}: $e',
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isUploadingImage = false);
+      }
+    }
+  }
+
+  Future<void> _pickCoverImage() async {
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile == null) {
+      if (mounted) {
+        Helpers.showSnackBar(context, context.tr('No image selected'));
+      }
+      return;
+    }
+
+    setState(() => _isUploadingCover = true);
+    try {
+      final userData = StorageService.getUserData();
+      final userId = userData?['id'];
+      if (userId == null) throw Exception('Cannot identify user ID');
+
+      await ApiService.updateMultipart(
+        '${ApiConfig.users}$userId/',
+        {},
+        pickedFile,
+        'cover_image',
+        method: 'PATCH',
+      );
+
+      final store = await ApiService.get('${ApiConfig.users}$userId/');
+      setState(() {
+        _coverUrl = store is Map ? store['cover_image']?.toString() : _coverUrl;
+      });
+
+      if (mounted) {
+        Helpers.showSnackBar(
+            context, context.tr('Cover image updated successfully'));
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to update cover')}: $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
+  Future<void> _deleteImage() async {
+    if (_isUploadingImage) return;
+    final userData = StorageService.getUserData();
+    final userId = userData?['id'];
+    if (userId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('Delete profile image?')),
+        content:
+            Text(context.tr('This will remove your current profile image.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.tr('Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingImage = true);
+    try {
+      await ApiService.patch(
+          '${ApiConfig.users}$userId/', {'profile_image': null});
+      final response = await ApiService.get('${ApiConfig.users}$userId/');
+      await StorageService.saveUserData(response);
+      setState(() => _avatarUrl = null);
+      if (mounted) {
+        Helpers.showSnackBar(
+            context, context.tr('Profile image deleted successfully'));
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete image')}: $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<void> _deleteCoverImage() async {
+    if (_isUploadingCover) return;
+    final userData = StorageService.getUserData();
+    final userId = userData?['id'];
+    if (userId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('Delete cover image?')),
+        content: Text(context.tr('This will remove your current cover image.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.tr('Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingCover = true);
+    try {
+      await ApiService.patch(
+          '${ApiConfig.users}$userId/', {'cover_image': null});
+      final response = await ApiService.get('${ApiConfig.users}$userId/');
+      await StorageService.saveUserData(response);
+      setState(() => _coverUrl = null);
+      if (mounted) {
+        Helpers.showSnackBar(
+            context, context.tr('Cover image deleted successfully'));
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          '${context.tr('Failed to delete cover')}: $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      Helpers.showSnackBar(context, context.tr('Please enter your name'));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    String? errorMessage;
+
+    try {
+      final userData = StorageService.getUserData();
+      final userId = userData?['id'];
+      if (userId == null) throw Exception('Cannot identify user ID');
+
+      // Build address (optional for profile save)
+      final address = (_selectedWilaya != null && _selectedBaladiya != null)
+          ? '$_selectedBaladiya, $_selectedWilaya'
+          : (userData?['address'] ?? '');
+
+      // Single PATCH — store == user in this backend
+      final payload = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'store_description': _descriptionController.text.trim(),
+        if (address.trim().isNotEmpty) 'address': address,
+        'facebook': _facebookController.text.trim(),
+        'instagram': _instagramController.text.trim(),
+        'whatsapp': _whatsappController.text.trim(),
+        'tiktok': _tiktokController.text.trim(),
+        'youtube': _youtubeController.text.trim(),
+        'allow_nearby_visibility': _allowNearbyVisibility,
+        'show_phone_public': _showPhonePublic,
+        'show_social_public': _showSocialPublic,
+      };
+
+      // Only add coordinates if they have been set (round to 6dp to fit DecimalField(max_digits=9, decimal_places=6))
+      if (_latitude != null) {
+        payload['latitude'] = _latitude!.toStringAsFixed(6);
+      }
+      if (_longitude != null) {
+        payload['longitude'] = _longitude!.toStringAsFixed(6);
+      }
+
+      debugPrint('💾 Saving profile payload: $payload');
+
+      final updated =
+          await ApiService.patch(ApiConfig.userDetail(userId), payload);
+      debugPrint('✅ Save response: $updated');
+
+      // Sync local storage with fresh server values
+      if (updated is Map<String, dynamic>) {
+        final merged = <String, dynamic>{...(userData ?? {}), ...updated};
+        // Address keys in sync
+        merged['location'] = merged['address'] ?? address;
+        await StorageService.saveUserData(merged);
+        debugPrint('✅ Local storage updated');
+      } else {
+        // Fallback: update locally
+        if (userData != null) {
+          userData['name'] = _nameController.text.trim();
+          userData['store_description'] = _descriptionController.text.trim();
+          userData['address'] = address;
+          userData['location'] = address;
+          userData['facebook'] = _facebookController.text.trim();
+          userData['instagram'] = _instagramController.text.trim();
+          userData['whatsapp'] = _whatsappController.text.trim();
+          userData['tiktok'] = _tiktokController.text.trim();
+          userData['youtube'] = _youtubeController.text.trim();
+          userData['allow_nearby_visibility'] = _allowNearbyVisibility;
+          userData['show_phone_public'] = _showPhonePublic;
+          userData['show_social_public'] = _showSocialPublic;
+          if (_latitude != null) userData['latitude'] = _latitude.toString();
+          if (_longitude != null) userData['longitude'] = _longitude.toString();
+          await StorageService.saveUserData(userData);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Save error: $e');
+      errorMessage = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+
+    if (!mounted) return;
+
+    if (errorMessage != null) {
+      // Show error as a dialog so it cannot be missed
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(context.tr('Save Failed')),
+          content: Text(errorMessage!),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(context.tr('OK')),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Helpers.showSnackBar(context, context.tr('✅ Profile saved successfully'));
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push<LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialWilaya: _selectedWilaya,
+          initialBaladiya: _selectedBaladiya,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedWilaya = result.wilaya;
+        _selectedBaladiya = result.baladiya;
+      });
+    }
+  }
+
+  Future<void> _becomeCustomer() async {
+    // Intentionally removed from this screen per requested scope.
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: Directionality.of(context),
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.neutral100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.arrow_back,
+                  size: 16, color: AppColors.textPrimary),
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(context.tr('Edit Profile'),
+              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
+          centerTitle: true,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: SizedBox(
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _saveProfile,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: Text(context.tr('Save')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    minimumSize: const Size(0, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Form Fields
+                  AppTextField(
+                    controller: _nameController,
+                    label: context.tr('Name'),
+                    hint: context.tr('Enter your name'),
+                    icon: Icons.person_rounded,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 20),
+                  AppTextField(
+                    controller: _descriptionController,
+                    label: context.tr('Description'),
+                    hint: context.tr('Describe your store...'),
+                    icon: Icons.description_rounded,
+                    maxLines: 3,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 20),
+                  AppSwitchTile(
+                    title: context.tr('Show call button'),
+                    subtitle: _showPhonePublic
+                        ? context.tr('Customers can call you')
+                        : context.tr('Call button will be hidden'),
+                    value: _showPhonePublic,
+                    onChanged: (value) {
+                      setState(() => _showPhonePublic = value);
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+                  _buildLocationSection(),
+                  const SizedBox(height: 28),
+
+                  // Social Accounts Section
+                  Text(context.tr('Social Accounts'),
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 16),
+                  AppSwitchTile(
+                    title: context.tr('Show WhatsApp/social buttons'),
+                    subtitle: _showSocialPublic
+                        ? context.tr('Customers can contact you')
+                        : context.tr('Buttons will be hidden'),
+                    value: _showSocialPublic,
+                    onChanged: (value) {
+                      setState(() => _showSocialPublic = value);
+                    },
+                  ),
+                  const SizedBox(height: 6),
+
+                  AppTextField(
+                    controller: _facebookController,
+                    label: 'Facebook',
+                    hint: 'https://facebook.com/...',
+                    icon: Icons.facebook,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _instagramController,
+                    label: 'Instagram',
+                    hint: 'https://instagram.com/...',
+                    icon: Icons
+                        .camera_alt_outlined, // Fallback as we don't have font_awesome here yet
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _whatsappController,
+                    label: 'WhatsApp',
+                    hint: 'Number (e.g. 213555...)',
+                    icon: Icons.phone_android,
+                    keyboardType: TextInputType.phone,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _tiktokController,
+                    label: 'TikTok',
+                    hint: 'https://tiktok.com/@...',
+                    icon: Icons.music_note,
+                    style: AppTextFieldStyle.profile,
+                  ),
+                  const SizedBox(height: 12),
+
+                  AppTextField(
+                    controller: _youtubeController,
+                    label: 'YouTube',
+                    hint: 'https://youtube.com/@...',
+                    icon: Icons.video_library,
+                    style: AppTextFieldStyle.profile,
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return SizedBox(
+      height: 224,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 190,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.primaryDeep.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+            ),
+            child: (_coverUrl != null && _coverUrl!.isNotEmpty)
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      _coverUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                      ),
+                    ),
+                  )
+                : Container(
+                    color: AppColors.primaryDeep.withValues(alpha: 0.08),
+                  ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 190,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: _isUploadingCover ? null : _pickCoverImage,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: _isUploadingCover
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.camera_alt_outlined,
+                              size: 24, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  if ((_coverUrl ?? '').isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _isUploadingCover ? null : _deleteCoverImage,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.red.shade100),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(Icons.delete_outline,
+                            color: Colors.red.shade500, size: 22),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            bottom: 0,
+            start: 20,
+            child: GestureDetector(
+              onTap: _isUploadingImage ? null : _pickImage,
+              behavior: HitTestBehavior.opaque,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey.shade100,
+                      child: _isUploadingImage
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                              ? ClipOval(
+                                  child: Image.network(
+                                    _avatarUrl!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.store,
+                                        size: 30,
+                                        color: Colors.grey),
+                                  ),
+                                )
+                              : const Icon(Icons.store,
+                                  size: 30, color: Colors.grey),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: Colors.grey[300]!, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.camera_alt,
+                              size: 14, color: AppColors.primaryColor),
+                        ),
+                        if ((_avatarUrl ?? '').isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: _isUploadingImage ? null : _deleteImage,
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.red.shade100, width: 1),
+                              ),
+                              child: Icon(Icons.delete_outline,
+                                  size: 14, color: Colors.red.shade500),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection() {
+    final hasLocation = _selectedWilaya != null && _selectedBaladiya != null;
+    final hasGpsCoordinates = _latitude != null && _longitude != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.tr('Store Location'),
+            style:
+                AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: _openLocationPicker,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadowLight,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: hasLocation
+                  ? Border.all(
+                      color: AppColors.successGreen.withValues(alpha: 0.5),
+                      width: 1.5)
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: hasLocation
+                        ? AppColors.successGreen.withValues(alpha: 0.1)
+                        : AppColors.neutral100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    hasLocation
+                        ? Icons.location_on
+                        : Icons.add_location_alt_outlined,
+                    color: hasLocation
+                        ? AppColors.successGreen
+                        : AppColors.textSecondary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: hasLocation
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr(_selectedBaladiya!),
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              context.tr(_selectedWilaya!),
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          context.tr('Tap to select location'),
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.textTertiary),
+                        ),
+                ),
+                Icon(
+                  Icons.chevron_left,
+                  color: hasLocation
+                      ? AppColors.successGreen
+                      : AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+          ),
+          child: Text(
+            context.tr(
+              'Important: Nearby filter needs GPS coordinates. If GPS is not set, your products will not appear in distance search. Also, area search (Wilaya/Baladiya) depends on your address. If address is empty, your products will not appear in area filter.',
+            ),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Colors.orange.shade800,
+              height: 1.35,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: hasGpsCoordinates
+                ? AppColors.successGreen.withValues(alpha: 0.08)
+                : AppColors.warningAmber.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasGpsCoordinates
+                  ? AppColors.successGreen.withValues(alpha: 0.35)
+                  : AppColors.warningAmber.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                hasGpsCoordinates ? Icons.check_circle : Icons.info_outline,
+                size: 18,
+                color: hasGpsCoordinates
+                    ? AppColors.successGreen
+                    : AppColors.warningAmber,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasGpsCoordinates
+                      ? context.tr('GPS coordinates selected')
+                      : context.tr('GPS coordinates not selected yet'),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: hasGpsCoordinates
+                        ? AppColors.successGreen
+                        : AppColors.warningAmber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryColor.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.primaryColor.withValues(alpha: 0.22),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.tr('Nearby search visibility'),
+                style: AppTextStyles.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                context.tr(
+                  'Nearby results use your GPS. Turn this on to show your store by distance. You can turn it off anytime.',
+                ),
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        AppSwitchTile(
+          title: context.tr('Show my store in nearby results'),
+          subtitle: _allowNearbyVisibility
+              ? context.tr('Visible in nearby results')
+              : context.tr('Hidden from nearby results'),
+          value: _allowNearbyVisibility,
+          onChanged: (value) {
+            setState(() => _allowNearbyVisibility = value);
+          },
+          titleStyle:
+              AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+          subtitleStyle:
+              AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+
+        const SizedBox(height: 8),
+
+        // GPS Button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _isGettingLocation ? null : _getCurrentLocation,
+            icon: _isGettingLocation
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.my_location, size: 18),
+            label: Text(_latitude != null
+                ? context.tr('GPS location is saved')
+                : context.tr('Set GPS location')),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: BorderSide(
+                  color: AppColors.primaryColor.withValues(alpha: 0.5)),
+              foregroundColor: AppColors.primaryColor,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

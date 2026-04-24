@@ -1,0 +1,490 @@
+@startuml
+title Toprice Backend - Unified DB Diagram (Portrait)
+top to bottom direction
+hide circle
+hide methods
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam classFontSize 11
+skinparam classAttributeFontSize 9
+skinparam ranksep 120
+skinparam nodesep 50
+scale max 700 width
+
+package "users" {
+  class "AbuseFlag" as users_AbuseFlag {
+    +actor: fk -> User
+    +signal_type: str
+    +target_type: str
+    +target_id: pos_int
+    +count: pos_int
+    +metadata: json
+    +first_seen_at: dt
+    +last_seen_at: dt
+  }
+  class "Follower" as users_Follower {
+    +user: fk -> User
+    +followed_user: fk -> User
+    +created_at: dt
+  }
+  class "PhoneOTP" as users_PhoneOTP {
+    +phone: str
+    +code: str
+    +created_at: dt
+    +expires_at: dt
+    +attempts: pos_small_int
+    +is_verified: bool
+  }
+  class "StoreReport" as users_StoreReport {
+    +reporter: fk -> User
+    +store: fk -> User
+    +reason: str
+    +details: text
+    +status: str
+    +seriousness_score: pos_small_int
+    +seriousness_level: str
+    +evidence_snapshot: json
+    +is_low_credibility: bool
+    +scored_at: dt
+    +reporter_reputation_score_at_submission: pos_small_int
+    +created_at: dt
+  }
+  class "SystemSettings" as users_SystemSettings {
+    +first_login_coins: pos_int
+    +daily_login_coins: pos_int
+  }
+  class "TrustSettings" as users_TrustSettings {
+    +report_quick_submit_seconds: pos_int
+    +review_quick_submit_seconds: pos_int
+    +minimum_interactions_for_high_credibility: pos_int
+    +reporter_reputation_default: pos_small_int
+    +reporter_reputation_low_quality_penalty: pos_small_int
+    +reporter_reputation_good_report_bonus: pos_small_int
+    +report_weight_interactions: pos_small_int
+    +report_weight_recency: pos_small_int
+    +report_weight_reputation: pos_small_int
+    +report_weight_account_age: pos_small_int
+    +review_weight_dwell: pos_small_int
+    +review_weight_interactions: pos_small_int
+    +review_weight_account_age: pos_small_int
+    +review_weight_history: pos_small_int
+    +verified_min_credible_positive_reviews: pos_int
+    +verified_max_credible_negative_ratio_percent: pos_small_int
+    +verified_min_account_age_days: pos_int
+    +auto_verify_eligible_stores: bool
+    +report_cooldown_minutes: pos_int
+    +review_cooldown_minutes: pos_int
+    +max_reports_per_day: pos_int
+    +analytics_retention_days: pos_int
+  }
+  class "User" as users_User {
+    +password: str
+    +last_login: dt
+    +is_superuser: bool
+    +username: str
+    +email: email
+    +is_staff: bool
+    +is_active: bool
+    +date_joined: dt
+    +name: str
+    +phone: str
+    +gender: str
+    +birthday: date
+    +profile_image: img
+    +store_description: text
+    +address: str
+    +latitude: decimal
+    +longitude: decimal
+    +allow_nearby_visibility: bool
+    +location_updated_at: dt
+    +store_type: str
+    +cover_image: img
+    +facebook: str
+    +instagram: str
+    +whatsapp: str
+    +tiktok: str
+    +youtube: str
+    +show_phone_public: bool
+    +show_social_public: bool
+    +coins_balance: pos_int
+    +post_coins: pos_int
+    +ad_view_coins: pos_int
+    +last_daily_coin_grant: dt
+    +verification_status: str
+    +is_verified: bool
+    +verified_at: dt
+    +verified_by: fk -> User
+    +verification_note: text
+  }
+}
+
+package "catalog" {
+  class "Category" as catalog_Category {
+    +name: str
+    +name_ar: str
+    +name_fr: str
+    +name_en: str
+    +parent: fk -> Category
+    +icon_code_point: str
+    +icon_font_family: str
+    +icon_font_package: str
+    +scarcity_level: int
+  }
+  class "Favorite" as catalog_Favorite {
+    +user: fk -> User
+    +product: fk -> Product
+    +created_at: dt
+  }
+  class "Pack" as catalog_Pack {
+    +merchant: fk -> User
+    +name: str
+    +description: text
+    +discount: decimal
+    +available_status: str
+    +delivery_available: bool
+    +delivery_wilayas: text
+    +created_at: dt
+  }
+  class "PackImage" as catalog_PackImage {
+    +pack: fk -> Pack
+    +image: img
+    +is_main: bool
+  }
+  class "PackProduct" as catalog_PackProduct {
+    +pack: fk -> Pack
+    +product: fk -> Product
+    +quantity: pos_int
+  }
+  class "Product" as catalog_Product {
+    +store: fk -> User
+    +category: fk -> Category
+    +name: str
+    +description: text
+    +price: decimal
+    +hide_price: bool
+    +negotiable: bool
+    +available_status: str
+    +delivery_available: bool
+    +delivery_wilayas: text
+    +created_at: dt
+  }
+  class "ProductImage" as catalog_ProductImage {
+    +product: fk -> Product
+    +image: img
+    +is_main: bool
+  }
+  class "ProductReport" as catalog_ProductReport {
+    +reporter: fk -> User
+    +product: fk -> Product
+    +reason: str
+    +details: text
+    +status: str
+    +seriousness_score: pos_small_int
+    +seriousness_level: str
+    +evidence_snapshot: json
+    +is_low_credibility: bool
+    +scored_at: dt
+    +reporter_reputation_score_at_submission: pos_small_int
+    +created_at: dt
+  }
+  class "Promotion" as catalog_Promotion {
+    +store: fk -> User
+    +product: fk -> Product
+    +name: str
+    +description: text
+    +percentage: decimal
+    +is_active: bool
+    +start_date: dt
+    +end_date: dt
+    +created_at: dt
+  }
+  class "PromotionImage" as catalog_PromotionImage {
+    +promotion: fk -> Promotion
+    +image: img
+    +is_main: bool
+  }
+  class "PromotionViewer" as catalog_PromotionViewer {
+    +promotion: fk -> Promotion
+    +viewer_key: str
+    +first_seen_at: dt
+    +last_seen_at: dt
+  }
+  class "Review" as catalog_Review {
+    +user: fk -> User
+    +store: fk -> User
+    +product: fk -> Product
+    +rating: int
+    +comment: text
+    +credibility_score: pos_small_int
+    +credibility_level: str
+    +evidence_snapshot: json
+    +is_low_credibility: bool
+    +scored_at: dt
+    +created_at: dt
+  }
+}
+
+package "ads" {
+  class "AdCampaign" as ads_AdCampaign {
+    +store: fk -> User
+    +product: fk -> Product
+    +pack: fk -> Pack
+    +name: str
+    +description: text
+    +percentage: decimal
+    +placement: str
+    +display_hours: json
+    +audience_mode: str
+    +age_from: pos_int
+    +age_to: pos_int
+    +geo_mode: str
+    +target_wilayas: json
+    +target_radius_km: pos_int
+    +target_categories: json
+    +is_active: bool
+    +start_date: dt
+    +end_date: dt
+    +max_impressions: pos_int
+    +unique_viewers_count: pos_int
+    +impressions_count: pos_int
+    +delivered_views_count: pos_int
+    +clicks_count: pos_int
+    +created_at: dt
+  }
+  class "AdCampaignViewer" as ads_AdCampaignViewer {
+    +campaign: fk -> AdCampaign
+    +viewer_key: str
+    +first_seen_at: dt
+    +last_seen_at: dt
+  }
+}
+
+package "analytics" {
+  class "InteractionLog" as analytics_InteractionLog {
+    +user: fk -> User
+    +product: fk -> Product
+    +category: fk -> Category
+    +action: str
+    +metadata: json
+    +session_id: str
+    +timestamp: dt
+  }
+  class "UserInterestProfile" as analytics_UserInterestProfile {
+    +user: o2o -> User
+    +category_scores: json
+    +price_affinity: json
+    +distance_sensitivity: float
+    +quality_sensitivity: float
+    +preferred_max_distance_km: float
+    +preferred_wilayas: json
+    +search_keywords: json
+    +preferred_sellers: json
+    +last_updated: dt
+  }
+}
+
+package "notifications" {
+  class "Notification" as notifications_Notification {
+    +actor: fk -> User
+    +notification_type: str
+    +title: str
+    +body: text
+    +product_id: int
+    +pack_id: int
+    +image_url: url
+    +extra_data: json
+    +created_at: dt
+  }
+  class "NotificationRecipient" as notifications_NotificationRecipient {
+    +notification: fk -> Notification
+    +user: fk -> User
+    +is_read: bool
+    +read_at: dt
+    +delivered_at: dt
+  }
+}
+
+package "feedback" {
+  class "Feedback" as feedback_Feedback {
+    +user: fk -> User
+    +type: str
+    +message: text
+    +screenshot: img
+    +app_version: str
+    +platform: str
+    +device_info: str
+    +status: str
+    +admin_note: text
+    +created_at: dt
+    +updated_at: dt
+  }
+}
+
+package "subscriptions" {
+  class "MerchantSubscription" as subscriptions_MerchantSubscription {
+    +store: fk -> User
+    +plan: fk -> SubscriptionPlan
+    +start_date: dt
+    +end_date: dt
+    +status: str
+  }
+  class "SubscriptionPaymentConfig" as subscriptions_SubscriptionPaymentConfig {
+    +rib: str
+    +instructions: text
+    +is_active: bool
+    +updated_at: dt
+  }
+  class "SubscriptionPaymentProof" as subscriptions_SubscriptionPaymentProof {
+    +payment_request: fk -> SubscriptionPaymentRequest
+    +image: img
+    +created_at: dt
+  }
+  class "SubscriptionPaymentRequest" as subscriptions_SubscriptionPaymentRequest {
+    +merchant: fk -> User
+    +plan: fk -> SubscriptionPlan
+    +status: str
+    +payment_note: text
+    +status_reason_code: str
+    +status_reason_text: text
+    +reviewed_by: fk -> User
+    +reviewed_at: dt
+    +created_at: dt
+  }
+  class "SubscriptionPlan" as subscriptions_SubscriptionPlan {
+    +name: str
+    +slug: slug
+    +max_products: int
+    +price: decimal
+    +duration_days: int
+    +benefits: text
+    +plan_features: json
+    +is_active: bool
+  }
+}
+
+package "wallet" {
+  class "CoinPackPlan" as wallet_CoinPackPlan {
+    +pack_id: slug
+    +coins_amount: pos_int
+    +price_amount: decimal
+    +original_price_amount: decimal
+    +title: str
+    +promo_badge: str
+    +is_promoted: bool
+    +sort_order: pos_int
+    +is_active: bool
+    +created_at: dt
+    +updated_at: dt
+  }
+  class "CoinPurchase" as wallet_CoinPurchase {
+    +user: fk -> User
+    +pack_id: str
+    +coins_amount: pos_int
+    +price_amount: decimal
+    +payment_note: text
+    +status: str
+    +approved_at: dt
+    +approved_by: fk -> User
+    +created_at: dt
+  }
+  class "CoinPurchaseProof" as wallet_CoinPurchaseProof {
+    +purchase: fk -> CoinPurchase
+    +image: img
+    +created_at: dt
+  }
+  class "CoinTransaction" as wallet_CoinTransaction {
+    +user: fk -> User
+    +amount_signed: int
+    +reason: str
+    +related_model: str
+    +related_id: pos_int
+    +created_at: dt
+  }
+}
+
+package "External" <<Frame>> {
+  class "AbstractUser" as external_AbstractUser <<external>>
+}
+
+users_AbuseFlag -[hidden]down- users_Follower
+users_Follower -[hidden]down- users_PhoneOTP
+users_PhoneOTP -[hidden]down- users_StoreReport
+users_StoreReport -[hidden]down- users_SystemSettings
+users_SystemSettings -[hidden]down- users_TrustSettings
+users_TrustSettings -[hidden]down- users_User
+users_User -[hidden]down- catalog_Category
+catalog_Category -[hidden]down- catalog_Favorite
+catalog_Favorite -[hidden]down- catalog_Pack
+catalog_Pack -[hidden]down- catalog_PackImage
+catalog_PackImage -[hidden]down- catalog_PackProduct
+catalog_PackProduct -[hidden]down- catalog_Product
+catalog_Product -[hidden]down- catalog_ProductImage
+catalog_ProductImage -[hidden]down- catalog_ProductReport
+catalog_ProductReport -[hidden]down- catalog_Promotion
+catalog_Promotion -[hidden]down- catalog_PromotionImage
+catalog_PromotionImage -[hidden]down- catalog_PromotionViewer
+catalog_PromotionViewer -[hidden]down- catalog_Review
+catalog_Review -[hidden]down- ads_AdCampaign
+ads_AdCampaign -[hidden]down- ads_AdCampaignViewer
+ads_AdCampaignViewer -[hidden]down- analytics_InteractionLog
+analytics_InteractionLog -[hidden]down- analytics_UserInterestProfile
+analytics_UserInterestProfile -[hidden]down- notifications_Notification
+notifications_Notification -[hidden]down- notifications_NotificationRecipient
+notifications_NotificationRecipient -[hidden]down- feedback_Feedback
+feedback_Feedback -[hidden]down- subscriptions_MerchantSubscription
+subscriptions_MerchantSubscription -[hidden]down- subscriptions_SubscriptionPaymentConfig
+subscriptions_SubscriptionPaymentConfig -[hidden]down- subscriptions_SubscriptionPaymentProof
+subscriptions_SubscriptionPaymentProof -[hidden]down- subscriptions_SubscriptionPaymentRequest
+subscriptions_SubscriptionPaymentRequest -[hidden]down- subscriptions_SubscriptionPlan
+subscriptions_SubscriptionPlan -[hidden]down- wallet_CoinPackPlan
+wallet_CoinPackPlan -[hidden]down- wallet_CoinPurchase
+wallet_CoinPurchase -[hidden]down- wallet_CoinPurchaseProof
+wallet_CoinPurchaseProof -[hidden]down- wallet_CoinTransaction
+
+users_User --|> external_AbstractUser
+ads_AdCampaign <-- ads_AdCampaignViewer
+catalog_Category <-- analytics_InteractionLog
+catalog_Category <-- catalog_Category
+catalog_Category <-- catalog_Product
+catalog_Pack <-- ads_AdCampaign
+catalog_Pack <-- catalog_PackImage
+catalog_Pack <-- catalog_PackProduct
+catalog_Product <-- ads_AdCampaign
+catalog_Product <-- analytics_InteractionLog
+catalog_Product <-- catalog_Favorite
+catalog_Product <-- catalog_PackProduct
+catalog_Product <-- catalog_ProductImage
+catalog_Product <-- catalog_ProductReport
+catalog_Product <-- catalog_Promotion
+catalog_Product <-- catalog_Review
+catalog_Promotion <-- catalog_PromotionImage
+catalog_Promotion <-- catalog_PromotionViewer
+notifications_Notification <-- notifications_NotificationRecipient
+subscriptions_SubscriptionPaymentRequest <-- subscriptions_SubscriptionPaymentProof
+subscriptions_SubscriptionPlan <-- subscriptions_MerchantSubscription
+subscriptions_SubscriptionPlan <-- subscriptions_SubscriptionPaymentRequest
+users_User <-- ads_AdCampaign
+users_User <-- analytics_InteractionLog
+users_User <-- analytics_UserInterestProfile
+users_User <-- catalog_Favorite
+users_User <-- catalog_Pack
+users_User <-- catalog_Product
+users_User <-- catalog_ProductReport
+users_User <-- catalog_Promotion
+users_User <-- catalog_Review
+users_User <-- feedback_Feedback
+users_User <-- notifications_Notification
+users_User <-- notifications_NotificationRecipient
+users_User <-- subscriptions_MerchantSubscription
+users_User <-- subscriptions_SubscriptionPaymentRequest
+users_User <-- users_AbuseFlag
+users_User <-- users_Follower
+users_User <-- users_StoreReport
+users_User <-- users_User
+users_User <-- wallet_CoinPurchase
+users_User <-- wallet_CoinTransaction
+wallet_CoinPurchase <-- wallet_CoinPurchaseProof
+@enduml

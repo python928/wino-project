@@ -5,8 +5,8 @@ Last reviewed: 2026-04-01
 
 Project roots
 -------------
-- Backend: `/home/anti-problems/toprice/app-backend`
-- App API config: `/home/anti-problems/toprice/the_app/lib/core/config/api_config.dart`
+- Backend: `/home/anti-problems/toprice/wino_backend`
+- App API config: `/home/anti-problems/toprice/wino_app/lib/core/config/api_config.dart`
 
 Base URL currently used by the Flutter app
 ------------------------------------------
@@ -182,18 +182,18 @@ Android manifest currently also accepts
 If an endpoint changes, sync all of these:
 - backend `urls.py`
 - backend view / serializer if needed
-- `the_app/lib/core/config/api_config.dart`
+- `wino_app/lib/core/config/api_config.dart`
 - app service / provider / screen
 - root docs that map APIs
 
 2026-03-30 Maps Directions Update:
 - The new external directions flow does not introduce a new backend API or Directions API dependency.
 - It depends on existing store/user latitude and longitude fields and launches Google Maps externally.
-- Main Flutter integration points: `the_app/lib/core/services/external_maps_service.dart`, `the_app/lib/core/services/location_service.dart`, `the_app/lib/presentation/shared_widgets/directions_button.dart`.
+- Main Flutter integration points: `wino_app/lib/core/services/external_maps_service.dart`, `wino_app/lib/core/services/location_service.dart`, `wino_app/lib/presentation/shared_widgets/directions_button.dart`.
 
 2026-03-30 Home Ads Single-Random Update:
-- Homepage sponsored ads still use `the_app/lib/core/config/api_config.dart -> /api/ads/campaigns/`, but the client now requests `placement=home_top&single_random=true`.
-- The deciding logic now lives in `app-backend/ads/views.py`, not in Flutter list slicing.
+- Homepage sponsored ads still use `wino_app/lib/core/config/api_config.dart -> /api/ads/campaigns/`, but the client now requests `placement=home_top&single_random=true`.
+- The deciding logic now lives in `wino_backend/ads/views.py`, not in Flutter list slicing.
 - Flutter passes current location context when nearby mode is active so the server can choose one eligible ad before the UI renders it.
 
 2026-04-01 Auth And Category Flow Note:
